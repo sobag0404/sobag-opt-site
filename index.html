@@ -3,29 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sobag Opt | Оптовый каталог текстиля</title>
+    <title>Sobag Opt | Оптовый текстиль с принтами</title>
     <meta
       name="description"
       content="Тестовый прототип B2B-сайта Sobag для оптовых покупателей текстильной продукции с принтами."
     />
-    <link rel="icon" type="image/png" href="https://static.tildacdn.com/tild3634-6135-4739-b937-393365333332/__1-min.png" />
-    <link rel="preconnect" href="https://static.tildacdn.com" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Crect x='6' y='6' width='52' height='52' fill='%23fff'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial,sans-serif' font-size='34' font-weight='900' fill='%23000'%3ES%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://images.pexels.com" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="topline">
       <div class="container topline__inner">
-        <span>Оптовые поставки от 30 000 ₽</span>
-        <span>Производство под ваш принт от 7 дней</span>
-        <span>Доставка по России и СНГ</span>
+        <span>Оптовые партии от 30 000 ₽</span>
+        <span>Печать и пошив под заказ</span>
+        <span>Каталог для селлеров и магазинов</span>
       </div>
     </header>
 
     <nav class="header">
       <div class="container header__inner">
         <a class="brand" href="#" aria-label="Sobag Opt">
-          <img src="https://static.tildacdn.com/tild3636-3539-4137-b739-663561336435/Prekinis_logotipas_S.png" alt="Sobag" />
-          <span>opt</span>
+          <span class="brand__mark">S</span>
+          <span class="brand__name">Sobag <b>Opt</b></span>
         </a>
         <button class="catalog-button" type="button" data-scroll="#catalog">
           <i data-lucide="layout-grid"></i>
@@ -33,7 +36,7 @@
         </button>
         <label class="search" aria-label="Поиск по каталогу">
           <i data-lucide="search"></i>
-          <input id="searchInput" type="search" placeholder="Найти пледы, подушки, принт..." />
+          <input id="searchInput" type="search" placeholder="Поиск: пледы, подушки, тираж, принт" />
         </label>
         <div class="header__actions">
           <button class="icon-button" type="button" title="Условия для бизнеса" data-scroll="#wholesale">
@@ -54,13 +57,20 @@
 
     <main>
       <section class="hero">
+        <img
+          class="hero__image"
+          src="https://images.pexels.com/photos/236748/pexels-photo-236748.jpeg?auto=compress&cs=tinysrgb&w=1800"
+          alt="Рулоны ткани на складе"
+        />
+        <div class="hero__shade"></div>
         <div class="container hero__grid">
           <div class="hero__content">
-            <p class="eyebrow">Текстиль с принтами для маркетплейсов, магазинов и корпоративных заказов</p>
-            <h1>Sobag для опта</h1>
+            <div class="accent-stripe" aria-hidden="true"></div>
+            <p class="eyebrow">B2B textile production</p>
+            <h1>Оптовый текстиль с принтами</h1>
             <p class="hero__lead">
-              Каталог готовой продукции, расчет оптовой скидки, заявка в один клик и отдельный поток для производства
-              изделий с вашим дизайном.
+              Готовые позиции для продаж и производство под ваш макет: пледы, подушки, наволочки, шопперы и сезонные
+              коллекции для маркетплейсов.
             </p>
             <div class="hero__actions">
               <button class="primary-button" type="button" data-scroll="#catalog">
@@ -73,15 +83,19 @@
               </button>
             </div>
           </div>
-          <div class="hero__visual" aria-label="Продукция Sobag">
-            <img
-              src="https://static.tildacdn.com/tild3738-3637-4934-a435-373337636562/-min_2.png"
-              alt="Текстиль Sobag с принтом"
-            />
-            <div class="hero__stat">
-              <strong>4 уровня скидки</strong>
-              <span>автоматически в заявке</span>
-            </div>
+          <div class="hero__specs" aria-label="Преимущества оптового заказа">
+            <article>
+              <strong>30 000 ₽</strong>
+              <span>минимальная оптовая заявка</span>
+            </article>
+            <article>
+              <strong>7 дней</strong>
+              <span>тестовый срок запуска партии</span>
+            </article>
+            <article>
+              <strong>18%</strong>
+              <span>максимальная скидка по шкале</span>
+            </article>
           </div>
         </div>
       </section>
@@ -114,8 +128,9 @@
       <section class="catalog-section" id="catalog">
         <div class="container section-head">
           <div>
-            <p class="eyebrow">Тестовый каталог</p>
-            <h2>Готовая продукция для оптовых закупок</h2>
+            <div class="accent-stripe" aria-hidden="true"></div>
+            <p class="eyebrow">Wholesale catalog</p>
+            <h2>Готовая продукция для закупки</h2>
           </div>
           <div class="view-tools" role="group" aria-label="Фильтр наличия">
             <button class="chip is-active" type="button" data-stock="all">Все</button>
@@ -195,10 +210,11 @@
 
       <section class="wholesale" id="wholesale">
         <div class="container wholesale__grid">
-          <div class="section-head section-head--inline">
-            <div>
-              <p class="eyebrow">Для оптовиков</p>
-              <h2>Система скидок и условий</h2>
+            <div class="section-head section-head--inline">
+              <div>
+              <div class="accent-stripe" aria-hidden="true"></div>
+              <p class="eyebrow">Trade terms</p>
+              <h2>Скидки и условия</h2>
             </div>
             <p>Можно заменить цифры на ваши реальные пороги после утверждения коммерческой политики.</p>
           </div>
@@ -212,15 +228,22 @@
       </section>
 
       <section class="custom" id="custom">
+        <div class="custom__photo-band">
+          <img
+            src="https://images.pexels.com/photos/31090827/pexels-photo-31090827.jpeg?auto=compress&cs=tinysrgb&w=1800"
+            alt="Производство и подготовка текстильной партии"
+          />
+        </div>
         <div class="container custom__grid">
           <div class="custom__media">
             <img
-              src="https://static.tildacdn.com/tild3461-3262-4035-b332-356434353538/-min_3.png"
-              alt="Текстильное производство Sobag"
+              src="https://images.pexels.com/photos/4614119/pexels-photo-4614119.jpeg?auto=compress&cs=tinysrgb&w=1200"
+              alt="Фактуры тканей и рулоны материала"
             />
           </div>
           <div class="custom__content">
-            <p class="eyebrow">Производство</p>
+            <div class="accent-stripe" aria-hidden="true"></div>
+            <p class="eyebrow">Custom production</p>
             <h2>Изделия с вашим принтом</h2>
             <p>
               Отдельный сценарий для корпоративных клиентов, селлеров и магазинов: загружают задачу, выбирают изделие,
@@ -255,7 +278,7 @@
     <footer class="footer">
       <div class="container footer__grid">
         <div>
-          <strong>Sobag Opt</strong>
+          <strong>SOBAG OPT</strong>
           <p>Тестовый прототип B2B-сайта для оптовых продаж текстиля с принтами.</p>
         </div>
         <div>
