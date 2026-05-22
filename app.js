@@ -52,31 +52,43 @@ const catalogCategories = [
   {
     name: "Подушки",
     icon: "square-stack",
+    image: "assets/hero-products-1.png",
+    position: "52% 42%",
     description: "Декоративные подушки с наполнителем",
   },
   {
     name: "Наволочки",
     icon: "panel-top",
+    image: "assets/hero-products-3.png",
+    position: "44% 54%",
     description: "Съемные наволочки под готовые линейки",
   },
   {
     name: "Пледы",
     icon: "layers",
+    image: "assets/hero-products-2.png",
+    position: "48% 72%",
     description: "Пледы с полноцветными принтами",
   },
   {
     name: "Мешки для обуви",
     icon: "package",
+    image: "assets/hero-products-1.png",
+    position: "78% 74%",
     description: "Легкие мешки для школ, спорта и мерча",
   },
   {
     name: "Чехлы на кулер",
     icon: "container",
+    image: "assets/hero-products-2.png",
+    position: "82% 54%",
     description: "Текстильные чехлы под корпоративные заказы",
   },
   {
     name: "Чехлы на чемодан",
     icon: "briefcase",
+    image: "assets/hero-products-1.png",
+    position: "89% 34%",
     description: "Принтованные чехлы для багажа",
   },
 ];
@@ -103,7 +115,7 @@ const productDrafts = [
     theme: "Аниме",
     stock: "ready",
     badge: "Хит опта",
-    image: "https://images.pexels.com/photos/4622202/pexels-photo-4622202.jpeg?auto=compress&cs=tinysrgb&w=900",
+    image: "assets/hero-products-1.png",
     description: "Один принт, разные комплектации: подушка с наполнителем или наволочка для готовой линейки.",
     types: TYPE_OPTIONS,
     sizes: SIZE_OPTIONS,
@@ -119,7 +131,7 @@ const productDrafts = [
     theme: "Игры",
     stock: "ready",
     badge: "Маркетплейсы",
-    image: "https://images.pexels.com/photos/20531149/pexels-photo-20531149.jpeg?auto=compress&cs=tinysrgb&w=900",
+    image: "assets/hero-products-3.png",
     description: "Игровая тематика для селлеров: размеры от 30 до 50 см, два материала на выбор.",
     types: TYPE_OPTIONS,
     sizes: SIZE_OPTIONS,
@@ -135,7 +147,7 @@ const productDrafts = [
     theme: "Новый год",
     stock: "made",
     badge: "Под заказ",
-    image: "https://images.pexels.com/photos/12008104/pexels-photo-12008104.jpeg?auto=compress&cs=tinysrgb&w=900",
+    image: "assets/hero-products-2.png",
     description: "Сезонный принт для подарочных витрин, корпоративных наборов и новогодних поставок.",
     types: TYPE_OPTIONS,
     sizes: SIZE_OPTIONS,
@@ -151,7 +163,7 @@ const productDrafts = [
     theme: "Бренд",
     stock: "made",
     badge: "Ваш принт",
-    image: "https://images.pexels.com/photos/236748/pexels-photo-236748.jpeg?auto=compress&cs=tinysrgb&w=900",
+    image: "assets/hero-products-1.png",
     description: "База для клиентских макетов: логотипы, фирменные паттерны, упаковка под конкретный бренд.",
     types: TYPE_OPTIONS,
     sizes: SIZE_OPTIONS,
@@ -167,7 +179,7 @@ const productDrafts = [
     theme: "Военные",
     stock: "ready",
     badge: "Новая серия",
-    image: "https://images.pexels.com/photos/5816299/pexels-photo-5816299.jpeg?auto=compress&cs=tinysrgb&w=900",
+    image: "assets/hero-products-2.png",
     description: "Мешки для обуви и спортивных наборов с камуфляжными и тактическими принтами.",
     types: ["Мешок"],
     sizes: ["30x40", "35x45", "40x50"],
@@ -183,7 +195,7 @@ const productDrafts = [
     theme: "14 февраля",
     stock: "made",
     badge: "Сезон",
-    image: "https://images.pexels.com/photos/6634382/pexels-photo-6634382.jpeg?auto=compress&cs=tinysrgb&w=900",
+    image: "assets/hero-products-3.png",
     description: "Чехлы для кулеров с сезонными и корпоративными принтами для офисов и подарков.",
     types: ["Чехол"],
     sizes: ["Стандарт", "XL"],
@@ -196,7 +208,7 @@ const productDrafts = [
 const STORAGE = {
   user: "sobag.currentUser",
   users: "sobag.users",
-  products: "sobag.products.v2",
+  products: "sobag.products.v4",
   guestCart: "sobag.cart.guest",
 };
 
@@ -448,7 +460,10 @@ function renderCatalogHome() {
     .map(
       (category) => `
         <button class="category-tile" type="button" data-open-category="${category.name}">
-          <span class="category-tile__icon"><i data-lucide="${category.icon}"></i></span>
+          <span class="category-tile__media">
+            <img src="${category.image}" alt="" style="object-position: ${category.position}" loading="lazy" />
+            <i data-lucide="${category.icon}"></i>
+          </span>
           <strong>${category.name}</strong>
           <small>${category.description}</small>
           <b>${countByCategory[category.name] || 0} товаров</b>
