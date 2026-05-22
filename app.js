@@ -5,11 +5,14 @@ const MATERIAL_OPTIONS = ["Велюр", "Габардин"];
 const typeCodes = {
   Подушка: "POD",
   Наволочка: "NAV",
+  Мешок: "BAG",
+  Чехол: "CSH",
 };
 
 const materialCodes = {
   Велюр: "VEL",
   Габардин: "GAB",
+  Оксфорд: "OXF",
 };
 
 const sizeFactors = {
@@ -18,16 +21,24 @@ const sizeFactors = {
   "40x40": 70,
   "45x45": 115,
   "50x50": 160,
+  "30x40": 70,
+  "35x45": 115,
+  "40x50": 160,
+  Стандарт: 120,
+  XL: 240,
 };
 
 const materialFactors = {
   Габардин: 0,
   Велюр: 90,
+  Оксфорд: 70,
 };
 
 const typeFactors = {
   Наволочка: 0,
   Подушка: 180,
+  Мешок: 40,
+  Чехол: 120,
 };
 
 const quantityTiers = [
@@ -37,12 +48,58 @@ const quantityTiers = [
   { qty: 300, discount: 18 },
 ];
 
+const catalogCategories = [
+  {
+    name: "Подушки",
+    icon: "square-stack",
+    description: "Декоративные подушки с наполнителем",
+  },
+  {
+    name: "Наволочки",
+    icon: "panel-top",
+    description: "Съемные наволочки под готовые линейки",
+  },
+  {
+    name: "Пледы",
+    icon: "layers",
+    description: "Пледы с полноцветными принтами",
+  },
+  {
+    name: "Мешки для обуви",
+    icon: "package",
+    description: "Легкие мешки для школ, спорта и мерча",
+  },
+  {
+    name: "Чехлы на кулер",
+    icon: "container",
+    description: "Текстильные чехлы под корпоративные заказы",
+  },
+  {
+    name: "Чехлы на чемодан",
+    icon: "briefcase",
+    description: "Принтованные чехлы для багажа",
+  },
+];
+
+const catalogThemes = [
+  { name: "Аниме", icon: "sparkles" },
+  { name: "Военные", icon: "shield" },
+  { name: "Новый год", icon: "snowflake" },
+  { name: "14 февраля", icon: "heart" },
+  { name: "Игры", icon: "gamepad-2" },
+  { name: "Животные", icon: "paw-print" },
+  { name: "Космос", icon: "orbit" },
+  { name: "Паттерны", icon: "palette" },
+  { name: "Бренд", icon: "badge-check" },
+  { name: "Подарки", icon: "gift" },
+];
+
 const productDrafts = [
   {
     id: "aurora-cats",
     baseSku: "SB-PIL-AUR",
-    name: "Коллекция Aurora Cats",
-    category: "Подушки и наволочки",
+    name: "Подушка Aurora Cats",
+    category: "Подушки",
     theme: "Аниме",
     stock: "ready",
     badge: "Хит опта",
@@ -57,8 +114,8 @@ const productDrafts = [
   {
     id: "pixel-quest",
     baseSku: "SB-PIL-PXQ",
-    name: "Коллекция Pixel Quest",
-    category: "Подушки и наволочки",
+    name: "Наволочка Pixel Quest",
+    category: "Наволочки",
     theme: "Игры",
     stock: "ready",
     badge: "Маркетплейсы",
@@ -73,9 +130,9 @@ const productDrafts = [
   {
     id: "winter-gift",
     baseSku: "SB-PIL-WIN",
-    name: "Коллекция Winter Gift",
-    category: "Подушки и наволочки",
-    theme: "Праздники",
+    name: "Плед Winter Gift",
+    category: "Пледы",
+    theme: "Новый год",
     stock: "made",
     badge: "Под заказ",
     image: "https://images.pexels.com/photos/12008104/pexels-photo-12008104.jpeg?auto=compress&cs=tinysrgb&w=900",
@@ -89,8 +146,8 @@ const productDrafts = [
   {
     id: "brand-line",
     baseSku: "SB-PIL-BRN",
-    name: "Коллекция Brand Line",
-    category: "Корпоративный текстиль",
+    name: "Чехол Brand Line",
+    category: "Чехлы на чемодан",
     theme: "Бренд",
     stock: "made",
     badge: "Ваш принт",
@@ -102,12 +159,44 @@ const productDrafts = [
     basePrice: 240,
     popular: 80,
   },
+  {
+    id: "army-supply",
+    baseSku: "SB-BAG-ARM",
+    name: "Мешок Army Supply",
+    category: "Мешки для обуви",
+    theme: "Военные",
+    stock: "ready",
+    badge: "Новая серия",
+    image: "https://images.pexels.com/photos/5816299/pexels-photo-5816299.jpeg?auto=compress&cs=tinysrgb&w=900",
+    description: "Мешки для обуви и спортивных наборов с камуфляжными и тактическими принтами.",
+    types: ["Мешок"],
+    sizes: ["30x40", "35x45", "40x50"],
+    materials: ["Габардин", "Оксфорд"],
+    basePrice: 165,
+    popular: 76,
+  },
+  {
+    id: "cooler-love",
+    baseSku: "SB-CLR-LOVE",
+    name: "Чехол Love Cooler",
+    category: "Чехлы на кулер",
+    theme: "14 февраля",
+    stock: "made",
+    badge: "Сезон",
+    image: "https://images.pexels.com/photos/6634382/pexels-photo-6634382.jpeg?auto=compress&cs=tinysrgb&w=900",
+    description: "Чехлы для кулеров с сезонными и корпоративными принтами для офисов и подарков.",
+    types: ["Чехол"],
+    sizes: ["Стандарт", "XL"],
+    materials: ["Габардин", "Велюр"],
+    basePrice: 390,
+    popular: 72,
+  },
 ];
 
 const STORAGE = {
   user: "sobag.currentUser",
   users: "sobag.users",
-  products: "sobag.products",
+  products: "sobag.products.v2",
   guestCart: "sobag.cart.guest",
 };
 
@@ -123,6 +212,8 @@ const state = {
     stock: new Set(),
   },
   filterSearch: {},
+  selectedCategory: "",
+  selectedTheme: "",
   search: "",
   sort: "popular",
   cart: new Map(),
@@ -141,6 +232,12 @@ const state = {
 const productGrid = document.querySelector("#productGrid");
 const productCount = document.querySelector("#productCount");
 const filterGroups = document.querySelector("#filterGroups");
+const categoryTiles = document.querySelector("#categoryTiles");
+const themeTiles = document.querySelector("#themeTiles");
+const catalogHome = document.querySelector("#catalogHome");
+const catalogListing = document.querySelector("#catalogListing");
+const catalogTools = document.querySelector("#catalogTools");
+const catalogTitle = document.querySelector("#catalogTitle");
 const searchInput = document.querySelector("#searchInput");
 const sortSelect = document.querySelector("#sortSelect");
 const cartItems = document.querySelector("#cartItems");
@@ -158,9 +255,12 @@ function createVariants(product) {
   return product.types.flatMap((type) =>
     product.sizes.flatMap((size) =>
       product.materials.map((material) => {
-        const price = product.basePrice + typeFactors[type] + sizeFactors[size] + materialFactors[material];
+        const price =
+          product.basePrice + (typeFactors[type] || 0) + (sizeFactors[size] || 0) + (materialFactors[material] || 0);
         return {
-          sku: `${product.baseSku}-${typeCodes[type]}-${size.replace("x", "")}-${materialCodes[material]}`,
+          sku: `${product.baseSku}-${typeCodes[type] || optionCode(type)}-${optionCode(size)}-${
+            materialCodes[material] || optionCode(material)
+          }`,
           type,
           size,
           material,
@@ -169,6 +269,13 @@ function createVariants(product) {
       })
     )
   );
+}
+
+function optionCode(value) {
+  return String(value)
+    .toUpperCase()
+    .replace(/[^A-ZА-Я0-9]+/g, "")
+    .slice(0, 6);
 }
 
 function normalizeProduct(product) {
@@ -287,6 +394,8 @@ function uniqueOptions(key) {
 
 function productMatchesFilters(product) {
   const filters = state.filters;
+  if (state.selectedCategory && product.category !== state.selectedCategory) return false;
+  if (state.selectedTheme && product.theme !== state.selectedTheme) return false;
   if (filters.category.size && !filters.category.has(product.category)) return false;
   if (filters.theme.size && !filters.theme.has(product.theme)) return false;
   if (filters.stock.size && !filters.stock.has(product.stock)) return false;
@@ -327,6 +436,93 @@ function getFilteredProducts() {
       return b.product.popular - a.product.popular;
     })
     .map(({ product }) => product);
+}
+
+function renderCatalogHome() {
+  const countByCategory = Object.fromEntries(catalogCategories.map((category) => [category.name, 0]));
+  products.forEach((product) => {
+    countByCategory[product.category] = (countByCategory[product.category] || 0) + 1;
+  });
+
+  categoryTiles.innerHTML = catalogCategories
+    .map(
+      (category) => `
+        <button class="category-tile" type="button" data-open-category="${category.name}">
+          <span class="category-tile__icon"><i data-lucide="${category.icon}"></i></span>
+          <strong>${category.name}</strong>
+          <small>${category.description}</small>
+          <b>${countByCategory[category.name] || 0} товаров</b>
+        </button>
+      `
+    )
+    .join("");
+
+  themeTiles.innerHTML = catalogThemes
+    .map(
+      (theme) => `
+        <button class="theme-tile" type="button" data-open-theme="${theme.name}">
+          <i data-lucide="${theme.icon}"></i>
+          <span>${theme.name}</span>
+        </button>
+      `
+    )
+    .join("");
+
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function renderCatalogShell() {
+  const isHome = !state.selectedCategory && !state.selectedTheme && !state.search.trim();
+  catalogHome.classList.toggle("is-hidden", !isHome);
+  catalogListing.classList.toggle("is-hidden", isHome);
+  catalogTools.classList.toggle("is-hidden", isHome);
+
+  if (isHome) {
+    catalogTitle.textContent = "Каталог продукции";
+    return;
+  }
+
+  const titleParts = [];
+  if (state.selectedCategory) titleParts.push(state.selectedCategory);
+  if (state.selectedTheme) titleParts.push(state.selectedTheme);
+  if (!titleParts.length && state.search.trim()) titleParts.push("Результаты поиска");
+  catalogTitle.textContent = titleParts.join(" · ");
+}
+
+function openCatalogCategory(category) {
+  state.selectedCategory = category;
+  state.selectedTheme = "";
+  state.filters.category.clear();
+  state.filters.stock.clear();
+  document.querySelectorAll("[data-stock]").forEach((node) => node.classList.toggle("is-active", node.dataset.stock === "all"));
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
+  document.querySelector("#catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function openCatalogTheme(theme) {
+  state.selectedCategory = "";
+  state.selectedTheme = theme;
+  state.filters.theme.clear();
+  state.filters.stock.clear();
+  document.querySelectorAll("[data-stock]").forEach((node) => node.classList.toggle("is-active", node.dataset.stock === "all"));
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
+  document.querySelector("#catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function backToCatalogHome() {
+  state.selectedCategory = "";
+  state.selectedTheme = "";
+  state.search = "";
+  searchInput.value = "";
+  Object.values(state.filters).forEach((bucket) => bucket.clear());
+  document.querySelectorAll("[data-stock]").forEach((node) => node.classList.toggle("is-active", node.dataset.stock === "all"));
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
 }
 
 function renderFilters() {
@@ -767,6 +963,8 @@ function saveGeneratedProducts() {
   }
   products = [...state.adminPreview, ...products];
   saveProducts();
+  renderCatalogHome();
+  renderCatalogShell();
   renderFilters();
   renderProducts();
   renderAdminPreview([]);
@@ -845,6 +1043,8 @@ function submitOrder(form) {
 function boot() {
   seedUsers();
   loadCart();
+  renderCatalogHome();
+  renderCatalogShell();
   renderFilters();
   renderProducts();
   renderCart();
@@ -860,6 +1060,9 @@ function boot() {
     if (!button) return;
 
     if (button.dataset.scroll) document.querySelector(button.dataset.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (button.dataset.openCategory) openCatalogCategory(button.dataset.openCategory);
+    if (button.dataset.openTheme) openCatalogTheme(button.dataset.openTheme);
+    if (button.dataset.backCatalog !== undefined) backToCatalogHome();
     if (button.id === "accountButton") openAccount();
     if (button.dataset.closeModal !== undefined) closeModal();
     if (button.dataset.openProduct) openProduct(button.dataset.openProduct);
@@ -901,6 +1104,7 @@ function boot() {
   document.addEventListener("input", (event) => {
     if (event.target.id === "searchInput") {
       state.search = event.target.value;
+      renderCatalogShell();
       renderProducts();
     }
     if (event.target.dataset.filterSearch) {
@@ -926,6 +1130,15 @@ function boot() {
       renderProducts();
     }
     if (event.target.id === "excelInput" && event.target.files[0]) importExcel(event.target.files[0]);
+  });
+
+  document.addEventListener("click", (event) => {
+    const stockButton = event.target.closest("[data-stock]");
+    if (!stockButton) return;
+    state.filters.stock.clear();
+    if (stockButton.dataset.stock !== "all") state.filters.stock.add(stockButton.dataset.stock);
+    document.querySelectorAll("[data-stock]").forEach((node) => node.classList.toggle("is-active", node === stockButton));
+    renderProducts();
   });
 
   document.addEventListener("submit", (event) => {

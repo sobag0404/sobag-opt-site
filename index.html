@@ -133,16 +133,34 @@
           <div>
             <div class="accent-stripe" aria-hidden="true"></div>
             <p class="eyebrow">Wholesale catalog</p>
-            <h2>Готовая продукция для закупки</h2>
+            <h2 id="catalogTitle">Каталог продукции</h2>
           </div>
-          <div class="view-tools" role="group" aria-label="Фильтр наличия">
+          <div class="view-tools" id="catalogTools" role="group" aria-label="Фильтр наличия">
+            <button class="chip" type="button" data-back-catalog>
+              <i data-lucide="arrow-left"></i>
+              Категории
+            </button>
             <button class="chip is-active" type="button" data-stock="all">Все</button>
             <button class="chip" type="button" data-stock="ready">В наличии</button>
             <button class="chip" type="button" data-stock="made">Под заказ</button>
           </div>
         </div>
 
-        <div class="container catalog-layout">
+        <div class="container catalog-home" id="catalogHome">
+          <div class="catalog-home__head">
+            <h3>Выберите категорию</h3>
+            <span>Сначала раздел, потом товары и фильтры</span>
+          </div>
+          <div id="categoryTiles" class="category-tiles"></div>
+
+          <div class="catalog-home__head catalog-home__head--themes">
+            <h3>Тематики</h3>
+            <span>Быстрые подборки по принтам и сезонам</span>
+          </div>
+          <div id="themeTiles" class="theme-tiles"></div>
+        </div>
+
+        <div class="container catalog-layout" id="catalogListing">
           <aside class="filters" aria-label="Фильтры каталога">
             <div id="filterGroups"></div>
             <div class="filters__block">
