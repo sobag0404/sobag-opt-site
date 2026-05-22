@@ -52,43 +52,31 @@ const catalogCategories = [
   {
     name: "Подушки",
     icon: "square-stack",
-    image: "assets/category-pillow.svg",
-    position: "50% 50%",
     description: "Декоративные подушки с наполнителем",
   },
   {
     name: "Наволочки",
     icon: "panel-top",
-    image: "assets/category-pillowcase.svg",
-    position: "50% 50%",
     description: "Съемные наволочки под готовые линейки",
   },
   {
     name: "Пледы",
     icon: "layers",
-    image: "assets/category-blanket.svg",
-    position: "50% 50%",
     description: "Пледы с полноцветными принтами",
   },
   {
     name: "Мешки для обуви",
     icon: "package",
-    image: "assets/category-shoe-bag.svg",
-    position: "50% 50%",
     description: "Легкие мешки для школ, спорта и мерча",
   },
   {
     name: "Чехлы на кулер",
     icon: "container",
-    image: "assets/category-cooler-cover.svg",
-    position: "50% 50%",
     description: "Текстильные чехлы под корпоративные заказы",
   },
   {
     name: "Чехлы на чемодан",
     icon: "briefcase",
-    image: "assets/category-suitcase-cover.svg",
-    position: "50% 50%",
     description: "Принтованные чехлы для багажа",
   },
 ];
@@ -460,8 +448,13 @@ function renderCatalogHome() {
     .map(
       (category) => `
         <button class="category-tile" type="button" data-open-category="${category.name}">
-          <span class="category-tile__media">
-            <img src="${category.image}" alt="" style="object-position: ${category.position}" loading="lazy" />
+          <span class="category-tile__top">
+            <span class="category-tile__icon"><i data-lucide="${category.icon}"></i></span>
+            <span class="category-tile__schema" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
           </span>
           <strong>${category.name}</strong>
           <small>${category.description}</small>
