@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sobag Opt | Оптовый каталог текстиля</title>
+    <meta
+      name="description"
+      content="Тестовый прототип B2B-сайта Sobag для оптовых покупателей текстильной продукции с принтами."
+    />
+    <link rel="icon" type="image/png" href="https://static.tildacdn.com/tild3634-6135-4739-b937-393365333332/__1-min.png" />
+    <link rel="preconnect" href="https://static.tildacdn.com" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topline">
+      <div class="container topline__inner">
+        <span>Оптовые поставки от 30 000 ₽</span>
+        <span>Производство под ваш принт от 7 дней</span>
+        <span>Доставка по России и СНГ</span>
+      </div>
+    </header>
+
+    <nav class="header">
+      <div class="container header__inner">
+        <a class="brand" href="#" aria-label="Sobag Opt">
+          <img src="https://static.tildacdn.com/tild3636-3539-4137-b739-663561336435/Prekinis_logotipas_S.png" alt="Sobag" />
+          <span>opt</span>
+        </a>
+        <button class="catalog-button" type="button" data-scroll="#catalog">
+          <i data-lucide="layout-grid"></i>
+          Каталог
+        </button>
+        <label class="search" aria-label="Поиск по каталогу">
+          <i data-lucide="search"></i>
+          <input id="searchInput" type="search" placeholder="Найти пледы, подушки, принт..." />
+        </label>
+        <div class="header__actions">
+          <button class="icon-button" type="button" title="Условия для бизнеса" data-scroll="#wholesale">
+            <i data-lucide="briefcase-business"></i>
+          </button>
+          <button class="icon-button" type="button" title="Избранное">
+            <i data-lucide="heart"></i>
+            <span id="favoriteCount">0</span>
+          </button>
+          <button class="cart-button" type="button" data-scroll="#request">
+            <i data-lucide="shopping-cart"></i>
+            <span>Заявка</span>
+            <strong id="cartCount">0</strong>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <section class="hero">
+        <div class="container hero__grid">
+          <div class="hero__content">
+            <p class="eyebrow">Текстиль с принтами для маркетплейсов, магазинов и корпоративных заказов</p>
+            <h1>Sobag для опта</h1>
+            <p class="hero__lead">
+              Каталог готовой продукции, расчет оптовой скидки, заявка в один клик и отдельный поток для производства
+              изделий с вашим дизайном.
+            </p>
+            <div class="hero__actions">
+              <button class="primary-button" type="button" data-scroll="#catalog">
+                <i data-lucide="shopping-bag"></i>
+                Перейти в каталог
+              </button>
+              <button class="ghost-button" type="button" data-scroll="#custom">
+                <i data-lucide="sparkles"></i>
+                Заказать свой принт
+              </button>
+            </div>
+          </div>
+          <div class="hero__visual" aria-label="Продукция Sobag">
+            <img
+              src="https://static.tildacdn.com/tild3738-3637-4934-a435-373337636562/-min_2.png"
+              alt="Текстиль Sobag с принтом"
+            />
+            <div class="hero__stat">
+              <strong>4 уровня скидки</strong>
+              <span>автоматически в заявке</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="benefits">
+        <div class="container benefits__grid">
+          <article>
+            <i data-lucide="badge-percent"></i>
+            <strong>Скидки по сумме</strong>
+            <span>Чем больше заявка, тем ниже цена. Уровень считается сразу.</span>
+          </article>
+          <article>
+            <i data-lucide="factory"></i>
+            <strong>Свое производство</strong>
+            <span>Печать, пошив, упаковка и подготовка к отгрузке в одном процессе.</span>
+          </article>
+          <article>
+            <i data-lucide="package-check"></i>
+            <strong>Под маркетплейсы</strong>
+            <span>Штрихкоды, упаковка, комплектация и поставки партиями.</span>
+          </article>
+          <article>
+            <i data-lucide="message-square-text"></i>
+            <strong>Заявка без оплаты</strong>
+            <span>Покупатель собирает корзину, менеджер уточняет наличие и условия.</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="catalog-section" id="catalog">
+        <div class="container section-head">
+          <div>
+            <p class="eyebrow">Тестовый каталог</p>
+            <h2>Готовая продукция для оптовых закупок</h2>
+          </div>
+          <div class="view-tools" role="group" aria-label="Фильтр наличия">
+            <button class="chip is-active" type="button" data-stock="all">Все</button>
+            <button class="chip" type="button" data-stock="ready">В наличии</button>
+            <button class="chip" type="button" data-stock="made">Под заказ</button>
+          </div>
+        </div>
+
+        <div class="container catalog-layout">
+          <aside class="filters" aria-label="Фильтры каталога">
+            <div class="filters__block">
+              <h3>Категории</h3>
+              <div id="categoryFilters" class="category-list"></div>
+            </div>
+            <div class="filters__block">
+              <h3>Тип принта</h3>
+              <label><input type="checkbox" value="Аниме" data-print /> Аниме</label>
+              <label><input type="checkbox" value="Игры" data-print /> Игры</label>
+              <label><input type="checkbox" value="Праздники" data-print /> Праздники</label>
+              <label><input type="checkbox" value="Бренд" data-print /> Бренд</label>
+            </div>
+            <div class="filters__block">
+              <h3>Сумма заявки</h3>
+              <div class="discount-meter">
+                <div class="discount-meter__bar"><span id="discountProgress"></span></div>
+                <p id="discountHint">Добавьте товары, чтобы открыть скидку.</p>
+              </div>
+            </div>
+          </aside>
+
+          <div class="catalog-main">
+            <div class="catalog-toolbar">
+              <span id="productCount">0 товаров</span>
+              <select id="sortSelect" aria-label="Сортировка">
+                <option value="popular">Сначала популярные</option>
+                <option value="priceAsc">Цена: ниже</option>
+                <option value="priceDesc">Цена: выше</option>
+                <option value="minQty">Минимальная партия</option>
+              </select>
+            </div>
+            <div id="productGrid" class="product-grid"></div>
+          </div>
+
+          <aside class="request-panel" id="request" aria-label="Заявка">
+            <div class="request-panel__head">
+              <div>
+                <p class="eyebrow">Заявка</p>
+                <h3>Оптовый заказ</h3>
+              </div>
+              <button class="icon-button" id="clearCart" type="button" title="Очистить заявку">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+            <div id="cartItems" class="cart-items"></div>
+            <div class="cart-empty" id="cartEmpty">
+              <i data-lucide="shopping-basket"></i>
+              <span>Добавьте товары из каталога</span>
+            </div>
+            <div class="totals">
+              <div><span>Сумма</span><strong id="subtotal">0 ₽</strong></div>
+              <div><span>Скидка</span><strong id="discountValue">0%</strong></div>
+              <div class="totals__final"><span>Итого</span><strong id="grandTotal">0 ₽</strong></div>
+            </div>
+            <form class="request-form" id="requestForm">
+              <input name="company" type="text" placeholder="Компания или ИП" required />
+              <input name="phone" type="tel" placeholder="Телефон" required />
+              <input name="email" type="email" placeholder="Email" />
+              <textarea name="comment" placeholder="Комментарий: сроки, город, упаковка"></textarea>
+              <button class="primary-button" type="submit">
+                <i data-lucide="send"></i>
+                Отправить заявку
+              </button>
+            </form>
+          </aside>
+        </div>
+      </section>
+
+      <section class="wholesale" id="wholesale">
+        <div class="container wholesale__grid">
+          <div class="section-head section-head--inline">
+            <div>
+              <p class="eyebrow">Для оптовиков</p>
+              <h2>Система скидок и условий</h2>
+            </div>
+            <p>Можно заменить цифры на ваши реальные пороги после утверждения коммерческой политики.</p>
+          </div>
+          <div class="tiers">
+            <article><span>от 30 000 ₽</span><strong>3%</strong><small>стартовая оптовая скидка</small></article>
+            <article><span>от 70 000 ₽</span><strong>7%</strong><small>для регулярных закупок</small></article>
+            <article><span>от 150 000 ₽</span><strong>12%</strong><small>для магазинов и селлеров</small></article>
+            <article><span>от 300 000 ₽</span><strong>18%</strong><small>индивидуальные условия</small></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="custom" id="custom">
+        <div class="container custom__grid">
+          <div class="custom__media">
+            <img
+              src="https://static.tildacdn.com/tild3461-3262-4035-b332-356434353538/-min_3.png"
+              alt="Текстильное производство Sobag"
+            />
+          </div>
+          <div class="custom__content">
+            <p class="eyebrow">Производство</p>
+            <h2>Изделия с вашим принтом</h2>
+            <p>
+              Отдельный сценарий для корпоративных клиентов, селлеров и магазинов: загружают задачу, выбирают изделие,
+              тираж, упаковку и получают расчет.
+            </p>
+            <div class="steps">
+              <span><b>1</b> Выбор изделия и ткани</span>
+              <span><b>2</b> Проверка макета</span>
+              <span><b>3</b> Печать и пошив</span>
+              <span><b>4</b> Упаковка и отгрузка</span>
+            </div>
+            <form class="brief-form" id="briefForm">
+              <select name="product" required>
+                <option value="">Что производим?</option>
+                <option>Пледы</option>
+                <option>Подушки</option>
+                <option>Наволочки</option>
+                <option>Шопперы</option>
+              </select>
+              <input name="quantity" type="number" min="50" placeholder="Тираж, шт." required />
+              <input name="contact" type="text" placeholder="Телефон или Telegram" required />
+              <button class="primary-button" type="submit">
+                <i data-lucide="calculator"></i>
+                Получить расчет
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer__grid">
+        <div>
+          <strong>Sobag Opt</strong>
+          <p>Тестовый прототип B2B-сайта для оптовых продаж текстиля с принтами.</p>
+        </div>
+        <div>
+          <span>Отдел опта</span>
+          <a href="mailto:opt@sobag-shop.ru">opt@sobag-shop.ru</a>
+          <a href="tel:+79000000000">+7 900 000-00-00</a>
+        </div>
+      </div>
+    </footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
