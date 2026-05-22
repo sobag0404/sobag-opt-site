@@ -48,10 +48,11 @@
             <i data-lucide="heart"></i>
             <span id="favoriteCount">0</span>
           </button>
-          <button class="cart-button" type="button" data-scroll="#request">
+          <button class="cart-button" type="button" data-open-cart>
             <i data-lucide="shopping-cart"></i>
             <span>Корзина</span>
             <strong id="cartCount">0</strong>
+            <em id="cartHeaderTotal">0 ₽</em>
           </button>
         </div>
       </div>
@@ -66,18 +67,31 @@
         </div>
         <div class="hero__shade"></div>
         <div class="hero__actual" aria-label="Актуально">
-          <strong>Актуально</strong>
-          <button class="hero__actual-card hero__actual-card--one" type="button" data-open-holiday="Новый год">
+          <div class="hero__actual-head">
+            <strong>Актуально</strong>
+            <div class="hero__actual-nav" aria-label="Переключение актуальных предложений">
+              <button type="button" data-actual-prev aria-label="Предыдущий слайд">
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <button type="button" data-actual-next aria-label="Следующий слайд">
+                <i data-lucide="chevron-right"></i>
+              </button>
+            </div>
+          </div>
+          <button class="hero__actual-card is-active" type="button" data-actual-slide data-open-holiday="Новый год">
             <img src="assets/hero-products-2.png" alt="Новогодние товары" />
-            <span>Новый год</span>
+            <span>Новогодний опт</span>
+            <b>Новый год</b>
           </button>
-          <button class="hero__actual-card hero__actual-card--two" type="button" data-open-collection="Аниме">
+          <button class="hero__actual-card" type="button" data-actual-slide data-open-collection="Аниме">
             <img src="assets/hero-products-1.png" alt="Аниме подборка" />
-            <span>Аниме</span>
+            <span>Аниме на товарах</span>
+            <b>Аниме</b>
           </button>
-          <button class="hero__actual-card hero__actual-card--three" type="button" data-open-holiday="8 марта">
+          <button class="hero__actual-card" type="button" data-actual-slide data-open-holiday="8 марта">
             <img src="assets/hero-products-3.png" alt="Товары к 8 марта" />
-            <span>8 марта</span>
+            <span>Подарки к 8 марта</span>
+            <b>8 марта</b>
           </button>
         </div>
         <div class="container hero__grid">

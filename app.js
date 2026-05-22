@@ -241,16 +241,246 @@ const productDrafts = [
     basePrice: 390,
     popular: 72,
   },
+  {
+    id: "meme-cloud",
+    baseSku: "SB-PIL-MEM",
+    name: "Подушка Meme Cloud",
+    category: "Подушки",
+    theme: "Мемы",
+    collections: ["Мемы", "Подарки", "Паттерны", "Именные", "Бренд"],
+    holidays: ["День рождения"],
+    tags: ["Мемы", "Подарки", "Именные", "День рождения", "Паттерны"],
+    stock: "ready",
+    badge: "Тест",
+    image: "assets/hero-products-3.png",
+    description: "Подушка с юмористическими принтами для маркетплейсов и подарочных витрин.",
+    types: TYPE_OPTIONS,
+    sizes: SIZE_OPTIONS,
+    materials: MATERIAL_OPTIONS,
+    basePrice: 225,
+    popular: 89,
+  },
+  {
+    id: "march-bloom",
+    baseSku: "SB-NAV-MAR",
+    name: "Наволочка March Bloom",
+    category: "Наволочки",
+    theme: "Подарки",
+    collections: ["Подарки", "Животные", "Паттерны", "Именные", "Бренд"],
+    holidays: ["8 марта", "День рождения"],
+    tags: ["8 марта", "Подарки", "Женские принты", "Цветы", "Именные"],
+    stock: "made",
+    badge: "Сезон",
+    image: "assets/hero-products-1.png",
+    description: "Подарочная серия наволочек с цветочными и именными принтами.",
+    types: TYPE_OPTIONS,
+    sizes: SIZE_OPTIONS,
+    materials: MATERIAL_OPTIONS,
+    basePrice: 215,
+    popular: 87,
+  },
+  {
+    id: "teacher-pattern",
+    baseSku: "SB-PIL-TCH",
+    name: "Подушка Teacher Pattern",
+    category: "Подушки",
+    theme: "Паттерны",
+    collections: ["Паттерны", "Подарки", "Именные", "Бренд", "Мемы"],
+    holidays: ["День учителя"],
+    tags: ["День учителя", "Паттерны", "Подарки", "Именные", "Школа"],
+    stock: "ready",
+    badge: "Школа",
+    image: "assets/hero-products-2.png",
+    description: "Тестовая школьная линейка для сезонных закупок и подарочных наборов.",
+    types: TYPE_OPTIONS,
+    sizes: SIZE_OPTIONS,
+    materials: MATERIAL_OPTIONS,
+    basePrice: 218,
+    popular: 82,
+  },
+  {
+    id: "space-luggage",
+    baseSku: "SB-CSH-SPC",
+    name: "Чехол Space Luggage",
+    category: "Чехлы на чемодан",
+    theme: "Космос",
+    collections: ["Космос", "Паттерны", "Бренд", "Подарки", "Игры"],
+    holidays: ["День рождения"],
+    tags: ["Космос", "Паттерны", "Чехол", "Подарки", "Бренд"],
+    stock: "made",
+    badge: "Travel",
+    image: "assets/hero-products-2.png",
+    description: "Чехлы на чемодан с яркими паттернами для туристических и корпоративных заказов.",
+    types: ["Чехол"],
+    sizes: ["Стандарт", "XL"],
+    materials: ["Габардин", "Велюр"],
+    basePrice: 420,
+    popular: 78,
+  },
+  {
+    id: "anime-cover",
+    baseSku: "SB-CSH-ANI",
+    name: "Чехол Anime Trip",
+    category: "Чехлы на чемодан",
+    theme: "Аниме",
+    collections: ["Аниме", "Игры", "Подарки", "Бренд", "Паттерны"],
+    holidays: ["День рождения"],
+    tags: ["Аниме", "Игры", "Чехол", "Подарки", "Паттерны"],
+    stock: "ready",
+    badge: "Хит",
+    image: "assets/hero-products-1.png",
+    description: "Аниме-серия для чемоданов, тестовая карточка под разные принты и размеры.",
+    types: ["Чехол"],
+    sizes: ["Стандарт", "XL"],
+    materials: ["Габардин", "Велюр"],
+    basePrice: 435,
+    popular: 86,
+  },
+  {
+    id: "shoe-cyber",
+    baseSku: "SB-BAG-CYB",
+    name: "Мешок Cyber Sport",
+    category: "Мешки для обуви",
+    theme: "Игры",
+    collections: ["Игры", "Мемы", "Космос", "Паттерны", "Бренд"],
+    holidays: ["23 февраля", "День рождения"],
+    tags: ["Игры", "Мемы", "Спорт", "Космос", "23 февраля"],
+    stock: "ready",
+    badge: "Спорт",
+    image: "assets/hero-products-3.png",
+    description: "Мешки для обуви с игровыми и спортивными принтами.",
+    types: ["Мешок"],
+    sizes: ["30x40", "35x45", "40x50"],
+    materials: ["Габардин", "Оксфорд"],
+    basePrice: 175,
+    popular: 81,
+  },
+  {
+    id: "shoe-flower",
+    baseSku: "SB-BAG-FLR",
+    name: "Мешок Flower Mood",
+    category: "Мешки для обуви",
+    theme: "Подарки",
+    collections: ["Подарки", "Животные", "Паттерны", "Именные", "Бренд"],
+    holidays: ["8 марта", "День рождения"],
+    tags: ["8 марта", "Подарки", "Цветы", "Мешок", "Именные"],
+    stock: "made",
+    badge: "Весна",
+    image: "assets/hero-products-1.png",
+    description: "Весенняя серия мешков для обуви и подарочных комплектов.",
+    types: ["Мешок"],
+    sizes: ["30x40", "35x45", "40x50"],
+    materials: ["Габардин", "Оксфорд"],
+    basePrice: 168,
+    popular: 74,
+  },
+  {
+    id: "cooler-brand",
+    baseSku: "SB-CLR-BRN",
+    name: "Чехол Corporate Cooler",
+    category: "Чехлы на кулер",
+    theme: "Бренд",
+    collections: ["Бренд", "Паттерны", "Подарки", "Именные", "Космос"],
+    holidays: ["23 февраля", "8 марта"],
+    tags: ["Бренд", "Кулер", "Корпоративные", "Подарки", "Паттерны"],
+    stock: "made",
+    badge: "Офис",
+    image: "assets/hero-products-2.png",
+    description: "Корпоративные чехлы на кулер с логотипами и паттернами компании.",
+    types: ["Чехол"],
+    sizes: ["Стандарт", "XL"],
+    materials: ["Габардин", "Велюр"],
+    basePrice: 405,
+    popular: 77,
+  },
+  {
+    id: "cooler-newyear",
+    baseSku: "SB-CLR-NY",
+    name: "Чехол Snow Office",
+    category: "Чехлы на кулер",
+    theme: "Новый год",
+    collections: ["Подарки", "Паттерны", "Бренд", "Именные", "Животные"],
+    holidays: ["Новый год"],
+    tags: ["Новый год", "Кулер", "Офис", "Подарки", "Паттерны"],
+    stock: "ready",
+    badge: "Зима",
+    image: "assets/hero-products-3.png",
+    description: "Новогодние офисные чехлы на кулер для сезонного оформления.",
+    types: ["Чехол"],
+    sizes: ["Стандарт", "XL"],
+    materials: ["Габардин", "Велюр"],
+    basePrice: 398,
+    popular: 83,
+  },
+  {
+    id: "plaid-animal",
+    baseSku: "SB-PLD-ANM",
+    name: "Плед Animal Soft",
+    category: "Пледы",
+    theme: "Животные",
+    collections: ["Животные", "Подарки", "Паттерны", "Именные", "Аниме"],
+    holidays: ["День рождения", "Новый год"],
+    tags: ["Животные", "Плед", "Подарки", "Новый год", "Именные"],
+    stock: "ready",
+    badge: "Soft",
+    image: "assets/hero-products-1.png",
+    description: "Пледы с животными и мягкими паттернами для подарочных подборок.",
+    types: TYPE_OPTIONS,
+    sizes: SIZE_OPTIONS,
+    materials: MATERIAL_OPTIONS,
+    basePrice: 260,
+    popular: 85,
+  },
+  {
+    id: "plaid-meme",
+    baseSku: "SB-PLD-MEM",
+    name: "Плед Meme Night",
+    category: "Пледы",
+    theme: "Мемы",
+    collections: ["Мемы", "Игры", "Подарки", "Паттерны", "Космос"],
+    holidays: ["День рождения"],
+    tags: ["Мемы", "Плед", "Игры", "Подарки", "День рождения"],
+    stock: "made",
+    badge: "Юмор",
+    image: "assets/hero-products-2.png",
+    description: "Тестовый плед с мемными принтами для молодежных подборок.",
+    types: TYPE_OPTIONS,
+    sizes: SIZE_OPTIONS,
+    materials: MATERIAL_OPTIONS,
+    basePrice: 255,
+    popular: 79,
+  },
+  {
+    id: "name-stars",
+    baseSku: "SB-NAV-NAM",
+    name: "Наволочка Name Stars",
+    category: "Наволочки",
+    theme: "Именные",
+    collections: ["Именные", "Космос", "Подарки", "Паттерны", "Бренд"],
+    holidays: ["День рождения", "8 марта"],
+    tags: ["Именные", "Космос", "Подарки", "Наволочка", "8 марта"],
+    stock: "made",
+    badge: "Персонализация",
+    image: "assets/hero-products-3.png",
+    description: "Именные наволочки для подарочных и корпоративных заказов.",
+    types: TYPE_OPTIONS,
+    sizes: SIZE_OPTIONS,
+    materials: MATERIAL_OPTIONS,
+    basePrice: 235,
+    popular: 88,
+  },
 ];
 
 const STORAGE = {
   user: "sobag.currentUser",
   users: "sobag.users",
-  products: "sobag.products.v7",
+  products: "sobag.products.v8",
   guestCart: "sobag.cart.guest",
 };
 
 let products = loadProducts();
+let actualSlideIndex = 0;
+let actualSlideTimer = null;
 
 const state = {
   filters: {
@@ -296,6 +526,7 @@ const sortSelect = document.querySelector("#sortSelect");
 const cartItems = document.querySelector("#cartItems");
 const cartEmpty = document.querySelector("#cartEmpty");
 const cartCount = document.querySelector("#cartCount");
+const cartHeaderTotal = document.querySelector("#cartHeaderTotal");
 const favoriteCount = document.querySelector("#favoriteCount");
 const subtotalNode = document.querySelector("#subtotal");
 const discountValue = document.querySelector("#discountValue");
@@ -798,6 +1029,7 @@ function renderCart() {
 
   cartEmpty.classList.toggle("is-hidden", lines.length > 0);
   cartCount.textContent = totals.qty;
+  if (cartHeaderTotal) cartHeaderTotal.textContent = formatMoney(totals.total);
   favoriteCount.textContent = state.favorites.size;
   subtotalNode.textContent = formatMoney(totals.subtotal);
   discountValue.textContent = `${averageDiscount}%`;
@@ -979,6 +1211,7 @@ function addVariantToCart(productId) {
     key,
     productId: product.id,
     productName: product.name,
+    productImage: product.image,
     variant,
     qty: existing ? existing.qty + qty : qty,
   });
@@ -1172,6 +1405,29 @@ function saveGeneratedProducts() {
   showToast("Карточки добавлены в каталог.");
 }
 
+function setActualSlide(index) {
+  const slides = [...document.querySelectorAll("[data-actual-slide]")];
+  if (!slides.length) return;
+  actualSlideIndex = (index + slides.length) % slides.length;
+  slides.forEach((slide, slideIndex) => {
+    slide.classList.toggle("is-active", slideIndex === actualSlideIndex);
+  });
+}
+
+function nextActualSlide(direction = 1) {
+  setActualSlide(actualSlideIndex + direction);
+}
+
+function startActualSlider() {
+  window.clearInterval(actualSlideTimer);
+  actualSlideTimer = window.setInterval(() => nextActualSlide(1), 15000);
+}
+
+function initActualSlider() {
+  setActualSlide(0);
+  startActualSlider();
+}
+
 function downloadTemplate() {
   const csv = [
     "name,baseSku,category,theme,collections,holidays,tags,types,sizes,materials,basePrice,image,stock",
@@ -1257,6 +1513,7 @@ function boot() {
   renderProducts();
   renderCart();
   renderAccountButton();
+  initActualSlider();
 
   document.addEventListener("click", (event) => {
     if (event.target.dataset.closeModal !== undefined) {
@@ -1267,6 +1524,21 @@ function boot() {
     const button = event.target.closest("button");
     if (!button) return;
 
+    if (button.dataset.actualPrev !== undefined) {
+      nextActualSlide(-1);
+      startActualSlider();
+      return;
+    }
+    if (button.dataset.actualNext !== undefined) {
+      nextActualSlide(1);
+      startActualSlider();
+      return;
+    }
+    if (button.dataset.openCart !== undefined) {
+      const cartWindow = window.open("cart.html", "_blank", "noopener");
+      if (!cartWindow) window.location.href = "cart.html";
+      return;
+    }
     if (button.dataset.scroll) document.querySelector(button.dataset.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" });
     if (button.dataset.openCategory) {
       closeModal();
