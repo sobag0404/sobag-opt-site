@@ -52,43 +52,43 @@ const catalogCategories = [
   {
     name: "Подушки",
     icon: "square-stack",
-    image: "assets/hero-products-1.png",
-    position: "52% 42%",
+    image: "assets/category-pillow.svg",
+    position: "50% 50%",
     description: "Декоративные подушки с наполнителем",
   },
   {
     name: "Наволочки",
     icon: "panel-top",
-    image: "assets/hero-products-3.png",
-    position: "44% 54%",
+    image: "assets/category-pillowcase.svg",
+    position: "50% 50%",
     description: "Съемные наволочки под готовые линейки",
   },
   {
     name: "Пледы",
     icon: "layers",
-    image: "assets/hero-products-2.png",
-    position: "48% 72%",
+    image: "assets/category-blanket.svg",
+    position: "50% 50%",
     description: "Пледы с полноцветными принтами",
   },
   {
     name: "Мешки для обуви",
     icon: "package",
-    image: "assets/hero-products-1.png",
-    position: "78% 74%",
+    image: "assets/category-shoe-bag.svg",
+    position: "50% 50%",
     description: "Легкие мешки для школ, спорта и мерча",
   },
   {
     name: "Чехлы на кулер",
     icon: "container",
-    image: "assets/hero-products-2.png",
-    position: "82% 54%",
+    image: "assets/category-cooler-cover.svg",
+    position: "50% 50%",
     description: "Текстильные чехлы под корпоративные заказы",
   },
   {
     name: "Чехлы на чемодан",
     icon: "briefcase",
-    image: "assets/hero-products-1.png",
-    position: "89% 34%",
+    image: "assets/category-suitcase-cover.svg",
+    position: "50% 50%",
     description: "Принтованные чехлы для багажа",
   },
 ];
@@ -462,7 +462,6 @@ function renderCatalogHome() {
         <button class="category-tile" type="button" data-open-category="${category.name}">
           <span class="category-tile__media">
             <img src="${category.image}" alt="" style="object-position: ${category.position}" loading="lazy" />
-            <i data-lucide="${category.icon}"></i>
           </span>
           <strong>${category.name}</strong>
           <small>${category.description}</small>
@@ -894,7 +893,7 @@ function adminModalHtml() {
           <input name="sizes" type="text" placeholder="Размеры через запятую" value="${SIZE_OPTIONS.join(", ")}" required />
           <input name="materials" type="text" placeholder="Материалы через запятую" value="${MATERIAL_OPTIONS.join(", ")}" required />
           <input name="basePrice" type="number" min="1" value="220" placeholder="Базовая цена" required />
-          <input name="image" type="url" placeholder="URL изображения" value="https://images.pexels.com/photos/4614119/pexels-photo-4614119.jpeg?auto=compress&cs=tinysrgb&w=900" />
+          <input name="image" type="url" placeholder="URL изображения" value="assets/production-workshop-1.png" />
           <select name="stock">
             <option value="ready">В наличии</option>
             <option value="made">Под заказ</option>
@@ -944,7 +943,7 @@ function productFromForm(form) {
     sizes: splitList(data.sizes),
     materials: splitList(data.materials),
     basePrice: Number(data.basePrice),
-    image: data.image || "https://images.pexels.com/photos/4614119/pexels-photo-4614119.jpeg?auto=compress&cs=tinysrgb&w=900",
+    image: data.image || "assets/production-workshop-1.png",
     stock: data.stock,
     badge: "Новая карточка",
     description: "Карточка создана массовым генератором вариантов.",
@@ -1017,7 +1016,7 @@ async function importExcel(file) {
         sizes: splitList(row.sizes || SIZE_OPTIONS.join(",")),
         materials: splitList(row.materials || MATERIAL_OPTIONS.join(",")),
         basePrice: Number(row.basePrice || 220),
-        image: row.image || "https://images.pexels.com/photos/4614119/pexels-photo-4614119.jpeg?auto=compress&cs=tinysrgb&w=900",
+        image: row.image || "assets/production-workshop-1.png",
         stock: row.stock || "made",
         badge: "Excel",
         description: "Карточка импортирована из Excel.",
