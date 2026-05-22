@@ -481,39 +481,51 @@ function productModalHtml(product) {
       <div class="modal__backdrop" data-close-modal></div>
       <section class="modal__panel product-detail">
         <button class="modal__close" type="button" data-close-modal><i data-lucide="x"></i></button>
-        <div class="product-detail__media">
-          <img src="${product.image}" alt="${product.name}" />
-        </div>
-        <div class="product-detail__content">
-          <p class="eyebrow">${product.baseSku}</p>
-          <h2>${product.name}</h2>
-          <p>${product.description}</p>
-          <div class="sku-line">
-            <span>Выбранный артикул</span>
-            <strong id="selectedSku">${variant.sku}</strong>
-          </div>
-          ${variantControls("type", "Тип товара", product.types)}
-          ${variantControls("size", "Размер", product.sizes)}
-          ${variantControls("material", "Материал", product.materials)}
-          <div class="detail-qty">
-            <label>
-              Количество, шт.
-              <input id="detailQty" type="number" min="1" step="1" value="${state.activeVariant.qty}" />
-            </label>
-            <div class="detail-price">
-              <span>Цена за шт.</span>
-              <strong id="detailPrice">${formatMoney(variant.price)}</strong>
-              <small id="detailDiscount">Скидка ${discount}% от количества</small>
+        <div class="product-detail__layout">
+          <div class="product-detail__main">
+            <div class="product-detail__media">
+              <img src="${product.image}" alt="${product.name}" />
+            </div>
+            <div class="product-detail__copy">
+              <p class="eyebrow">${product.baseSku}</p>
+              <h2>${product.name}</h2>
+              <p>${product.description}</p>
+              <div class="detail-facts">
+                <span>${product.category}</span>
+                <span>${product.theme}</span>
+                <span>${stockLabel(product.stock)}</span>
+                <span>${product.variants.length} вариантов</span>
+              </div>
             </div>
           </div>
-          <div class="detail-total">
-            <span>Итого по позиции</span>
-            <strong id="detailTotal">${formatMoney(total)}</strong>
+          <aside class="product-detail__options">
+            <div class="sku-line">
+              <span>Выбранный артикул</span>
+              <strong id="selectedSku">${variant.sku}</strong>
+            </div>
+            ${variantControls("type", "Тип товара", product.types)}
+            ${variantControls("size", "Размер", product.sizes)}
+            ${variantControls("material", "Материал", product.materials)}
+            <div class="detail-qty">
+              <label>
+                Количество, шт.
+                <input id="detailQty" type="number" min="1" step="1" value="${state.activeVariant.qty}" />
+              </label>
+              <div class="detail-price">
+                <span>Цена за шт.</span>
+                <strong id="detailPrice">${formatMoney(variant.price)}</strong>
+                <small id="detailDiscount">Скидка ${discount}% от количества</small>
+              </div>
+            </div>
+            <div class="detail-total">
+              <span>Итого по позиции</span>
+              <strong id="detailTotal">${formatMoney(total)}</strong>
+            </div>
+            <button class="primary-button" type="button" data-add-variant="${product.id}">
+              <i data-lucide="shopping-cart"></i>
+              Добавить выбранный вариант
+            </button>
           </div>
-          <button class="primary-button" type="button" data-add-variant="${product.id}">
-            <i data-lucide="shopping-cart"></i>
-            Добавить выбранный вариант
-          </button>
         </div>
       </section>
     </div>
