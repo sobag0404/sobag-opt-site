@@ -48,6 +48,8 @@ const quantityTiers = [
   { qty: 300, discount: 18 },
 ];
 
+const MIN_CART_TOTAL = 30000;
+
 const catalogCategories = [
   {
     name: "Подушки",
@@ -101,6 +103,7 @@ const productDrafts = [
     name: "Подушка Aurora Cats",
     category: "Подушки",
     theme: "Аниме",
+    tags: ["Аниме", "Подарки", "Животные", "Паттерны", "Новый год"],
     stock: "ready",
     badge: "Хит опта",
     image: "assets/hero-products-1.png",
@@ -117,6 +120,7 @@ const productDrafts = [
     name: "Наволочка Pixel Quest",
     category: "Наволочки",
     theme: "Игры",
+    tags: ["Игры", "Аниме", "Подарки", "Паттерны", "Бренд"],
     stock: "ready",
     badge: "Маркетплейсы",
     image: "assets/hero-products-3.png",
@@ -133,6 +137,7 @@ const productDrafts = [
     name: "Плед Winter Gift",
     category: "Пледы",
     theme: "Новый год",
+    tags: ["Новый год", "Подарки", "Паттерны", "Животные", "Бренд"],
     stock: "made",
     badge: "Под заказ",
     image: "assets/hero-products-2.png",
@@ -149,6 +154,7 @@ const productDrafts = [
     name: "Чехол Brand Line",
     category: "Чехлы на чемодан",
     theme: "Бренд",
+    tags: ["Бренд", "Паттерны", "Подарки", "Космос", "Игры"],
     stock: "made",
     badge: "Ваш принт",
     image: "assets/hero-products-1.png",
@@ -165,6 +171,7 @@ const productDrafts = [
     name: "Мешок Army Supply",
     category: "Мешки для обуви",
     theme: "Военные",
+    tags: ["Военные", "Паттерны", "Бренд", "Подарки", "Игры"],
     stock: "ready",
     badge: "Новая серия",
     image: "assets/hero-products-2.png",
@@ -181,6 +188,7 @@ const productDrafts = [
     name: "Чехол Love Cooler",
     category: "Чехлы на кулер",
     theme: "14 февраля",
+    tags: ["14 февраля", "Подарки", "Бренд", "Паттерны", "Космос"],
     stock: "made",
     badge: "Сезон",
     image: "assets/hero-products-3.png",
@@ -196,7 +204,7 @@ const productDrafts = [
 const STORAGE = {
   user: "sobag.currentUser",
   users: "sobag.users",
-  products: "sobag.products.v5",
+  products: "sobag.products.v6",
   guestCart: "sobag.cart.guest",
 };
 
@@ -222,7 +230,7 @@ const state = {
     type: "Подушка",
     size: "40x40",
     material: "Габардин",
-    qty: 30,
+    qty: 1,
   },
   adminPreview: [],
 };
@@ -276,12 +284,22 @@ function optionCode(value) {
     .slice(0, 6);
 }
 
+function normalizeTags(product) {
+  const rawTags = Array.isArray(product.tags) ? product.tags : splitList(product.tags);
+  return [...new Set([product.theme, ...rawTags].filter(Boolean).map((tag) => String(tag).trim()).filter(Boolean))];
+}
+
+function productHasTheme(product, theme) {
+  return product.tags.includes(theme);
+}
+
 function normalizeProduct(product) {
   const normalized = {
     ...product,
     types: product.types?.length ? product.types : TYPE_OPTIONS,
     sizes: product.sizes?.length ? product.sizes : SIZE_OPTIONS,
     materials: product.materials?.length ? product.materials : MATERIAL_OPTIONS,
+    tags: normalizeTags(product),
     gallery: [...new Set([product.image, ...(product.gallery || []), "assets/hero-products-1.png", "assets/hero-products-2.png", "assets/hero-products-3.png"])].filter(Boolean),
     detailDescription:
       product.detailDescription ||
@@ -389,9 +407,9 @@ function stockLabel(stock) {
 function productsForFilterOptions(key) {
   return products.filter((product) => {
     if (state.selectedCategory && product.category !== state.selectedCategory) return false;
-    if (state.selectedTheme && product.theme !== state.selectedTheme) return false;
+    if (state.selectedTheme && !productHasTheme(product, state.selectedTheme)) return false;
     if (key !== "category" && state.filters.category.size && !state.filters.category.has(product.category)) return false;
-    if (key !== "theme" && state.filters.theme.size && !state.filters.theme.has(product.theme)) return false;
+    if (key !== "theme" && state.filters.theme.size && ![...state.filters.theme].some((theme) => productHasTheme(product, theme))) return false;
 
     if (key === "size" || key === "material") {
       return product.variants.some((variant) => {
@@ -421,15 +439,16 @@ function uniqueOptions(key) {
       ),
     ];
   }
+  if (key === "theme") return [...new Set(sourceProducts.flatMap((product) => product.tags))];
   return [...new Set(sourceProducts.map((product) => product[key]))];
 }
 
 function productMatchesFilters(product) {
   const filters = state.filters;
   if (state.selectedCategory && product.category !== state.selectedCategory) return false;
-  if (state.selectedTheme && product.theme !== state.selectedTheme) return false;
+  if (state.selectedTheme && !productHasTheme(product, state.selectedTheme)) return false;
   if (filters.category.size && !filters.category.has(product.category)) return false;
-  if (filters.theme.size && !filters.theme.has(product.theme)) return false;
+  if (filters.theme.size && ![...filters.theme].some((theme) => productHasTheme(product, theme))) return false;
 
   const variantFilters = ["size", "material"];
   return product.variants.some((variant) =>
@@ -450,7 +469,7 @@ function searchScore(product) {
 
   const name = product.name.toLowerCase();
   if (name.includes(query)) return 3000;
-  const text = [product.theme, product.category, product.description].join(" ").toLowerCase();
+  const text = [product.theme, product.tags.join(" "), product.category, product.description].join(" ").toLowerCase();
   if (text.includes(query)) return 1000;
   return 0;
 }
@@ -600,35 +619,24 @@ function renderProducts() {
   productGrid.innerHTML = list
     .map((product) => {
       const favorite = state.favorites.has(product.id) ? " is-active" : "";
-      const variantCount = product.variants.length;
       return `
         <article class="product-card">
-          <button class="product-card__open" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}"></button>
           <div class="product-card__image">
-            <img src="${product.image}" alt="${product.name}" loading="lazy" />
-            <span class="product-card__badge">${product.badge}</span>
+            <button class="product-card__image-button" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}">
+              <img src="${product.image}" alt="${product.name}" loading="lazy" />
+            </button>
             <button class="favorite-button${favorite}" type="button" title="В избранное" data-favorite="${product.id}">
               <i data-lucide="heart"></i>
             </button>
           </div>
           <div class="product-card__body">
-            <div class="product-card__meta">
-              <span>${product.baseSku}</span>
-              <span>${product.theme}</span>
-              <span>${stockLabel(product.stock)}</span>
-            </div>
+            <span class="product-card__sku">${product.baseSku}</span>
             <h3>${product.name}</h3>
-            <p class="product-card__spec">${product.description}</p>
-            <div class="variant-summary">
-              <span>${variantCount} вариантов</span>
-              <span>${product.types.join(" / ")}</span>
-            </div>
             <div class="product-card__bottom">
               <div class="price">
                 <strong>от ${formatMoney(product.minPrice)}</strong>
-                <span>зависит от типа, размера и материала</span>
               </div>
-              <button class="add-button" type="button" data-open-product="${product.id}">Настроить</button>
+              <button class="add-button" type="button" data-open-product="${product.id}">Перейти в карточку</button>
             </div>
           </div>
         </article>
@@ -669,12 +677,26 @@ function renderCart() {
   subtotalNode.textContent = formatMoney(totals.subtotal);
   discountValue.textContent = `${averageDiscount}%`;
   grandTotal.textContent = formatMoney(totals.total);
+  const cartMinHint = document.querySelector("#cartMinHint");
+  const checkoutButton = document.querySelector("#requestForm button[type='submit']");
+  const cartReady = totals.total >= MIN_CART_TOTAL;
+  if (cartMinHint) {
+    cartMinHint.textContent = cartReady
+      ? "Минимальная сумма набрана, корзину можно отправлять."
+      : `До минимальной суммы осталось ${formatMoney(Math.max(MIN_CART_TOTAL - totals.total, 0))}.`;
+  }
+  if (checkoutButton) {
+    checkoutButton.disabled = !cartReady;
+    checkoutButton.innerHTML = cartReady
+      ? '<i data-lucide="send"></i> Отправить корзину'
+      : `<i data-lucide="lock"></i> Минимум ${formatMoney(MIN_CART_TOTAL)}`;
+  }
 
   const nextTier = quantityTiers.find((tier) => totals.qty < tier.qty);
   const maxTier = quantityTiers[quantityTiers.length - 1];
   discountProgress.style.width = `${Math.min((totals.qty / maxTier.qty) * 100, 100)}%`;
   discountHint.textContent = nextTier
-    ? `До скидки ${nextTier.discount}% осталось ${nextTier.qty - totals.qty} шт. в заявке.`
+    ? `До скидки ${nextTier.discount}% осталось ${nextTier.qty - totals.qty} шт. в корзине.`
     : "Максимальная скидка по количеству применена.";
 
   saveCart();
@@ -733,7 +755,9 @@ function productModalHtml(product) {
               <p class="product-detail__note">${product.detailDescription}</p>
               <div class="detail-tags" aria-label="Быстрые фильтры">
                 <button type="button" class="detail-tag" data-open-category="${product.category}">${product.category}</button>
-                <button type="button" class="detail-tag" data-open-theme="${product.theme}">${product.theme}</button>
+                ${product.tags
+                  .map((tag) => `<button type="button" class="detail-tag" data-open-theme="${tag}">${tag}</button>`)
+                  .join("")}
               </div>
             </div>
           </div>
@@ -762,7 +786,7 @@ function productModalHtml(product) {
             </div>
             <button class="primary-button" type="button" data-add-variant="${product.id}">
               <i data-lucide="shopping-cart"></i>
-              Добавить выбранный вариант
+              Добавить в корзину
             </button>
           </div>
         </div>
@@ -794,7 +818,7 @@ function openProduct(productId) {
     type: product.types[0],
     size: product.sizes.includes("40x40") ? "40x40" : product.sizes[0],
     material: product.materials[0],
-    qty: 30,
+    qty: 1,
   };
   document.body.insertAdjacentHTML("beforeend", productModalHtml(product));
   if (window.lucide) window.lucide.createIcons();
@@ -918,6 +942,7 @@ function adminModalHtml() {
           <input name="baseSku" type="text" placeholder="Начальный артикул" value="SB-PIL-NEW" required />
           <input name="category" type="text" placeholder="Категория" value="Подушки и наволочки" required />
           <input name="theme" type="text" placeholder="Тематика" value="Новая тематика" required />
+          <input name="tags" type="text" placeholder="Теги через запятую" value="Новая тематика" />
           <input name="types" type="text" placeholder="Типы через запятую" value="${TYPE_OPTIONS.join(", ")}" required />
           <input name="sizes" type="text" placeholder="Размеры через запятую" value="${SIZE_OPTIONS.join(", ")}" required />
           <input name="materials" type="text" placeholder="Материалы через запятую" value="${MATERIAL_OPTIONS.join(", ")}" required />
@@ -938,7 +963,7 @@ function adminModalHtml() {
             Импорт Excel/CSV
             <input id="excelInput" type="file" accept=".xlsx,.xls,.csv" />
           </label>
-          <p>Колонки: name, baseSku, category, theme, types, sizes, materials, basePrice, image, stock.</p>
+          <p>Колонки: name, baseSku, category, theme, tags, types, sizes, materials, basePrice, image, stock.</p>
         </div>
         <div class="admin-preview" id="adminPreview"></div>
       </section>
@@ -968,6 +993,7 @@ function productFromForm(form) {
     name: data.name.trim(),
     category: data.category.trim(),
     theme: data.theme.trim(),
+    tags: splitList(data.tags || data.theme),
     types: splitList(data.types),
     sizes: splitList(data.sizes),
     materials: splitList(data.materials),
@@ -1016,8 +1042,8 @@ function saveGeneratedProducts() {
 
 function downloadTemplate() {
   const csv = [
-    "name,baseSku,category,theme,types,sizes,materials,basePrice,image,stock",
-    `"Коллекция Sample","SB-PIL-SMP","Подушки и наволочки","Аниме","Подушка, Наволочка","30x30, 35x35, 40x40, 45x45, 50x50","Велюр, Габардин","220","","ready"`,
+    "name,baseSku,category,theme,tags,types,sizes,materials,basePrice,image,stock",
+    `"Коллекция Sample","SB-PIL-SMP","Подушки и наволочки","Аниме","Аниме, Подарки","Подушка, Наволочка","30x30, 35x35, 40x40, 45x45, 50x50","Велюр, Габардин","220","","ready"`,
   ].join("\n");
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -1041,6 +1067,7 @@ async function importExcel(file) {
         name: String(row.name).trim(),
         category: String(row.category || "Подушки и наволочки").trim(),
         theme: String(row.theme || "Без тематики").trim(),
+        tags: splitList(row.tags || row.theme || "Без тематики"),
         types: splitList(row.types || TYPE_OPTIONS.join(",")),
         sizes: splitList(row.sizes || SIZE_OPTIONS.join(",")),
         materials: splitList(row.materials || MATERIAL_OPTIONS.join(",")),
@@ -1062,12 +1089,16 @@ function closeModal() {
 
 function submitOrder(form) {
   if (state.cart.size === 0) {
-    showToast("Сначала добавьте товары в заявку.");
+    showToast("Сначала добавьте товары в корзину.");
     return;
   }
   const users = getUsers();
   const user = users[state.currentUser];
   const totals = getCartTotals();
+  if (totals.total < MIN_CART_TOTAL) {
+    showToast(`Минимальная сумма корзины ${formatMoney(MIN_CART_TOTAL)}. Осталось ${formatMoney(MIN_CART_TOTAL - totals.total)}.`);
+    return;
+  }
   if (user) {
     user.orders.unshift({
       id: `SO-${Date.now().toString().slice(-6)}`,
@@ -1080,7 +1111,7 @@ function submitOrder(form) {
   form.reset();
   state.cart.clear();
   renderCart();
-  showToast(user ? "Заявка сохранена в истории заказов." : "Заявка отправлена. Зарегистрируйтесь, чтобы сохранять историю.");
+  showToast(user ? "Корзина сохранена в истории заказов." : "Корзина отправлена. Зарегистрируйтесь, чтобы сохранять историю.");
 }
 
 function boot() {
