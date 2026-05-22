@@ -83,17 +83,47 @@ const catalogCategories = [
   },
 ];
 
-const catalogThemes = [
+const catalogCollections = [
   { name: "Аниме", icon: "sparkles" },
-  { name: "Военные", icon: "shield" },
-  { name: "Новый год", icon: "snowflake" },
-  { name: "14 февраля", icon: "heart" },
-  { name: "Игры", icon: "gamepad-2" },
+  { name: "Мемы", icon: "message-circle" },
   { name: "Животные", icon: "paw-print" },
-  { name: "Космос", icon: "orbit" },
   { name: "Паттерны", icon: "palette" },
+  { name: "Игры", icon: "gamepad-2" },
+  { name: "Космос", icon: "orbit" },
+  { name: "Военные", icon: "shield" },
   { name: "Бренд", icon: "badge-check" },
   { name: "Подарки", icon: "gift" },
+  { name: "Именные", icon: "type" },
+];
+
+const catalogHolidays = [
+  { name: "Новый год", icon: "snowflake" },
+  { name: "14 февраля", icon: "heart" },
+  { name: "8 марта", icon: "flower-2" },
+  { name: "23 февраля", icon: "medal" },
+  { name: "День учителя", icon: "graduation-cap" },
+  { name: "День рождения", icon: "cake" },
+];
+
+const actualItems = [
+  {
+    title: "Новогодний опт",
+    label: "Новый год",
+    type: "holiday",
+    image: "assets/hero-products-2.png",
+  },
+  {
+    title: "Аниме на подушках",
+    label: "Аниме",
+    type: "collection",
+    image: "assets/hero-products-1.png",
+  },
+  {
+    title: "Подарки к 8 марта",
+    label: "8 марта",
+    type: "holiday",
+    image: "assets/hero-products-3.png",
+  },
 ];
 
 const productDrafts = [
@@ -103,6 +133,8 @@ const productDrafts = [
     name: "Подушка Aurora Cats",
     category: "Подушки",
     theme: "Аниме",
+    collections: ["Аниме", "Животные", "Паттерны", "Подарки", "Именные"],
+    holidays: ["Новый год"],
     tags: ["Аниме", "Подарки", "Животные", "Паттерны", "Новый год"],
     stock: "ready",
     badge: "Хит опта",
@@ -120,11 +152,13 @@ const productDrafts = [
     name: "Наволочка Pixel Quest",
     category: "Наволочки",
     theme: "Игры",
+    collections: ["Игры", "Аниме", "Мемы", "Паттерны", "Бренд"],
+    holidays: ["День рождения"],
     tags: ["Игры", "Аниме", "Подарки", "Паттерны", "Бренд"],
     stock: "ready",
     badge: "Маркетплейсы",
     image: "assets/hero-products-3.png",
-    description: "Игровая тематика для селлеров: размеры от 30 до 50 см, два материала на выбор.",
+    description: "Игровая подборка для селлеров: размеры от 30 до 50 см, два материала на выбор.",
     types: TYPE_OPTIONS,
     sizes: SIZE_OPTIONS,
     materials: MATERIAL_OPTIONS,
@@ -137,6 +171,8 @@ const productDrafts = [
     name: "Плед Winter Gift",
     category: "Пледы",
     theme: "Новый год",
+    collections: ["Подарки", "Паттерны", "Животные", "Бренд", "Именные"],
+    holidays: ["Новый год", "День рождения"],
     tags: ["Новый год", "Подарки", "Паттерны", "Животные", "Бренд"],
     stock: "made",
     badge: "Под заказ",
@@ -154,6 +190,8 @@ const productDrafts = [
     name: "Чехол Brand Line",
     category: "Чехлы на чемодан",
     theme: "Бренд",
+    collections: ["Бренд", "Паттерны", "Подарки", "Космос", "Игры"],
+    holidays: ["23 февраля", "День рождения"],
     tags: ["Бренд", "Паттерны", "Подарки", "Космос", "Игры"],
     stock: "made",
     badge: "Ваш принт",
@@ -171,6 +209,8 @@ const productDrafts = [
     name: "Мешок Army Supply",
     category: "Мешки для обуви",
     theme: "Военные",
+    collections: ["Военные", "Паттерны", "Бренд", "Подарки", "Игры"],
+    holidays: ["23 февраля"],
     tags: ["Военные", "Паттерны", "Бренд", "Подарки", "Игры"],
     stock: "ready",
     badge: "Новая серия",
@@ -188,6 +228,8 @@ const productDrafts = [
     name: "Чехол Love Cooler",
     category: "Чехлы на кулер",
     theme: "14 февраля",
+    collections: ["Подарки", "Бренд", "Паттерны", "Космос", "Именные"],
+    holidays: ["14 февраля", "8 марта"],
     tags: ["14 февраля", "Подарки", "Бренд", "Паттерны", "Космос"],
     stock: "made",
     badge: "Сезон",
@@ -204,7 +246,7 @@ const productDrafts = [
 const STORAGE = {
   user: "sobag.currentUser",
   users: "sobag.users",
-  products: "sobag.products.v6",
+  products: "sobag.products.v7",
   guestCart: "sobag.cart.guest",
 };
 
@@ -213,13 +255,15 @@ let products = loadProducts();
 const state = {
   filters: {
     category: new Set(),
-    theme: new Set(),
+    collection: new Set(),
+    holiday: new Set(),
     size: new Set(),
     material: new Set(),
   },
   filterSearch: {},
   selectedCategory: "",
-  selectedTheme: "",
+  selectedCollection: "",
+  selectedHoliday: "",
   search: "",
   sort: "popular",
   cart: new Map(),
@@ -239,11 +283,14 @@ const productGrid = document.querySelector("#productGrid");
 const productCount = document.querySelector("#productCount");
 const filterGroups = document.querySelector("#filterGroups");
 const categoryTiles = document.querySelector("#categoryTiles");
-const themeTiles = document.querySelector("#themeTiles");
+const actualTiles = document.querySelector("#actualTiles");
+const collectionTiles = document.querySelector("#collectionTiles");
+const holidayTiles = document.querySelector("#holidayTiles");
 const catalogHome = document.querySelector("#catalogHome");
 const catalogListing = document.querySelector("#catalogListing");
 const catalogTools = document.querySelector("#catalogTools");
 const catalogTitle = document.querySelector("#catalogTitle");
+const filterToggle = document.querySelector("#filterToggle");
 const searchInput = document.querySelector("#searchInput");
 const sortSelect = document.querySelector("#sortSelect");
 const cartItems = document.querySelector("#cartItems");
@@ -284,13 +331,31 @@ function optionCode(value) {
     .slice(0, 6);
 }
 
-function normalizeTags(product) {
-  const rawTags = Array.isArray(product.tags) ? product.tags : splitList(product.tags);
-  return [...new Set([product.theme, ...rawTags].filter(Boolean).map((tag) => String(tag).trim()).filter(Boolean))];
+function normalizeListField(product, key, fallback = []) {
+  const value = product[key];
+  const raw = Array.isArray(value) ? value : splitList(value);
+  const backup = Array.isArray(fallback) ? fallback : splitList(fallback);
+  return [...new Set((raw.length ? raw : backup).filter(Boolean).map((item) => String(item).trim()).filter(Boolean))];
 }
 
-function productHasTheme(product, theme) {
-  return product.tags.includes(theme);
+function normalizeTags(product) {
+  const rawTags = Array.isArray(product.tags) ? product.tags : splitList(product.tags);
+  return [
+    ...new Set(
+      [product.theme, ...normalizeListField(product, "collections"), ...normalizeListField(product, "holidays"), ...rawTags]
+        .filter(Boolean)
+        .map((tag) => String(tag).trim())
+        .filter(Boolean)
+    ),
+  ];
+}
+
+function productHasCollection(product, collection) {
+  return product.collections.includes(collection);
+}
+
+function productHasHoliday(product, holiday) {
+  return product.holidays.includes(holiday);
 }
 
 function normalizeProduct(product) {
@@ -299,6 +364,8 @@ function normalizeProduct(product) {
     types: product.types?.length ? product.types : TYPE_OPTIONS,
     sizes: product.sizes?.length ? product.sizes : SIZE_OPTIONS,
     materials: product.materials?.length ? product.materials : MATERIAL_OPTIONS,
+    collections: normalizeListField(product, "collections", product.theme ? [product.theme] : []),
+    holidays: normalizeListField(product, "holidays"),
     tags: normalizeTags(product),
     gallery: [...new Set([product.image, ...(product.gallery || []), "assets/hero-products-1.png", "assets/hero-products-2.png", "assets/hero-products-3.png"])].filter(Boolean),
     detailDescription:
@@ -407,9 +474,11 @@ function stockLabel(stock) {
 function productsForFilterOptions(key) {
   return products.filter((product) => {
     if (state.selectedCategory && product.category !== state.selectedCategory) return false;
-    if (state.selectedTheme && !productHasTheme(product, state.selectedTheme)) return false;
+    if (state.selectedCollection && !productHasCollection(product, state.selectedCollection)) return false;
+    if (state.selectedHoliday && !productHasHoliday(product, state.selectedHoliday)) return false;
     if (key !== "category" && state.filters.category.size && !state.filters.category.has(product.category)) return false;
-    if (key !== "theme" && state.filters.theme.size && ![...state.filters.theme].some((theme) => productHasTheme(product, theme))) return false;
+    if (key !== "collection" && state.filters.collection.size && ![...state.filters.collection].some((collection) => productHasCollection(product, collection))) return false;
+    if (key !== "holiday" && state.filters.holiday.size && ![...state.filters.holiday].some((holiday) => productHasHoliday(product, holiday))) return false;
 
     if (key === "size" || key === "material") {
       return product.variants.some((variant) => {
@@ -439,16 +508,19 @@ function uniqueOptions(key) {
       ),
     ];
   }
-  if (key === "theme") return [...new Set(sourceProducts.flatMap((product) => product.tags))];
+  if (key === "collection") return [...new Set(sourceProducts.flatMap((product) => product.collections))];
+  if (key === "holiday") return [...new Set(sourceProducts.flatMap((product) => product.holidays))];
   return [...new Set(sourceProducts.map((product) => product[key]))];
 }
 
 function productMatchesFilters(product) {
   const filters = state.filters;
   if (state.selectedCategory && product.category !== state.selectedCategory) return false;
-  if (state.selectedTheme && !productHasTheme(product, state.selectedTheme)) return false;
+  if (state.selectedCollection && !productHasCollection(product, state.selectedCollection)) return false;
+  if (state.selectedHoliday && !productHasHoliday(product, state.selectedHoliday)) return false;
   if (filters.category.size && !filters.category.has(product.category)) return false;
-  if (filters.theme.size && ![...filters.theme].some((theme) => productHasTheme(product, theme))) return false;
+  if (filters.collection.size && ![...filters.collection].some((collection) => productHasCollection(product, collection))) return false;
+  if (filters.holiday.size && ![...filters.holiday].some((holiday) => productHasHoliday(product, holiday))) return false;
 
   const variantFilters = ["size", "material"];
   return product.variants.some((variant) =>
@@ -469,7 +541,9 @@ function searchScore(product) {
 
   const name = product.name.toLowerCase();
   if (name.includes(query)) return 3000;
-  const text = [product.theme, product.tags.join(" "), product.category, product.description].join(" ").toLowerCase();
+  const text = [product.collections.join(" "), product.holidays.join(" "), product.tags.join(" "), product.category, product.description]
+    .join(" ")
+    .toLowerCase();
   if (text.includes(query)) return 1000;
   return 0;
 }
@@ -514,12 +588,35 @@ function renderCatalogHome() {
     )
     .join("");
 
-  themeTiles.innerHTML = catalogThemes
+  actualTiles.innerHTML = actualItems
     .map(
-      (theme) => `
-        <button class="theme-tile" type="button" data-open-theme="${theme.name}">
-          <i data-lucide="${theme.icon}"></i>
-          <span>${theme.name}</span>
+      (item, index) => `
+        <button class="actual-tile actual-tile--${index + 1}" type="button" data-open-${item.type}="${item.label}">
+          <img src="${item.image}" alt="${item.title}" loading="lazy" />
+          <span>${item.title}</span>
+          <b>${item.label}</b>
+        </button>
+      `
+    )
+    .join("");
+
+  collectionTiles.innerHTML = catalogCollections
+    .map(
+      (collection) => `
+        <button class="theme-tile" type="button" data-open-collection="${collection.name}">
+          <i data-lucide="${collection.icon}"></i>
+          <span>${collection.name}</span>
+        </button>
+      `
+    )
+    .join("");
+
+  holidayTiles.innerHTML = catalogHolidays
+    .map(
+      (holiday) => `
+        <button class="theme-tile" type="button" data-open-holiday="${holiday.name}">
+          <i data-lucide="${holiday.icon}"></i>
+          <span>${holiday.name}</span>
         </button>
       `
     )
@@ -529,26 +626,40 @@ function renderCatalogHome() {
 }
 
 function renderCatalogShell() {
-  const isHome = !state.selectedCategory && !state.selectedTheme && !state.search.trim();
+  const isHome = !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
   catalogHome.classList.toggle("is-hidden", !isHome);
   catalogListing.classList.toggle("is-hidden", isHome);
   catalogTools.classList.toggle("is-hidden", isHome);
+  document.body.classList.remove("filters-open");
+  updateFilterToggle();
 
   if (isHome) {
     catalogTitle.textContent = "Каталог продукции";
+    filterToggle?.classList.add("is-hidden");
     return;
   }
 
   const titleParts = [];
   if (state.selectedCategory) titleParts.push(state.selectedCategory);
-  if (state.selectedTheme) titleParts.push(state.selectedTheme);
+  if (state.selectedCollection) titleParts.push(state.selectedCollection);
+  if (state.selectedHoliday) titleParts.push(state.selectedHoliday);
   if (!titleParts.length && state.search.trim()) titleParts.push("Результаты поиска");
   catalogTitle.textContent = titleParts.join(" · ");
+  filterToggle?.classList.remove("is-hidden");
+  updateFilterToggle();
+}
+
+function updateFilterToggle() {
+  if (!filterToggle) return;
+  const open = document.body.classList.contains("filters-open");
+  filterToggle.innerHTML = `<i data-lucide="${open ? "x" : "sliders-horizontal"}"></i> ${open ? "Закрыть фильтры" : "Открыть фильтры"}`;
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function openCatalogCategory(category) {
   state.selectedCategory = category;
-  state.selectedTheme = "";
+  state.selectedCollection = "";
+  state.selectedHoliday = "";
   state.filters.category.clear();
   renderCatalogShell();
   renderFilters();
@@ -556,10 +667,22 @@ function openCatalogCategory(category) {
   document.querySelector("#catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function openCatalogTheme(theme) {
+function openCatalogCollection(collection) {
   state.selectedCategory = "";
-  state.selectedTheme = theme;
-  state.filters.theme.clear();
+  state.selectedCollection = collection;
+  state.selectedHoliday = "";
+  state.filters.collection.clear();
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
+  document.querySelector("#catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function openCatalogHoliday(holiday) {
+  state.selectedCategory = "";
+  state.selectedCollection = "";
+  state.selectedHoliday = holiday;
+  state.filters.holiday.clear();
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -568,7 +691,8 @@ function openCatalogTheme(theme) {
 
 function backToCatalogHome() {
   state.selectedCategory = "";
-  state.selectedTheme = "";
+  state.selectedCollection = "";
+  state.selectedHoliday = "";
   state.search = "";
   searchInput.value = "";
   Object.values(state.filters).forEach((bucket) => bucket.clear());
@@ -580,7 +704,8 @@ function backToCatalogHome() {
 function renderFilters() {
   const groups = [];
   if (!state.selectedCategory) groups.push({ key: "category", title: "Категории", label: (value) => value });
-  if (!state.selectedTheme) groups.push({ key: "theme", title: "Тематика", label: (value) => value });
+  if (!state.selectedCollection) groups.push({ key: "collection", title: "Подборки", label: (value) => value });
+  if (!state.selectedHoliday) groups.push({ key: "holiday", title: "Праздники", label: (value) => value });
   groups.push(
     { key: "size", title: "Размер", label: (value) => value },
     { key: "material", title: "Материал", label: (value) => value }
@@ -755,8 +880,11 @@ function productModalHtml(product) {
               <p class="product-detail__note">${product.detailDescription}</p>
               <div class="detail-tags" aria-label="Быстрые фильтры">
                 <button type="button" class="detail-tag" data-open-category="${product.category}">${product.category}</button>
-                ${product.tags
-                  .map((tag) => `<button type="button" class="detail-tag" data-open-theme="${tag}">${tag}</button>`)
+                ${product.collections
+                  .map((tag) => `<button type="button" class="detail-tag" data-open-collection="${tag}">${tag}</button>`)
+                  .join("")}
+                ${product.holidays
+                  .map((tag) => `<button type="button" class="detail-tag" data-open-holiday="${tag}">${tag}</button>`)
                   .join("")}
               </div>
             </div>
@@ -941,8 +1069,10 @@ function adminModalHtml() {
           <input name="name" type="text" placeholder="Название коллекции" value="Коллекция New Print" required />
           <input name="baseSku" type="text" placeholder="Начальный артикул" value="SB-PIL-NEW" required />
           <input name="category" type="text" placeholder="Категория" value="Подушки и наволочки" required />
-          <input name="theme" type="text" placeholder="Тематика" value="Новая тематика" required />
-          <input name="tags" type="text" placeholder="Теги через запятую" value="Новая тематика" />
+          <input name="theme" type="text" placeholder="Основная подборка" value="Новая подборка" required />
+          <input name="collections" type="text" placeholder="Подборки через запятую" value="Новая подборка" />
+          <input name="holidays" type="text" placeholder="Праздники через запятую" value="" />
+          <input name="tags" type="text" placeholder="Дополнительные теги через запятую" value="Новая подборка" />
           <input name="types" type="text" placeholder="Типы через запятую" value="${TYPE_OPTIONS.join(", ")}" required />
           <input name="sizes" type="text" placeholder="Размеры через запятую" value="${SIZE_OPTIONS.join(", ")}" required />
           <input name="materials" type="text" placeholder="Материалы через запятую" value="${MATERIAL_OPTIONS.join(", ")}" required />
@@ -963,7 +1093,7 @@ function adminModalHtml() {
             Импорт Excel/CSV
             <input id="excelInput" type="file" accept=".xlsx,.xls,.csv" />
           </label>
-          <p>Колонки: name, baseSku, category, theme, tags, types, sizes, materials, basePrice, image, stock.</p>
+          <p>Колонки: name, baseSku, category, theme, collections, holidays, tags, types, sizes, materials, basePrice, image, stock.</p>
         </div>
         <div class="admin-preview" id="adminPreview"></div>
       </section>
@@ -993,6 +1123,8 @@ function productFromForm(form) {
     name: data.name.trim(),
     category: data.category.trim(),
     theme: data.theme.trim(),
+    collections: splitList(data.collections || data.theme),
+    holidays: splitList(data.holidays || ""),
     tags: splitList(data.tags || data.theme),
     types: splitList(data.types),
     sizes: splitList(data.sizes),
@@ -1042,8 +1174,8 @@ function saveGeneratedProducts() {
 
 function downloadTemplate() {
   const csv = [
-    "name,baseSku,category,theme,tags,types,sizes,materials,basePrice,image,stock",
-    `"Коллекция Sample","SB-PIL-SMP","Подушки и наволочки","Аниме","Аниме, Подарки","Подушка, Наволочка","30x30, 35x35, 40x40, 45x45, 50x50","Велюр, Габардин","220","","ready"`,
+    "name,baseSku,category,theme,collections,holidays,tags,types,sizes,materials,basePrice,image,stock",
+    `"Коллекция Sample","SB-PIL-SMP","Подушки и наволочки","Аниме","Аниме, Подарки","Новый год","Аниме, Подарки","Подушка, Наволочка","30x30, 35x35, 40x40, 45x45, 50x50","Велюр, Габардин","220","","ready"`,
   ].join("\n");
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -1066,8 +1198,10 @@ async function importExcel(file) {
         baseSku: String(row.baseSku).trim().toUpperCase(),
         name: String(row.name).trim(),
         category: String(row.category || "Подушки и наволочки").trim(),
-        theme: String(row.theme || "Без тематики").trim(),
-        tags: splitList(row.tags || row.theme || "Без тематики"),
+        theme: String(row.theme || "Без подборки").trim(),
+        collections: splitList(row.collections || row.theme || "Без подборки"),
+        holidays: splitList(row.holidays || ""),
+        tags: splitList(row.tags || row.theme || "Без подборки"),
         types: splitList(row.types || TYPE_OPTIONS.join(",")),
         sizes: splitList(row.sizes || SIZE_OPTIONS.join(",")),
         materials: splitList(row.materials || MATERIAL_OPTIONS.join(",")),
@@ -1139,9 +1273,19 @@ function boot() {
       openCatalogCategory(button.dataset.openCategory);
       return;
     }
-    if (button.dataset.openTheme) {
+    if (button.dataset.openCollection) {
       closeModal();
-      openCatalogTheme(button.dataset.openTheme);
+      openCatalogCollection(button.dataset.openCollection);
+      return;
+    }
+    if (button.dataset.openHoliday) {
+      closeModal();
+      openCatalogHoliday(button.dataset.openHoliday);
+      return;
+    }
+    if (button.dataset.toggleFilters !== undefined) {
+      document.body.classList.toggle("filters-open");
+      updateFilterToggle();
       return;
     }
     if (button.dataset.backCatalog !== undefined) {

@@ -2645,7 +2645,7 @@ main {
 @media (max-width: 560px) {
   .category-tiles,
   .theme-tiles {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .product-grid {
@@ -2673,5 +2673,267 @@ main {
 
   .detail-facts {
     grid-template-columns: 1fr;
+  }
+}
+
+.hero__actual {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: max(24px, calc((100vw - 1440px) / 2 + 24px));
+  display: grid;
+  gap: 4px;
+  width: min(210px, calc(100vw - 48px));
+  color: var(--canvas);
+}
+
+.hero__actual strong {
+  width: max-content;
+  padding: 5px 10px;
+  color: var(--on-dark);
+  background: var(--canvas);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.hero__actual-card {
+  position: relative;
+  display: block;
+  grid-area: 2 / 1;
+  min-height: 34px;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--canvas);
+  background: var(--on-dark);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 0;
+}
+
+.hero__actual-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.72;
+}
+
+.hero__actual-card span {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  z-index: 1;
+  max-width: calc(100% - 20px);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.hero__actual-card--one {
+  animation: actualHero 12s infinite;
+}
+
+.hero__actual-card--two {
+  animation: actualHero 12s 4s infinite;
+}
+
+.hero__actual-card--three {
+  animation: actualHero 12s 8s infinite;
+}
+
+@keyframes actualHero {
+  0%,
+  29% {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  33%,
+  96% {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  100% {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.actual-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.actual-tile {
+  position: relative;
+  min-height: 190px;
+  padding: 18px;
+  overflow: hidden;
+  color: var(--canvas);
+  text-align: left;
+  background: var(--on-dark);
+  border: 0;
+  border-radius: 0;
+}
+
+.actual-tile img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.74;
+  transition: transform 180ms ease;
+}
+
+.actual-tile:hover img {
+  transform: scale(1.035);
+}
+
+.actual-tile span,
+.actual-tile b {
+  position: relative;
+  z-index: 1;
+  display: block;
+  text-align: left;
+}
+
+.actual-tile span {
+  max-width: 280px;
+  margin-top: 92px;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.actual-tile b {
+  width: max-content;
+  margin-top: 10px;
+  padding: 7px 12px;
+  color: var(--on-dark);
+  background: var(--canvas);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.filter-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  color: var(--canvas);
+  background: var(--on-dark);
+  border: 0;
+  border-radius: 0;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .hero__actual {
+    top: 0;
+    left: 16px;
+    width: min(190px, calc(100vw - 32px));
+  }
+
+  .hero__actual-card {
+    min-height: 34px;
+  }
+
+  .hero__actual-card span {
+    font-size: 13px;
+  }
+
+  .actual-tiles {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-toggle {
+    display: inline-flex;
+    width: 100%;
+  }
+
+  .catalog-layout {
+    gap: 12px;
+  }
+
+  .catalog-layout .filters {
+    display: none;
+    max-height: 70vh;
+    padding: 16px;
+    overflow-y: auto;
+    border: 1px solid var(--hairline-strong);
+  }
+
+  body.filters-open .catalog-layout .filters {
+    display: block;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding-top: 128px;
+  }
+
+  .category-tiles,
+  .theme-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .category-tile {
+    min-height: 150px;
+    padding: 14px;
+  }
+
+  .category-tile__top {
+    margin-bottom: 12px;
+  }
+
+  .category-tile__schema {
+    display: none;
+  }
+
+  .category-tile strong {
+    font-size: 16px;
+  }
+
+  .category-tile small {
+    min-height: 0;
+    font-size: 12px;
+  }
+
+  .category-tile b {
+    margin-top: 12px;
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+
+  .theme-tile {
+    min-height: 48px;
+    padding: 0 12px;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .theme-tile svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .actual-tile {
+    min-height: 150px;
+  }
+
+  .actual-tile span {
+    margin-top: 66px;
+    font-size: 22px;
   }
 }

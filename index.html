@@ -65,6 +65,21 @@
           <img class="hero__image hero__image--three" src="assets/production-hero-1.png" alt="" />
         </div>
         <div class="hero__shade"></div>
+        <div class="hero__actual" aria-label="Актуально">
+          <strong>Актуально</strong>
+          <button class="hero__actual-card hero__actual-card--one" type="button" data-open-holiday="Новый год">
+            <img src="assets/hero-products-2.png" alt="Новогодние товары" />
+            <span>Новый год</span>
+          </button>
+          <button class="hero__actual-card hero__actual-card--two" type="button" data-open-collection="Аниме">
+            <img src="assets/hero-products-1.png" alt="Аниме подборка" />
+            <span>Аниме</span>
+          </button>
+          <button class="hero__actual-card hero__actual-card--three" type="button" data-open-holiday="8 марта">
+            <img src="assets/hero-products-3.png" alt="Товары к 8 марта" />
+            <span>8 марта</span>
+          </button>
+        </div>
         <div class="container hero__grid">
           <div class="hero__content">
             <div class="accent-stripe" aria-hidden="true"></div>
@@ -148,13 +163,26 @@
           <div id="categoryTiles" class="category-tiles"></div>
 
           <div class="catalog-home__head catalog-home__head--themes">
-            <h3>Тематики</h3>
-            <span>Быстрые подборки по принтам и сезонам</span>
+            <h3>Актуально</h3>
           </div>
-          <div id="themeTiles" class="theme-tiles"></div>
+          <div id="actualTiles" class="actual-tiles"></div>
+
+          <div class="catalog-home__head catalog-home__head--themes">
+            <h3>Подборки</h3>
+          </div>
+          <div id="collectionTiles" class="theme-tiles"></div>
+
+          <div class="catalog-home__head catalog-home__head--themes">
+            <h3>Праздники</h3>
+          </div>
+          <div id="holidayTiles" class="theme-tiles"></div>
         </div>
 
         <div class="container catalog-layout" id="catalogListing">
+          <button class="filter-toggle is-hidden" id="filterToggle" type="button" data-toggle-filters>
+            <i data-lucide="sliders-horizontal"></i>
+            Открыть фильтры
+          </button>
           <aside class="filters" aria-label="Фильтры каталога">
             <div id="filterGroups"></div>
             <div class="filters__block">
@@ -221,7 +249,6 @@
               <div class="accent-stripe" aria-hidden="true"></div>
               <h2>Скидки и условия</h2>
             </div>
-            <p>Можно заменить цифры на ваши реальные пороги после утверждения коммерческой политики.</p>
           </div>
           <div class="tiers">
             <article><span>от 30 000 ₽</span><strong>3%</strong><small>стартовая оптовая скидка</small></article>
