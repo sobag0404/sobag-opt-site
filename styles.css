@@ -596,12 +596,41 @@ h3 {
 }
 
 .product-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
   background: var(--surface-card);
   border: 1px solid var(--hairline);
+}
+
+.product-card__open {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.product-card__image,
+.product-card__body {
+  position: relative;
+  z-index: 2;
+}
+
+.product-card__body {
+  pointer-events: none;
+}
+
+.product-card__body button,
+.product-card__body input,
+.product-card__body select {
+  pointer-events: auto;
 }
 
 .product-card__image {
@@ -683,6 +712,22 @@ h3 {
   gap: 16px;
   align-items: center;
   margin-top: auto;
+}
+
+.variant-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.variant-summary span {
+  color: var(--body);
+  border-bottom: 1px solid var(--hairline);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .price strong {
@@ -958,6 +1003,288 @@ h3 {
   border: 1px solid var(--hairline);
 }
 
+.filter-group:first-child {
+  margin-top: 0;
+}
+
+.filter-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-bottom: 10px;
+  padding: 0 10px;
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+}
+
+.filter-search input {
+  width: 100%;
+  min-width: 0;
+  color: var(--on-dark);
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.filter-options {
+  display: grid;
+  gap: 2px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.74);
+  backdrop-filter: blur(10px);
+}
+
+.modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(1120px, 100%);
+  max-height: min(900px, calc(100vh - 48px));
+  overflow: auto;
+  color: var(--on-dark);
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+}
+
+.modal__close {
+  position: sticky;
+  top: 0;
+  left: 100%;
+  z-index: 3;
+  width: 48px;
+  height: 48px;
+  margin-left: auto;
+  color: var(--on-dark);
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+}
+
+.product-detail {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1fr);
+}
+
+.product-detail__media {
+  min-height: 100%;
+  background: var(--surface-soft);
+  border-right: 1px solid var(--hairline);
+}
+
+.product-detail__media img {
+  width: 100%;
+  height: 100%;
+  min-height: 620px;
+  object-fit: cover;
+}
+
+.product-detail__content,
+.account-panel,
+.admin-panel {
+  padding: 32px;
+}
+
+.product-detail__content > p:not(.eyebrow),
+.admin-panel > div > p,
+.form-note,
+.excel-import p,
+.orders-list p {
+  color: var(--body);
+  line-height: 1.55;
+}
+
+.sku-line,
+.detail-total,
+.account-summary {
+  display: grid;
+  gap: 6px;
+  margin: 22px 0;
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+
+.sku-line span,
+.detail-total span,
+.detail-price span,
+.account-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.sku-line strong,
+.detail-total strong,
+.detail-price strong,
+.account-summary strong {
+  color: var(--on-dark);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.variant-group {
+  margin: 20px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.variant-group legend {
+  margin-bottom: 10px;
+  color: var(--body);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.variant-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.variant-option {
+  min-height: 44px;
+  padding: 0 14px;
+  color: var(--body);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.variant-option.is-active {
+  color: var(--canvas);
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.detail-qty {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr);
+  gap: 16px;
+  align-items: end;
+  margin: 24px 0 16px;
+}
+
+.detail-qty label,
+.excel-import label {
+  display: grid;
+  gap: 8px;
+  color: var(--body);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.detail-qty input,
+.auth-form input,
+.admin-form input,
+.admin-form select,
+.excel-import input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  color: var(--on-dark);
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  outline: 0;
+}
+
+.detail-price {
+  display: grid;
+  gap: 4px;
+}
+
+.detail-price small {
+  color: var(--amber);
+}
+
+.account-panel,
+.admin-panel {
+  width: min(900px, 100%);
+}
+
+.auth-form,
+.admin-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.auth-actions,
+.account-actions,
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.orders-list,
+.admin-preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.orders-list article,
+.admin-preview article,
+.excel-import {
+  padding: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+
+.orders-list article strong,
+.admin-preview article strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--on-dark);
+  font-weight: 900;
+}
+
+.orders-list article span,
+.admin-preview article span,
+.admin-preview article small {
+  display: block;
+  color: var(--body);
+  line-height: 1.45;
+}
+
+.admin-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-form .admin-actions {
+  grid-column: 1 / -1;
+}
+
+.excel-import {
+  margin-top: 18px;
+}
+
 .footer {
   padding: 64px 0;
   color: var(--body);
@@ -1088,6 +1415,24 @@ textarea:focus-visible {
   }
 
   .brief-form {
+    grid-template-columns: 1fr;
+  }
+
+  .product-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .product-detail__media {
+    border-right: 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .product-detail__media img {
+    min-height: 340px;
+  }
+
+  .admin-form,
+  .detail-qty {
     grid-template-columns: 1fr;
   }
 }

@@ -39,6 +39,9 @@
           <input id="searchInput" type="search" placeholder="Поиск: пледы, подушки, тираж, принт" />
         </label>
         <div class="header__actions">
+          <button class="icon-button" id="accountButton" type="button" title="Аккаунт">
+            <i data-lucide="user"></i>
+          </button>
           <button class="icon-button" type="button" title="Условия для бизнеса" data-scroll="#wholesale">
             <i data-lucide="briefcase-business"></i>
           </button>
@@ -141,17 +144,7 @@
 
         <div class="container catalog-layout">
           <aside class="filters" aria-label="Фильтры каталога">
-            <div class="filters__block">
-              <h3>Категории</h3>
-              <div id="categoryFilters" class="category-list"></div>
-            </div>
-            <div class="filters__block">
-              <h3>Тип принта</h3>
-              <label><input type="checkbox" value="Аниме" data-print /> Аниме</label>
-              <label><input type="checkbox" value="Игры" data-print /> Игры</label>
-              <label><input type="checkbox" value="Праздники" data-print /> Праздники</label>
-              <label><input type="checkbox" value="Бренд" data-print /> Бренд</label>
-            </div>
+            <div id="filterGroups"></div>
             <div class="filters__block">
               <h3>Сумма заявки</h3>
               <div class="discount-meter">
@@ -292,6 +285,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
