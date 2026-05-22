@@ -206,10 +206,8 @@ const state = {
   filters: {
     category: new Set(),
     theme: new Set(),
-    type: new Set(),
     size: new Set(),
     material: new Set(),
-    stock: new Set(),
   },
   filterSearch: {},
   selectedCategory: "",
@@ -384,12 +382,42 @@ function stockLabel(stock) {
   return stock === "ready" ? "В наличии" : "Под заказ";
 }
 
+function productsForFilterOptions(key) {
+  return products.filter((product) => {
+    if (state.selectedCategory && product.category !== state.selectedCategory) return false;
+    if (state.selectedTheme && product.theme !== state.selectedTheme) return false;
+    if (key !== "category" && state.filters.category.size && !state.filters.category.has(product.category)) return false;
+    if (key !== "theme" && state.filters.theme.size && !state.filters.theme.has(product.theme)) return false;
+
+    if (key === "size" || key === "material") {
+      return product.variants.some((variant) => {
+        if (key !== "size" && state.filters.size.size && !state.filters.size.has(variant.size)) return false;
+        if (key !== "material" && state.filters.material.size && !state.filters.material.has(variant.material)) return false;
+        return true;
+      });
+    }
+
+    return true;
+  });
+}
+
 function uniqueOptions(key) {
-  if (key === "type" || key === "size" || key === "material") {
-    return [...new Set(products.flatMap((product) => product.variants.map((variant) => variant[key])))];
+  const sourceProducts = productsForFilterOptions(key);
+  if (key === "size" || key === "material") {
+    const variants = sourceProducts.flatMap((product) => product.variants);
+    return [
+      ...new Set(
+        variants
+          .filter((variant) => {
+            if (key !== "size" && state.filters.size.size && !state.filters.size.has(variant.size)) return false;
+            if (key !== "material" && state.filters.material.size && !state.filters.material.has(variant.material)) return false;
+            return true;
+          })
+          .map((variant) => variant[key])
+      ),
+    ];
   }
-  if (key === "stock") return ["ready", "made"];
-  return [...new Set(products.map((product) => product[key]))];
+  return [...new Set(sourceProducts.map((product) => product[key]))];
 }
 
 function productMatchesFilters(product) {
@@ -398,9 +426,8 @@ function productMatchesFilters(product) {
   if (state.selectedTheme && product.theme !== state.selectedTheme) return false;
   if (filters.category.size && !filters.category.has(product.category)) return false;
   if (filters.theme.size && !filters.theme.has(product.theme)) return false;
-  if (filters.stock.size && !filters.stock.has(product.stock)) return false;
 
-  const variantFilters = ["type", "size", "material"];
+  const variantFilters = ["size", "material"];
   return product.variants.some((variant) =>
     variantFilters.every((key) => !filters[key].size || filters[key].has(variant[key]))
   );
@@ -500,8 +527,6 @@ function openCatalogCategory(category) {
   state.selectedCategory = category;
   state.selectedTheme = "";
   state.filters.category.clear();
-  state.filters.stock.clear();
-  document.querySelectorAll("[data-stock]").forEach((node) => node.classList.toggle("is-active", node.dataset.stock === "all"));
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -512,8 +537,6 @@ function openCatalogTheme(theme) {
   state.selectedCategory = "";
   state.selectedTheme = theme;
   state.filters.theme.clear();
-  state.filters.stock.clear();
-  document.querySelectorAll("[data-stock]").forEach((node) => node.classList.toggle("is-active", node.dataset.stock === "all"));
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -526,21 +549,19 @@ function backToCatalogHome() {
   state.search = "";
   searchInput.value = "";
   Object.values(state.filters).forEach((bucket) => bucket.clear());
-  document.querySelectorAll("[data-stock]").forEach((node) => node.classList.toggle("is-active", node.dataset.stock === "all"));
   renderCatalogShell();
   renderFilters();
   renderProducts();
 }
 
 function renderFilters() {
-  const groups = [
-    { key: "category", title: "Категории", label: (value) => value },
-    { key: "theme", title: "Тематика", label: (value) => value },
-    { key: "type", title: "Тип товара", label: (value) => value },
+  const groups = [];
+  if (!state.selectedCategory) groups.push({ key: "category", title: "Категории", label: (value) => value });
+  if (!state.selectedTheme) groups.push({ key: "theme", title: "Тематика", label: (value) => value });
+  groups.push(
     { key: "size", title: "Размер", label: (value) => value },
-    { key: "material", title: "Материал", label: (value) => value },
-    { key: "stock", title: "Наличие", label: stockLabel },
-  ];
+    { key: "material", title: "Материал", label: (value) => value }
+  );
 
   filterGroups.innerHTML = groups
     .map((group) => {
@@ -1130,6 +1151,7 @@ function boot() {
       const bucket = state.filters[event.target.dataset.filter];
       if (event.target.checked) bucket.add(event.target.value);
       else bucket.delete(event.target.value);
+      renderFilters();
       renderProducts();
     }
     if (event.target.id === "sortSelect") {
@@ -1137,15 +1159,6 @@ function boot() {
       renderProducts();
     }
     if (event.target.id === "excelInput" && event.target.files[0]) importExcel(event.target.files[0]);
-  });
-
-  document.addEventListener("click", (event) => {
-    const stockButton = event.target.closest("[data-stock]");
-    if (!stockButton) return;
-    state.filters.stock.clear();
-    if (stockButton.dataset.stock !== "all") state.filters.stock.add(stockButton.dataset.stock);
-    document.querySelectorAll("[data-stock]").forEach((node) => node.classList.toggle("is-active", node === stockButton));
-    renderProducts();
   });
 
   document.addEventListener("submit", (event) => {
