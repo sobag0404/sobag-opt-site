@@ -196,7 +196,7 @@ const productDrafts = [
 const STORAGE = {
   user: "sobag.currentUser",
   users: "sobag.users",
-  products: "sobag.products.v4",
+  products: "sobag.products.v5",
   guestCart: "sobag.cart.guest",
 };
 
@@ -282,6 +282,10 @@ function normalizeProduct(product) {
     types: product.types?.length ? product.types : TYPE_OPTIONS,
     sizes: product.sizes?.length ? product.sizes : SIZE_OPTIONS,
     materials: product.materials?.length ? product.materials : MATERIAL_OPTIONS,
+    gallery: [...new Set([product.image, ...(product.gallery || []), "assets/hero-products-1.png", "assets/hero-products-2.png", "assets/hero-products-3.png"])].filter(Boolean),
+    detailDescription:
+      product.detailDescription ||
+      "Тестовая карточка показывает, как будет выглядеть товар с несколькими фотографиями, быстрыми тегами и настройкой варианта под оптовую заявку.",
     stock: product.stock || "made",
     popular: product.popular || 50,
     basePrice: Number(product.basePrice || 200),
@@ -700,6 +704,7 @@ function productModalHtml(product) {
   const variant = findVariant(product);
   const discount = getQuantityDiscount(state.activeVariant.qty);
   const total = Math.round(variant.price * state.activeVariant.qty * (1 - discount / 100));
+  const gallery = product.gallery?.length ? product.gallery : [product.image];
   return `
     <div class="modal is-visible" id="productModal" role="dialog" aria-modal="true">
       <div class="modal__backdrop" data-close-modal></div>
@@ -708,17 +713,27 @@ function productModalHtml(product) {
         <div class="product-detail__layout">
           <div class="product-detail__main">
             <div class="product-detail__media">
-              <img src="${product.image}" alt="${product.name}" />
+              <img id="detailMainImage" src="${gallery[0]}" alt="${product.name}" />
+              <div class="product-gallery" aria-label="Фотографии товара">
+                ${gallery
+                  .map(
+                    (image, index) => `
+                      <button class="product-gallery__thumb${index === 0 ? " is-active" : ""}" type="button" data-detail-image="${image}" aria-label="Фото ${index + 1}">
+                        <img src="${image}" alt="" loading="lazy" />
+                      </button>
+                    `
+                  )
+                  .join("")}
+              </div>
             </div>
             <div class="product-detail__copy">
               <p class="eyebrow">${product.baseSku}</p>
               <h2>${product.name}</h2>
               <p>${product.description}</p>
-              <div class="detail-facts">
-                <span>${product.category}</span>
-                <span>${product.theme}</span>
-                <span>${stockLabel(product.stock)}</span>
-                <span>${product.variants.length} вариантов</span>
+              <p class="product-detail__note">${product.detailDescription}</p>
+              <div class="detail-tags" aria-label="Быстрые фильтры">
+                <button type="button" class="detail-tag" data-open-category="${product.category}">${product.category}</button>
+                <button type="button" class="detail-tag" data-open-theme="${product.theme}">${product.theme}</button>
               </div>
             </div>
           </div>
@@ -1088,12 +1103,28 @@ function boot() {
     if (!button) return;
 
     if (button.dataset.scroll) document.querySelector(button.dataset.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    if (button.dataset.openCategory) openCatalogCategory(button.dataset.openCategory);
-    if (button.dataset.openTheme) openCatalogTheme(button.dataset.openTheme);
-    if (button.dataset.backCatalog !== undefined) backToCatalogHome();
+    if (button.dataset.openCategory) {
+      closeModal();
+      openCatalogCategory(button.dataset.openCategory);
+      return;
+    }
+    if (button.dataset.openTheme) {
+      closeModal();
+      openCatalogTheme(button.dataset.openTheme);
+      return;
+    }
+    if (button.dataset.backCatalog !== undefined) {
+      backToCatalogHome();
+      return;
+    }
     if (button.id === "accountButton") openAccount();
     if (button.dataset.closeModal !== undefined) closeModal();
     if (button.dataset.openProduct) openProduct(button.dataset.openProduct);
+    if (button.dataset.detailImage) {
+      const image = document.querySelector("#detailMainImage");
+      if (image) image.src = button.dataset.detailImage;
+      document.querySelectorAll(".product-gallery__thumb").forEach((node) => node.classList.toggle("is-active", node === button));
+    }
     if (button.dataset.variantKey) {
       state.activeVariant[button.dataset.variantKey] = button.dataset.variantValue;
       refreshProductModal();
