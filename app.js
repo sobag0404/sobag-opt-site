@@ -775,7 +775,7 @@ function updateButtonText(button, text) {
 }
 
 function buttonLabel(text) {
-  return String(text || "").trim().toLocaleLowerCase("ru-RU");
+  return String(text || "").trim().toLocaleUpperCase("ru-RU");
 }
 
 function setText(selector, value) {

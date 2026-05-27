@@ -4129,7 +4129,7 @@ body.theme-night.cart-page .cart-page-line__remove:hover {
   letter-spacing: 0;
   line-height: 1.1;
   text-align: center;
-  text-transform: lowercase;
+  text-transform: uppercase;
 }
 
 .icon-button,
@@ -4147,7 +4147,7 @@ body.theme-night.cart-page .cart-page-line__remove:hover {
 .actual-tile,
 .variant-option,
 .detail-tag {
-  text-transform: lowercase;
+  text-transform: uppercase;
 }
 
 .theme-toggle {
