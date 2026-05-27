@@ -3746,3 +3746,352 @@ body.theme-night .copy-sku-button:hover {
   color: var(--on-dark);
   background: rgba(255, 138, 31, 0.16);
 }
+
+/* Final flat theme reset: keeps day mode close to the original black-and-white design. */
+.nav-link-button {
+  min-height: 48px;
+  padding: 0 18px;
+  color: var(--on-dark);
+  background: var(--surface-soft);
+  border: 0;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.header__inner {
+  grid-template-columns: auto auto auto minmax(280px, 1fr) auto;
+}
+
+.nav-link-button:hover {
+  color: var(--canvas);
+  background: var(--on-dark);
+}
+
+.theme-toggle {
+  margin-left: auto;
+  background: var(--surface-soft);
+  border: 0;
+}
+
+.marketplaces {
+  padding: var(--section) 0;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.marketplaces__grid {
+  display: grid;
+  gap: 32px;
+}
+
+.marketplace-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.marketplace-card {
+  display: grid;
+  gap: 10px;
+  min-height: 168px;
+  padding: 24px;
+  color: var(--on-dark);
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+
+.marketplace-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.marketplace-card strong {
+  color: var(--on-dark);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.marketplace-card small {
+  color: var(--body);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.catalog-button,
+.primary-button,
+.cart-button,
+.add-button {
+  color: var(--canvas);
+  background: var(--on-dark);
+  border: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+.catalog-button:hover,
+.primary-button:hover,
+.cart-button:hover,
+.add-button:hover {
+  color: var(--canvas);
+  background: #39393b;
+  box-shadow: none;
+  transform: none;
+}
+
+.ghost-button,
+.theme-toggle,
+.icon-button,
+.favorite-button,
+.modal__close,
+.copy-sku-button,
+.nav-link-button {
+  box-shadow: none;
+}
+
+.brand__mark {
+  color: var(--canvas);
+  background: var(--on-dark);
+  border: 0;
+  box-shadow: none;
+}
+
+.brand__name b,
+.topline__inner > span:first-child,
+.theme-toggle svg,
+.product-card__sku,
+.detail-price small {
+  color: var(--on-dark);
+}
+
+.accent-stripe {
+  background: var(--on-dark);
+}
+
+.category-tile,
+.theme-tile,
+.actual-tile,
+.benefits article,
+.tiers article,
+.steps article,
+.modal__panel,
+.filter-sidebar,
+.cart-panel,
+.product-detail__media,
+.product-detail__aside,
+.admin-content-section,
+.admin-slide-editor,
+.orders-list article,
+.admin-preview article,
+.excel-import,
+.marketplace-card {
+  border-color: var(--hairline);
+  box-shadow: none;
+}
+
+.category-tile:hover,
+.theme-tile:hover,
+.actual-tile:hover,
+.marketplace-card:hover {
+  border-color: var(--hairline-strong);
+  box-shadow: none;
+}
+
+.hero__actual-card {
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: none;
+}
+
+.hero__actual-nav button {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.product-grid {
+  gap: 24px;
+}
+
+.product-card,
+.product-card:hover {
+  background: var(--canvas);
+  border: 0;
+  box-shadow: none;
+}
+
+.product-card__body {
+  padding: 16px 0 0;
+}
+
+.product-card__bottom {
+  gap: 14px;
+}
+
+.product-card .add-button {
+  margin-top: 12px;
+}
+
+.copy-sku-button {
+  width: 24px;
+  height: 24px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+@media (max-width: 900px) {
+  .nav-link-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+.copy-sku-button:hover {
+  color: var(--on-dark);
+  background: transparent;
+  transform: none;
+}
+
+body.theme-night .nav-link-button {
+  color: var(--on-dark);
+  background: var(--surface-soft);
+  border: 1px solid rgba(255, 138, 31, 0.58);
+}
+
+body.theme-night .nav-link-button:hover {
+  color: #160b04;
+  background: var(--amber);
+}
+
+body.theme-night .catalog-button,
+body.theme-night .primary-button,
+body.theme-night .cart-button,
+body.theme-night .add-button {
+  color: #160b04;
+  background: var(--amber);
+  border: 1px solid rgba(255, 138, 31, 0.68);
+  box-shadow: none;
+  transform: none;
+}
+
+body.theme-night .catalog-button:hover,
+body.theme-night .primary-button:hover,
+body.theme-night .cart-button:hover,
+body.theme-night .add-button:hover {
+  color: #160b04;
+  background: var(--sand);
+  box-shadow: none;
+  transform: none;
+}
+
+body.theme-night .ghost-button,
+body.theme-night .theme-toggle,
+body.theme-night .icon-button,
+body.theme-night .favorite-button,
+body.theme-night .modal__close {
+  color: var(--on-dark);
+  background: var(--surface-soft);
+  border: 1px solid rgba(255, 138, 31, 0.58);
+  box-shadow: none;
+}
+
+body.theme-night .brand__mark {
+  color: #160b04;
+  background: var(--amber);
+  border: 1px solid rgba(255, 138, 31, 0.68);
+}
+
+body.theme-night .brand__name b,
+body.theme-night .topline__inner > span:first-child,
+body.theme-night .theme-toggle svg,
+body.theme-night .product-card__sku,
+body.theme-night .detail-price small {
+  color: var(--amber);
+}
+
+body.theme-night .accent-stripe {
+  background: var(--amber);
+}
+
+body.theme-night .product-card,
+body.theme-night .category-tile,
+body.theme-night .theme-tile,
+body.theme-night .benefits article,
+body.theme-night .tiers article,
+body.theme-night .steps article,
+body.theme-night .modal__panel,
+body.theme-night .filter-sidebar,
+body.theme-night .cart-panel,
+body.theme-night .product-detail__media,
+body.theme-night .product-detail__aside,
+body.theme-night .admin-content-section,
+body.theme-night .admin-slide-editor,
+body.theme-night .orders-list article,
+body.theme-night .admin-preview article,
+body.theme-night .excel-import,
+body.theme-night .marketplace-card {
+  border: 2px solid rgba(255, 138, 31, 0.62);
+  box-shadow: none;
+}
+
+body.theme-night .product-card:hover,
+body.theme-night .category-tile:hover,
+body.theme-night .theme-tile:hover,
+body.theme-night .marketplace-card:hover {
+  border-color: rgba(255, 138, 31, 0.82);
+  box-shadow: none;
+}
+
+body.theme-night .hero__actual-card {
+  border-width: 3px;
+  border-color: rgba(255, 122, 26, 0.9);
+  box-shadow: none;
+}
+
+body.theme-night .hero__specs {
+  color: var(--on-dark);
+  background: var(--surface-soft);
+  border: 2px solid rgba(255, 138, 31, 0.62);
+}
+
+body.theme-night .hero__specs article {
+  border-right-color: rgba(255, 138, 31, 0.55);
+}
+
+body.theme-night .hero__specs strong {
+  color: var(--on-dark);
+}
+
+body.theme-night .hero__specs span {
+  color: var(--body);
+}
+
+body.theme-night .copy-sku-button,
+body.theme-night .copy-sku-button:hover {
+  color: var(--body);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+@media (max-width: 980px) {
+  .marketplace-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .nav-link-button {
+    display: none;
+  }
+
+  .theme-toggle {
+    margin-left: 0;
+  }
+}
