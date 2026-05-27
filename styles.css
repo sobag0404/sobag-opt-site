@@ -4216,6 +4216,32 @@ body.theme-night .copy-sku-button:hover {
   font-size: 0;
 }
 
+.filter-toggle {
+  display: none;
+}
+
+.product-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+
+@media (min-width: 1500px) {
+  .product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .filter-toggle {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 640px) {
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 body.theme-night .catalog-button,
 body.theme-night .primary-button,
 body.theme-night .ghost-button,

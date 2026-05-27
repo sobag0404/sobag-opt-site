@@ -753,7 +753,7 @@ function applyTheme(theme) {
   document.body.classList.toggle("theme-night", isNight);
   if (themeToggle) {
     themeToggle.setAttribute("aria-pressed", String(isNight));
-    themeToggle.innerHTML = `<i data-lucide="${isNight ? "sun" : "moon"}"></i><span>${isNight ? "дневная схема" : "ночная схема"}</span>`;
+    themeToggle.innerHTML = `<i data-lucide="${isNight ? "sun" : "moon"}"></i><span>${isNight ? "дневная тема" : "ночная тема"}</span>`;
   }
   if (window.lucide) window.lucide.createIcons();
 }
@@ -954,7 +954,7 @@ function renderSiteContent() {
     }
     if (footerPhone) footerPhone.textContent = content.footerPhone;
   }
-  if (catalogTitle && !state.currentCategory && !state.currentCollection && !state.currentHoliday && !state.query) {
+  if (catalogTitle && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim()) {
     catalogTitle.textContent = content.catalogTitleDefault;
   }
   document.querySelectorAll(".hero__slideshow .hero__image").forEach((image, index) => {

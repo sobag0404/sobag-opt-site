@@ -74,16 +74,18 @@ Recently completed:
 - Admin has export buttons for all products and the currently filtered product set.
 - Recommended mass product import shape: one table row per base article/print; variants are generated from type, size, and material columns.
 - For 10k+ products and local photos, plan a local importer or backend storage flow instead of relying on browser localStorage.
+- Fixed catalog listing layout after unified button styling made the desktop filter toggle participate in the grid.
+- Product cards now use an adaptive grid so the catalog does not collapse into very narrow cards when sidebars are visible.
+- Catalog title preservation now uses `selectedCategory`, `selectedCollection`, `selectedHoliday`, and search state instead of stale `current*` fields.
+- Theme toggle labels now say `ночная тема` and `дневная тема` instead of `ночная схема` / `дневная схема`.
 
 Latest verified production commit:
-- Site code commit `b6af33c Add product CSV export controls`; later docs-only commits may deploy the same site bundle.
+- pending verification for the upcoming catalog layout/theme-label commit
 
 Latest production verification:
-- Local verification passed for admin product export before push.
+- Local verification passed for category, collection, home, custom, marketplaces, and cart pages before push.
 - `node --check app.js` passed.
-- Production catalog `https://sobag-opt-site.vercel.app/catalog` serves `app.js?v=20260527-product-export`.
-- Production `app.js` contains `data-export-products`, `data-export-filtered-products`, `Папка фото`, and `downloadProductsCsv`.
-- Browser production check passed: catalog page loaded with fresh script and title `Sobag Opt | Каталог`.
+- Vercel verification still needs to run after pushing the current commit.
 
 ## Important Constraints
 
