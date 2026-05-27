@@ -76,12 +76,14 @@ Recently completed:
 - For 10k+ products and local photos, plan a local importer or backend storage flow instead of relying on browser localStorage.
 
 Latest verified production commit:
-- pending verification for `b6af33c Add product CSV export controls`
+- Site code commit `b6af33c Add product CSV export controls`; later docs-only commits may deploy the same site bundle.
 
 Latest production verification:
 - Local verification passed for admin product export before push.
 - `node --check app.js` passed.
-- Vercel verification still needs to run after pushing the current commit.
+- Production catalog `https://sobag-opt-site.vercel.app/catalog` serves `app.js?v=20260527-product-export`.
+- Production `app.js` contains `data-export-products`, `data-export-filtered-products`, `Папка фото`, and `downloadProductsCsv`.
+- Browser production check passed: catalog page loaded with fresh script and title `Sobag Opt | Каталог`.
 
 ## Important Constraints
 
