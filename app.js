@@ -107,24 +107,31 @@ const catalogHolidays = [
 
 const actualItems = [
   {
-    title: "Новогодний опт",
     label: "Новый год",
     type: "holiday",
     image: "assets/hero-products-2.png",
   },
   {
-    title: "Аниме на подушках",
     label: "Аниме",
     type: "collection",
     image: "assets/hero-products-1.png",
   },
   {
-    title: "Подарки к 8 марта",
     label: "8 марта",
     type: "holiday",
     image: "assets/hero-products-3.png",
   },
 ];
+
+const defaultSiteContent = {
+  heroTitle: "Оптовый текстиль с принтами",
+  heroLead:
+    "Готовые позиции для продаж и производство под ваш макет: пледы, подушки, наволочки, шопперы и сезонные коллекции для маркетплейсов.",
+  heroPrimaryButton: "Перейти в каталог",
+  heroCustomButton: "Изделия с вашим принтом",
+  heroImages: ["assets/production-hero-1.png", "assets/production-workshop-1.png", "assets/production-hero-1.png"],
+  actualSlides: actualItems,
+};
 
 const productDrafts = [
   {
@@ -475,6 +482,7 @@ const STORAGE = {
   user: "sobag.currentUser",
   users: "sobag.users",
   products: "sobag.products.v8",
+  content: "sobag.siteContent.v1",
   guestCart: "sobag.cart.guest",
 };
 
@@ -534,6 +542,71 @@ const grandTotal = document.querySelector("#grandTotal");
 const discountProgress = document.querySelector("#discountProgress");
 const discountHint = document.querySelector("#discountHint");
 const toast = document.querySelector("#toast");
+
+function normalizeSiteContent(content = {}) {
+  const actualSlides = Array.isArray(content.actualSlides) && content.actualSlides.length ? content.actualSlides : defaultSiteContent.actualSlides;
+  const heroImages = Array.isArray(content.heroImages) && content.heroImages.length ? content.heroImages : defaultSiteContent.heroImages;
+  return {
+    ...defaultSiteContent,
+    ...content,
+    heroImages: [0, 1, 2].map((index) => heroImages[index] || defaultSiteContent.heroImages[index]),
+    actualSlides: [0, 1, 2].map((index) => ({
+      ...defaultSiteContent.actualSlides[index],
+      ...(actualSlides[index] || {}),
+    })),
+  };
+}
+
+function getSiteContent() {
+  try {
+    return normalizeSiteContent(JSON.parse(localStorage.getItem(STORAGE.content) || "null") || {});
+  } catch {
+    return normalizeSiteContent();
+  }
+}
+
+function saveSiteContent(content) {
+  localStorage.setItem(STORAGE.content, JSON.stringify(normalizeSiteContent(content)));
+}
+
+function updateButtonText(button, text) {
+  if (!button) return;
+  const icon = button.querySelector("i")?.outerHTML || "";
+  button.innerHTML = `${icon}${text}`;
+}
+
+function renderHeroActualSlides(content = getSiteContent()) {
+  const actual = document.querySelector(".hero__actual");
+  if (!actual) return;
+  actual.querySelectorAll("[data-actual-slide]").forEach((slide) => slide.remove());
+  const slidesHtml = content.actualSlides
+    .map((slide, index) => {
+      const type = slide.type === "collection" ? "collection" : "holiday";
+      return `
+        <button class="hero__actual-card${index === actualSlideIndex ? " is-active" : ""}" type="button" data-actual-slide data-open-${type}="${slide.label}">
+          <img src="${slide.image}" alt="${slide.label}" />
+          <b>${slide.label}</b>
+        </button>
+      `;
+    })
+    .join("");
+  actual.insertAdjacentHTML("beforeend", slidesHtml);
+}
+
+function renderSiteContent() {
+  const content = getSiteContent();
+  const heroTitle = document.querySelector(".hero h1");
+  const heroLead = document.querySelector(".hero__lead");
+  if (heroTitle) heroTitle.textContent = content.heroTitle;
+  if (heroLead) heroLead.textContent = content.heroLead;
+  updateButtonText(document.querySelector(".hero__actions .primary-button"), content.heroPrimaryButton);
+  updateButtonText(document.querySelector(".hero__actions .ghost-button"), content.heroCustomButton);
+  document.querySelectorAll(".hero__slideshow .hero__image").forEach((image, index) => {
+    image.src = content.heroImages[index] || defaultSiteContent.heroImages[index];
+  });
+  renderHeroActualSlides(content);
+  if (window.lucide) window.lucide.createIcons();
+}
 
 function createVariants(product) {
   return product.types.flatMap((type) =>
@@ -823,8 +896,8 @@ function renderCatalogHome() {
     .map(
       (item, index) => `
         <button class="actual-tile actual-tile--${index + 1}" type="button" data-open-${item.type}="${item.label}">
-          <img src="${item.image}" alt="${item.title}" loading="lazy" />
-          <span>${item.title}</span>
+          <img src="${item.image}" alt="${item.label}" loading="lazy" />
+          <span>${item.label}</span>
           <b>${item.label}</b>
         </button>
       `
@@ -1287,12 +1360,90 @@ function openAccount() {
   if (window.lucide) window.lucide.createIcons();
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function adminImageUploadHtml(kind, index, image, title) {
+  return `
+    <label class="admin-image-upload">
+      <span>${title}</span>
+      <img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" />
+      <input type="file" accept="image/*" data-content-image="${kind}" data-content-index="${index}" />
+    </label>
+  `;
+}
+
+function adminActualSlideHtml(slide, index) {
+  const collectionSelected = slide.type === "collection" ? "selected" : "";
+  const holidaySelected = slide.type !== "collection" ? "selected" : "";
+  return `
+    <article class="admin-slide-editor" data-admin-slide="${index}">
+      ${adminImageUploadHtml("actualSlides", index, slide.image, `Актуально ${index + 1}`)}
+      <div class="admin-slide-editor__fields">
+        <input name="actualLabel${index}" type="text" value="${escapeHtml(slide.label)}" placeholder="Надпись на слайде" />
+        <select name="actualType${index}">
+          <option value="holiday" ${holidaySelected}>Праздник</option>
+          <option value="collection" ${collectionSelected}>Подборка</option>
+        </select>
+      </div>
+    </article>
+  `;
+}
+
 function adminModalHtml() {
+  const content = getSiteContent();
   return `
     <div class="modal is-visible" id="adminModal" role="dialog" aria-modal="true">
       <div class="modal__backdrop" data-close-modal></div>
       <section class="modal__panel admin-panel">
         <button class="modal__close" type="button" data-close-modal><i data-lucide="x"></i></button>
+        <div>
+          <p class="eyebrow">Content</p>
+          <h2>Контент сайта</h2>
+          <p>Тестовое управление контентом. Изображения и тексты сохраняются в этом браузере; для постоянного хранения нужен backend.</p>
+        </div>
+        <form class="admin-content-form" id="adminContentForm">
+          <div class="admin-content-grid">
+            <label>
+              Заголовок главной
+              <input name="heroTitle" type="text" value="${escapeHtml(content.heroTitle)}" />
+            </label>
+            <label>
+              Текст главной
+              <textarea name="heroLead">${escapeHtml(content.heroLead)}</textarea>
+            </label>
+            <label>
+              Кнопка каталога
+              <input name="heroPrimaryButton" type="text" value="${escapeHtml(content.heroPrimaryButton)}" />
+            </label>
+            <label>
+              Кнопка калькулятора
+              <input name="heroCustomButton" type="text" value="${escapeHtml(content.heroCustomButton)}" />
+            </label>
+          </div>
+          <div class="admin-content-section">
+            <h3>Фото главной страницы</h3>
+            <div class="admin-image-grid">
+              ${content.heroImages.map((image, index) => adminImageUploadHtml("heroImages", index, image, `Главное фото ${index + 1}`)).join("")}
+            </div>
+          </div>
+          <div class="admin-content-section">
+            <h3>Вкладка Актуально</h3>
+            <div class="admin-slides-grid">
+              ${content.actualSlides.map((slide, index) => adminActualSlideHtml(slide, index)).join("")}
+            </div>
+          </div>
+          <div class="admin-actions">
+            <button class="primary-button" type="submit">Сохранить контент</button>
+            <button class="ghost-button" type="button" data-reset-content>Сбросить контент</button>
+          </div>
+        </form>
+        <div class="admin-divider"></div>
         <div>
           <p class="eyebrow">Admin</p>
           <h2>Массовое создание карточек</h2>
@@ -1473,6 +1624,49 @@ async function importExcel(file) {
   showToast(`Из Excel загружено карточек: ${imported.length}.`);
 }
 
+function readContentFile(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > 1_500_000) {
+    showToast("Изображение слишком тяжелое для тестового localStorage. Лучше загрузить файл до 1.5 МБ.");
+    input.value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    input.dataset.imageValue = String(reader.result);
+    const preview = input.closest(".admin-image-upload")?.querySelector("img");
+    if (preview) preview.src = String(reader.result);
+    showToast("Изображение загружено в предпросмотр. Нажмите «Сохранить контент».");
+  });
+  reader.readAsDataURL(file);
+}
+
+function contentFromAdminForm(form) {
+  const current = getSiteContent();
+  const data = Object.fromEntries(new FormData(form).entries());
+  const heroImages = [0, 1, 2].map((index) => {
+    const input = form.querySelector(`[data-content-image="heroImages"][data-content-index="${index}"]`);
+    return input?.dataset.imageValue || current.heroImages[index] || defaultSiteContent.heroImages[index];
+  });
+  const actualSlides = [0, 1, 2].map((index) => {
+    const input = form.querySelector(`[data-content-image="actualSlides"][data-content-index="${index}"]`);
+    return {
+      label: data[`actualLabel${index}`] || current.actualSlides[index].label,
+      type: data[`actualType${index}`] || current.actualSlides[index].type,
+      image: input?.dataset.imageValue || current.actualSlides[index].image || defaultSiteContent.actualSlides[index].image,
+    };
+  });
+  return normalizeSiteContent({
+    heroTitle: data.heroTitle || defaultSiteContent.heroTitle,
+    heroLead: data.heroLead || defaultSiteContent.heroLead,
+    heroPrimaryButton: data.heroPrimaryButton || defaultSiteContent.heroPrimaryButton,
+    heroCustomButton: data.heroCustomButton || defaultSiteContent.heroCustomButton,
+    heroImages,
+    actualSlides,
+  });
+}
+
 function closeModal() {
   document.querySelectorAll(".modal").forEach((modal) => modal.remove());
 }
@@ -1513,6 +1707,7 @@ function boot() {
   renderProducts();
   renderCart();
   renderAccountButton();
+  renderSiteContent();
   initActualSlider();
 
   document.addEventListener("click", (event) => {
@@ -1605,6 +1800,14 @@ function boot() {
     if (button.dataset.openAdmin !== undefined) openAdmin();
     if (button.dataset.saveGenerated !== undefined) saveGeneratedProducts();
     if (button.dataset.downloadTemplate !== undefined) downloadTemplate();
+    if (button.dataset.resetContent !== undefined) {
+      localStorage.removeItem(STORAGE.content);
+      renderSiteContent();
+      closeModal();
+      openAdmin();
+      showToast("Контент сброшен к тестовым значениям.");
+      return;
+    }
   });
 
   document.addEventListener("input", (event) => {
@@ -1637,6 +1840,7 @@ function boot() {
       renderProducts();
     }
     if (event.target.id === "excelInput" && event.target.files[0]) importExcel(event.target.files[0]);
+    if (event.target.dataset.contentImage) readContentFile(event.target);
   });
 
   document.addEventListener("submit", (event) => {
@@ -1679,6 +1883,12 @@ function boot() {
     if (event.target.id === "adminGenerator") {
       event.preventDefault();
       renderAdminPreview([productFromForm(event.target)]);
+    }
+    if (event.target.id === "adminContentForm") {
+      event.preventDefault();
+      saveSiteContent(contentFromAdminForm(event.target));
+      renderSiteContent();
+      showToast("Контент сайта сохранен в этом браузере.");
     }
   });
 
