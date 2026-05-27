@@ -1669,6 +1669,23 @@ h3 {
   margin-top: 16px;
 }
 
+.account-section {
+  margin-top: 24px;
+}
+
+.order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.order-actions .ghost-button {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+
 .orders-list article,
 .admin-preview article,
 .excel-import {

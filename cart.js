@@ -1,6 +1,9 @@
 const MIN_CART_TOTAL = 30000;
-const CART_KEY = localStorage.getItem("sobag.currentUser")
-  ? `sobag.cart.${localStorage.getItem("sobag.currentUser")}`
+const CURRENT_USER_KEY = "sobag.currentUser";
+const USERS_KEY = "sobag.users";
+const ORDERS_KEY = "sobag.orders.v1";
+const CART_KEY = localStorage.getItem(CURRENT_USER_KEY)
+  ? `sobag.cart.${localStorage.getItem(CURRENT_USER_KEY)}`
   : "sobag.cart.guest";
 
 const quantityTiers = [
@@ -91,6 +94,53 @@ function getSiteContent() {
   } catch {
     return { ...defaultCartContent };
   }
+}
+
+function getCurrentUserProfile() {
+  const email = localStorage.getItem(CURRENT_USER_KEY);
+  if (!email) return null;
+  try {
+    return JSON.parse(localStorage.getItem(USERS_KEY) || "{}")[email] || null;
+  } catch {
+    return null;
+  }
+}
+
+function getUsers() {
+  try {
+    return JSON.parse(localStorage.getItem(USERS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function getOrders() {
+  try {
+    return JSON.parse(localStorage.getItem(ORDERS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveOrderRecord(order) {
+  const userKey = localStorage.getItem(CURRENT_USER_KEY) || "";
+  const users = getUsers();
+  const record = {
+    status: "new",
+    source: "cart",
+    userEmail: userKey || order.customer?.email || "",
+    ...order,
+  };
+  localStorage.setItem(ORDERS_KEY, JSON.stringify([record, ...getOrders()]));
+  if (userKey && users[userKey]) {
+    users[userKey].orders = [record, ...(users[userKey].orders || [])];
+    saveUsers(users);
+  }
+  return record;
 }
 
 function setText(selector, value) {
@@ -276,6 +326,19 @@ function openCheckout() {
   document.body.classList.add("modal-open");
 }
 
+function fillCheckoutFromProfile() {
+  const profile = getCurrentUserProfile();
+  const form = document.querySelector("#checkoutForm");
+  if (!form || !profile) {
+    showToast("Войдите или зарегистрируйтесь, чтобы использовать данные профиля.");
+    return;
+  }
+  form.elements.name.value = profile.name || "";
+  form.elements.email.value = profile.email || "";
+  form.elements.phone.value = profile.phone || "";
+  showToast("Данные профиля подставлены в форму заказа.");
+}
+
 function closeCheckout() {
   nodes.checkoutModal.classList.remove("is-visible");
   document.body.classList.remove("modal-open");
@@ -293,6 +356,7 @@ document.addEventListener("click", (event) => {
     showToast("Позиция удалена из корзины.");
   }
   if (button.id === "checkoutButton") openCheckout();
+  if (button.id === "useProfileButton") fillCheckoutFromProfile();
   if (button.dataset.closeCheckout !== undefined) closeCheckout();
 });
 
@@ -332,6 +396,7 @@ document.querySelector("#checkoutForm").addEventListener("submit", (event) => {
     promo: state.promo,
   };
   localStorage.setItem("sobag.lastOrder", JSON.stringify(order));
+  saveOrderRecord(order);
   state.cart.clear();
   closeCheckout();
   event.target.reset();

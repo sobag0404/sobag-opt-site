@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sobag Opt | Корзина</title>
     <meta name="description" content="Корзина оптового заказа Sobag Opt." />
-    <link rel="stylesheet" href="styles.css?v=20260527-filter-layout" />
+    <link rel="stylesheet" href="styles.css?v=20260527-profile-orders" />
   </head>
   <body class="cart-page">
     <header class="topline">
@@ -97,6 +97,10 @@
           <h2 id="checkoutTitle">Контакты покупателя</h2>
         </div>
         <form class="checkout-form" id="checkoutForm">
+          <button class="ghost-button checkout-profile-button" id="useProfileButton" type="button">
+            <i data-lucide="user-check"></i>
+            Использовать информацию из профиля
+          </button>
           <input name="name" type="text" placeholder="Имя" required />
           <input name="email" type="email" placeholder="Почта" required />
           <input name="phone" type="tel" placeholder="Номер телефона" required />
@@ -115,6 +119,6 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="cart.js?v=20260527-uppercase-controls"></script>
+    <script src="cart.js?v=20260527-profile-orders"></script>
   </body>
 </html>

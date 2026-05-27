@@ -662,6 +662,7 @@ const STORAGE = {
   content: "sobag.siteContent.v1",
   theme: "sobag.theme.v1",
   guestCart: "sobag.cart.guest",
+  orders: "sobag.orders.v1",
 };
 
 let products = loadProducts();
@@ -1060,6 +1061,7 @@ function seedUsers() {
       email: "admin@sobag.local",
       password: "admin",
       name: "Администратор",
+      phone: "+7 900 000-00-00",
       role: "admin",
       orders: [],
     },
@@ -1074,6 +1076,65 @@ function getUsers() {
 
 function saveUsers(users) {
   localStorage.setItem(STORAGE.users, JSON.stringify(users));
+}
+
+function getOrders() {
+  return JSON.parse(localStorage.getItem(STORAGE.orders) || "[]");
+}
+
+function saveOrders(orders) {
+  localStorage.setItem(STORAGE.orders, JSON.stringify(orders));
+}
+
+function roleLabel(role) {
+  if (role === "admin") return "Администратор";
+  if (role === "manager") return "Менеджер";
+  return "Покупатель";
+}
+
+function orderStatusLabel(status) {
+  if (status === "processing") return "В работе";
+  if (status === "done") return "Выполнен";
+  return "Новый";
+}
+
+function canManageOrders(user) {
+  return user?.role === "admin" || user?.role === "manager";
+}
+
+function saveOrderRecord(order, userKey = state.currentUser) {
+  const users = getUsers();
+  const orders = getOrders();
+  const record = {
+    status: "new",
+    source: "cart",
+    userEmail: userKey || order.customer?.email || "",
+    ...order,
+  };
+  saveOrders([record, ...orders]);
+  if (userKey && users[userKey]) {
+    users[userKey].orders = [record, ...(users[userKey].orders || [])];
+    saveUsers(users);
+  }
+  return record;
+}
+
+function updateOrderStatus(orderId, status) {
+  const orders = getOrders().map((order) => (order.id === orderId ? { ...order, status } : order));
+  const users = getUsers();
+  Object.values(users).forEach((user) => {
+    user.orders = (user.orders || []).map((order) => (order.id === orderId ? { ...order, status } : order));
+  });
+  saveOrders(orders);
+  saveUsers(users);
+}
+
+function setUserRole(email, role) {
+  const users = getUsers();
+  if (!users[email] || users[email].role === "admin") return false;
+  users[email].role = role;
+  saveUsers(users);
+  return true;
 }
 
 function getCartKey() {
@@ -1577,7 +1638,12 @@ function renderAccountButton() {
   const users = getUsers();
   const user = users[state.currentUser];
   button.title = user ? `${user.name || user.email}` : "Войти или зарегистрироваться";
-  button.innerHTML = user?.role === "admin" ? '<i data-lucide="shield"></i>' : '<i data-lucide="user"></i>';
+  button.innerHTML =
+    user?.role === "admin"
+      ? '<i data-lucide="shield"></i>'
+      : user?.role === "manager"
+      ? '<i data-lucide="briefcase-business"></i>'
+      : '<i data-lucide="user"></i>';
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -1741,6 +1807,82 @@ function addVariantToCart(productId) {
   showToast("Вариант добавлен в корзину и сохранен за текущим пользователем.");
 }
 
+function orderCardHtml(order, managerMode = false) {
+  const items = order.items || [];
+  const customer = order.customer || {};
+  return `
+    <article class="order-card">
+      <strong>${order.id}</strong>
+      <span>${order.date}</span>
+      <span>${items.length} позиций · ${formatMoney(order.total || 0)}</span>
+      <span>${customer.name || customer.company || order.userEmail || "Покупатель"} · ${customer.phone || customer.email || ""}</span>
+      <span>Статус: ${orderStatusLabel(order.status)}</span>
+      ${
+        managerMode
+          ? `
+            <div class="order-actions">
+              <button class="ghost-button" type="button" data-order-status="${order.id}" data-status-value="processing">В работу</button>
+              <button class="ghost-button" type="button" data-order-status="${order.id}" data-status-value="done">Выполнен</button>
+            </div>
+          `
+          : ""
+      }
+    </article>
+  `;
+}
+
+function managementOrdersHtml(user) {
+  if (!canManageOrders(user)) return "";
+  const orders = getOrders();
+  return `
+    <div class="account-section">
+      <h3>Заказы покупателей</h3>
+      <div class="orders-list">
+        ${
+          orders.length
+            ? orders.map((order) => orderCardHtml(order, true)).join("")
+            : "<p>Заказов пока нет. Новые заказы покупателей появятся здесь.</p>"
+        }
+      </div>
+    </div>
+  `;
+}
+
+function userManagementHtml(user) {
+  if (user?.role !== "admin") return "";
+  const users = getUsers();
+  return `
+    <div class="account-section">
+      <h3>Пользователи</h3>
+      <div class="orders-list">
+        ${Object.entries(users)
+          .map(([email, item]) => {
+            const isAdmin = item.role === "admin";
+            const isManager = item.role === "manager";
+            return `
+              <article>
+                <strong>${item.name || email}</strong>
+                <span>${email}</span>
+                ${item.phone ? `<span>${item.phone}</span>` : ""}
+                <span>${roleLabel(item.role)}</span>
+                ${
+                  isAdmin
+                    ? ""
+                    : `<div class="order-actions">
+                        <button class="ghost-button" type="button" data-set-role="${email}" data-role-value="${isManager ? "buyer" : "manager"}">
+                          ${isManager ? "Снять менеджера" : "Назначить менеджером"}
+                        </button>
+                      </div>`
+                }
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
 function accountModalHtml() {
   const users = getUsers();
   const user = users[state.currentUser];
@@ -1760,7 +1902,8 @@ function accountModalHtml() {
               <div class="account-summary">
                 <strong>${user.name || user.email}</strong>
                 <span>${user.email}</span>
-                <span>${user.role === "admin" ? "Администратор" : "Покупатель"}</span>
+                ${user.phone ? `<span>${user.phone}</span>` : ""}
+                <span>${roleLabel(user.role)}</span>
               </div>
               <div class="account-actions">
                 ${user.role === "admin" ? '<button class="primary-button" type="button" data-open-admin><i data-lucide="settings"></i> Админка</button>' : ""}
@@ -1771,24 +1914,19 @@ function accountModalHtml() {
                 ${
                   orders.length
                     ? orders
-                        .map(
-                          (order) => `
-                            <article>
-                              <strong>${order.id}</strong>
-                              <span>${order.date}</span>
-                              <span>${order.items.length} позиций · ${formatMoney(order.total)}</span>
-                            </article>
-                          `
-                        )
+                        .map((order) => orderCardHtml(order))
                         .join("")
                     : "<p>Заказов пока нет. После отправки заявки они появятся здесь.</p>"
                 }
               </div>
+              ${managementOrdersHtml(user)}
+              ${userManagementHtml(user)}
             `
             : `
               <form class="auth-form" id="authForm">
                 <input name="name" type="text" placeholder="Имя или компания" />
                 <input name="email" type="email" placeholder="Email" required />
+                <input name="phone" type="tel" placeholder="Телефон" />
                 <input name="password" type="password" placeholder="Пароль" required />
                 <div class="auth-actions">
                   <button class="primary-button" type="submit" data-auth-mode="login">Войти</button>
@@ -2022,6 +2160,10 @@ function adminModalHtml() {
 }
 
 function openAdmin() {
+  if (getUsers()[state.currentUser]?.role !== "admin") {
+    showToast("Управление сайтом доступно только администратору.");
+    return;
+  }
   document.querySelector("#accountModal")?.remove();
   document.body.insertAdjacentHTML("beforeend", adminModalHtml());
   renderAdminPreview([]);
@@ -2280,19 +2422,29 @@ function submitOrder(form) {
     showToast(`Минимальная сумма корзины ${formatMoney(MIN_CART_TOTAL)}. Осталось ${formatMoney(MIN_CART_TOTAL - totals.total)}.`);
     return;
   }
-  if (user) {
-    user.orders.unshift({
+  const data = Object.fromEntries(new FormData(form).entries());
+  const customer = {
+    name: user?.name || data.company || "",
+    company: data.company || "",
+    phone: data.phone || user?.phone || "",
+    email: data.email || user?.email || "",
+    comment: data.comment || "",
+  };
+  saveOrderRecord(
+    {
       id: `SO-${Date.now().toString().slice(-6)}`,
       date: new Date().toLocaleString("ru-RU"),
+      customer,
       items: [...state.cart.values()],
       total: totals.total,
-    });
-    saveUsers(users);
-  }
+      source: "catalog",
+    },
+    state.currentUser
+  );
   form.reset();
   state.cart.clear();
   renderCart();
-  showToast(user ? "Корзина сохранена в истории заказов." : "Корзина отправлена. Зарегистрируйтесь, чтобы сохранять историю.");
+  showToast("Заказ отправлен и появился у администратора и менеджеров.");
 }
 
 function boot() {
@@ -2422,6 +2574,20 @@ function boot() {
       renderCart();
       renderAccountButton();
     }
+    if (button.dataset.orderStatus) {
+      updateOrderStatus(button.dataset.orderStatus, button.dataset.statusValue || "new");
+      closeModal();
+      openAccount();
+      showToast("Статус заказа обновлен.");
+      return;
+    }
+    if (button.dataset.setRole) {
+      const updated = setUserRole(button.dataset.setRole, button.dataset.roleValue || "buyer");
+      closeModal();
+      openAccount();
+      showToast(updated ? "Роль пользователя обновлена." : "Роль пользователя не изменена.");
+      return;
+    }
     if (button.dataset.openAdmin !== undefined) openAdmin();
     if (button.dataset.saveGenerated !== undefined) saveGeneratedProducts();
     if (button.dataset.downloadTemplate !== undefined) downloadTemplate();
@@ -2485,22 +2651,37 @@ function boot() {
       const submitter = event.submitter;
       const data = Object.fromEntries(new FormData(event.target).entries());
       const users = getUsers();
+      const email = String(data.email || "").trim().toLowerCase();
+      const password = String(data.password || "");
+      const name = String(data.name || "").trim();
+      const phone = String(data.phone || "").trim();
+      const existingEmailKey = Object.keys(users).find((key) => key.toLowerCase() === email);
       if (submitter.dataset.authMode === "register") {
-        users[data.email] = {
-          email: data.email,
-          password: data.password,
-          name: data.name || data.email,
+        if (!name || !phone) {
+          showToast("Для регистрации укажите имя и телефон.");
+          return;
+        }
+        if (existingEmailKey) {
+          showToast("Этот email уже зарегистрирован в системе.");
+          return;
+        }
+        users[email] = {
+          email,
+          password,
+          name: name || email,
+          phone,
           role: "buyer",
           orders: [],
         };
         saveUsers(users);
       }
-      if (!users[data.email] || users[data.email].password !== data.password) {
+      const userKey = existingEmailKey || email;
+      if (!users[userKey] || users[userKey].password !== password) {
         showToast("Проверьте email и пароль.");
         return;
       }
-      state.currentUser = data.email;
-      localStorage.setItem(STORAGE.user, data.email);
+      state.currentUser = userKey;
+      localStorage.setItem(STORAGE.user, userKey);
       loadCart();
       closeModal();
       renderCart();

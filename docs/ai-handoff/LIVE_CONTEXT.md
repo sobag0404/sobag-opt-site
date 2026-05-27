@@ -78,9 +78,14 @@ Recently completed:
 - Product cards now use an adaptive grid so the catalog does not collapse into very narrow cards when sidebars are visible.
 - Catalog title preservation now uses `selectedCategory`, `selectedCollection`, `selectedHoliday`, and search state instead of stale `current*` fields.
 - Theme toggle labels now say `ночная тема` and `дневная тема` instead of `ночная схема` / `дневная схема`.
+- Registration now blocks duplicate emails and requires name + phone for new users.
+- User profiles store phone numbers and can fill checkout contact fields from the profile.
+- Orders from catalog and cart flows are saved into a shared `sobag.orders.v1` order history.
+- Buyer profiles show personal order history; admins and managers see all orders with statuses and customer data.
+- Admins can assign or remove the `manager` role for non-admin users; managers can process orders but cannot open the full site admin/content panel.
 
 Latest verified production commit:
-- `6f30826 Fix catalog filter layout`
+- pending verification for the upcoming profile/order-management commit
 
 Latest production verification:
 - Local verification passed for category, collection, home, custom, marketplaces, and cart pages before push.
@@ -88,6 +93,8 @@ Latest production verification:
 - Production category page serves `styles.css?v=20260527-filter-layout` and `app.js?v=20260527-filter-layout`.
 - Production category layout checked: filters are left, products are centered, cart panel is right, and no horizontal overflow.
 - Production theme toggle label checked: `ночная тема`.
+- Local syntax verification passed for `app.js` and `cart.js` after profile/order-management changes.
+- Full browser form-entry test was limited by the in-app browser text-entry/clipboard restriction, so production verification should confirm fresh scripts and then manual form behavior can be checked by the user.
 
 ## Important Constraints
 
