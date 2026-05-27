@@ -43,13 +43,13 @@ SAMPLE_ROW = [
     "10345",
     "Подушка Aurora Cats",
     "Подушки",
-    "Подушка, Наволочка",
-    "30x30, 35x35, 40x40, 45x45, 50x50",
-    "Велюр, Габардин",
+    "Подушка; Наволочка",
+    "30x30; 35x35; 40x40; 45x45; 50x50",
+    "Велюр; Габардин",
     "210",
-    "Аниме, Животные",
+    "Аниме; Животные",
     "Новый год",
-    "аниме, коты, подарок",
+    "аниме; коты; подарок",
     "Готовая позиция с одним принтом и вариантами комплектации.",
     "Описание для карточки товара: материалы, уход, упаковка, сроки.",
     "made",
@@ -85,7 +85,9 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
 def split_list(value: str) -> list[str]:
-    return [item.strip() for item in str(value or "").split(",") if item.strip()]
+    prepared = str(value or "")
+    delimiter = ";" if ";" in prepared else ","
+    return [item.strip() for item in prepared.split(delimiter) if item.strip()]
 
 
 def clean_number(value: str, fallback: int) -> int:
@@ -247,9 +249,9 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
         "collections": collections,
         "holidays": split_list(row_value(row, "holidays")),
         "tags": split_list(row_value(row, "tags")),
-        "types": split_list(row_value(row, "types", "Подушка, Наволочка")),
+        "types": split_list(row_value(row, "types", "Подушка; Наволочка")),
         "sizes": split_list(row_value(row, "sizes", "40x40")),
-        "materials": split_list(row_value(row, "materials", "Велюр, Габардин")),
+        "materials": split_list(row_value(row, "materials", "Велюр; Габардин")),
         "basePrice": clean_number(row_value(row, "basePrice"), 220),
         "image": main_image,
         "gallery": copied_images[1:] if copied_images else gallery_from_table,
@@ -479,9 +481,9 @@ def main() -> int:
     scan_parser.add_argument("--out", default="local-import-output/products-from-photo-folders.csv", help="prefilled CSV path")
     scan_parser.add_argument("--report", default="local-import-output/photo-folder-report.csv", help="photo folder report path")
     scan_parser.add_argument("--category", default="Подушки", help="default category for generated rows")
-    scan_parser.add_argument("--types", default="Подушка, Наволочка", help="default product types")
-    scan_parser.add_argument("--sizes", default="30x30, 35x35, 40x40, 45x45, 50x50", help="default sizes")
-    scan_parser.add_argument("--materials", default="Велюр, Габардин", help="default materials")
+    scan_parser.add_argument("--types", default="", help="default product types separated by ;")
+    scan_parser.add_argument("--sizes", default="", help="default sizes separated by ;")
+    scan_parser.add_argument("--materials", default="", help="default materials separated by ;")
     scan_parser.add_argument("--base-price", default="220", help="default base price")
     scan_parser.add_argument("--include-empty", action="store_true", help="include folders without images")
     scan_parser.set_defaults(func=command_scan_photos)

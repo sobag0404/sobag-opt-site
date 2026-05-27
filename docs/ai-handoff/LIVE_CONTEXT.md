@@ -146,6 +146,21 @@ Latest production verification:
   - `https://sobag-opt-site.vercel.app/catalog` serves `app.js?v=20260527-importer-admin`.
   - Production `app.js?v=20260527-importer-admin` contains the XLSX template download handler and editable catalog admin fields.
   - `https://sobag-opt-site.vercel.app/templates/sobag-products-template.xlsx` returned HTTP 200 with the expected template file.
+- Latest local work before the next push:
+  - Added a separate `favorites.html` page for the header heart button.
+  - Header favorite buttons on the main static pages now navigate to `favorites.html`.
+  - Favorites page reuses catalog cards and filters but only shows products saved in `sobag.favorites`.
+  - Empty favorites now show a clear empty state with a catalog button.
+  - Template/list parsing now prefers `;` for multi-value cells and still reads old comma-only cells for backward compatibility.
+  - Regenerated `templates/sobag-products-template.csv` and `templates/sobag-products-template.xlsx` with `;` in list examples.
+  - Updated `docs/product-import.md` to explain `;` and decimal-comma sizes like `3,5`.
+  - Local ignored CSV `local-import-output/products-from-photo-folders.csv` was also converted from comma-list examples to `;`; the edited XLSX already had no comma delimiters in checked list columns.
+  - Local checks passed:
+    - `node --check app.js`
+    - `node --check cart.js`
+    - `python -m py_compile tools/product_importer.py tools/publish_imported_products.py`
+    - browser check at `http://127.0.0.1:4174/favorites.html` verified empty favorites.
+    - browser flow check from category catalog -> heart click -> header favorites button verified `1 товар` on `favorites.html`.
 
 ## Important Constraints
 

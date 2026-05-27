@@ -725,6 +725,7 @@ const discountProgress = document.querySelector("#discountProgress");
 const discountHint = document.querySelector("#discountHint");
 const toast = document.querySelector("#toast");
 const themeToggle = document.querySelector("[data-theme-toggle]");
+const isFavoritesPage = document.body.classList.contains("favorites-page");
 
 function normalizeCatalogList(items, fallbackItems, options = {}) {
   const source = Array.isArray(items) && items.length ? items : fallbackItems;
@@ -989,7 +990,14 @@ function renderSiteContent() {
     }
     if (footerPhone) footerPhone.textContent = content.footerPhone;
   }
-  if (catalogTitle && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim()) {
+  if (
+    catalogTitle &&
+    !isFavoritesPage &&
+    !state.selectedCategory &&
+    !state.selectedCollection &&
+    !state.selectedHoliday &&
+    !state.search.trim()
+  ) {
     catalogTitle.textContent = content.catalogTitleDefault;
   }
   document.querySelectorAll(".hero__slideshow .hero__image").forEach((image, index) => {
@@ -1261,6 +1269,7 @@ function stockLabel(stock) {
 
 function productsForFilterOptions(key) {
   return products.filter((product) => {
+    if (isFavoritesPage && !state.favorites.has(product.id)) return false;
     if (state.selectedCategory && product.category !== state.selectedCategory) return false;
     if (state.selectedCollection && !productHasCollection(product, state.selectedCollection)) return false;
     if (state.selectedHoliday && !productHasHoliday(product, state.selectedHoliday)) return false;
@@ -1339,7 +1348,12 @@ function searchScore(product) {
 function getFilteredProducts() {
   return products
     .map((product) => ({ product, score: searchScore(product) }))
-    .filter(({ product, score }) => productMatchesFilters(product) && (state.search.trim() ? score > 0 : true))
+    .filter(
+      ({ product, score }) =>
+        (!isFavoritesPage || state.favorites.has(product.id)) &&
+        productMatchesFilters(product) &&
+        (state.search.trim() ? score > 0 : true)
+    )
     .sort((a, b) => {
       if (state.search.trim() && b.score !== a.score) return b.score - a.score;
       if (state.sort === "priceAsc") return a.product.minPrice - b.product.minPrice;
@@ -1417,12 +1431,19 @@ function renderCatalogHome() {
 
 function renderCatalogShell() {
   if (!catalogHome || !catalogListing || !catalogTools || !catalogTitle) return;
-  const isHome = !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
+  const isHome = !isFavoritesPage && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
   catalogHome.classList.toggle("is-hidden", !isHome);
   catalogListing.classList.toggle("is-hidden", isHome);
-  catalogTools.classList.toggle("is-hidden", isHome);
+  catalogTools.classList.toggle("is-hidden", isHome || isFavoritesPage);
   document.body.classList.remove("filters-open");
   updateFilterToggle();
+
+  if (isFavoritesPage) {
+    catalogTitle.textContent = "Избранное";
+    filterToggle?.classList.remove("is-hidden");
+    updateFilterToggle();
+    return;
+  }
 
   if (isHome) {
     catalogTitle.textContent = getSiteContent().catalogTitleDefault;
@@ -1567,6 +1588,18 @@ function renderProducts() {
   if (!productGrid || !productCount) return;
   const list = getFilteredProducts();
   productCount.textContent = `${list.length} ${productWord(list.length)}`;
+  if (!list.length) {
+    productGrid.innerHTML = `
+      <div class="empty-products">
+        <i data-lucide="${isFavoritesPage ? "heart" : "search-x"}"></i>
+        <strong>${isFavoritesPage ? "Избранное пока пустое" : "Товары не найдены"}</strong>
+        <span>${isFavoritesPage ? "Нажмите сердечко в каталоге, чтобы сохранить товары здесь." : "Попробуйте изменить фильтры или запрос поиска."}</span>
+        ${isFavoritesPage ? `<button class="ghost-button" type="button" data-nav="catalog.html">в каталог</button>` : ""}
+      </div>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
   productGrid.innerHTML = list
     .map((product) => {
       const favorite = state.favorites.has(product.id) ? " is-active" : "";
@@ -2191,27 +2224,27 @@ function adminModalHtml() {
           </label>
           <label>
             Подборки
-            <input name="collections" type="text" placeholder="Через запятую" value="Новая подборка" />
+            <input name="collections" type="text" placeholder="Через ;" value="Новая подборка" />
           </label>
           <label>
             Праздники
-            <input name="holidays" type="text" placeholder="Через запятую" value="" />
+            <input name="holidays" type="text" placeholder="Через ;" value="" />
           </label>
           <label>
             Теги
-            <input name="tags" type="text" placeholder="Через запятую" value="Новая подборка" />
+            <input name="tags" type="text" placeholder="Через ;" value="Новая подборка" />
           </label>
           <label>
             Типы товара
-            <input name="types" type="text" placeholder="Через запятую" value="${TYPE_OPTIONS.join(", ")}" required />
+            <input name="types" type="text" placeholder="Через ;" value="${TYPE_OPTIONS.join("; ")}" required />
           </label>
           <label>
             Размеры
-            <input name="sizes" type="text" placeholder="Через запятую" value="${SIZE_OPTIONS.join(", ")}" required />
+            <input name="sizes" type="text" placeholder="Через ;" value="${SIZE_OPTIONS.join("; ")}" required />
           </label>
           <label>
             Материалы
-            <input name="materials" type="text" placeholder="Через запятую" value="${MATERIAL_OPTIONS.join(", ")}" required />
+            <input name="materials" type="text" placeholder="Через ;" value="${MATERIAL_OPTIONS.join("; ")}" required />
           </label>
           <label>
             Базовая цена
@@ -2266,8 +2299,10 @@ function openAdmin() {
 }
 
 function splitList(value) {
-  return String(value || "")
-    .split(",")
+  const prepared = String(value || "");
+  const delimiter = prepared.includes(";") ? ";" : ",";
+  return prepared
+    .split(delimiter)
     .map((item) => item.trim())
     .filter(Boolean);
 }
@@ -2354,7 +2389,7 @@ function initActualSlider() {
 }
 
 function csvCell(value) {
-  const prepared = Array.isArray(value) ? value.join(", ") : value ?? "";
+  const prepared = Array.isArray(value) ? value.join("; ") : value ?? "";
   return `"${String(prepared).replaceAll('"', '""')}"`;
 }
 
@@ -2377,12 +2412,12 @@ function downloadTemplate() {
       "SB-PIL-SMP",
       "Подушки",
       "Аниме",
-      "Аниме, Подарки",
+      "Аниме; Подарки",
       "Новый год",
-      "Аниме, Подарки, интерьер",
-      "Подушка, Наволочка",
-      "30x30, 35x35, 40x40, 45x45, 50x50",
-      "Велюр, Габардин",
+      "Аниме; Подарки; интерьер",
+      "Подушка; Наволочка",
+      "30x30; 35x35; 40x40; 45x45; 50x50",
+      "Велюр; Габардин",
       "220",
       "",
       "made",
@@ -2391,7 +2426,7 @@ function downloadTemplate() {
       "Новинка",
       "60",
       "SB-PIL-SMP",
-      "2.jpg, 3.jpg, 4.jpg",
+      "2.jpg; 3.jpg; 4.jpg",
     ],
   ]);
 }
@@ -2464,9 +2499,9 @@ async function importExcel(file) {
         collections: splitList(rowValue(row, "collections") || rowValue(row, "theme") || ""),
         holidays: splitList(rowValue(row, "holidays") || ""),
         tags: splitList(rowValue(row, "tags") || rowValue(row, "theme") || ""),
-        types: splitList(rowValue(row, "types") || TYPE_OPTIONS.join(",")),
-        sizes: splitList(rowValue(row, "sizes") || SIZE_OPTIONS.join(",")),
-        materials: splitList(rowValue(row, "materials") || MATERIAL_OPTIONS.join(",")),
+        types: splitList(rowValue(row, "types") || TYPE_OPTIONS.join(";")),
+        sizes: splitList(rowValue(row, "sizes") || SIZE_OPTIONS.join(";")),
+        materials: splitList(rowValue(row, "materials") || MATERIAL_OPTIONS.join(";")),
         basePrice: Number(rowValue(row, "basePrice") || 220),
         image: rowValue(row, "image") || "assets/production-workshop-1.png",
         stock: rowValue(row, "stock") || "made",

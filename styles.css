@@ -3768,6 +3768,39 @@ body.theme-night .copy-sku-button:hover {
   border-radius: var(--control-radius);
 }
 
+.empty-products {
+  display: grid;
+  grid-column: 1 / -1;
+  justify-items: center;
+  gap: 12px;
+  min-height: 280px;
+  padding: 48px 24px;
+  text-align: center;
+  background: var(--surface-card);
+  border: 2px solid var(--on-dark);
+  border-radius: var(--control-radius);
+}
+
+.empty-products svg {
+  width: 34px;
+  height: 34px;
+  color: var(--muted);
+}
+
+.empty-products strong {
+  font-size: 22px;
+}
+
+.empty-products span {
+  max-width: 360px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.empty-products .ghost-button {
+  margin-top: 8px;
+}
+
 .copy-sku-button {
   width: 24px;
   height: 24px;
