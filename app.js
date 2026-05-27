@@ -1832,8 +1832,19 @@ const productTemplateColumns = [
   { key: "stock", label: "Статус" },
 ];
 
+const productExportOnlyColumns = [
+  { key: "description", label: "Краткое описание" },
+  { key: "detailDescription", label: "Описание в карточке" },
+  { key: "badge", label: "Бейдж" },
+  { key: "popular", label: "Популярность" },
+  { key: "photoFolder", label: "Папка фото" },
+  { key: "gallery", label: "Фото галереи" },
+];
+
+const productExportColumns = [...productTemplateColumns, ...productExportOnlyColumns];
+
 function rowValue(row, key) {
-  const column = productTemplateColumns.find((item) => item.key === key);
+  const column = productExportColumns.find((item) => item.key === key);
   return row[key] ?? row[column?.label] ?? "";
 }
 
@@ -1997,8 +2008,12 @@ function adminModalHtml() {
             Импорт Excel/CSV
             <input id="excelInput" type="file" accept=".xlsx,.xls,.csv" />
           </label>
-          <p>Колонки шаблона: ${productTemplateColumns.map((column) => column.label).join(", ")}.</p>
-          <p>Фото товаров в импорте: квадрат 1200x1200 px, ссылка в колонке «URL фото». Старые английские колонки тоже поддерживаются.</p>
+          <p>Колонки шаблона: ${productExportColumns.map((column) => column.label).join(", ")}.</p>
+          <p>Фото товаров в импорте: квадрат 1200x1200 px. Пока можно указать ссылку в колонке «URL фото», а для будущей привязки локальных папок заполнить «Папка фото».</p>
+          <div class="admin-actions">
+            <button class="ghost-button" type="button" data-export-products>Скачать все товары</button>
+            <button class="ghost-button" type="button" data-export-filtered-products>Скачать товары по текущим фильтрам</button>
+          </div>
         </div>
         <div class="admin-preview" id="adminPreview"></div>
       </section>
@@ -2100,19 +2115,73 @@ function initActualSlider() {
   startActualSlider();
 }
 
-function downloadTemplate() {
-  const header = productTemplateColumns.map((column) => column.label).join(",");
-  const csv = [
-    header,
-    `"Коллекция Sample","SB-PIL-SMP","Подушки и наволочки","Аниме","Аниме, Подарки","Новый год","Аниме, Подарки","Подушка, Наволочка","30x30, 35x35, 40x40, 45x45, 50x50","Велюр, Габардин","220","","ready"`,
-  ].join("\n");
+function csvCell(value) {
+  const prepared = Array.isArray(value) ? value.join(", ") : value ?? "";
+  return `"${String(prepared).replaceAll('"', '""')}"`;
+}
+
+function downloadCsv(fileName, rows) {
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "sobag-products-template.csv";
+  link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function downloadTemplate() {
+  downloadCsv("sobag-products-template.csv", [
+    productExportColumns.map((column) => column.label),
+    [
+      "Коллекция Sample",
+      "SB-PIL-SMP",
+      "Подушки",
+      "Аниме",
+      "Аниме, Подарки",
+      "Новый год",
+      "Аниме, Подарки, интерьер",
+      "Подушка, Наволочка",
+      "30x30, 35x35, 40x40, 45x45, 50x50",
+      "Велюр, Габардин",
+      "220",
+      "",
+      "made",
+      "Краткое описание для каталога",
+      "Подробное описание для карточки товара",
+      "Новинка",
+      "60",
+      "SB-PIL-SMP",
+      "2.jpg, 3.jpg, 4.jpg",
+    ],
+  ]);
+}
+
+function productGalleryForExport(product) {
+  const generatedImages = new Set(["assets/hero-products-1.png", "assets/hero-products-2.png", "assets/hero-products-3.png"]);
+  return (product.gallery || [])
+    .filter((image) => image && image !== product.image && !generatedImages.has(image))
+    .join(", ");
+}
+
+function productExportValue(product, key) {
+  if (["types", "sizes", "materials", "collections", "holidays", "tags"].includes(key)) {
+    return product[key] || [];
+  }
+  if (key === "gallery") return productGalleryForExport(product);
+  if (key === "photoFolder") return product.photoFolder || product.baseSku;
+  return product[key] ?? "";
+}
+
+function productExportRow(product) {
+  return productExportColumns.map((column) => productExportValue(product, column.key));
+}
+
+function downloadProductsCsv(source, fileName) {
+  const rows = source.map(productExportRow);
+  downloadCsv(fileName, [productExportColumns.map((column) => column.label), ...rows]);
+  showToast(`Скачано товаров: ${source.length}.`);
 }
 
 async function importExcel(file) {
@@ -2137,9 +2206,12 @@ async function importExcel(file) {
         basePrice: Number(rowValue(row, "basePrice") || 220),
         image: rowValue(row, "image") || "assets/production-workshop-1.png",
         stock: rowValue(row, "stock") || "made",
-        badge: "Excel",
-        description: "Карточка импортирована из Excel.",
-        popular: 55,
+        gallery: splitList(rowValue(row, "gallery") || ""),
+        photoFolder: rowValue(row, "photoFolder") || rowValue(row, "baseSku"),
+        badge: rowValue(row, "badge") || "Excel",
+        description: rowValue(row, "description") || "Карточка импортирована из Excel.",
+        detailDescription: rowValue(row, "detailDescription") || "Карточка импортирована из Excel. Фото и параметры можно уточнить перед публикацией.",
+        popular: Number(rowValue(row, "popular") || 55),
       })
     );
   renderAdminPreview(imported);
@@ -2353,6 +2425,8 @@ function boot() {
     if (button.dataset.openAdmin !== undefined) openAdmin();
     if (button.dataset.saveGenerated !== undefined) saveGeneratedProducts();
     if (button.dataset.downloadTemplate !== undefined) downloadTemplate();
+    if (button.dataset.exportProducts !== undefined) downloadProductsCsv(products, "sobag-products-all.csv");
+    if (button.dataset.exportFilteredProducts !== undefined) downloadProductsCsv(getFilteredProducts(), "sobag-products-filtered.csv");
     if (button.dataset.resetContent !== undefined) {
       localStorage.removeItem(STORAGE.content);
       renderSiteContent();
