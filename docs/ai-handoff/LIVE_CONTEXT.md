@@ -85,7 +85,7 @@ Recently completed:
 - Admins can assign or remove the `manager` role for non-admin users; managers can process orders but cannot open the full site admin/content panel.
 
 Latest verified production commit:
-- pending verification for the upcoming profile/order-management commit
+- `e3b8262 Add profile order management`
 
 Latest production verification:
 - Local verification passed for category, collection, home, custom, marketplaces, and cart pages before push.
@@ -95,6 +95,9 @@ Latest production verification:
 - Production theme toggle label checked: `ночная тема`.
 - Local syntax verification passed for `app.js` and `cart.js` after profile/order-management changes.
 - Full browser form-entry test was limited by the in-app browser text-entry/clipboard restriction, so production verification should confirm fresh scripts and then manual form behavior can be checked by the user.
+- Production catalog serves `app.js?v=20260527-profile-orders` and `styles.css?v=20260527-profile-orders`.
+- Production cart canonical route is `https://sobag-opt-site.vercel.app/cart`; it serves `cart.js?v=20260527-profile-orders` and shows the profile-fill checkout button.
+- Production `app.js` and `cart.js` contain the shared order history key `sobag.orders.v1`.
 
 ## Important Constraints
 
