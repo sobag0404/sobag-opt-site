@@ -127,6 +127,8 @@ function renderCart() {
     .join("");
 
   nodes.count.textContent = totals.qty;
+  nodes.count.closest(".cart-page__header-note")?.classList.toggle("is-empty", totals.qty === 0);
+  nodes.count.hidden = totals.qty === 0;
   nodes.subtotal.textContent = formatMoney(totals.subtotal);
   nodes.qtyDiscount.textContent = `${totals.qtyDiscount}%`;
   nodes.promoDiscount.textContent = `${totals.promoDiscount}%`;
