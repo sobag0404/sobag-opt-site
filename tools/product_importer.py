@@ -190,8 +190,16 @@ def find_photo_folder(photos_root: Path, folder_value: str) -> Path | None:
     if exact.is_dir():
         return exact
     wanted = normalize_match_key(folder_value)
-    for child in photos_root.iterdir():
-        if child.is_dir() and normalize_match_key(child.name) == wanted:
+    for child in photos_root.rglob("*"):
+        if not child.is_dir():
+            continue
+        if normalize_match_key(child.name) == wanted:
+            return child
+        try:
+            relative = child.relative_to(photos_root).as_posix()
+        except ValueError:
+            relative = child.name
+        if normalize_match_key(relative) == wanted:
             return child
     return None
 
@@ -235,8 +243,8 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
         "baseSku": base_sku,
         "name": row_value(row, "name"),
         "category": row_value(row, "category", "Подушки"),
-        "theme": row_value(row, "theme") or (collections[0] if collections else "Без подборки"),
-        "collections": collections or ["Без подборки"],
+        "theme": row_value(row, "theme") or (collections[0] if collections else ""),
+        "collections": collections,
         "holidays": split_list(row_value(row, "holidays")),
         "tags": split_list(row_value(row, "tags")),
         "types": split_list(row_value(row, "types", "Подушка, Наволочка")),
@@ -332,6 +340,38 @@ def folder_image_count(folder: Path) -> int:
     return sum(1 for path in folder.iterdir() if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS)
 
 
+def folder_has_child_dirs(folder: Path) -> bool:
+    return any(path.is_dir() for path in folder.iterdir())
+
+
+def iter_product_photo_folders(photos_root: Path, include_empty: bool) -> list[Path]:
+    folders: list[Path] = []
+    for folder in photos_root.rglob("*"):
+        if not folder.is_dir():
+            continue
+        image_count = folder_image_count(folder)
+        if image_count > 0 or (include_empty and not folder_has_child_dirs(folder)):
+            folders.append(folder)
+    return sorted(folders, key=lambda path: path.relative_to(photos_root).as_posix().lower())
+
+
+def category_from_folder(photos_root: Path, folder: Path, fallback: str) -> str:
+    try:
+        relative = folder.relative_to(photos_root)
+    except ValueError:
+        return fallback
+    if len(relative.parts) >= 2:
+        return folder.parent.name
+    return fallback
+
+
+def relative_folder_value(photos_root: Path, folder: Path) -> str:
+    try:
+        return folder.relative_to(photos_root).as_posix()
+    except ValueError:
+        return folder.name
+
+
 def guess_base_sku(folder_name: str) -> str:
     starts_with_sku = re.match(r"^\s*([A-Za-zА-Яа-яЁё]+[-_\s]?\d+[A-Za-zА-Яа-яЁё0-9-]*)", folder_name)
     if starts_with_sku:
@@ -351,16 +391,18 @@ def command_scan_photos(args: argparse.Namespace) -> None:
     rows = [TEMPLATE_COLUMNS]
     report_rows: list[dict[str, str]] = []
 
-    for folder in sorted([item for item in photos_root.iterdir() if item.is_dir()], key=lambda path: path.name.lower()):
+    for folder in iter_product_photo_folders(photos_root, args.include_empty):
         count = folder_image_count(folder)
         if count == 0 and not args.include_empty:
             continue
         base_sku = guess_base_sku(folder.name)
+        category = category_from_folder(photos_root, folder, args.category)
+        relative_folder = relative_folder_value(photos_root, folder)
         rows.append(
             [
                 base_sku,
                 f"Товар {base_sku}",
-                args.category,
+                category,
                 args.types,
                 args.sizes,
                 args.materials,
@@ -372,7 +414,7 @@ def command_scan_photos(args: argparse.Namespace) -> None:
                 "",
                 "made",
                 "50",
-                folder.name,
+                relative_folder,
                 "",
                 "",
             ]
@@ -381,7 +423,7 @@ def command_scan_photos(args: argparse.Namespace) -> None:
             {
                 "baseSku": base_sku,
                 "name": f"Товар {base_sku}",
-                "photoFolder": folder.name,
+                "photoFolder": relative_folder,
                 "photoCount": str(count),
                 "mainImage": "",
                 "warnings": "" if count else "В папке нет фото",

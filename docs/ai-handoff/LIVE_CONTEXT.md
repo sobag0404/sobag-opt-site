@@ -115,6 +115,14 @@ Latest production verification:
   - `scan-photos` and `import` were tested against a temp photo folder and created CSV, XLSX, copied images, JSON, and import report.
   - Local catalog at `http://127.0.0.1:4174/catalog.html` rendered 6 categories, 3 actual slides, 10 collections, 6 holidays, and no browser console errors.
   - Local template URL `/templates/sobag-products-template.xlsx` returned HTTP 200.
+- Latest importer update:
+  - `scan-photos` now supports nested folders shaped as `category/article/photos`.
+  - Category is read from the penultimate folder, base SKU from the last folder, and `Папка фото` stores the relative path.
+  - Empty collections stay empty instead of being forced into `Без подборки`.
+  - Frontend Excel import auto-adds missing categories to site content with a temporary `tag` icon.
+  - User test folder scanned successfully: `C:\Users\SoBag\OneDrive\Рабочий стол\Сайт\Тест импорт товаров`.
+  - Scan result: 58 folders/products; categories: `пляжные сумки` 19, `Ремувки` 19, `шевроны 8х10` 14, `шевроны 8х5` 6.
+  - Generated local files: `local-import-output\products-from-photo-folders.xlsx`, `local-import-output\products-from-photo-folders.csv`, and `local-import-output\photo-folder-report.csv`.
 - Production verification after push:
   - `https://sobag-opt-site.vercel.app/catalog` serves `app.js?v=20260527-importer-admin`.
   - Production `app.js?v=20260527-importer-admin` contains the XLSX template download handler and editable catalog admin fields.

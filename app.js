@@ -2320,6 +2320,7 @@ function saveGeneratedProducts() {
     return;
   }
   products = [...state.adminPreview, ...products];
+  addMissingCatalogCategories(state.adminPreview);
   saveProducts();
   renderCatalogHome();
   renderCatalogShell();
@@ -2425,6 +2426,28 @@ function downloadProductsCsv(source, fileName) {
   showToast(`Скачано товаров: ${source.length}.`);
 }
 
+function addMissingCatalogCategories(sourceProducts) {
+  const content = getSiteContent();
+  const existing = new Set(content.catalogCategories.map((category) => category.name.toLocaleLowerCase("ru-RU")));
+  const additions = [];
+  sourceProducts.forEach((product) => {
+    const name = String(product.category || "").trim();
+    if (!name || existing.has(name.toLocaleLowerCase("ru-RU"))) return;
+    existing.add(name.toLocaleLowerCase("ru-RU"));
+    additions.push({
+      name,
+      icon: "tag",
+      description: "Категория добавлена из импорта. Эмблему и описание можно уточнить в админке.",
+      image: "",
+    });
+  });
+  if (!additions.length) return;
+  saveSiteContent({
+    ...content,
+    catalogCategories: [...content.catalogCategories, ...additions],
+  });
+}
+
 async function importExcel(file) {
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer);
@@ -2437,10 +2460,10 @@ async function importExcel(file) {
         baseSku: String(rowValue(row, "baseSku")).trim().toUpperCase(),
         name: String(rowValue(row, "name")).trim(),
         category: String(rowValue(row, "category") || "Подушки").trim(),
-        theme: String(rowValue(row, "theme") || "Без подборки").trim(),
-        collections: splitList(rowValue(row, "collections") || rowValue(row, "theme") || "Без подборки"),
+        theme: String(rowValue(row, "theme") || "").trim(),
+        collections: splitList(rowValue(row, "collections") || rowValue(row, "theme") || ""),
         holidays: splitList(rowValue(row, "holidays") || ""),
-        tags: splitList(rowValue(row, "tags") || rowValue(row, "theme") || "Без подборки"),
+        tags: splitList(rowValue(row, "tags") || rowValue(row, "theme") || ""),
         types: splitList(rowValue(row, "types") || TYPE_OPTIONS.join(",")),
         sizes: splitList(rowValue(row, "sizes") || SIZE_OPTIONS.join(",")),
         materials: splitList(rowValue(row, "materials") || MATERIAL_OPTIONS.join(",")),
@@ -2455,6 +2478,7 @@ async function importExcel(file) {
         popular: Number(rowValue(row, "popular") || 55),
       })
     );
+  addMissingCatalogCategories(imported);
   renderAdminPreview(imported);
   showToast(`Из Excel загружено карточек: ${imported.length}.`);
 }
