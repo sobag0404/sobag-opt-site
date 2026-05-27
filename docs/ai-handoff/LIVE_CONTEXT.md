@@ -94,8 +94,7 @@ Recently completed:
   - Added `.gitignore` rules for local import output and copied product photos.
 
 Latest verified production commit:
-- `e3b8262 Add profile order management`
-- New importer/admin dictionary work is verified locally but not yet pushed/deployed at the time of this note.
+- `b5d9521 Add product importer and editable catalog content`
 
 Latest production verification:
 - Local verification passed for category, collection, home, custom, marketplaces, and cart pages before push.
@@ -116,6 +115,10 @@ Latest production verification:
   - `scan-photos` and `import` were tested against a temp photo folder and created CSV, XLSX, copied images, JSON, and import report.
   - Local catalog at `http://127.0.0.1:4174/catalog.html` rendered 6 categories, 3 actual slides, 10 collections, 6 holidays, and no browser console errors.
   - Local template URL `/templates/sobag-products-template.xlsx` returned HTTP 200.
+- Production verification after push:
+  - `https://sobag-opt-site.vercel.app/catalog` serves `app.js?v=20260527-importer-admin`.
+  - Production `app.js?v=20260527-importer-admin` contains the XLSX template download handler and editable catalog admin fields.
+  - `https://sobag-opt-site.vercel.app/templates/sobag-products-template.xlsx` returned HTTP 200 with the expected template file.
 
 ## Important Constraints
 
