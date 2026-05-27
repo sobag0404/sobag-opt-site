@@ -35,7 +35,7 @@ Workspace:
 - Do not use the old Tilda site or its images as visual reference.
 - Day scheme must be black/white/gray only, no orange in borders, text, buttons, or accents.
 - Night scheme may use orange accents.
-- Buttons should use one standard: centered text, lowercase visual style, rectangular with small rounded corners.
+- Buttons should use one standard: centered text, uppercase visual style, rectangular with small rounded corners.
 - Product cards should have square photos, SKU, name, price, and a card button only in listing.
 - Use correct Russian pluralization: `1 товар`, `2 товара`, `5 товаров`.
 - Use agents only when a task naturally splits into meaningful parallel work; do not create agents for every small change.
@@ -70,24 +70,27 @@ Recently completed:
 - Day scheme orange accents removed in latest checked build.
 - Category tile count uses button-like shape and correct pluralization.
 - Text smoothing added via CSS.
+- Admin product CSV workflow now supports extended columns: descriptions, badge, popularity, photo folder, and gallery.
+- Admin has export buttons for all products and the currently filtered product set.
+- Recommended mass product import shape: one table row per base article/print; variants are generated from type, size, and material columns.
+- For 10k+ products and local photos, plan a local importer or backend storage flow instead of relying on browser localStorage.
 
 Latest verified production commit:
-- `81bb095 Use uppercase centered control labels`
+- pending verification for `b6af33c Add product CSV export controls`
 
 Latest production verification:
-- Vercel deployment completed successfully.
-- Production checked on catalog and cart pages after uppercase control update.
-- Main buttons and count pills show `text-transform: uppercase`.
-- Main buttons and count pills have `justify-content: center` and `align-items: center`.
-- Category counts still use correct pluralization in source text, e.g. `3 товара`, while visually uppercased by CSS.
-- No horizontal overflow found in the checked catalog/cart views.
+- Local verification passed for admin product export before push.
+- `node --check app.js` passed.
+- Vercel verification still needs to run after pushing the current commit.
 
 ## Important Constraints
 
 - No backend exists yet.
 - Users, carts, admin changes, and orders are localStorage prototype data.
 - Admin image uploads are local browser storage only and are not permanent across devices.
-- Real Excel import is prototype-level in frontend.
+- Excel/CSV import and export are prototype-level in frontend.
+- A browser page cannot automatically read arbitrary folders from the user's PC; local photo matching needs explicit folder selection or a local importer script.
+- 10k+ products and photo assets should not be stored in `app.js`, GitHub, Vercel static bundle, or localStorage for production.
 - No real payment, CRM, email, auth provider, database, or production file storage yet.
 
 ## Useful Test Accounts
@@ -103,6 +106,6 @@ This is demo-only localStorage data, not a production secret.
 - Continue polishing visual style and typography.
 - Replace prototype images with designer assets later.
 - Expand admin from localStorage to real backend/storage when ready.
-- Add real product import workflow from Excel.
+- Design and build the real product import workflow: Excel/CSV + local photo folders -> normalized products + uploaded photo URLs.
 - Add legal/personal data pages and real consent text.
 - Build production order submission path.
