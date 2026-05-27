@@ -137,6 +137,11 @@ Latest production verification:
     - `https://sobag-opt-site.vercel.app/data/products-live.json` returns 58 products.
     - sample image `assets/product-preview/68029/1.webp` returns HTTP 200.
     - browser check on production showed 58 product cards and 9 category tiles.
+- Test import assets were later removed at the user's request:
+  - deleted tracked `assets/product-preview/` and `data/products-live.json`;
+  - removed local generated `assets/imported-products/`, `data/products.import.json`, and `data/import-report.csv`;
+  - removed the frontend `products-live.json` fetch so production does not make a dead test-data request;
+  - kept `local-import-output/products-from-photo-folders.xlsx` locally so the user's edited import table is not lost.
 - Production verification after push:
   - `https://sobag-opt-site.vercel.app/catalog` serves `app.js?v=20260527-importer-admin`.
   - Production `app.js?v=20260527-importer-admin` contains the XLSX template download handler and editable catalog admin fields.
