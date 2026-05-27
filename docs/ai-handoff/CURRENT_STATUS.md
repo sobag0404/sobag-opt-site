@@ -2,39 +2,46 @@
 
 Date: 2026-05-27
 
-Latest commit:
-- `1db809e Expand editable content and normalize button text`
+Latest functional commit before this handoff update:
+- `7bc2760 Add favorites page and semicolon import lists`
 
 Working tree at the start of handoff preparation:
 - clean
 
 Production URLs:
 - Main: `https://sobag-opt-site.vercel.app/`
-- Cart: `https://sobag-opt-site.vercel.app/cart.html`
+- Catalog: `https://sobag-opt-site.vercel.app/catalog`
+- Cart: `https://sobag-opt-site.vercel.app/cart`
+- Favorites: `https://sobag-opt-site.vercel.app/favorites`
 
 Current focus:
-- B2B ecommerce UX prototype for wholesale printed textile products.
-- Visual polish and content management prototype.
-- Admin-managed page text and images.
-- Consistent button/card styling.
-- Day/night theme separation.
-- Keeping live AI context current during work.
+- preparing the project to continue from another device;
+- keeping handoff docs and ZIP current;
+- continuing product-import workflow next.
 
 Completed most recently:
-- Multi-page static structure: home, catalog, custom print, marketplaces, cart.
-- Unified button styling: centered, lowercase, smaller radius.
-- Day scheme checked with no orange accents in production.
-- Category tile count changed to button-like shape.
-- Russian pluralization added for `товар` and `вариант`.
-- Admin content editor expanded to broad site text controls.
-- `docs/ai-handoff/LIVE_CONTEXT.md` added as the working context file to update before final responses after project work.
+- removed test imported product assets and `data/products-live.json`;
+- added separate favorites page;
+- made header heart button open favorites;
+- kept favorites as localStorage prototype data;
+- changed import list examples from comma to `;`;
+- regenerated product templates;
+- updated product-import documentation.
 
 Remaining work:
-- real catalog import from Excel;
-- backend and real storage;
-- real user accounts;
-- real order submission;
-- legal docs and consent text;
-- designer-provided product/category images;
-- production content and prices;
-- persistent admin uploads across devices.
+- real product import workflow for large batches;
+- duplicate-safe import/update process;
+- optional AI-assisted descriptions/tags/collections from photos;
+- separate price-editing file per variant;
+- real backend and persistent storage;
+- real user accounts and server-side roles;
+- real order submission and manager/admin processing;
+- legal pages and consent text;
+- designer-provided product/category/actual images.
+
+Important constraints:
+- no secrets in repo/docs/ZIP/chat;
+- do not use old Tilda site or old images;
+- do not commit raw bulk product photo folders;
+- day theme should remain black/white/gray;
+- localStorage data is prototype-only.

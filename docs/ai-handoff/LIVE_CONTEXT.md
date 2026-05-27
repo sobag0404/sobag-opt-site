@@ -161,6 +161,11 @@ Latest production verification:
     - `python -m py_compile tools/product_importer.py tools/publish_imported_products.py`
     - browser check at `http://127.0.0.1:4174/favorites.html` verified empty favorites.
     - browser flow check from category catalog -> heart click -> header favorites button verified `1 товар` on `favorites.html`.
+- Handoff preparation for moving to another device:
+  - refreshed `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEW_CHAT_PROMPT.md`, `NEW_DEVICE_SETUP.md`, and `SERVER_HANDOFF_STORAGE.md`;
+  - removed stale/mojibake text from older handoff docs;
+  - documented the current production URLs, latest functional commit, local setup commands, import constraints, and no-secrets policy;
+  - rebuilt `project-ai-handoff-latest.zip` from `docs/ai-handoff`.
 
 ## Important Constraints
 
@@ -172,14 +177,6 @@ Latest production verification:
 - A browser page cannot automatically read arbitrary folders from the user's PC; local photo matching needs explicit folder selection or a local importer script.
 - 10k+ products and photo assets should not be stored in `app.js`, GitHub, Vercel static bundle, or localStorage for production.
 - No real payment, CRM, email, auth provider, database, or production file storage yet.
-
-## Useful Test Accounts
-
-Prototype admin login:
-- email: `admin@sobag.local`
-- password: `admin`
-
-This is demo-only localStorage data, not a production secret.
 
 ## Next Likely Work
 

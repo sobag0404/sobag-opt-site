@@ -1,18 +1,23 @@
 # Server And Storage Handoff
 
-## Current Server State
+## Current Hosting
 
-There is no custom server.
+There is no custom backend server.
 
-The project is deployed as static files on Vercel from GitHub:
+The site is deployed as static files on Vercel from GitHub:
 - `index.html`
+- `catalog.html`
+- `favorites.html`
+- `custom.html`
+- `marketplaces.html`
 - `cart.html`
 - `app.js`
 - `cart.js`
 - `styles.css`
 - `assets/*`
+- `templates/*`
 
-`vercel.json` contains:
+`vercel.json`:
 
 ```json
 {
@@ -21,85 +26,81 @@ The project is deployed as static files on Vercel from GitHub:
 }
 ```
 
-## Current Storage State
+Clean URL examples:
+- `/catalog` serves `catalog.html`
+- `/cart` serves `cart.html`
+- `/favorites` serves `favorites.html`
+
+## Current Storage
 
 All dynamic state is browser localStorage prototype data.
 
 Known localStorage keys:
-- `sobag.currentUser`: currently selected local prototype user email.
-- `sobag.users`: local prototype users and their order history.
-- `sobag.products.v8`: optional saved/generated product catalog override.
+- `sobag.currentUser`: selected prototype user email.
+- `sobag.users`: prototype users and roles.
+- `sobag.orders.v1`: prototype order history for buyers/admins/managers.
+- `sobag.products.v8`: optional product catalog override from admin/import prototype.
 - `sobag.cart.guest`: guest cart.
-- `sobag.cart.<email>`: per-user cart prototype.
-- `sobag.favorites`: product IDs marked as favorites.
-- `sobag.lastOrder`: last checkout order created from `cart.html`.
+- `sobag.cart.<email>`: per-user cart.
+- `sobag.favorites`: favorite product IDs.
+- `sobag.siteContent.v1`: editable site content from admin prototype.
+- `sobag.theme`: day/night theme.
 
 No real database exists.
 
-## Prototype Users
-
-The app seeds local prototype users in `app.js`.
-
-Prototype login data is demo-only and must not be treated as real authentication. Do not put real credentials into source code, chat, handoff files, or ZIP archives.
-
 ## Product Data
 
-Product test data is hardcoded in `app.js` in `productDrafts`.
+Demo products are currently in `app.js`.
 
-Current storage version:
-- `sobag.products.v8`
+Removed test imported data should stay removed unless intentionally testing a new import:
+- `data/products-live.json`
+- `assets/product-preview/`
 
-Changing the version forces users to receive the latest hardcoded test product data instead of an old localStorage override.
+Generated local import outputs are ignored and should not be committed by default:
+- `local-import-output/`
+- `assets/imported-products/`
+- `data/products.import.json`
+- `data/import-report.csv`
 
-## Cart Logic
+## Import Storage Direction
 
-Main page:
-- adding a product writes a cart entry into localStorage.
+For real production, do not rely on localStorage or Git-tracked static files for 10k+ products.
 
-Cart page:
-- reads the same cart key;
-- allows quantity changes and item removal;
-- applies quantity discounts;
-- applies demo promo codes;
-- saves cart changes back to localStorage;
-- checkout stores a demo `sobag.lastOrder` and clears the cart.
+Recommended future storage:
+- product catalog database;
+- object storage for images;
+- background import job for Excel/CSV + images;
+- duplicate detection by base SKU and photo folder;
+- import report with created/updated/skipped rows.
 
-Minimum cart total:
-- `30 000 ₽`
+## Future Backend Entities
 
-Discount tiers:
-- 30 items: 3%
-- 70 items: 7%
-- 150 items: 12%
-- 300 items: 18%
-
-Promo codes:
-- `SOBAG5`: 5%
-- `OPT10`: 10%
-
-## Future Backend Recommendations
-
-Before real production usage, replace localStorage with server-side persistence:
-- product catalog DB;
-- users and auth;
-- carts;
-- orders;
-- promo codes;
-- admin Excel import;
-- order notification pipeline, for example email, Telegram, CRM, or admin dashboard.
-
-Recommended first backend entities:
+Recommended first backend model:
+- User
+- Role
 - Product
 - ProductVariant
 - Category
 - Collection
 - Holiday
+- ProductTag
 - ProductImage
 - Cart
 - CartItem
 - Order
 - OrderItem
 - PromoCode
-- User
+- ImportBatch
+- ImportRow
 
-Do not migrate browser localStorage data as production truth.
+## Security Notes
+
+Do not treat current prototype login/roles as real security.
+
+Before real production:
+- add proper authentication;
+- add server-side authorization for admin and manager roles;
+- store orders server-side;
+- move admin uploads to real storage;
+- add privacy policy and personal data consent pages;
+- add audit trail for order status changes and imports.

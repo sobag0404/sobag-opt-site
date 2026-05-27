@@ -1,58 +1,65 @@
 # Prompt For A New AI Chat
 
-You are continuing work on the Sobag Opt wholesale textile website prototype.
+Continue work on the Sobag Opt wholesale textile website prototype.
 
-Project folder on the old machine:
-`C:\Users\SoBag\OneDrive\Документы\New project\sobag-opt-site`
+User language: Russian. Answer in Russian.
 
-GitHub repo:
+Repository:
 `https://github.com/sobag0404/sobag-opt-site`
 
 Production:
 `https://sobag-opt-site.vercel.app/`
 
-Cart:
-`https://sobag-opt-site.vercel.app/cart.html`
+Known pages:
+- `https://sobag-opt-site.vercel.app/`
+- `https://sobag-opt-site.vercel.app/catalog`
+- `https://sobag-opt-site.vercel.app/cart`
+- `https://sobag-opt-site.vercel.app/favorites`
+- `https://sobag-opt-site.vercel.app/custom`
+- `https://sobag-opt-site.vercel.app/marketplaces`
 
-Latest known commit:
-`ef70dbd Add cart page and expanded demo catalog`
+Latest functional commit before handoff docs update:
+`7bc2760 Add favorites page and semicolon import lists`
 
-Read these files first:
+Read first:
 - `docs/ai-handoff/AI_HANDOFF.md`
+- `docs/ai-handoff/CURRENT_STATUS.md`
+- `docs/ai-handoff/LIVE_CONTEXT.md`
 - `docs/ai-handoff/NEW_DEVICE_SETUP.md`
 - `docs/ai-handoff/SERVER_HANDOFF_STORAGE.md`
+- `docs/product-import.md`
 
-Important context:
-- The user speaks Russian. Answer in Russian.
-- The current site is a static prototype: `index.html`, `app.js`, `styles.css`, `cart.html`, `cart.js`.
-- Do not use the old Tilda site or old site images as visual reference.
-- Do not add secrets to repo or chat.
-- No backend exists yet. User/account/cart/order behavior is localStorage-only.
-- Vercel preview URLs may require login; production URL is usually public.
+Core constraints:
+- Do not use the old Tilda site or old site images as design/assets.
+- Do not put secrets in chat, repo, docs, or ZIP.
+- The project is frontend-only for now.
+- localStorage data is prototype data only.
+- Day theme should remain black/white/gray; night theme may use orange.
+- Product import list cells should use `;`, not comma, so sizes like `3,5` are safe.
+- Do not commit raw bulk photo folders or generated import outputs unless explicitly asked.
 
 Current implemented features:
-- catalog home with category tiles;
-- separate `Подборки` and `Праздники`;
-- large right-top hero `Актуально` slider with arrows and 15-second auto rotation;
-- 18 test products;
-- square product cards;
-- product modal with variants, gallery, tags, price, quantity;
-- favorite heart toggle;
-- separate cart page with quantity controls, discount scale, promo codes, checkout modal and personal data consent checkbox.
-
-Likely next tasks:
-- refine cart UX and checkout;
-- add real catalog data from Excel;
-- implement admin import/export;
-- prepare backend and persistent storage;
-- replace test/generated images with real designer assets.
+- home/catalog/custom/marketplaces/cart/favorites pages;
+- catalog categories, collections, holidays, and actual slider;
+- product modal with type/size/material variants and changing SKU/price;
+- favorites page for header heart button;
+- cart page with quantities, discount scale, promo code, minimum sum, checkout modal;
+- localStorage prototype accounts, roles, admin/manager order views;
+- admin content controls for page text/images/logo/site name;
+- CSV/XLSX product template download;
+- local importer that can scan nested category/article/photo folders.
 
 Before pushing changes:
-1. Run `git status --short`.
-2. Run syntax checks for touched JS files.
-3. Check locally in browser if UI changed.
+1. Check `git status --short`.
+2. Run syntax checks for touched JS/Python files.
+3. Use local browser checks for UI changes.
 4. Commit intentionally.
-5. Push to GitHub.
-6. Verify Vercel deployment success.
-7. Open production URL and verify the updated behavior.
+5. Push to `main`.
+6. Verify Vercel got the fresh commit.
+7. Check the production URL affected by the change.
 
+If continuing product import work, start from:
+- `tools/product_importer.py`
+- `tools/publish_imported_products.py`
+- `templates/sobag-products-template.xlsx`
+- `docs/product-import.md`
