@@ -72,15 +72,15 @@ Recently completed:
 - Text smoothing added via CSS.
 
 Latest verified production commit:
-- `1db809e Expand editable content and normalize button text`
+- `81bb095 Use uppercase centered control labels`
 
 Latest production verification:
 - Vercel deployment completed successfully.
-- Production checked on catalog and cart pages.
-- Day scheme showed no orange elements in automated DOM style check.
-- Category counts showed `3 товара`.
-- Product listing count showed `3 товара`.
-- Cart button text lowercased and centered.
+- Production checked on catalog and cart pages after uppercase control update.
+- Main buttons and count pills show `text-transform: uppercase`.
+- Main buttons and count pills have `justify-content: center` and `align-items: center`.
+- Category counts still use correct pluralization in source text, e.g. `3 товара`, while visually uppercased by CSS.
+- No horizontal overflow found in the checked catalog/cart views.
 
 ## Important Constraints
 
