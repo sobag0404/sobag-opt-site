@@ -126,14 +126,189 @@ const actualItems = [
 const defaultSiteContent = {
   brandName: "Sobag Opt",
   brandLogo: "",
+  toplinePrimary: "Оптовые партии от 30 000 ₽",
+  toplineSecondary: "Печать и пошив под заказ",
+  toplineTertiary: "Каталог для селлеров и магазинов",
+  navCatalogButton: "каталог",
+  navMarketplacesButton: "мы на маркетплейсах",
+  cartButton: "корзина",
   heroTitle: "Оптовый текстиль с принтами",
   heroLead:
     "Готовые позиции для продаж и производство под ваш макет: пледы, подушки, наволочки, шопперы и сезонные коллекции для маркетплейсов.",
-  heroPrimaryButton: "Перейти в каталог",
-  heroCustomButton: "Изделия с вашим принтом",
+  heroPrimaryButton: "перейти в каталог",
+  heroCustomButton: "изделия с вашим принтом",
+  actualTitle: "Актуально",
+  heroSpecOneValue: "30 000 ₽",
+  heroSpecOneText: "минимальная сумма корзины",
+  heroSpecTwoValue: "7 дней",
+  heroSpecTwoText: "тестовый срок запуска партии",
+  heroSpecThreeValue: "18%",
+  heroSpecThreeText: "максимальная скидка по шкале",
+  benefitOneTitle: "Скидки по количеству",
+  benefitOneText: "Чем больше штук в корзине, тем ниже цена. Уровень считается сразу.",
+  benefitTwoTitle: "Свое производство",
+  benefitTwoText: "Печать, пошив, упаковка и подготовка к отгрузке в одном процессе.",
+  benefitThreeTitle: "Под маркетплейсы",
+  benefitThreeText: "Штрихкоды, упаковка, комплектация и поставки партиями.",
+  benefitFourTitle: "Корзина без оплаты",
+  benefitFourText: "Покупатель собирает корзину, менеджер уточняет наличие и условия.",
+  catalogTitleDefault: "Каталог продукции",
+  catalogBackButton: "категории",
+  catalogHomeTitle: "Выберите категорию",
+  catalogHomeSubtitle: "Сначала раздел, потом товары и фильтры",
+  catalogActualTitle: "Актуально",
+  catalogCollectionsTitle: "Подборки",
+  catalogHolidaysTitle: "Праздники",
+  filterOpenButton: "открыть фильтры",
+  filterCloseButton: "закрыть фильтры",
+  requestEyebrow: "Корзина",
+  requestTitle: "Оптовый заказ",
+  requestEmptyText: "Добавьте товары из каталога",
+  requestMinHint: "Минимальная сумма корзины 30 000 ₽.",
+  requestSubmitReady: "отправить корзину",
+  requestSubmitLocked: "минимум 30 000 ₽",
+  wholesaleTitle: "Скидки и условия",
+  tierOneLabel: "от 30 000 ₽",
+  tierOneValue: "3%",
+  tierOneText: "стартовая оптовая скидка",
+  tierTwoLabel: "от 70 000 ₽",
+  tierTwoValue: "7%",
+  tierTwoText: "для регулярных закупок",
+  tierThreeLabel: "от 150 000 ₽",
+  tierThreeValue: "12%",
+  tierThreeText: "для магазинов и селлеров",
+  tierFourLabel: "от 300 000 ₽",
+  tierFourValue: "18%",
+  tierFourText: "индивидуальные условия",
+  marketplacesTitle: "Мы на маркетплейсах",
+  marketplacesText:
+    "Готовые товары Sobag можно смотреть на витринах маркетплейсов, а оптовые партии и индивидуальные принты оформлять через этот сайт.",
+  marketplaceOneName: "Wildberries",
+  marketplaceOneTitle: "Витрина Sobag",
+  marketplaceOneText: "Ссылка будет добавлена после подключения магазина.",
+  marketplaceTwoName: "Ozon",
+  marketplaceTwoTitle: "Товары в наличии",
+  marketplaceTwoText: "Подходит для просмотра готовых коллекций.",
+  marketplaceThreeName: "Яндекс Маркет",
+  marketplaceThreeTitle: "Проверка ассортимента",
+  marketplaceThreeText: "Позже добавим прямую ссылку на магазин.",
+  customTitle: "Изделия с вашим принтом",
+  customText:
+    "Отдельный сценарий для корпоративных клиентов, селлеров и магазинов: загружают задачу, выбирают изделие, тираж, упаковку и получают расчет.",
+  customStepOne: "Выбор изделия и ткани",
+  customStepTwo: "Проверка макета",
+  customStepThree: "Печать и пошив",
+  customStepFour: "Упаковка и отгрузка",
+  customSubmitButton: "получить расчет",
+  footerBrand: "SOBAG OPT",
+  footerText: "Тестовый прототип B2B-сайта для оптовых продаж текстиля с принтами.",
+  footerSalesLabel: "Отдел опта",
+  footerEmail: "opt@sobag-shop.ru",
+  footerPhone: "+7 900 000-00-00",
+  cartPageTitle: "Корзина",
+  cartPageBackButton: "вернуться в каталог",
+  cartPageEmptyTitle: "Корзина пока пустая",
+  cartPageEmptyText: "Добавьте товары из каталога, чтобы увидеть расчет оптовой скидки.",
+  cartDiscountTitle: "Скидка",
+  cartPromoTitle: "Промокод",
+  cartPromoPlaceholder: "Введите промокод",
+  cartPromoButton: "применить",
+  cartCheckoutButton: "оформить заказ",
+  checkoutTitle: "Контакты покупателя",
+  checkoutSubmitButton: "отправить заказ",
   heroImages: ["assets/production-hero-1.png", "assets/production-workshop-1.png", "assets/production-hero-1.png"],
   actualSlides: actualItems,
 };
+
+const siteTextFields = [
+  { key: "toplinePrimary", label: "Верхняя строка 1" },
+  { key: "toplineSecondary", label: "Верхняя строка 2" },
+  { key: "toplineTertiary", label: "Верхняя строка 3" },
+  { key: "navCatalogButton", label: "Кнопка шапки: каталог" },
+  { key: "navMarketplacesButton", label: "Кнопка шапки: маркетплейсы" },
+  { key: "cartButton", label: "Кнопка шапки: корзина" },
+  { key: "heroTitle", label: "Заголовок главной" },
+  { key: "heroLead", label: "Текст главной", multiline: true, wide: true },
+  { key: "heroPrimaryButton", label: "Кнопка главной: каталог" },
+  { key: "heroCustomButton", label: "Кнопка главной: свой принт" },
+  { key: "actualTitle", label: "Название блока актуально" },
+  { key: "heroSpecOneValue", label: "Преимущество 1: цифра" },
+  { key: "heroSpecOneText", label: "Преимущество 1: подпись" },
+  { key: "heroSpecTwoValue", label: "Преимущество 2: цифра" },
+  { key: "heroSpecTwoText", label: "Преимущество 2: подпись" },
+  { key: "heroSpecThreeValue", label: "Преимущество 3: цифра" },
+  { key: "heroSpecThreeText", label: "Преимущество 3: подпись" },
+  { key: "benefitOneTitle", label: "Блок преимуществ 1: заголовок" },
+  { key: "benefitOneText", label: "Блок преимуществ 1: текст", multiline: true, wide: true },
+  { key: "benefitTwoTitle", label: "Блок преимуществ 2: заголовок" },
+  { key: "benefitTwoText", label: "Блок преимуществ 2: текст", multiline: true, wide: true },
+  { key: "benefitThreeTitle", label: "Блок преимуществ 3: заголовок" },
+  { key: "benefitThreeText", label: "Блок преимуществ 3: текст", multiline: true, wide: true },
+  { key: "benefitFourTitle", label: "Блок преимуществ 4: заголовок" },
+  { key: "benefitFourText", label: "Блок преимуществ 4: текст", multiline: true, wide: true },
+  { key: "catalogTitleDefault", label: "Каталог: заголовок" },
+  { key: "catalogBackButton", label: "Каталог: кнопка назад к категориям" },
+  { key: "catalogHomeTitle", label: "Каталог: заголовок категорий" },
+  { key: "catalogHomeSubtitle", label: "Каталог: подпись категорий" },
+  { key: "catalogActualTitle", label: "Каталог: актуально" },
+  { key: "catalogCollectionsTitle", label: "Каталог: подборки" },
+  { key: "catalogHolidaysTitle", label: "Каталог: праздники" },
+  { key: "filterOpenButton", label: "Кнопка: открыть фильтры" },
+  { key: "filterCloseButton", label: "Кнопка: закрыть фильтры" },
+  { key: "requestEyebrow", label: "Мини-корзина: метка" },
+  { key: "requestTitle", label: "Мини-корзина: заголовок" },
+  { key: "requestEmptyText", label: "Мини-корзина: пустая корзина" },
+  { key: "requestMinHint", label: "Мини-корзина: минимальная сумма" },
+  { key: "requestSubmitReady", label: "Кнопка: отправить корзину" },
+  { key: "requestSubmitLocked", label: "Кнопка: минимум не набран" },
+  { key: "wholesaleTitle", label: "Оптовый блок: заголовок" },
+  { key: "tierOneLabel", label: "Скидка 1: условие" },
+  { key: "tierOneValue", label: "Скидка 1: процент" },
+  { key: "tierOneText", label: "Скидка 1: подпись" },
+  { key: "tierTwoLabel", label: "Скидка 2: условие" },
+  { key: "tierTwoValue", label: "Скидка 2: процент" },
+  { key: "tierTwoText", label: "Скидка 2: подпись" },
+  { key: "tierThreeLabel", label: "Скидка 3: условие" },
+  { key: "tierThreeValue", label: "Скидка 3: процент" },
+  { key: "tierThreeText", label: "Скидка 3: подпись" },
+  { key: "tierFourLabel", label: "Скидка 4: условие" },
+  { key: "tierFourValue", label: "Скидка 4: процент" },
+  { key: "tierFourText", label: "Скидка 4: подпись" },
+  { key: "marketplacesTitle", label: "Маркетплейсы: заголовок" },
+  { key: "marketplacesText", label: "Маркетплейсы: описание", multiline: true, wide: true },
+  { key: "marketplaceOneName", label: "Маркетплейс 1: площадка" },
+  { key: "marketplaceOneTitle", label: "Маркетплейс 1: заголовок" },
+  { key: "marketplaceOneText", label: "Маркетплейс 1: текст" },
+  { key: "marketplaceTwoName", label: "Маркетплейс 2: площадка" },
+  { key: "marketplaceTwoTitle", label: "Маркетплейс 2: заголовок" },
+  { key: "marketplaceTwoText", label: "Маркетплейс 2: текст" },
+  { key: "marketplaceThreeName", label: "Маркетплейс 3: площадка" },
+  { key: "marketplaceThreeTitle", label: "Маркетплейс 3: заголовок" },
+  { key: "marketplaceThreeText", label: "Маркетплейс 3: текст" },
+  { key: "customTitle", label: "Свой принт: заголовок" },
+  { key: "customText", label: "Свой принт: описание", multiline: true, wide: true },
+  { key: "customStepOne", label: "Свой принт: шаг 1" },
+  { key: "customStepTwo", label: "Свой принт: шаг 2" },
+  { key: "customStepThree", label: "Свой принт: шаг 3" },
+  { key: "customStepFour", label: "Свой принт: шаг 4" },
+  { key: "customSubmitButton", label: "Кнопка: получить расчет" },
+  { key: "footerBrand", label: "Подвал: название" },
+  { key: "footerText", label: "Подвал: описание", multiline: true, wide: true },
+  { key: "footerSalesLabel", label: "Подвал: отдел" },
+  { key: "footerEmail", label: "Подвал: email" },
+  { key: "footerPhone", label: "Подвал: телефон" },
+  { key: "cartPageTitle", label: "Страница корзины: заголовок" },
+  { key: "cartPageBackButton", label: "Страница корзины: кнопка назад" },
+  { key: "cartPageEmptyTitle", label: "Страница корзины: пустая корзина" },
+  { key: "cartPageEmptyText", label: "Страница корзины: текст пустой корзины", multiline: true, wide: true },
+  { key: "cartDiscountTitle", label: "Страница корзины: скидка" },
+  { key: "cartPromoTitle", label: "Страница корзины: промокод" },
+  { key: "cartPromoPlaceholder", label: "Страница корзины: поле промокода" },
+  { key: "cartPromoButton", label: "Страница корзины: кнопка промокода" },
+  { key: "cartCheckoutButton", label: "Страница корзины: кнопка оформления" },
+  { key: "checkoutTitle", label: "Форма заказа: заголовок" },
+  { key: "checkoutSubmitButton", label: "Форма заказа: кнопка отправки" },
+];
 
 const productDrafts = [
   {
@@ -578,7 +753,7 @@ function applyTheme(theme) {
   document.body.classList.toggle("theme-night", isNight);
   if (themeToggle) {
     themeToggle.setAttribute("aria-pressed", String(isNight));
-    themeToggle.innerHTML = `<i data-lucide="${isNight ? "sun" : "moon"}"></i><span>${isNight ? "Дневная схема" : "Ночная схема"}</span>`;
+    themeToggle.innerHTML = `<i data-lucide="${isNight ? "sun" : "moon"}"></i><span>${isNight ? "дневная схема" : "ночная схема"}</span>`;
   }
   if (window.lucide) window.lucide.createIcons();
 }
@@ -596,7 +771,38 @@ function toggleTheme() {
 function updateButtonText(button, text) {
   if (!button) return;
   const icon = button.querySelector("i")?.outerHTML || "";
-  button.innerHTML = `${icon}${text}`;
+  button.innerHTML = `${icon}${buttonLabel(text)}`;
+}
+
+function buttonLabel(text) {
+  return String(text || "").trim().toLocaleLowerCase("ru-RU");
+}
+
+function setText(selector, value) {
+  document.querySelectorAll(selector).forEach((node) => {
+    node.textContent = value;
+  });
+}
+
+function setButtonText(selector, value) {
+  document.querySelectorAll(selector).forEach((button) => updateButtonText(button, value));
+}
+
+function pluralRu(count, one, few, many) {
+  const value = Math.abs(Number(count));
+  const mod10 = value % 10;
+  const mod100 = value % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
+function productWord(count) {
+  return pluralRu(count, "товар", "товара", "товаров");
+}
+
+function variantWord(count) {
+  return pluralRu(count, "вариант", "варианта", "вариантов");
 }
 
 function brandNameHtml(name) {
@@ -604,6 +810,25 @@ function brandNameHtml(name) {
   if (parts.length < 2) return escapeHtml(parts[0] || defaultSiteContent.brandName);
   const last = parts.pop();
   return `${escapeHtml(parts.join(" "))} <b>${escapeHtml(last)}</b>`;
+}
+
+function renderTextField(field, content) {
+  const value = escapeHtml(content[field.key] ?? defaultSiteContent[field.key] ?? "");
+  const wide = field.wide || field.multiline ? " admin-content-grid__wide" : "";
+  if (field.multiline) {
+    return `
+      <label class="${wide.trim()}">
+        ${field.label}
+        <textarea name="${field.key}">${value}</textarea>
+      </label>
+    `;
+  }
+  return `
+    <label class="${wide.trim()}">
+      ${field.label}
+      <input name="${field.key}" type="text" value="${value}" />
+    </label>
+  `;
 }
 
 function renderHeroActualSlides(content = getSiteContent()) {
@@ -631,6 +856,7 @@ function renderSiteContent() {
   const brandName = document.querySelector(".brand__name");
   const heroTitle = document.querySelector(".hero h1");
   const heroLead = document.querySelector(".hero__lead");
+  const toplineItems = document.querySelectorAll(".topline__inner > span");
   if (brand) brand.setAttribute("aria-label", content.brandName);
   if (brandMark) {
     brandMark.innerHTML = content.brandLogo
@@ -638,10 +864,99 @@ function renderSiteContent() {
       : escapeHtml(String(content.brandName || "S").trim().charAt(0) || "S");
   }
   if (brandName) brandName.innerHTML = brandNameHtml(content.brandName);
+  [content.toplinePrimary, content.toplineSecondary, content.toplineTertiary].forEach((value, index) => {
+    if (toplineItems[index]) toplineItems[index].textContent = value;
+  });
   if (heroTitle) heroTitle.textContent = content.heroTitle;
   if (heroLead) heroLead.textContent = content.heroLead;
-  updateButtonText(document.querySelector(".hero__actions .primary-button"), content.heroPrimaryButton);
-  updateButtonText(document.querySelector(".hero__actions .ghost-button"), content.heroCustomButton);
+  setButtonText(".catalog-button", content.navCatalogButton);
+  setButtonText(".nav-link-button", content.navMarketplacesButton);
+  setText(".cart-button span", buttonLabel(content.cartButton));
+  setButtonText(".hero__actions .primary-button", content.heroPrimaryButton);
+  setButtonText(".hero__actions .ghost-button", content.heroCustomButton);
+  setText(".hero__actual-head strong", content.actualTitle);
+  const heroSpecs = document.querySelectorAll(".hero__specs article");
+  [
+    [content.heroSpecOneValue, content.heroSpecOneText],
+    [content.heroSpecTwoValue, content.heroSpecTwoText],
+    [content.heroSpecThreeValue, content.heroSpecThreeText],
+  ].forEach(([value, text], index) => {
+    heroSpecs[index]?.querySelector("strong") && (heroSpecs[index].querySelector("strong").textContent = value);
+    heroSpecs[index]?.querySelector("span") && (heroSpecs[index].querySelector("span").textContent = text);
+  });
+  const benefitCards = document.querySelectorAll(".benefits article");
+  [
+    [content.benefitOneTitle, content.benefitOneText],
+    [content.benefitTwoTitle, content.benefitTwoText],
+    [content.benefitThreeTitle, content.benefitThreeText],
+    [content.benefitFourTitle, content.benefitFourText],
+  ].forEach(([title, text], index) => {
+    benefitCards[index]?.querySelector("strong") && (benefitCards[index].querySelector("strong").textContent = title);
+    benefitCards[index]?.querySelector("span") && (benefitCards[index].querySelector("span").textContent = text);
+  });
+  setButtonText("[data-back-catalog]", content.catalogBackButton);
+  setText("#catalogHome .catalog-home__head:not(.catalog-home__head--themes) h3", content.catalogHomeTitle);
+  setText("#catalogHome .catalog-home__head:not(.catalog-home__head--themes) span", content.catalogHomeSubtitle);
+  const catalogThemeHeads = document.querySelectorAll("#catalogHome .catalog-home__head--themes h3");
+  [content.catalogActualTitle, content.catalogCollectionsTitle, content.catalogHolidaysTitle].forEach((value, index) => {
+    if (catalogThemeHeads[index]) catalogThemeHeads[index].textContent = value;
+  });
+  setText(".request-panel .eyebrow", content.requestEyebrow);
+  setText(".request-panel h3", content.requestTitle);
+  setText("#cartEmpty span", content.requestEmptyText);
+  setText("#cartMinHint", content.requestMinHint);
+  const wholesaleTitle = document.querySelector(".wholesale h2");
+  if (wholesaleTitle) wholesaleTitle.textContent = content.wholesaleTitle;
+  const tiers = document.querySelectorAll(".tiers article");
+  [
+    [content.tierOneLabel, content.tierOneValue, content.tierOneText],
+    [content.tierTwoLabel, content.tierTwoValue, content.tierTwoText],
+    [content.tierThreeLabel, content.tierThreeValue, content.tierThreeText],
+    [content.tierFourLabel, content.tierFourValue, content.tierFourText],
+  ].forEach(([label, value, text], index) => {
+    tiers[index]?.querySelector("span") && (tiers[index].querySelector("span").textContent = label);
+    tiers[index]?.querySelector("strong") && (tiers[index].querySelector("strong").textContent = value);
+    tiers[index]?.querySelector("small") && (tiers[index].querySelector("small").textContent = text);
+  });
+  setText(".marketplaces h2", content.marketplacesTitle);
+  setText(".marketplaces .section-head p", content.marketplacesText);
+  const marketplaceCards = document.querySelectorAll(".marketplace-card");
+  [
+    [content.marketplaceOneName, content.marketplaceOneTitle, content.marketplaceOneText],
+    [content.marketplaceTwoName, content.marketplaceTwoTitle, content.marketplaceTwoText],
+    [content.marketplaceThreeName, content.marketplaceThreeTitle, content.marketplaceThreeText],
+  ].forEach(([name, title, text], index) => {
+    marketplaceCards[index]?.querySelector("span") && (marketplaceCards[index].querySelector("span").textContent = name);
+    marketplaceCards[index]?.querySelector("strong") && (marketplaceCards[index].querySelector("strong").textContent = title);
+    marketplaceCards[index]?.querySelector("small") && (marketplaceCards[index].querySelector("small").textContent = text);
+  });
+  setText(".custom h2", content.customTitle);
+  setText(".custom__content p:not(.eyebrow)", content.customText);
+  document.querySelectorAll(".custom .steps span").forEach((step, index) => {
+    const values = [content.customStepOne, content.customStepTwo, content.customStepThree, content.customStepFour];
+    const number = step.querySelector("b")?.outerHTML || `<b>${index + 1}</b>`;
+    step.innerHTML = `${number} ${escapeHtml(values[index])}`;
+  });
+  setButtonText("#briefForm .primary-button", content.customSubmitButton);
+  const footer = document.querySelector(".footer");
+  if (footer) {
+    const footerBrand = footer.querySelector("strong");
+    const footerText = footer.querySelector("p");
+    const footerLabel = footer.querySelector("span");
+    const footerEmail = footer.querySelector('a[href^="mailto:"]');
+    const footerPhone = footer.querySelector('a[href^="tel:"]');
+    if (footerBrand) footerBrand.textContent = content.footerBrand;
+    if (footerText) footerText.textContent = content.footerText;
+    if (footerLabel) footerLabel.textContent = content.footerSalesLabel;
+    if (footerEmail) {
+      footerEmail.textContent = content.footerEmail;
+      footerEmail.href = `mailto:${content.footerEmail}`;
+    }
+    if (footerPhone) footerPhone.textContent = content.footerPhone;
+  }
+  if (catalogTitle && !state.currentCategory && !state.currentCollection && !state.currentHoliday && !state.query) {
+    catalogTitle.textContent = content.catalogTitleDefault;
+  }
   document.querySelectorAll(".hero__slideshow .hero__image").forEach((image, index) => {
     image.src = content.heroImages[index] || defaultSiteContent.heroImages[index];
   });
@@ -961,7 +1276,7 @@ function renderCatalogHome() {
           </span>
           <strong>${category.name}</strong>
           <small>${category.description}</small>
-          <b>${countByCategory[category.name] || 0} товаров</b>
+          <b>${countByCategory[category.name] || 0} ${productWord(countByCategory[category.name] || 0)}</b>
         </button>
       `
     )
@@ -1014,7 +1329,7 @@ function renderCatalogShell() {
   updateFilterToggle();
 
   if (isHome) {
-    catalogTitle.textContent = "Каталог продукции";
+    catalogTitle.textContent = getSiteContent().catalogTitleDefault;
     filterToggle?.classList.add("is-hidden");
     return;
   }
@@ -1031,8 +1346,9 @@ function renderCatalogShell() {
 
 function updateFilterToggle() {
   if (!filterToggle) return;
+  const content = getSiteContent();
   const open = document.body.classList.contains("filters-open");
-  filterToggle.innerHTML = `<i data-lucide="${open ? "x" : "sliders-horizontal"}"></i> ${open ? "Закрыть фильтры" : "Открыть фильтры"}`;
+  filterToggle.innerHTML = `<i data-lucide="${open ? "x" : "sliders-horizontal"}"></i> ${buttonLabel(open ? content.filterCloseButton : content.filterOpenButton)}`;
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -1154,7 +1470,7 @@ function renderFilters() {
 function renderProducts() {
   if (!productGrid || !productCount) return;
   const list = getFilteredProducts();
-  productCount.textContent = `${list.length} ${list.length === 1 ? "товар" : "товаров"}`;
+  productCount.textContent = `${list.length} ${productWord(list.length)}`;
   productGrid.innerHTML = list
     .map((product) => {
       const favorite = state.favorites.has(product.id) ? " is-active" : "";
@@ -1180,7 +1496,7 @@ function renderProducts() {
               <div class="price">
                 <strong>от ${formatMoney(product.minPrice)}</strong>
               </div>
-              <button class="add-button" type="button" data-open-product="${product.id}">Перейти в карточку</button>
+              <button class="add-button" type="button" data-open-product="${product.id}">перейти в карточку</button>
             </div>
           </div>
         </article>
@@ -1228,17 +1544,18 @@ function renderCart() {
   if (grandTotal) grandTotal.textContent = formatMoney(totals.total);
   const cartMinHint = document.querySelector("#cartMinHint");
   const checkoutButton = document.querySelector("#requestForm button[type='submit']");
+  const content = getSiteContent();
   const cartReady = totals.total >= MIN_CART_TOTAL;
   if (cartMinHint) {
     cartMinHint.textContent = cartReady
       ? "Минимальная сумма набрана, корзину можно отправлять."
-      : `До минимальной суммы осталось ${formatMoney(Math.max(MIN_CART_TOTAL - totals.total, 0))}.`;
+      : content.requestMinHint;
   }
   if (checkoutButton) {
     checkoutButton.disabled = !cartReady;
     checkoutButton.innerHTML = cartReady
-      ? '<i data-lucide="send"></i> Отправить корзину'
-      : `<i data-lucide="lock"></i> Минимум ${formatMoney(MIN_CART_TOTAL)}`;
+      ? `<i data-lucide="send"></i> ${buttonLabel(content.requestSubmitReady)}`
+      : `<i data-lucide="lock"></i> ${buttonLabel(content.requestSubmitLocked)}`;
   }
 
   const nextTier = quantityTiers.find((tier) => totals.qty < tier.qty);
@@ -1579,22 +1896,7 @@ function adminModalHtml() {
               Название сайта
               <input name="brandName" type="text" value="${escapeHtml(content.brandName)}" />
             </label>
-            <label>
-              Заголовок главной
-              <input name="heroTitle" type="text" value="${escapeHtml(content.heroTitle)}" />
-            </label>
-            <label class="admin-content-grid__wide">
-              Текст главной
-              <textarea name="heroLead">${escapeHtml(content.heroLead)}</textarea>
-            </label>
-            <label>
-              Кнопка каталога
-              <input name="heroPrimaryButton" type="text" value="${escapeHtml(content.heroPrimaryButton)}" />
-            </label>
-            <label>
-              Кнопка калькулятора
-              <input name="heroCustomButton" type="text" value="${escapeHtml(content.heroCustomButton)}" />
-            </label>
+            ${siteTextFields.map((field) => renderTextField(field, content)).join("")}
           </div>
           <div class="admin-content-section">
             <h3>Логотип в шапке</h3>
@@ -1751,7 +2053,7 @@ function renderAdminPreview(items) {
           (product) => `
             <article>
               <strong>${product.name}</strong>
-              <span>${product.baseSku} · ${product.variants.length} вариантов</span>
+              <span>${product.baseSku} · ${product.variants.length} ${variantWord(product.variants.length)}</span>
               <small>${product.variants.slice(0, 6).map((variant) => variant.sku).join(", ")}${product.variants.length > 6 ? "..." : ""}</small>
             </article>
           `
@@ -1878,13 +2180,13 @@ function contentFromAdminForm(form) {
       image: input?.dataset.imageValue || current.actualSlides[index].image || defaultSiteContent.actualSlides[index].image,
     };
   });
+  const textContent = Object.fromEntries(
+    siteTextFields.map((field) => [field.key, data[field.key] || defaultSiteContent[field.key] || ""])
+  );
   return normalizeSiteContent({
+    ...textContent,
     brandName: data.brandName || defaultSiteContent.brandName,
     brandLogo: brandLogoInput?.dataset.imageValue || current.brandLogo || defaultSiteContent.brandLogo,
-    heroTitle: data.heroTitle || defaultSiteContent.heroTitle,
-    heroLead: data.heroLead || defaultSiteContent.heroLead,
-    heroPrimaryButton: data.heroPrimaryButton || defaultSiteContent.heroPrimaryButton,
-    heroCustomButton: data.heroCustomButton || defaultSiteContent.heroCustomButton,
     heroImages,
     actualSlides,
   });

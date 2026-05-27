@@ -15,6 +15,33 @@ const promoCodes = {
   OPT10: 10,
 };
 
+const CART_CONTENT_KEY = "sobag.siteContent.v1";
+const defaultCartContent = {
+  brandName: "Sobag Opt",
+  brandLogo: "",
+  toplinePrimary: "Оптовые партии от 30 000 ₽",
+  toplineSecondary: "Печать и пошив под заказ",
+  toplineTertiary: "Каталог для селлеров и магазинов",
+  navCatalogButton: "каталог",
+  cartButton: "корзина",
+  footerBrand: "SOBAG OPT",
+  footerText: "Тестовый прототип B2B-сайта для оптовых продаж текстиля с принтами.",
+  footerSalesLabel: "Отдел опта",
+  footerEmail: "opt@sobag-shop.ru",
+  footerPhone: "+7 900 000-00-00",
+  cartPageTitle: "Корзина",
+  cartPageBackButton: "вернуться в каталог",
+  cartPageEmptyTitle: "Корзина пока пустая",
+  cartPageEmptyText: "Добавьте товары из каталога, чтобы увидеть расчет оптовой скидки.",
+  cartDiscountTitle: "Скидка",
+  cartPromoTitle: "Промокод",
+  cartPromoPlaceholder: "Введите промокод",
+  cartPromoButton: "применить",
+  cartCheckoutButton: "оформить заказ",
+  checkoutTitle: "Контакты покупателя",
+  checkoutSubmitButton: "отправить заказ",
+};
+
 const state = {
   cart: new Map(JSON.parse(localStorage.getItem(CART_KEY) || "[]")),
   promo: "",
@@ -44,6 +71,88 @@ function formatMoney(value) {
     currency: "RUB",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function buttonLabel(text) {
+  return String(text || "").trim().toLocaleLowerCase("ru-RU");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function getSiteContent() {
+  try {
+    return { ...defaultCartContent, ...(JSON.parse(localStorage.getItem(CART_CONTENT_KEY) || "null") || {}) };
+  } catch {
+    return { ...defaultCartContent };
+  }
+}
+
+function setText(selector, value) {
+  document.querySelectorAll(selector).forEach((node) => {
+    node.textContent = value;
+  });
+}
+
+function setButtonText(selector, value) {
+  document.querySelectorAll(selector).forEach((button) => {
+    const icon = button.querySelector("i")?.outerHTML || "";
+    button.innerHTML = `${icon}${buttonLabel(value)}`;
+  });
+}
+
+function brandNameHtml(name) {
+  const parts = String(name || defaultCartContent.brandName).trim().split(/\s+/);
+  if (parts.length < 2) return escapeHtml(parts[0] || defaultCartContent.brandName);
+  const last = parts.pop();
+  return `${escapeHtml(parts.join(" "))} <b>${escapeHtml(last)}</b>`;
+}
+
+function renderCartContent() {
+  const content = getSiteContent();
+  const toplineItems = document.querySelectorAll(".topline__inner > span");
+  [content.toplinePrimary, content.toplineSecondary, content.toplineTertiary].forEach((value, index) => {
+    if (toplineItems[index]) toplineItems[index].textContent = value;
+  });
+  const brandMark = document.querySelector(".brand__mark");
+  const brandName = document.querySelector(".brand__name");
+  if (brandMark) {
+    brandMark.innerHTML = content.brandLogo
+      ? `<img src="${content.brandLogo}" alt="" />`
+      : String(content.brandName || "S").trim().charAt(0);
+  }
+  if (brandName) brandName.innerHTML = brandNameHtml(content.brandName);
+  setButtonText(".catalog-button", content.navCatalogButton);
+  setText("#cartPageLabel", buttonLabel(content.cartButton));
+  setText(".cart-page h1", content.cartPageTitle);
+  setButtonText(".section-head .ghost-button", content.cartPageBackButton);
+  setText("#cartPageEmpty strong", content.cartPageEmptyTitle);
+  setText("#cartPageEmpty span", content.cartPageEmptyText);
+  setText(".cart-summary__block:first-child h2", content.cartDiscountTitle);
+  setText(".cart-summary__block:nth-child(2) h2", content.cartPromoTitle);
+  if (nodes.promoInput) nodes.promoInput.placeholder = content.cartPromoPlaceholder;
+  setButtonText(".promo-form button", content.cartPromoButton);
+  setButtonText("#checkoutButton", content.cartCheckoutButton);
+  setText("#checkoutTitle", content.checkoutTitle);
+  setButtonText(".checkout-form .primary-button", content.checkoutSubmitButton);
+  const footer = document.querySelector(".footer");
+  if (footer) {
+    footer.querySelector("strong").textContent = content.footerBrand;
+    footer.querySelector("p").textContent = content.footerText;
+    footer.querySelector("span").textContent = content.footerSalesLabel;
+    const email = footer.querySelector('a[href^="mailto:"]');
+    const phone = footer.querySelector('a[href^="tel:"]');
+    if (email) {
+      email.textContent = content.footerEmail;
+      email.href = `mailto:${content.footerEmail}`;
+    }
+    if (phone) phone.textContent = content.footerPhone;
+  }
 }
 
 function saveCart() {
@@ -134,6 +243,7 @@ function renderCart() {
   nodes.promoDiscount.textContent = `${totals.promoDiscount}%`;
   nodes.grandTotal.textContent = formatMoney(totals.total);
   nodes.checkoutButton.disabled = !totals.lines.length || totals.total < MIN_CART_TOTAL;
+  setButtonText("#checkoutButton", getSiteContent().cartCheckoutButton);
   nodes.minHint.textContent =
     totals.total >= MIN_CART_TOTAL
       ? "Минимальная сумма набрана, можно оформлять заказ."
@@ -229,5 +339,6 @@ document.querySelector("#checkoutForm").addEventListener("submit", (event) => {
   showToast("Заказ отправлен. Менеджер свяжется с покупателем.");
 });
 
+renderCartContent();
 renderCart();
 if (window.lucide) window.lucide.createIcons();

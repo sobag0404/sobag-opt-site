@@ -9,9 +9,9 @@
   --body: #39393b;
   --body-strong: #111111;
   --muted: #707072;
-  --amber: #ff7a1a;
-  --copper: #b95a1a;
-  --sand: #f1b36d;
+  --amber: #111111;
+  --copper: #39393b;
+  --sand: #f5f5f5;
   --success: #007d48;
   --section: 48px;
   --control-radius: 8px;
@@ -49,6 +49,10 @@ body {
   background: var(--canvas);
   font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
   font-weight: 300;
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button,
@@ -2077,7 +2081,7 @@ main {
   border: 1px solid rgba(255, 122, 26, 0.55);
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .theme-toggle svg {
@@ -2871,14 +2875,18 @@ main {
 
 .category-tile b {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: max-content;
   margin-top: 18px;
-  padding: 7px 13px;
+  min-height: 32px;
+  padding: 0 14px;
   color: var(--canvas);
   background: var(--on-dark);
-  border-radius: 999px;
+  border-radius: var(--control-radius);
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .theme-tiles {
@@ -3605,6 +3613,28 @@ body.theme-night .copy-sku-button:hover {
 .icon-button,
 .favorite-button,
 .modal__close,
+.nav-link-button {
+  color: var(--on-dark);
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+
+.ghost-button:hover,
+.theme-toggle:hover,
+.icon-button:hover,
+.favorite-button:hover,
+.modal__close:hover,
+.nav-link-button:hover {
+  color: var(--canvas);
+  background: var(--on-dark);
+  border-color: var(--on-dark);
+}
+
+.ghost-button,
+.theme-toggle,
+.icon-button,
+.favorite-button,
+.modal__close,
 .copy-sku-button,
 .nav-link-button {
   box-shadow: none;
@@ -4087,15 +4117,19 @@ body.theme-night.cart-page .cart-page-line__remove:hover {
 .excel-import button,
 .checkout-form button,
 .cart-page__header-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   min-height: var(--control-height);
   padding: 0 22px;
   border-radius: var(--control-radius);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 750;
   letter-spacing: 0;
   line-height: 1.1;
   text-align: center;
-  text-transform: none;
+  text-transform: lowercase;
 }
 
 .icon-button,
@@ -4105,6 +4139,15 @@ body.theme-night.cart-page .cart-page-line__remove:hover {
   width: 48px;
   height: 48px;
   border-radius: var(--control-radius);
+}
+
+.hero__actual-card,
+.category-tile,
+.theme-tile,
+.actual-tile,
+.variant-option,
+.detail-tag {
+  text-transform: lowercase;
 }
 
 .theme-toggle {
