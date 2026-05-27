@@ -16,6 +16,22 @@
   --section: 96px;
 }
 
+body.theme-night {
+  --canvas: #080504;
+  --surface-soft: #120c08;
+  --surface-card: #1b110b;
+  --surface-elevated: #26170d;
+  --hairline: #3a2418;
+  --hairline-strong: #74401c;
+  --on-dark: #fff8ef;
+  --body: #d9c0aa;
+  --body-strong: #fff1df;
+  --muted: #a98970;
+  --amber: #ff8a1f;
+  --copper: #d86516;
+  --sand: #ffc47d;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -107,12 +123,20 @@ a {
 .brand__mark {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 54px;
+  height: 54px;
+  overflow: hidden;
   color: var(--canvas);
   background: var(--on-dark);
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 900;
+  border-radius: 14px;
+}
+
+.brand__mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .brand__name {
@@ -251,6 +275,11 @@ a {
   font-style: normal;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.cart-button.is-empty strong,
+.cart-button.is-empty em {
+  display: none;
 }
 
 .hero {
@@ -1678,6 +1707,7 @@ h3 {
   gap: 12px;
 }
 
+.admin-form label,
 .admin-content-grid label,
 .admin-image-upload,
 .admin-slide-editor__fields label {
@@ -1690,7 +1720,7 @@ h3 {
   text-transform: uppercase;
 }
 
-.admin-content-grid label:nth-child(2) {
+.admin-content-grid__wide {
   grid-column: 1 / -1;
 }
 
@@ -1709,6 +1739,10 @@ h3 {
   gap: 12px;
 }
 
+.admin-image-grid--logo {
+  grid-template-columns: minmax(160px, 240px);
+}
+
 .admin-image-upload {
   min-width: 0;
 }
@@ -1721,10 +1755,27 @@ h3 {
   border: 1px solid var(--hairline);
 }
 
+.admin-image-upload--brandLogo img {
+  aspect-ratio: 1;
+  object-fit: contain;
+  padding: 18px;
+}
+
 .admin-image-upload input {
   min-height: auto;
   padding: 10px;
   font-size: 12px;
+}
+
+.admin-image-upload small,
+.field-note,
+.excel-import p {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.45;
+  text-transform: none;
 }
 
 .admin-slide-editor {
@@ -1925,8 +1976,8 @@ textarea:focus-visible {
   }
 
   .brand__mark {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
   }
 
   .cart-button span,
@@ -1980,9 +2031,9 @@ textarea:focus-visible {
   --body: #39393b;
   --body-strong: #111111;
   --muted: #707072;
-  --amber: #111111;
-  --copper: #707072;
-  --sand: #cacacb;
+  --amber: #ff7a1a;
+  --copper: #b95a1a;
+  --sand: #f1b36d;
   --success: #007d48;
   --section: 48px;
 }
@@ -2025,23 +2076,52 @@ main {
   padding: 8px 0;
 }
 
+.topline__inner > span:first-child {
+  color: var(--amber);
+  font-weight: 800;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 0 11px;
+  color: var(--on-dark);
+  background: rgba(255, 122, 26, 0.16);
+  border: 1px solid rgba(255, 122, 26, 0.55);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.theme-toggle svg {
+  width: 15px;
+  height: 15px;
+  color: var(--amber);
+}
+
 .header {
   background: rgba(255, 255, 255, 0.94);
   border-bottom: 1px solid var(--hairline-strong);
 }
 
+body.theme-night .header {
+  background: rgba(12, 8, 5, 0.96);
+  border-bottom-color: rgba(255, 138, 31, 0.38);
+}
+
 .header__inner {
-  min-height: 64px;
+  min-height: 76px;
 }
 
 .brand__mark {
   color: var(--canvas);
-  background: var(--on-dark);
-  border-radius: 999px;
+  background: var(--amber);
+  border-radius: 14px;
 }
 
 .brand__name,
-.brand__name b,
 h1,
 h2,
 h3,
@@ -2051,6 +2131,7 @@ h3,
 }
 
 .brand__name b {
+  color: var(--amber);
   font-weight: 900;
 }
 
@@ -2062,7 +2143,7 @@ h3,
   min-height: 48px;
   padding: 0 24px;
   color: var(--canvas);
-  background: var(--on-dark);
+  background: var(--amber);
   border: 0;
   border-radius: 30px;
   font-size: 15px;
@@ -2074,6 +2155,7 @@ h3,
 .ghost-button {
   color: var(--on-dark);
   background: var(--surface-soft);
+  border: 1px solid rgba(255, 122, 26, 0.34);
 }
 
 .catalog-button:hover,
@@ -2081,12 +2163,12 @@ h3,
 .cart-button:hover,
 .add-button:hover {
   color: var(--canvas);
-  background: #39393b;
+  background: var(--sand);
 }
 
 .ghost-button:hover {
-  color: var(--on-dark);
-  background: #e5e5e5;
+  color: var(--canvas);
+  background: var(--amber);
 }
 
 .search,
@@ -3024,7 +3106,7 @@ main {
   position: absolute;
   z-index: 2;
   top: 28px;
-  right: max(24px, calc((100vw - 1440px) / 2 + 24px));
+  right: max(12px, calc((100vw - 1440px) / 2 + 12px));
   display: grid;
   width: min(480px, calc(100vw - 48px));
   color: var(--canvas);
@@ -3038,38 +3120,45 @@ main {
   left: 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   pointer-events: none;
 }
 
 .hero__actual-head strong {
   width: max-content;
-  padding: 8px 13px;
+  padding: 10px 16px;
   color: var(--on-dark);
   background: var(--canvas);
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 850;
   text-transform: uppercase;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
 }
 
 .hero__actual-nav {
+  position: absolute;
+  top: 104px;
+  left: -1px;
+  right: -1px;
   display: flex;
-  gap: 6px;
-  pointer-events: auto;
+  justify-content: space-between;
+  pointer-events: none;
 }
 
 .hero__actual-nav button {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   color: var(--on-dark);
   background: var(--canvas);
-  border: 0;
+  border: 2px solid rgba(255, 122, 26, 0.88);
   border-radius: 999px;
+  pointer-events: auto;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
 }
 
 .hero__actual-nav svg {
@@ -3088,8 +3177,8 @@ main {
   pointer-events: none;
   color: var(--canvas);
   background: var(--on-dark);
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  border-radius: 0;
+  border: 3px solid rgba(255, 122, 26, 0.9);
+  border-radius: 22px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
   transition: opacity 260ms ease, transform 260ms ease;
   transform: translateY(8px);
@@ -3228,6 +3317,21 @@ main {
 
   .hero__actual-card {
     min-height: 164px;
+    border-radius: 18px;
+  }
+
+  .hero__actual-head strong {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .hero__actual-nav {
+    top: 60px;
+  }
+
+  .hero__actual-nav button {
+    width: 38px;
+    height: 38px;
   }
 
   .actual-tiles {
@@ -3341,4 +3445,149 @@ main {
     margin-top: 66px;
     font-size: 22px;
   }
+}
+
+/* Volume accents layer: gradients, orange accents, and soft shadows. Remove this block to roll back the added depth. */
+.catalog-button,
+.primary-button,
+.cart-button,
+.add-button {
+  color: var(--canvas);
+  background: linear-gradient(135deg, #ffffff 0%, #f3f3f3 58%, rgba(255, 122, 26, 0.88) 100%);
+  border: 1px solid rgba(255, 122, 26, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 12px 26px rgba(0, 0, 0, 0.22),
+    0 0 0 1px rgba(255, 122, 26, 0.08);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.catalog-button:hover,
+.primary-button:hover,
+.cart-button:hover,
+.add-button:hover {
+  color: var(--canvas);
+  background: linear-gradient(135deg, #ffffff 0%, #ffd0a6 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 16px 34px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 122, 26, 0.18);
+  transform: translateY(-1px);
+}
+
+.ghost-button,
+.theme-toggle,
+.icon-button,
+.favorite-button,
+.modal__close {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 122, 26, 0.12));
+  border: 1px solid rgba(255, 122, 26, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 10px 22px rgba(0, 0, 0, 0.16);
+}
+
+.brand__mark {
+  background: linear-gradient(145deg, #ffffff 0%, #f6f6f6 52%, var(--amber) 100%);
+  border: 1px solid rgba(255, 122, 26, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 10px 22px rgba(0, 0, 0, 0.22);
+}
+
+.brand__name b,
+.eyebrow,
+.price strong,
+.product-card__sku,
+.detail-price small {
+  color: var(--amber);
+}
+
+.accent-stripe {
+  background: linear-gradient(90deg, var(--amber), var(--on-dark));
+}
+
+.product-card,
+.category-tile,
+.theme-tile,
+.actual-tile,
+.benefits article,
+.tiers article,
+.steps article,
+.modal__panel,
+.filter-sidebar,
+.cart-panel,
+.product-detail__media,
+.product-detail__aside,
+.admin-content-section,
+.admin-slide-editor,
+.orders-list article,
+.admin-preview article,
+.excel-import {
+  border-color: rgba(255, 122, 26, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 44px rgba(0, 0, 0, 0.18);
+}
+
+.product-card:hover,
+.category-tile:hover,
+.theme-tile:hover,
+.actual-tile:hover {
+  border-color: rgba(255, 122, 26, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 22px 54px rgba(0, 0, 0, 0.26);
+}
+
+.hero__actual-card {
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+body.theme-night .catalog-button,
+body.theme-night .primary-button,
+body.theme-night .cart-button,
+body.theme-night .add-button {
+  color: #160b04;
+  background: linear-gradient(135deg, #ff9a3a 0%, #ff7a1a 58%, #ffe0b8 100%);
+  border-color: rgba(255, 196, 125, 0.44);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 14px 30px rgba(255, 122, 26, 0.2),
+    0 16px 34px rgba(0, 0, 0, 0.36);
+}
+
+body.theme-night .ghost-button,
+body.theme-night .theme-toggle,
+body.theme-night .icon-button,
+body.theme-night .favorite-button,
+body.theme-night .modal__close {
+  color: var(--on-dark);
+  background: linear-gradient(145deg, rgba(255, 138, 31, 0.2), rgba(255, 255, 255, 0.04));
+  border-color: rgba(255, 138, 31, 0.38);
+}
+
+body.theme-night .product-card,
+body.theme-night .category-tile,
+body.theme-night .theme-tile,
+body.theme-night .actual-tile,
+body.theme-night .benefits article,
+body.theme-night .tiers article,
+body.theme-night .steps article,
+body.theme-night .modal__panel,
+body.theme-night .filter-sidebar,
+body.theme-night .cart-panel,
+body.theme-night .product-detail__media,
+body.theme-night .product-detail__aside,
+body.theme-night .admin-content-section,
+body.theme-night .admin-slide-editor,
+body.theme-night .orders-list article,
+body.theme-night .admin-preview article,
+body.theme-night .excel-import {
+  border-color: rgba(255, 138, 31, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 46px rgba(0, 0, 0, 0.42);
 }

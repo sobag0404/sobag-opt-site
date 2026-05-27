@@ -124,6 +124,8 @@ const actualItems = [
 ];
 
 const defaultSiteContent = {
+  brandName: "Sobag Opt",
+  brandLogo: "",
   heroTitle: "Оптовый текстиль с принтами",
   heroLead:
     "Готовые позиции для продаж и производство под ваш макет: пледы, подушки, наволочки, шопперы и сезонные коллекции для маркетплейсов.",
@@ -483,6 +485,7 @@ const STORAGE = {
   users: "sobag.users",
   products: "sobag.products.v8",
   content: "sobag.siteContent.v1",
+  theme: "sobag.theme.v1",
   guestCart: "sobag.cart.guest",
 };
 
@@ -542,6 +545,7 @@ const grandTotal = document.querySelector("#grandTotal");
 const discountProgress = document.querySelector("#discountProgress");
 const discountHint = document.querySelector("#discountHint");
 const toast = document.querySelector("#toast");
+const themeToggle = document.querySelector("[data-theme-toggle]");
 
 function normalizeSiteContent(content = {}) {
   const actualSlides = Array.isArray(content.actualSlides) && content.actualSlides.length ? content.actualSlides : defaultSiteContent.actualSlides;
@@ -569,10 +573,37 @@ function saveSiteContent(content) {
   localStorage.setItem(STORAGE.content, JSON.stringify(normalizeSiteContent(content)));
 }
 
+function applyTheme(theme) {
+  const isNight = theme === "night";
+  document.body.classList.toggle("theme-night", isNight);
+  if (themeToggle) {
+    themeToggle.setAttribute("aria-pressed", String(isNight));
+    themeToggle.innerHTML = `<i data-lucide="${isNight ? "sun" : "moon"}"></i><span>${isNight ? "Обычная схема" : "Ночная схема"}</span>`;
+  }
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function initTheme() {
+  applyTheme(localStorage.getItem(STORAGE.theme) || "default");
+}
+
+function toggleTheme() {
+  const nextTheme = document.body.classList.contains("theme-night") ? "default" : "night";
+  localStorage.setItem(STORAGE.theme, nextTheme);
+  applyTheme(nextTheme);
+}
+
 function updateButtonText(button, text) {
   if (!button) return;
   const icon = button.querySelector("i")?.outerHTML || "";
   button.innerHTML = `${icon}${text}`;
+}
+
+function brandNameHtml(name) {
+  const parts = String(name || defaultSiteContent.brandName).trim().split(/\s+/);
+  if (parts.length < 2) return escapeHtml(parts[0] || defaultSiteContent.brandName);
+  const last = parts.pop();
+  return `${escapeHtml(parts.join(" "))} <b>${escapeHtml(last)}</b>`;
 }
 
 function renderHeroActualSlides(content = getSiteContent()) {
@@ -595,8 +626,18 @@ function renderHeroActualSlides(content = getSiteContent()) {
 
 function renderSiteContent() {
   const content = getSiteContent();
+  const brand = document.querySelector(".brand");
+  const brandMark = document.querySelector(".brand__mark");
+  const brandName = document.querySelector(".brand__name");
   const heroTitle = document.querySelector(".hero h1");
   const heroLead = document.querySelector(".hero__lead");
+  if (brand) brand.setAttribute("aria-label", content.brandName);
+  if (brandMark) {
+    brandMark.innerHTML = content.brandLogo
+      ? `<img src="${content.brandLogo}" alt="" />`
+      : escapeHtml(String(content.brandName || "S").trim().charAt(0) || "S");
+  }
+  if (brandName) brandName.innerHTML = brandNameHtml(content.brandName);
   if (heroTitle) heroTitle.textContent = content.heroTitle;
   if (heroLead) heroLead.textContent = content.heroLead;
   updateButtonText(document.querySelector(".hero__actions .primary-button"), content.heroPrimaryButton);
@@ -1103,6 +1144,8 @@ function renderCart() {
   cartEmpty.classList.toggle("is-hidden", lines.length > 0);
   cartCount.textContent = totals.qty;
   if (cartHeaderTotal) cartHeaderTotal.textContent = formatMoney(totals.total);
+  const headerCartButton = cartCount.closest(".cart-button");
+  headerCartButton?.classList.toggle("is-empty", totals.qty === 0);
   favoriteCount.textContent = state.favorites.size;
   subtotalNode.textContent = formatMoney(totals.subtotal);
   discountValue.textContent = `${averageDiscount}%`;
@@ -1368,12 +1411,41 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-function adminImageUploadHtml(kind, index, image, title) {
+const productTemplateColumns = [
+  { key: "name", label: "Название" },
+  { key: "baseSku", label: "Начальный артикул" },
+  { key: "category", label: "Категория" },
+  { key: "theme", label: "Основная подборка" },
+  { key: "collections", label: "Подборки" },
+  { key: "holidays", label: "Праздники" },
+  { key: "tags", label: "Теги" },
+  { key: "types", label: "Типы товара" },
+  { key: "sizes", label: "Размеры" },
+  { key: "materials", label: "Материалы" },
+  { key: "basePrice", label: "Базовая цена" },
+  { key: "image", label: "URL фото" },
+  { key: "stock", label: "Статус" },
+];
+
+function rowValue(row, key) {
+  const column = productTemplateColumns.find((item) => item.key === key);
+  return row[key] ?? row[column?.label] ?? "";
+}
+
+function adminImageFallback(kind) {
+  if (kind === "brandLogo") {
+    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='256' fill='%23fff'/%3E%3Ctext x='256' y='330' text-anchor='middle' font-family='Arial,sans-serif' font-size='250' font-weight='900' fill='%23000'%3ES%3C/text%3E%3C/svg%3E";
+  }
+  return "assets/production-workshop-1.png";
+}
+
+function adminImageUploadHtml(kind, index, image, title, note) {
   return `
-    <label class="admin-image-upload">
+    <label class="admin-image-upload admin-image-upload--${kind}">
       <span>${title}</span>
-      <img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" />
+      <img src="${escapeHtml(image || adminImageFallback(kind))}" alt="${escapeHtml(title)}" />
       <input type="file" accept="image/*" data-content-image="${kind}" data-content-index="${index}" />
+      <small>${note}</small>
     </label>
   `;
 }
@@ -1383,13 +1455,19 @@ function adminActualSlideHtml(slide, index) {
   const holidaySelected = slide.type !== "collection" ? "selected" : "";
   return `
     <article class="admin-slide-editor" data-admin-slide="${index}">
-      ${adminImageUploadHtml("actualSlides", index, slide.image, `Актуально ${index + 1}`)}
+      ${adminImageUploadHtml("actualSlides", index, slide.image, `Актуально ${index + 1}`, "Рекомендуем: 1440x750 px, JPG/WebP до 1.5 МБ.")}
       <div class="admin-slide-editor__fields">
-        <input name="actualLabel${index}" type="text" value="${escapeHtml(slide.label)}" placeholder="Надпись на слайде" />
-        <select name="actualType${index}">
-          <option value="holiday" ${holidaySelected}>Праздник</option>
-          <option value="collection" ${collectionSelected}>Подборка</option>
-        </select>
+        <label>
+          Надпись на слайде
+          <input name="actualLabel${index}" type="text" value="${escapeHtml(slide.label)}" placeholder="Например: Новый год" />
+        </label>
+        <label>
+          Куда ведет слайд
+          <select name="actualType${index}">
+            <option value="holiday" ${holidaySelected}>Праздник</option>
+            <option value="collection" ${collectionSelected}>Подборка</option>
+          </select>
+        </label>
       </div>
     </article>
   `;
@@ -1410,10 +1488,14 @@ function adminModalHtml() {
         <form class="admin-content-form" id="adminContentForm">
           <div class="admin-content-grid">
             <label>
+              Название сайта
+              <input name="brandName" type="text" value="${escapeHtml(content.brandName)}" />
+            </label>
+            <label>
               Заголовок главной
               <input name="heroTitle" type="text" value="${escapeHtml(content.heroTitle)}" />
             </label>
-            <label>
+            <label class="admin-content-grid__wide">
               Текст главной
               <textarea name="heroLead">${escapeHtml(content.heroLead)}</textarea>
             </label>
@@ -1427,9 +1509,17 @@ function adminModalHtml() {
             </label>
           </div>
           <div class="admin-content-section">
+            <h3>Логотип в шапке</h3>
+            <div class="admin-image-grid admin-image-grid--logo">
+              ${adminImageUploadHtml("brandLogo", 0, content.brandLogo, "Логотип", "Рекомендуем: PNG/WebP 512x512 px, прозрачный фон, до 1.5 МБ.")}
+            </div>
+          </div>
+          <div class="admin-content-section">
             <h3>Фото главной страницы</h3>
             <div class="admin-image-grid">
-              ${content.heroImages.map((image, index) => adminImageUploadHtml("heroImages", index, image, `Главное фото ${index + 1}`)).join("")}
+              ${content.heroImages
+                .map((image, index) => adminImageUploadHtml("heroImages", index, image, `Главное фото ${index + 1}`, "Рекомендуем: 1920x1200 px, JPG/WebP до 1.5 МБ."))
+                .join("")}
             </div>
           </div>
           <div class="admin-content-section">
@@ -1450,22 +1540,62 @@ function adminModalHtml() {
           <p>Задайте начальный артикул и группы вариантов. Сайт создаст все комбинации: тип × размер × материал.</p>
         </div>
         <form class="admin-form" id="adminGenerator">
-          <input name="name" type="text" placeholder="Название коллекции" value="Коллекция New Print" required />
-          <input name="baseSku" type="text" placeholder="Начальный артикул" value="SB-PIL-NEW" required />
-          <input name="category" type="text" placeholder="Категория" value="Подушки и наволочки" required />
-          <input name="theme" type="text" placeholder="Основная подборка" value="Новая подборка" required />
-          <input name="collections" type="text" placeholder="Подборки через запятую" value="Новая подборка" />
-          <input name="holidays" type="text" placeholder="Праздники через запятую" value="" />
-          <input name="tags" type="text" placeholder="Дополнительные теги через запятую" value="Новая подборка" />
-          <input name="types" type="text" placeholder="Типы через запятую" value="${TYPE_OPTIONS.join(", ")}" required />
-          <input name="sizes" type="text" placeholder="Размеры через запятую" value="${SIZE_OPTIONS.join(", ")}" required />
-          <input name="materials" type="text" placeholder="Материалы через запятую" value="${MATERIAL_OPTIONS.join(", ")}" required />
-          <input name="basePrice" type="number" min="1" value="220" placeholder="Базовая цена" required />
-          <input name="image" type="url" placeholder="URL изображения" value="assets/production-workshop-1.png" />
-          <select name="stock">
-            <option value="ready">В наличии</option>
-            <option value="made">Под заказ</option>
-          </select>
+          <label>
+            Название
+            <input name="name" type="text" placeholder="Название коллекции" value="Коллекция New Print" required />
+          </label>
+          <label>
+            Начальный артикул
+            <input name="baseSku" type="text" placeholder="SB-PIL-NEW" value="SB-PIL-NEW" required />
+          </label>
+          <label>
+            Категория
+            <input name="category" type="text" placeholder="Подушки" value="Подушки" required />
+          </label>
+          <label>
+            Основная подборка
+            <input name="theme" type="text" placeholder="Новая подборка" value="Новая подборка" required />
+          </label>
+          <label>
+            Подборки
+            <input name="collections" type="text" placeholder="Через запятую" value="Новая подборка" />
+          </label>
+          <label>
+            Праздники
+            <input name="holidays" type="text" placeholder="Через запятую" value="" />
+          </label>
+          <label>
+            Теги
+            <input name="tags" type="text" placeholder="Через запятую" value="Новая подборка" />
+          </label>
+          <label>
+            Типы товара
+            <input name="types" type="text" placeholder="Через запятую" value="${TYPE_OPTIONS.join(", ")}" required />
+          </label>
+          <label>
+            Размеры
+            <input name="sizes" type="text" placeholder="Через запятую" value="${SIZE_OPTIONS.join(", ")}" required />
+          </label>
+          <label>
+            Материалы
+            <input name="materials" type="text" placeholder="Через запятую" value="${MATERIAL_OPTIONS.join(", ")}" required />
+          </label>
+          <label>
+            Базовая цена
+            <input name="basePrice" type="number" min="1" value="220" placeholder="Цена за единицу" required />
+          </label>
+          <label>
+            Фото товара
+            <input name="image" type="url" placeholder="URL изображения" value="assets/production-workshop-1.png" />
+            <small class="field-note">Рекомендуем: квадрат 1200x1200 px, JPG/WebP. В каталоге все фото будут отображаться квадратом.</small>
+          </label>
+          <label>
+            Статус
+            <select name="stock">
+              <option value="ready">В наличии</option>
+              <option value="made">Под заказ</option>
+            </select>
+          </label>
           <div class="admin-actions">
             <button class="primary-button" type="submit">Сгенерировать</button>
             <button class="ghost-button" type="button" data-save-generated>Добавить карточку</button>
@@ -1477,7 +1607,8 @@ function adminModalHtml() {
             Импорт Excel/CSV
             <input id="excelInput" type="file" accept=".xlsx,.xls,.csv" />
           </label>
-          <p>Колонки: name, baseSku, category, theme, collections, holidays, tags, types, sizes, materials, basePrice, image, stock.</p>
+          <p>Колонки шаблона: ${productTemplateColumns.map((column) => column.label).join(", ")}.</p>
+          <p>Фото товаров в импорте: квадрат 1200x1200 px, ссылка в колонке «URL фото». Старые английские колонки тоже поддерживаются.</p>
         </div>
         <div class="admin-preview" id="adminPreview"></div>
       </section>
@@ -1580,8 +1711,9 @@ function initActualSlider() {
 }
 
 function downloadTemplate() {
+  const header = productTemplateColumns.map((column) => column.label).join(",");
   const csv = [
-    "name,baseSku,category,theme,collections,holidays,tags,types,sizes,materials,basePrice,image,stock",
+    header,
     `"Коллекция Sample","SB-PIL-SMP","Подушки и наволочки","Аниме","Аниме, Подарки","Новый год","Аниме, Подарки","Подушка, Наволочка","30x30, 35x35, 40x40, 45x45, 50x50","Велюр, Габардин","220","","ready"`,
   ].join("\n");
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
@@ -1598,23 +1730,23 @@ async function importExcel(file) {
   const workbook = XLSX.read(buffer);
   const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
   const imported = rows
-    .filter((row) => row.name && row.baseSku)
+    .filter((row) => rowValue(row, "name") && rowValue(row, "baseSku"))
     .map((row) =>
       normalizeProduct({
-        id: `${row.baseSku}-${Date.now()}-${Math.random().toString(16).slice(2)}`.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
-        baseSku: String(row.baseSku).trim().toUpperCase(),
-        name: String(row.name).trim(),
-        category: String(row.category || "Подушки и наволочки").trim(),
-        theme: String(row.theme || "Без подборки").trim(),
-        collections: splitList(row.collections || row.theme || "Без подборки"),
-        holidays: splitList(row.holidays || ""),
-        tags: splitList(row.tags || row.theme || "Без подборки"),
-        types: splitList(row.types || TYPE_OPTIONS.join(",")),
-        sizes: splitList(row.sizes || SIZE_OPTIONS.join(",")),
-        materials: splitList(row.materials || MATERIAL_OPTIONS.join(",")),
-        basePrice: Number(row.basePrice || 220),
-        image: row.image || "assets/production-workshop-1.png",
-        stock: row.stock || "made",
+        id: `${rowValue(row, "baseSku")}-${Date.now()}-${Math.random().toString(16).slice(2)}`.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+        baseSku: String(rowValue(row, "baseSku")).trim().toUpperCase(),
+        name: String(rowValue(row, "name")).trim(),
+        category: String(rowValue(row, "category") || "Подушки").trim(),
+        theme: String(rowValue(row, "theme") || "Без подборки").trim(),
+        collections: splitList(rowValue(row, "collections") || rowValue(row, "theme") || "Без подборки"),
+        holidays: splitList(rowValue(row, "holidays") || ""),
+        tags: splitList(rowValue(row, "tags") || rowValue(row, "theme") || "Без подборки"),
+        types: splitList(rowValue(row, "types") || TYPE_OPTIONS.join(",")),
+        sizes: splitList(rowValue(row, "sizes") || SIZE_OPTIONS.join(",")),
+        materials: splitList(rowValue(row, "materials") || MATERIAL_OPTIONS.join(",")),
+        basePrice: Number(rowValue(row, "basePrice") || 220),
+        image: rowValue(row, "image") || "assets/production-workshop-1.png",
+        stock: rowValue(row, "stock") || "made",
         badge: "Excel",
         description: "Карточка импортирована из Excel.",
         popular: 55,
@@ -1645,6 +1777,7 @@ function readContentFile(input) {
 function contentFromAdminForm(form) {
   const current = getSiteContent();
   const data = Object.fromEntries(new FormData(form).entries());
+  const brandLogoInput = form.querySelector('[data-content-image="brandLogo"][data-content-index="0"]');
   const heroImages = [0, 1, 2].map((index) => {
     const input = form.querySelector(`[data-content-image="heroImages"][data-content-index="${index}"]`);
     return input?.dataset.imageValue || current.heroImages[index] || defaultSiteContent.heroImages[index];
@@ -1658,6 +1791,8 @@ function contentFromAdminForm(form) {
     };
   });
   return normalizeSiteContent({
+    brandName: data.brandName || defaultSiteContent.brandName,
+    brandLogo: brandLogoInput?.dataset.imageValue || current.brandLogo || defaultSiteContent.brandLogo,
     heroTitle: data.heroTitle || defaultSiteContent.heroTitle,
     heroLead: data.heroLead || defaultSiteContent.heroLead,
     heroPrimaryButton: data.heroPrimaryButton || defaultSiteContent.heroPrimaryButton,
@@ -1700,6 +1835,7 @@ function submitOrder(form) {
 
 function boot() {
   seedUsers();
+  initTheme();
   loadCart();
   renderCatalogHome();
   renderCatalogShell();
@@ -1727,6 +1863,10 @@ function boot() {
     if (button.dataset.actualNext !== undefined) {
       nextActualSlide(1);
       startActualSlider();
+      return;
+    }
+    if (button.dataset.themeToggle !== undefined) {
+      toggleTheme();
       return;
     }
     if (button.dataset.openCart !== undefined) {
