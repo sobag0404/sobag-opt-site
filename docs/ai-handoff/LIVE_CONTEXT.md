@@ -123,6 +123,15 @@ Latest production verification:
   - User test folder scanned successfully: `C:\Users\SoBag\OneDrive\Рабочий стол\Сайт\Тест импорт товаров`.
   - Scan result: 58 folders/products; categories: `пляжные сумки` 19, `Ремувки` 19, `шевроны 8х10` 14, `шевроны 8х5` 6.
   - Generated local files: `local-import-output\products-from-photo-folders.xlsx`, `local-import-output\products-from-photo-folders.csv`, and `local-import-output\photo-folder-report.csv`.
+- First test import publication:
+  - User finished editing `local-import-output\products-from-photo-folders.xlsx`; prices are temporary and will be edited later.
+  - Ran importer against the user's nested photo folder and created 58 products in `data/products.import.json`.
+  - Import result: categories `Сумки пляжные` 19, `Ремувки` 19, `Шевроны` 20; 213 source photos matched; no import warnings.
+  - Added `tools/publish_imported_products.py` to optimize imported images for the static preview catalog.
+  - Published preview data to `data/products-live.json` and optimized WebP assets under `assets/product-preview/`.
+  - Optimized static asset size: about 24 MB for 213 WebP files instead of about 317 MB source images.
+  - `app.js` now fetches `data/products-live.json` for visitors who do not already have products saved in localStorage.
+  - Local browser check at `http://127.0.0.1:4174/catalog.html` showed 58 product cards and 9 category tiles including `Сумки пляжные`, `Ремувки`, `Шевроны`.
 - Production verification after push:
   - `https://sobag-opt-site.vercel.app/catalog` serves `app.js?v=20260527-importer-admin`.
   - Production `app.js?v=20260527-importer-admin` contains the XLSX template download handler and editable catalog admin fields.

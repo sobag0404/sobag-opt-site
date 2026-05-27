@@ -49,6 +49,7 @@ const quantityTiers = [
 ];
 
 const MIN_CART_TOTAL = 30000;
+const PUBLISHED_PRODUCTS_URL = "data/products-live.json";
 
 const catalogCategories = [
   {
@@ -1080,6 +1081,21 @@ function loadProducts() {
   const saved = JSON.parse(localStorage.getItem(STORAGE.products) || "null");
   const source = saved?.length ? saved : productDrafts;
   return source.map(normalizeProduct);
+}
+
+async function hydratePublishedProducts() {
+  const saved = JSON.parse(localStorage.getItem(STORAGE.products) || "null");
+  if (saved?.length) return;
+  try {
+    const response = await fetch(`${PUBLISHED_PRODUCTS_URL}?v=20260527-first-import`, { cache: "no-store" });
+    if (!response.ok) return;
+    const imported = await response.json();
+    if (!Array.isArray(imported) || !imported.length) return;
+    products = imported.map(normalizeProduct);
+    addMissingCatalogCategories(products);
+  } catch {
+    // Static preview data is optional; fallback products remain available.
+  }
 }
 
 function saveProducts() {
@@ -2648,11 +2664,12 @@ function submitOrder(form) {
   showToast("Заказ отправлен и появился у администратора и менеджеров.");
 }
 
-function boot() {
+async function boot() {
   seedUsers();
   initTheme();
   initCatalogRoute();
   loadCart();
+  await hydratePublishedProducts();
   renderCatalogHome();
   renderCatalogShell();
   renderFilters();

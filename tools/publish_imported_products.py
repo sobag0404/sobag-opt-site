@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Prepare imported products for the static preview catalog.
+
+This converts local imported images to smaller WebP files and rewrites product
+image paths into data/products-live.json, which the static site can fetch.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+from pathlib import Path
+
+from PIL import Image
+
+
+def convert_image(source: Path, target: Path, max_size: int, quality: int) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with Image.open(source) as image:
+        image = image.convert("RGB")
+        image.thumbnail((max_size, max_size), Image.LANCZOS)
+        image.save(target, "WEBP", quality=quality, method=6)
+
+
+def rewrite_image(path_value: str, source_root: Path, target_root: Path, project_root: Path, max_size: int, quality: int) -> str:
+    source = project_root / path_value
+    if not source.exists():
+        return path_value
+    relative = source.relative_to(source_root)
+    target = target_root / relative.with_suffix(".webp")
+    convert_image(source, target, max_size, quality)
+    return target.relative_to(project_root).as_posix()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Publish imported Sobag products as optimized static preview data")
+    parser.add_argument("--input", default="data/products.import.json", help="imported products JSON")
+    parser.add_argument("--out", default="data/products-live.json", help="published products JSON")
+    parser.add_argument("--source-assets", default="assets/imported-products", help="source imported image folder")
+    parser.add_argument("--target-assets", default="assets/product-preview", help="optimized image folder")
+    parser.add_argument("--max-size", type=int, default=1200, help="max image side in pixels")
+    parser.add_argument("--quality", type=int, default=78, help="WebP quality")
+    args = parser.parse_args()
+
+    project_root = Path.cwd()
+    input_path = project_root / args.input
+    output_path = project_root / args.out
+    source_root = project_root / args.source_assets
+    target_root = project_root / args.target_assets
+
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
+    if target_root.exists():
+        shutil.rmtree(target_root)
+    target_root.mkdir(parents=True, exist_ok=True)
+
+    products = json.loads(input_path.read_text(encoding="utf-8"))
+    image_count = 0
+    for product in products:
+        if product.get("image"):
+            product["image"] = rewrite_image(product["image"], source_root, target_root, project_root, args.max_size, args.quality)
+            image_count += 1
+        gallery = []
+        for image in product.get("gallery", []):
+            gallery.append(rewrite_image(image, source_root, target_root, project_root, args.max_size, args.quality))
+            image_count += 1
+        product["gallery"] = gallery
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps({"products": len(products), "images": image_count, "output": str(output_path)}, ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    main()
