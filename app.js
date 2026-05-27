@@ -941,6 +941,7 @@ function getFilteredProducts() {
 }
 
 function renderCatalogHome() {
+  if (!categoryTiles || !actualTiles || !collectionTiles || !holidayTiles) return;
   const countByCategory = Object.fromEntries(catalogCategories.map((category) => [category.name, 0]));
   products.forEach((product) => {
     countByCategory[product.category] = (countByCategory[product.category] || 0) + 1;
@@ -1004,6 +1005,7 @@ function renderCatalogHome() {
 }
 
 function renderCatalogShell() {
+  if (!catalogHome || !catalogListing || !catalogTools || !catalogTitle) return;
   const isHome = !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
   catalogHome.classList.toggle("is-hidden", !isHome);
   catalogListing.classList.toggle("is-hidden", isHome);
@@ -1035,6 +1037,10 @@ function updateFilterToggle() {
 }
 
 function openCatalogCategory(category) {
+  if (!catalogListing || document.body.classList.contains("home-page")) {
+    window.location.href = `catalog.html?category=${encodeURIComponent(category)}`;
+    return;
+  }
   state.selectedCategory = category;
   state.selectedCollection = "";
   state.selectedHoliday = "";
@@ -1046,6 +1052,10 @@ function openCatalogCategory(category) {
 }
 
 function openCatalogCollection(collection) {
+  if (!catalogListing || document.body.classList.contains("home-page")) {
+    window.location.href = `catalog.html?collection=${encodeURIComponent(collection)}`;
+    return;
+  }
   state.selectedCategory = "";
   state.selectedCollection = collection;
   state.selectedHoliday = "";
@@ -1057,6 +1067,10 @@ function openCatalogCollection(collection) {
 }
 
 function openCatalogHoliday(holiday) {
+  if (!catalogListing || document.body.classList.contains("home-page")) {
+    window.location.href = `catalog.html?holiday=${encodeURIComponent(holiday)}`;
+    return;
+  }
   state.selectedCategory = "";
   state.selectedCollection = "";
   state.selectedHoliday = holiday;
@@ -1067,12 +1081,32 @@ function openCatalogHoliday(holiday) {
   document.querySelector("#catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function initCatalogRoute() {
+  if (!catalogListing) return;
+  const params = new URLSearchParams(window.location.search);
+  const category = params.get("category");
+  const collection = params.get("collection");
+  const holiday = params.get("holiday");
+  const search = params.get("q");
+  if (category) state.selectedCategory = category;
+  if (collection) state.selectedCollection = collection;
+  if (holiday) state.selectedHoliday = holiday;
+  if (search) {
+    state.search = search;
+    if (searchInput) searchInput.value = search;
+  }
+}
+
 function backToCatalogHome() {
+  if (!catalogListing) {
+    window.location.href = "catalog.html";
+    return;
+  }
   state.selectedCategory = "";
   state.selectedCollection = "";
   state.selectedHoliday = "";
   state.search = "";
-  searchInput.value = "";
+  if (searchInput) searchInput.value = "";
   Object.values(state.filters).forEach((bucket) => bucket.clear());
   renderCatalogShell();
   renderFilters();
@@ -1080,6 +1114,7 @@ function backToCatalogHome() {
 }
 
 function renderFilters() {
+  if (!filterGroups) return;
   const groups = [];
   if (!state.selectedCategory) groups.push({ key: "category", title: "Категории", label: (value) => value });
   if (!state.selectedCollection) groups.push({ key: "collection", title: "Подборки", label: (value) => value });
@@ -1117,6 +1152,7 @@ function renderFilters() {
 }
 
 function renderProducts() {
+  if (!productGrid || !productCount) return;
   const list = getFilteredProducts();
   productCount.textContent = `${list.length} ${list.length === 1 ? "товар" : "товаров"}`;
   productGrid.innerHTML = list
@@ -1160,34 +1196,36 @@ function renderCart() {
   const lines = [...state.cart.values()];
   const averageDiscount = totals.subtotal ? Math.round((1 - totals.total / totals.subtotal) * 100) : 0;
 
-  cartItems.innerHTML = lines
-    .map((line) => {
-      const totals = lineTotals(line);
-      return `
-        <div class="cart-line">
-          <div>
-            <strong>${line.productName}</strong>
-            <span>${line.variant.sku}</span>
-            <span>${line.variant.type}, ${line.variant.size}, ${line.variant.material}</span>
-            <span>${line.qty} шт. × ${formatMoney(line.variant.price)} · скидка ${totals.discount}%</span>
+  if (cartItems) {
+    cartItems.innerHTML = lines
+      .map((line) => {
+        const totals = lineTotals(line);
+        return `
+          <div class="cart-line">
+            <div>
+              <strong>${line.productName}</strong>
+              <span>${line.variant.sku}</span>
+              <span>${line.variant.type}, ${line.variant.size}, ${line.variant.material}</span>
+              <span>${line.qty} шт. × ${formatMoney(line.variant.price)} · скидка ${totals.discount}%</span>
+            </div>
+            <button type="button" title="Удалить" data-remove="${line.key}">
+              <i data-lucide="x"></i>
+            </button>
           </div>
-          <button type="button" title="Удалить" data-remove="${line.key}">
-            <i data-lucide="x"></i>
-          </button>
-        </div>
-      `;
-    })
-    .join("");
+        `;
+      })
+      .join("");
+  }
 
-  cartEmpty.classList.toggle("is-hidden", lines.length > 0);
-  cartCount.textContent = totals.qty;
+  cartEmpty?.classList.toggle("is-hidden", lines.length > 0);
+  if (cartCount) cartCount.textContent = totals.qty;
   if (cartHeaderTotal) cartHeaderTotal.textContent = formatMoney(totals.total);
-  const headerCartButton = cartCount.closest(".cart-button");
+  const headerCartButton = cartCount?.closest(".cart-button");
   headerCartButton?.classList.toggle("is-empty", totals.qty === 0);
-  favoriteCount.textContent = state.favorites.size;
-  subtotalNode.textContent = formatMoney(totals.subtotal);
-  discountValue.textContent = `${averageDiscount}%`;
-  grandTotal.textContent = formatMoney(totals.total);
+  if (favoriteCount) favoriteCount.textContent = state.favorites.size;
+  if (subtotalNode) subtotalNode.textContent = formatMoney(totals.subtotal);
+  if (discountValue) discountValue.textContent = `${averageDiscount}%`;
+  if (grandTotal) grandTotal.textContent = formatMoney(totals.total);
   const cartMinHint = document.querySelector("#cartMinHint");
   const checkoutButton = document.querySelector("#requestForm button[type='submit']");
   const cartReady = totals.total >= MIN_CART_TOTAL;
@@ -1205,10 +1243,12 @@ function renderCart() {
 
   const nextTier = quantityTiers.find((tier) => totals.qty < tier.qty);
   const maxTier = quantityTiers[quantityTiers.length - 1];
-  discountProgress.style.width = `${Math.min((totals.qty / maxTier.qty) * 100, 100)}%`;
-  discountHint.textContent = nextTier
-    ? `До скидки ${nextTier.discount}% осталось ${nextTier.qty - totals.qty} шт. в корзине.`
-    : "Максимальная скидка по количеству применена.";
+  if (discountProgress) discountProgress.style.width = `${Math.min((totals.qty / maxTier.qty) * 100, 100)}%`;
+  if (discountHint) {
+    discountHint.textContent = nextTier
+      ? `До скидки ${nextTier.discount}% осталось ${nextTier.qty - totals.qty} шт. в корзине.`
+      : "Максимальная скидка по количеству применена.";
+  }
 
   saveCart();
   if (window.lucide) window.lucide.createIcons();
@@ -1884,6 +1924,7 @@ function submitOrder(form) {
 function boot() {
   seedUsers();
   initTheme();
+  initCatalogRoute();
   loadCart();
   renderCatalogHome();
   renderCatalogShell();
@@ -1917,12 +1958,30 @@ function boot() {
       toggleTheme();
       return;
     }
-    if (button.dataset.openCart !== undefined) {
-      const cartWindow = window.open("cart.html", "_blank", "noopener");
-      if (!cartWindow) window.location.href = "cart.html";
+    if (button.dataset.nav) {
+      window.location.href = button.dataset.nav;
       return;
     }
-    if (button.dataset.scroll) document.querySelector(button.dataset.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (button.dataset.openCart !== undefined) {
+      window.location.href = "cart.html";
+      return;
+    }
+    if (button.dataset.scroll) {
+      const target = document.querySelector(button.dataset.scroll);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        const routes = {
+          "#catalog": "catalog.html",
+          "#custom": "custom.html",
+          "#briefForm": "custom.html#briefForm",
+          "#marketplaces": "marketplaces.html",
+          "#wholesale": "index.html#wholesale",
+        };
+        if (routes[button.dataset.scroll]) window.location.href = routes[button.dataset.scroll];
+      }
+      return;
+    }
     if (button.dataset.openCategory) {
       closeModal();
       openCatalogCategory(button.dataset.openCategory);
