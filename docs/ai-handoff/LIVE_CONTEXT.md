@@ -80,12 +80,14 @@ Recently completed:
 - Theme toggle labels now say `ночная тема` and `дневная тема` instead of `ночная схема` / `дневная схема`.
 
 Latest verified production commit:
-- pending verification for the upcoming catalog layout/theme-label commit
+- `6f30826 Fix catalog filter layout`
 
 Latest production verification:
 - Local verification passed for category, collection, home, custom, marketplaces, and cart pages before push.
 - `node --check app.js` passed.
-- Vercel verification still needs to run after pushing the current commit.
+- Production category page serves `styles.css?v=20260527-filter-layout` and `app.js?v=20260527-filter-layout`.
+- Production category layout checked: filters are left, products are centered, cart panel is right, and no horizontal overflow.
+- Production theme toggle label checked: `ночная тема`.
 
 ## Important Constraints
 
