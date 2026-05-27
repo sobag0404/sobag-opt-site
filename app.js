@@ -812,6 +812,39 @@ function showToast(message) {
   showToast.timer = window.setTimeout(() => toast.classList.remove("is-visible"), 3000);
 }
 
+async function copyText(value, label = "Артикул") {
+  const text = String(value || "").trim();
+  if (!text) return;
+  const fallbackCopy = () => {
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.left = "-9999px";
+    field.style.top = "0";
+    document.body.append(field);
+    field.focus();
+    field.select();
+    const copied = document.execCommand("copy");
+    field.remove();
+    return copied;
+  };
+  try {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        if (!fallbackCopy()) throw new Error("fallback-copy-failed");
+      }
+    } else if (!fallbackCopy()) {
+      throw new Error("fallback-copy-failed");
+    }
+    showToast(`${label} скопирован: ${text}`);
+  } catch {
+    showToast("Не удалось скопировать. Попробуйте выделить артикул вручную.");
+  }
+}
+
 function stockLabel(stock) {
   return stock === "ready" ? "В наличии" : "Под заказ";
 }
@@ -1100,7 +1133,12 @@ function renderProducts() {
             </button>
           </div>
           <div class="product-card__body">
-            <span class="product-card__sku">${product.baseSku}</span>
+            <div class="product-card__sku-row">
+              <span class="product-card__sku">${product.baseSku}</span>
+              <button class="copy-sku-button" type="button" data-copy-sku="${product.baseSku}" title="Скопировать артикул" aria-label="Скопировать артикул ${product.baseSku}">
+                <i data-lucide="copy"></i>
+              </button>
+            </div>
             <h3>${product.name}</h3>
             <div class="product-card__bottom">
               <div class="price">
@@ -1240,7 +1278,12 @@ function productModalHtml(product) {
           <aside class="product-detail__options">
             <div class="sku-line">
               <span>Выбранный артикул</span>
-              <strong id="selectedSku">${variant.sku}</strong>
+              <div class="sku-line__value">
+                <strong id="selectedSku">${variant.sku}</strong>
+                <button class="copy-sku-button copy-sku-button--detail" type="button" data-copy-sku="${variant.sku}" title="Скопировать артикул" aria-label="Скопировать выбранный артикул ${variant.sku}">
+                  <i data-lucide="copy"></i>
+                </button>
+              </div>
             </div>
             ${variantControls("type", "Тип товара", product.types)}
             ${variantControls("size", "Размер", product.sizes)}
@@ -1309,6 +1352,11 @@ function refreshProductModal() {
   state.activeVariant.qty = qty;
   const discount = getQuantityDiscount(qty);
   document.querySelector("#selectedSku").textContent = variant.sku;
+  const detailCopySkuButton = modal.querySelector(".copy-sku-button--detail");
+  if (detailCopySkuButton) {
+    detailCopySkuButton.dataset.copySku = variant.sku;
+    detailCopySkuButton.setAttribute("aria-label", `Скопировать выбранный артикул ${variant.sku}`);
+  }
   document.querySelector("#detailPrice").textContent = formatMoney(variant.price);
   document.querySelector("#detailDiscount").textContent = `Скидка ${discount}% от количества`;
   document.querySelector("#detailTotal").textContent = formatMoney(Math.round(variant.price * qty * (1 - discount / 100)));
@@ -1897,6 +1945,10 @@ function boot() {
     }
     if (button.dataset.backCatalog !== undefined) {
       backToCatalogHome();
+      return;
+    }
+    if (button.dataset.copySku) {
+      copyText(button.dataset.copySku);
       return;
     }
     if (button.id === "accountButton") openAccount();
