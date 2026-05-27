@@ -94,7 +94,7 @@ Recently completed:
   - Added `.gitignore` rules for local import output and copied product photos.
 
 Latest verified production commit:
-- `b5d9521 Add product importer and editable catalog content`
+- `7636da0 Publish first imported product batch`
 
 Latest production verification:
 - Local verification passed for category, collection, home, custom, marketplaces, and cart pages before push.
@@ -132,6 +132,11 @@ Latest production verification:
   - Optimized static asset size: about 24 MB for 213 WebP files instead of about 317 MB source images.
   - `app.js` now fetches `data/products-live.json` for visitors who do not already have products saved in localStorage.
   - Local browser check at `http://127.0.0.1:4174/catalog.html` showed 58 product cards and 9 category tiles including `Сумки пляжные`, `Ремувки`, `Шевроны`.
+  - Production verification passed after deploy:
+    - `https://sobag-opt-site.vercel.app/catalog` serves `app.js?v=20260527-first-import`.
+    - `https://sobag-opt-site.vercel.app/data/products-live.json` returns 58 products.
+    - sample image `assets/product-preview/68029/1.webp` returns HTTP 200.
+    - browser check on production showed 58 product cards and 9 category tiles.
 - Production verification after push:
   - `https://sobag-opt-site.vercel.app/catalog` serves `app.js?v=20260527-importer-admin`.
   - Production `app.js?v=20260527-importer-admin` contains the XLSX template download handler and editable catalog admin fields.
