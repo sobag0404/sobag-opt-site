@@ -1,9 +1,9 @@
 # Current Status Snapshot
 
-Date: 2026-05-22
+Date: 2026-05-27
 
 Latest commit:
-- `ef70dbd Add cart page and expanded demo catalog`
+- `1db809e Expand editable content and normalize button text`
 
 Working tree at the start of handoff preparation:
 - clean
@@ -14,18 +14,20 @@ Production URLs:
 
 Current focus:
 - B2B ecommerce UX prototype for wholesale printed textile products.
-- Cart and checkout flow.
-- Richer test catalog.
-- Mobile usability.
-- Preparing transition to another device.
+- Visual polish and content management prototype.
+- Admin-managed page text and images.
+- Consistent button/card styling.
+- Day/night theme separation.
+- Keeping live AI context current during work.
 
 Completed most recently:
-- Large right-top `Актуально` slider with arrows and 15-second auto-rotation.
-- Separate cart page.
-- Header cart quantity plus total.
-- Promo code and discount scale.
-- Checkout modal with personal data consent checkbox.
-- Expanded test catalog to 18 products.
+- Multi-page static structure: home, catalog, custom print, marketplaces, cart.
+- Unified button styling: centered, lowercase, smaller radius.
+- Day scheme checked with no orange accents in production.
+- Category tile count changed to button-like shape.
+- Russian pluralization added for `товар` and `вариант`.
+- Admin content editor expanded to broad site text controls.
+- `docs/ai-handoff/LIVE_CONTEXT.md` added as the working context file to update before final responses after project work.
 
 Remaining work:
 - real catalog import from Excel;
@@ -34,5 +36,5 @@ Remaining work:
 - real order submission;
 - legal docs and consent text;
 - designer-provided product/category images;
-- production content and prices.
-
+- production content and prices;
+- persistent admin uploads across devices.
