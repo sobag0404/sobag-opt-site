@@ -3452,13 +3452,12 @@ main {
 .primary-button,
 .cart-button,
 .add-button {
-  color: #111111;
-  background: linear-gradient(135deg, #ffffff 0%, #f3f3f3 58%, rgba(255, 122, 26, 0.88) 100%);
-  border: 1px solid rgba(255, 122, 26, 0.34);
+  color: #ffffff;
+  background: linear-gradient(135deg, #111111 0%, #111111 72%, #f7f7f7 100%);
+  border: 1px solid rgba(17, 17, 17, 0.32);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    0 12px 26px rgba(0, 0, 0, 0.22),
-    0 0 0 1px rgba(255, 122, 26, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 22px rgba(0, 0, 0, 0.18);
   transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 
@@ -3466,12 +3465,11 @@ main {
 .primary-button:hover,
 .cart-button:hover,
 .add-button:hover {
-  color: #111111;
-  background: linear-gradient(135deg, #ffffff 0%, #ffd0a6 100%);
+  color: #ffffff;
+  background: linear-gradient(135deg, #000000 0%, #111111 78%, #ffffff 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 16px 34px rgba(0, 0, 0, 0.28),
-    0 0 0 1px rgba(255, 122, 26, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 14px 28px rgba(0, 0, 0, 0.24);
   transform: translateY(-1px);
 }
 
@@ -3480,17 +3478,17 @@ main {
 .icon-button,
 .favorite-button,
 .modal__close {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 122, 26, 0.12));
-  border: 1px solid rgba(255, 122, 26, 0.26);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(17, 17, 17, 0.08));
+  border: 1px solid rgba(17, 17, 17, 0.18);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 10px 22px rgba(0, 0, 0, 0.16);
+    0 8px 18px rgba(0, 0, 0, 0.12);
 }
 
 .brand__mark {
   color: #111111;
-  background: linear-gradient(145deg, #ffffff 0%, #f6f6f6 52%, var(--amber) 100%);
-  border: 1px solid rgba(255, 122, 26, 0.42);
+  background: linear-gradient(145deg, #ffffff 0%, #f6f6f6 58%, #111111 100%);
+  border: 1px solid rgba(17, 17, 17, 0.2);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
     0 10px 22px rgba(0, 0, 0, 0.22);
@@ -3498,25 +3496,32 @@ main {
 
 .cart-button strong,
 .cart-button em {
+  color: #ffffff;
+}
+
+.brand__name b {
   color: #111111;
 }
 
-.brand__name b,
-.eyebrow,
-.price strong,
-.product-card__sku,
-.detail-price small {
-  color: var(--amber);
-}
-
 .accent-stripe {
-  background: linear-gradient(90deg, var(--amber), var(--on-dark));
+  background: linear-gradient(90deg, #111111, #d8d8d8);
 }
 
-.product-card,
+.topline__inner > span:first-child,
+.theme-toggle svg {
+  color: #111111;
+}
+
+.hero__actual-card {
+  border-color: rgba(17, 17, 17, 0.36);
+}
+
+.hero__actual-nav button {
+  border-color: rgba(17, 17, 17, 0.34);
+}
+
 .category-tile,
 .theme-tile,
-.actual-tile,
 .benefits article,
 .tiers article,
 .steps article,
@@ -3530,20 +3535,18 @@ main {
 .orders-list article,
 .admin-preview article,
 .excel-import {
-  border-color: rgba(255, 122, 26, 0.18);
+  border-color: rgba(17, 17, 17, 0.12);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 18px 44px rgba(0, 0, 0, 0.18);
+    0 14px 34px rgba(0, 0, 0, 0.12);
 }
 
-.product-card:hover,
 .category-tile:hover,
-.theme-tile:hover,
-.actual-tile:hover {
-  border-color: rgba(255, 122, 26, 0.42);
+.theme-tile:hover {
+  border-color: rgba(17, 17, 17, 0.24);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 22px 54px rgba(0, 0, 0, 0.26);
+    0 18px 42px rgba(0, 0, 0, 0.18);
 }
 
 .hero__actual-card {
@@ -3565,6 +3568,11 @@ body.theme-night .add-button {
     0 16px 34px rgba(0, 0, 0, 0.36);
 }
 
+body.theme-night .topline__inner > span:first-child,
+body.theme-night .theme-toggle svg {
+  color: var(--amber);
+}
+
 body.theme-night .ghost-button,
 body.theme-night .theme-toggle,
 body.theme-night .icon-button,
@@ -3578,7 +3586,6 @@ body.theme-night .modal__close {
 body.theme-night .product-card,
 body.theme-night .category-tile,
 body.theme-night .theme-tile,
-body.theme-night .actual-tile,
 body.theme-night .benefits article,
 body.theme-night .tiers article,
 body.theme-night .steps article,
@@ -3592,10 +3599,80 @@ body.theme-night .admin-slide-editor,
 body.theme-night .orders-list article,
 body.theme-night .admin-preview article,
 body.theme-night .excel-import {
-  border-color: rgba(255, 138, 31, 0.24);
+  border-color: rgba(255, 138, 31, 0.62);
+  border-width: 2px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 18px 46px rgba(0, 0, 0, 0.42);
+}
+
+body.theme-night .hero__actual-card {
+  border-width: 3px;
+  border-color: rgba(255, 122, 26, 0.9);
+}
+
+body.theme-night .hero__specs {
+  color: var(--on-dark);
+  background: rgba(18, 12, 8, 0.94);
+  border: 2px solid rgba(255, 138, 31, 0.62);
+}
+
+body.theme-night .hero__specs article {
+  border-right-color: rgba(255, 138, 31, 0.55);
+}
+
+body.theme-night .hero__specs strong {
+  color: #ffffff;
+}
+
+body.theme-night .hero__specs span {
+  color: #f1c6a4;
+}
+
+.product-grid {
+  gap: 24px;
+}
+
+.product-card {
+  background: var(--canvas);
+  border: 0;
+  box-shadow: none;
+}
+
+.product-card:hover {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.product-card__body {
+  padding: 16px 0 0;
+}
+
+.product-card__bottom {
+  gap: 14px;
+}
+
+.product-card .add-button {
+  margin-top: 12px;
+}
+
+body.theme-night .brand__name b {
+  color: var(--amber);
+}
+
+body.theme-night .product-card {
+  background: var(--canvas);
+  border: 2px solid rgba(255, 138, 31, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 46px rgba(0, 0, 0, 0.42);
+}
+
+body.theme-night .product-card:hover {
+  border-color: rgba(255, 138, 31, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 20px 50px rgba(0, 0, 0, 0.48);
 }
 
 .product-card__sku-row,
@@ -3627,48 +3704,45 @@ body.theme-night .excel-import {
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  color: var(--on-dark);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 122, 26, 0.12));
-  border: 1px solid rgba(255, 122, 26, 0.28);
-  border-radius: 10px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 8px 18px rgba(0, 0, 0, 0.14);
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
 }
 
 .copy-sku-button svg {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
 }
 
 .copy-sku-button:hover {
-  color: #111111;
-  background: linear-gradient(135deg, #ffffff 0%, #ffd0a6 100%);
-  border-color: rgba(255, 122, 26, 0.5);
+  color: var(--on-dark);
+  background: rgba(17, 17, 17, 0.06);
   transform: translateY(-1px);
 }
 
 .copy-sku-button--detail {
-  width: 38px;
-  height: 38px;
-  border-radius: 14px;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
 }
 
 .copy-sku-button--detail svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 body.theme-night .copy-sku-button {
-  color: var(--on-dark);
-  background: linear-gradient(145deg, rgba(255, 138, 31, 0.2), rgba(255, 255, 255, 0.04));
-  border-color: rgba(255, 138, 31, 0.38);
+  color: var(--body);
+  background: transparent;
+  border: 0;
 }
 
 body.theme-night .copy-sku-button:hover {
-  color: #160b04;
-  background: linear-gradient(135deg, #ff9a3a 0%, #ffe0b8 100%);
+  color: var(--on-dark);
+  background: rgba(255, 138, 31, 0.16);
 }

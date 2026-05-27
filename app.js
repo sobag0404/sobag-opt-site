@@ -578,7 +578,7 @@ function applyTheme(theme) {
   document.body.classList.toggle("theme-night", isNight);
   if (themeToggle) {
     themeToggle.setAttribute("aria-pressed", String(isNight));
-    themeToggle.innerHTML = `<i data-lucide="${isNight ? "sun" : "moon"}"></i><span>${isNight ? "Обычная схема" : "Ночная схема"}</span>`;
+    themeToggle.innerHTML = `<i data-lucide="${isNight ? "sun" : "moon"}"></i><span>${isNight ? "Дневная схема" : "Ночная схема"}</span>`;
   }
   if (window.lucide) window.lucide.createIcons();
 }
