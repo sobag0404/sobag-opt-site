@@ -1,4 +1,9 @@
 .vercel
+local-import-output/
+assets/imported-products/
+data/products.import.json
+data/import-report.csv
 node_modules
+__pycache__/
 *.log
 *.png

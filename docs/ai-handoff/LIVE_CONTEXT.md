@@ -83,9 +83,19 @@ Recently completed:
 - Orders from catalog and cart flows are saved into a shared `sobag.orders.v1` order history.
 - Buyer profiles show personal order history; admins and managers see all orders with statuses and customer data.
 - Admins can assign or remove the `manager` role for non-admin users; managers can process orders but cannot open the full site admin/content panel.
+- In progress / latest local changes:
+  - Added editable admin dictionaries for catalog categories, collections, holidays, and `Актуально`.
+  - Admin can upload images for collections, holidays, and actual slides; category cards still use schematic tiles until designer assets are ready.
+  - Catalog home now renders categories, collections, holidays, and actual slides from saved site content instead of hardcoded lists.
+  - Added `XLSX-шаблон` download button in admin and renamed template column to `Основной артикул` with aliases for older columns.
+  - Added local importer `tools/product_importer.py` with commands `template`, `scan-photos`, and `import`.
+  - Generated `templates/sobag-products-template.csv` and `templates/sobag-products-template.xlsx`.
+  - Added `docs/product-import.md` with the mass import workflow and Yandex Disk sync recommendation.
+  - Added `.gitignore` rules for local import output and copied product photos.
 
 Latest verified production commit:
 - `e3b8262 Add profile order management`
+- New importer/admin dictionary work is verified locally but not yet pushed/deployed at the time of this note.
 
 Latest production verification:
 - Local verification passed for category, collection, home, custom, marketplaces, and cart pages before push.
@@ -98,6 +108,14 @@ Latest production verification:
 - Production catalog serves `app.js?v=20260527-profile-orders` and `styles.css?v=20260527-profile-orders`.
 - Production cart canonical route is `https://sobag-opt-site.vercel.app/cart`; it serves `cart.js?v=20260527-profile-orders` and shows the profile-fill checkout button.
 - Production `app.js` and `cart.js` contain the shared order history key `sobag.orders.v1`.
+- Local verification for importer/admin dictionary work:
+  - `node --check app.js` passed.
+  - `node --check cart.js` passed.
+  - `python -m py_compile tools/product_importer.py` passed.
+  - `python tools/product_importer.py template --out templates` generated CSV/XLSX templates.
+  - `scan-photos` and `import` were tested against a temp photo folder and created CSV, XLSX, copied images, JSON, and import report.
+  - Local catalog at `http://127.0.0.1:4174/catalog.html` rendered 6 categories, 3 actual slides, 10 collections, 6 holidays, and no browser console errors.
+  - Local template URL `/templates/sobag-products-template.xlsx` returned HTTP 200.
 
 ## Important Constraints
 
@@ -105,6 +123,7 @@ Latest production verification:
 - Users, carts, admin changes, and orders are localStorage prototype data.
 - Admin image uploads are local browser storage only and are not permanent across devices.
 - Excel/CSV import and export are prototype-level in frontend.
+- Local importer output (`local-import-output/`, `assets/imported-products/`, `data/products.import.json`, `data/import-report.csv`) is intentionally gitignored.
 - A browser page cannot automatically read arbitrary folders from the user's PC; local photo matching needs explicit folder selection or a local importer script.
 - 10k+ products and photo assets should not be stored in `app.js`, GitHub, Vercel static bundle, or localStorage for production.
 - No real payment, CRM, email, auth provider, database, or production file storage yet.

@@ -1755,6 +1755,23 @@ h3 {
   border: 1px solid var(--hairline);
 }
 
+.admin-content-section--nested {
+  background: var(--canvas);
+}
+
+.admin-content-section h4 {
+  margin: 4px 0 0;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.admin-section-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .admin-image-grid,
 .admin-slides-grid {
   display: grid;
@@ -2929,6 +2946,16 @@ main {
 
 .theme-tile svg {
   flex: 0 0 auto;
+}
+
+.theme-tile__image {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  object-fit: cover;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
 }
 
 .filters {

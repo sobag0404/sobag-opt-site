@@ -217,6 +217,9 @@ const defaultSiteContent = {
   checkoutTitle: "Контакты покупателя",
   checkoutSubmitButton: "отправить заказ",
   heroImages: ["assets/production-hero-1.png", "assets/production-workshop-1.png", "assets/production-hero-1.png"],
+  catalogCategories,
+  catalogCollections,
+  catalogHolidays,
   actualSlides: actualItems,
 };
 
@@ -723,17 +726,48 @@ const discountHint = document.querySelector("#discountHint");
 const toast = document.querySelector("#toast");
 const themeToggle = document.querySelector("[data-theme-toggle]");
 
+function normalizeCatalogList(items, fallbackItems, options = {}) {
+  const source = Array.isArray(items) && items.length ? items : fallbackItems;
+  return source
+    .map((item = {}, index) => {
+      const fallback = fallbackItems[index] || fallbackItems[0] || {};
+      const prepared = {
+        name: String(item.name || fallback.name || "").trim(),
+        icon: String(item.icon || fallback.icon || "tag").trim(),
+        image: String(item.image || "").trim(),
+      };
+      if (options.description) {
+        prepared.description = String(item.description || fallback.description || "").trim();
+      }
+      return prepared;
+    })
+    .filter((item) => item.name);
+}
+
+function normalizeActualSlides(items) {
+  const source = Array.isArray(items) && items.length ? items : defaultSiteContent.actualSlides;
+  return source
+    .map((item = {}, index) => {
+      const fallback = defaultSiteContent.actualSlides[index % defaultSiteContent.actualSlides.length] || {};
+      return {
+        label: String(item.label || fallback.label || "").trim(),
+        type: item.type === "collection" ? "collection" : "holiday",
+        image: String(item.image || fallback.image || "assets/production-workshop-1.png").trim(),
+      };
+    })
+    .filter((item) => item.label);
+}
+
 function normalizeSiteContent(content = {}) {
-  const actualSlides = Array.isArray(content.actualSlides) && content.actualSlides.length ? content.actualSlides : defaultSiteContent.actualSlides;
   const heroImages = Array.isArray(content.heroImages) && content.heroImages.length ? content.heroImages : defaultSiteContent.heroImages;
   return {
     ...defaultSiteContent,
     ...content,
     heroImages: [0, 1, 2].map((index) => heroImages[index] || defaultSiteContent.heroImages[index]),
-    actualSlides: [0, 1, 2].map((index) => ({
-      ...defaultSiteContent.actualSlides[index],
-      ...(actualSlides[index] || {}),
-    })),
+    catalogCategories: normalizeCatalogList(content.catalogCategories, defaultSiteContent.catalogCategories, { description: true }),
+    catalogCollections: normalizeCatalogList(content.catalogCollections, defaultSiteContent.catalogCollections),
+    catalogHolidays: normalizeCatalogList(content.catalogHolidays, defaultSiteContent.catalogHolidays),
+    actualSlides: normalizeActualSlides(content.actualSlides),
   };
 }
 
@@ -1318,60 +1352,61 @@ function getFilteredProducts() {
 
 function renderCatalogHome() {
   if (!categoryTiles || !actualTiles || !collectionTiles || !holidayTiles) return;
-  const countByCategory = Object.fromEntries(catalogCategories.map((category) => [category.name, 0]));
+  const content = getSiteContent();
+  const countByCategory = Object.fromEntries(content.catalogCategories.map((category) => [category.name, 0]));
   products.forEach((product) => {
     countByCategory[product.category] = (countByCategory[product.category] || 0) + 1;
   });
 
-  categoryTiles.innerHTML = catalogCategories
+  categoryTiles.innerHTML = content.catalogCategories
     .map(
       (category) => `
-        <button class="category-tile" type="button" data-open-category="${category.name}">
+        <button class="category-tile" type="button" data-open-category="${escapeHtml(category.name)}">
           <span class="category-tile__top">
-            <span class="category-tile__icon"><i data-lucide="${category.icon}"></i></span>
+            <span class="category-tile__icon"><i data-lucide="${escapeHtml(category.icon)}"></i></span>
             <span class="category-tile__schema" aria-hidden="true">
               <span></span>
               <span></span>
               <span></span>
             </span>
           </span>
-          <strong>${category.name}</strong>
-          <small>${category.description}</small>
+          <strong>${escapeHtml(category.name)}</strong>
+          <small>${escapeHtml(category.description)}</small>
           <b>${countByCategory[category.name] || 0} ${productWord(countByCategory[category.name] || 0)}</b>
         </button>
       `
     )
     .join("");
 
-  actualTiles.innerHTML = actualItems
+  actualTiles.innerHTML = content.actualSlides
     .map(
       (item, index) => `
-        <button class="actual-tile actual-tile--${index + 1}" type="button" data-open-${item.type}="${item.label}">
-          <img src="${item.image}" alt="${item.label}" loading="lazy" />
-          <span>${item.label}</span>
-          <b>${item.label}</b>
+        <button class="actual-tile actual-tile--${(index % 3) + 1}" type="button" data-open-${item.type}="${escapeHtml(item.label)}">
+          <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.label)}" loading="lazy" />
+          <span>${escapeHtml(item.label)}</span>
+          <b>${escapeHtml(item.label)}</b>
         </button>
       `
     )
     .join("");
 
-  collectionTiles.innerHTML = catalogCollections
+  collectionTiles.innerHTML = content.catalogCollections
     .map(
       (collection) => `
-        <button class="theme-tile" type="button" data-open-collection="${collection.name}">
-          <i data-lucide="${collection.icon}"></i>
-          <span>${collection.name}</span>
+        <button class="theme-tile" type="button" data-open-collection="${escapeHtml(collection.name)}">
+          ${collection.image ? `<img class="theme-tile__image" src="${escapeHtml(collection.image)}" alt="" loading="lazy" />` : `<i data-lucide="${escapeHtml(collection.icon)}"></i>`}
+          <span>${escapeHtml(collection.name)}</span>
         </button>
       `
     )
     .join("");
 
-  holidayTiles.innerHTML = catalogHolidays
+  holidayTiles.innerHTML = content.catalogHolidays
     .map(
       (holiday) => `
-        <button class="theme-tile" type="button" data-open-holiday="${holiday.name}">
-          <i data-lucide="${holiday.icon}"></i>
-          <span>${holiday.name}</span>
+        <button class="theme-tile" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
+          ${holiday.image ? `<img class="theme-tile__image" src="${escapeHtml(holiday.image)}" alt="" loading="lazy" />` : `<i data-lucide="${escapeHtml(holiday.icon)}"></i>`}
+          <span>${escapeHtml(holiday.name)}</span>
         </button>
       `
     )
@@ -1956,7 +1991,7 @@ function escapeHtml(value) {
 
 const productTemplateColumns = [
   { key: "name", label: "Название" },
-  { key: "baseSku", label: "Начальный артикул" },
+  { key: "baseSku", label: "Основной артикул" },
   { key: "category", label: "Категория" },
   { key: "theme", label: "Основная подборка" },
   { key: "collections", label: "Подборки" },
@@ -1981,9 +2016,20 @@ const productExportOnlyColumns = [
 
 const productExportColumns = [...productTemplateColumns, ...productExportOnlyColumns];
 
+const productColumnAliases = {
+  baseSku: ["Начальный артикул", "Артикул", "Базовый артикул"],
+  image: ["Главное фото", "URL фото", "Фото"],
+  theme: ["Тематика", "Основная тематика", "Основная подборка"],
+  collections: ["Тематики", "Подборки"],
+  holidays: ["Праздник", "Праздники"],
+  photoFolder: ["Папка", "Папка фото", "Папка с фото"],
+};
+
 function rowValue(row, key) {
   const column = productExportColumns.find((item) => item.key === key);
-  return row[key] ?? row[column?.label] ?? "";
+  const labels = [key, column?.label, ...(productColumnAliases[key] || [])].filter(Boolean);
+  const found = labels.find((label) => row[label] !== undefined && row[label] !== "");
+  return found ? row[found] : "";
 }
 
 function adminImageFallback(kind) {
@@ -2027,6 +2073,40 @@ function adminActualSlideHtml(slide, index) {
   `;
 }
 
+function serializeCategoryList(items) {
+  return items.map((item) => [item.name, item.description, item.icon].map((value) => value || "").join(" | ")).join("\n");
+}
+
+function serializeSimpleList(items) {
+  return items.map((item) => [item.name, item.icon].map((value) => value || "").join(" | ")).join("\n");
+}
+
+function serializeActualList(items) {
+  return items.map((item) => [item.label, item.type].map((value) => value || "").join(" | ")).join("\n");
+}
+
+function adminListTextarea(name, title, value, note) {
+  return `
+    <label class="admin-content-grid__wide">
+      ${title}
+      <textarea name="${name}" rows="6">${escapeHtml(value)}</textarea>
+      <small class="field-note">${note}</small>
+    </label>
+  `;
+}
+
+function adminCatalogImagesHtml(kind, items, title, note) {
+  if (!items.length) return "";
+  return `
+    <div class="admin-content-section admin-content-section--nested">
+      <h4>${title}</h4>
+      <div class="admin-image-grid">
+        ${items.map((item, index) => adminImageUploadHtml(kind, index, item.image, item.name || item.label, note)).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function adminModalHtml() {
   const content = getSiteContent();
   return `
@@ -2063,9 +2143,23 @@ function adminModalHtml() {
           </div>
           <div class="admin-content-section">
             <h3>Вкладка Актуально</h3>
+            <div class="admin-content-grid">
+              ${adminListTextarea("actualSlidesText", "Список актуального", serializeActualList(content.actualSlides), "Одна строка = один слайд. Формат: название | collection или holiday. После добавления новой строки сохраните контент, откройте админку снова и загрузите фото.")}
+            </div>
             <div class="admin-slides-grid">
               ${content.actualSlides.map((slide, index) => adminActualSlideHtml(slide, index)).join("")}
             </div>
+          </div>
+          <div class="admin-content-section">
+            <h3>Категории, подборки и праздники</h3>
+            <p class="admin-section-note">Редактируются справочники, которые видит покупатель на главной странице каталога. Иконки указываются названиями Lucide, например: square-stack, gift, heart, palette.</p>
+            <div class="admin-content-grid">
+              ${adminListTextarea("catalogCategoriesText", "Категории", serializeCategoryList(content.catalogCategories), "Одна строка = категория. Формат: название | описание | иконка. Фото категорий пока не используем, оставляем схему.")}
+              ${adminListTextarea("catalogCollectionsText", "Подборки", serializeSimpleList(content.catalogCollections), "Одна строка = подборка. Формат: название | иконка. Фото можно загрузить ниже после сохранения новой строки.")}
+              ${adminListTextarea("catalogHolidaysText", "Праздники", serializeSimpleList(content.catalogHolidays), "Одна строка = праздник. Формат: название | иконка. Фото можно загрузить ниже после сохранения новой строки.")}
+            </div>
+            ${adminCatalogImagesHtml("catalogCollections", content.catalogCollections, "Фото подборок", "Рекомендуем: 900x520 px, JPG/WebP до 1.5 МБ.")}
+            ${adminCatalogImagesHtml("catalogHolidays", content.catalogHolidays, "Фото праздников", "Рекомендуем: 900x520 px, JPG/WebP до 1.5 МБ.")}
           </div>
           <div class="admin-actions">
             <button class="primary-button" type="submit">Сохранить контент</button>
@@ -2139,6 +2233,7 @@ function adminModalHtml() {
             <button class="primary-button" type="submit">Сгенерировать</button>
             <button class="ghost-button" type="button" data-save-generated>Добавить карточку</button>
             <button class="ghost-button" type="button" data-download-template>CSV-шаблон</button>
+            <button class="ghost-button" type="button" data-download-xlsx-template>XLSX-шаблон</button>
           </div>
         </form>
         <div class="excel-import">
@@ -2300,6 +2395,10 @@ function downloadTemplate() {
   ]);
 }
 
+function downloadXlsxTemplate() {
+  window.location.href = "templates/sobag-products-template.xlsx";
+}
+
 function productGalleryForExport(product) {
   const generatedImages = new Set(["assets/hero-products-1.png", "assets/hero-products-2.png", "assets/hero-products-3.png"]);
   return (product.gallery || [])
@@ -2378,6 +2477,65 @@ function readContentFile(input) {
   reader.readAsDataURL(file);
 }
 
+function findCatalogItemByName(items, name) {
+  const prepared = String(name || "").trim().toLocaleLowerCase("ru-RU");
+  return items.find((item) => String(item.name || item.label || "").trim().toLocaleLowerCase("ru-RU") === prepared);
+}
+
+function parseCatalogLines(text, currentItems, fallbackItems, options = {}) {
+  const rows = String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const parsed = rows.map((line, index) => {
+    const [nameRaw, secondRaw, thirdRaw] = line.split("|").map((part) => part.trim());
+    const previous = findCatalogItemByName(currentItems, nameRaw) || currentItems[index] || {};
+    if (options.description) {
+      return {
+        name: nameRaw || previous.name || "",
+        description: secondRaw || previous.description || "",
+        icon: thirdRaw || previous.icon || "tag",
+        image: previous.image || "",
+      };
+    }
+    return {
+      name: nameRaw || previous.name || "",
+      icon: secondRaw || previous.icon || "tag",
+      image: previous.image || "",
+    };
+  });
+  return normalizeCatalogList(parsed, fallbackItems, options);
+}
+
+function parseActualLines(text, currentItems) {
+  const rows = String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const parsed = rows.map((line, index) => {
+    const [labelRaw, typeRaw] = line.split("|").map((part) => part.trim());
+    const previous = findCatalogItemByName(currentItems, labelRaw) || currentItems[index] || {};
+    const preparedType = String(typeRaw || previous.type || "holiday").toLocaleLowerCase("ru-RU");
+    return {
+      label: labelRaw || previous.label || "",
+      type: preparedType.includes("collection") || preparedType.includes("подбор") ? "collection" : "holiday",
+      image: previous.image || "",
+    };
+  });
+  return normalizeActualSlides(parsed);
+}
+
+function applyAdminIndexedImages(form, kind, items, currentItems) {
+  return items.map((item, index) => {
+    const input = form.querySelector(`[data-content-image="${kind}"][data-content-index="${index}"]`);
+    const previous = findCatalogItemByName(currentItems, item.name || item.label) || currentItems[index] || {};
+    return {
+      ...item,
+      image: input?.dataset.imageValue || item.image || previous.image || "",
+    };
+  });
+}
+
 function contentFromAdminForm(form) {
   const current = getSiteContent();
   const data = Object.fromEntries(new FormData(form).entries());
@@ -2386,14 +2544,30 @@ function contentFromAdminForm(form) {
     const input = form.querySelector(`[data-content-image="heroImages"][data-content-index="${index}"]`);
     return input?.dataset.imageValue || current.heroImages[index] || defaultSiteContent.heroImages[index];
   });
-  const actualSlides = [0, 1, 2].map((index) => {
+  const actualTextChanged = data.actualSlidesText && data.actualSlidesText !== serializeActualList(current.actualSlides);
+  const slideRows = data.actualSlidesText ? parseActualLines(data.actualSlidesText, current.actualSlides) : current.actualSlides;
+  const actualSlides = slideRows.map((slide, index) => {
     const input = form.querySelector(`[data-content-image="actualSlides"][data-content-index="${index}"]`);
+    const previous = findCatalogItemByName(current.actualSlides, slide.label) || current.actualSlides[index] || {};
     return {
-      label: data[`actualLabel${index}`] || current.actualSlides[index].label,
-      type: data[`actualType${index}`] || current.actualSlides[index].type,
-      image: input?.dataset.imageValue || current.actualSlides[index].image || defaultSiteContent.actualSlides[index].image,
+      label: actualTextChanged ? slide.label : data[`actualLabel${index}`] || slide.label || previous.label,
+      type: actualTextChanged ? slide.type : data[`actualType${index}`] || slide.type || previous.type,
+      image: input?.dataset.imageValue || slide.image || previous.image || defaultSiteContent.actualSlides[index % defaultSiteContent.actualSlides.length].image,
     };
   });
+  const catalogCategories = parseCatalogLines(data.catalogCategoriesText, current.catalogCategories, defaultSiteContent.catalogCategories, { description: true });
+  const catalogCollections = applyAdminIndexedImages(
+    form,
+    "catalogCollections",
+    parseCatalogLines(data.catalogCollectionsText, current.catalogCollections, defaultSiteContent.catalogCollections),
+    current.catalogCollections
+  );
+  const catalogHolidays = applyAdminIndexedImages(
+    form,
+    "catalogHolidays",
+    parseCatalogLines(data.catalogHolidaysText, current.catalogHolidays, defaultSiteContent.catalogHolidays),
+    current.catalogHolidays
+  );
   const textContent = Object.fromEntries(
     siteTextFields.map((field) => [field.key, data[field.key] || defaultSiteContent[field.key] || ""])
   );
@@ -2402,6 +2576,9 @@ function contentFromAdminForm(form) {
     brandName: data.brandName || defaultSiteContent.brandName,
     brandLogo: brandLogoInput?.dataset.imageValue || current.brandLogo || defaultSiteContent.brandLogo,
     heroImages,
+    catalogCategories,
+    catalogCollections,
+    catalogHolidays,
     actualSlides,
   });
 }
@@ -2591,6 +2768,7 @@ function boot() {
     if (button.dataset.openAdmin !== undefined) openAdmin();
     if (button.dataset.saveGenerated !== undefined) saveGeneratedProducts();
     if (button.dataset.downloadTemplate !== undefined) downloadTemplate();
+    if (button.dataset.downloadXlsxTemplate !== undefined) downloadXlsxTemplate();
     if (button.dataset.exportProducts !== undefined) downloadProductsCsv(products, "sobag-products-all.csv");
     if (button.dataset.exportFilteredProducts !== undefined) downloadProductsCsv(getFilteredProducts(), "sobag-products-filtered.csv");
     if (button.dataset.resetContent !== undefined) {
