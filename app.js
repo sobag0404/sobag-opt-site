@@ -1002,7 +1002,7 @@ function createVariants(product) {
           product.basePrice + (typeFactors[type] || 0) + (sizeFactors[size] || 0) + (materialFactors[material] || 0);
         return {
           sku: [product.baseSku, skuPart(type, 3), skuSizePart(size), skuPart(material, 3)].filter(Boolean).join("_"),
-          name: variantNameForType(product.name, type),
+          name: variantNameForType(product.name, type, size, material),
           type,
           size,
           material,
@@ -1013,7 +1013,7 @@ function createVariants(product) {
   );
 }
 
-function variantNameForType(name, type) {
+function variantNameForType(name, type, size, material) {
   const preparedName = String(name || "").trim();
   const preparedType = String(type || "").trim();
   if (!preparedName || !preparedType) return preparedName;
@@ -1032,12 +1032,20 @@ function variantNameForType(name, type) {
 
   const source = replacements.find(([word]) => new RegExp(`^${word}\\b`, "i").test(preparedName))?.[0];
   if (source && source !== target) {
-    return preparedName.replace(new RegExp(`^${source}\\b`, "i"), target);
+    return variantNameWithSpecs(preparedName.replace(new RegExp(`^${source}\\b`, "i"), target), size, material);
   }
   if (!source && !new RegExp(`^${target}\\b`, "i").test(preparedName)) {
-    return `${target} ${preparedName}`;
+    return variantNameWithSpecs(`${target} ${preparedName}`, size, material);
   }
-  return preparedName;
+  return variantNameWithSpecs(preparedName, size, material);
+}
+
+function variantNameWithSpecs(name, size, material) {
+  const specs = [size, material]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .filter((value) => value.toLocaleLowerCase("ru-RU") !== "стандарт");
+  return specs.length ? `${name} ${specs.join(" ")}` : name;
 }
 
 function skuPart(value, limit = Infinity) {

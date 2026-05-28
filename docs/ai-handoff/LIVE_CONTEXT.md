@@ -194,6 +194,12 @@ Latest production verification:
   - local `tools/product_importer.py import` now appends to an existing output JSON by default, skips duplicate base SKUs into the report, and only replaces output when explicitly run with `--replace`;
   - regenerated `templates/sobag-products-template.csv/.xlsx`; local suggestion workbook was updated to use the `Категории` header.
   - checks passed: `node --check app.js`, `python -m py_compile tools/product_importer.py`, template readback, and a duplicate-import smoke test under ignored `local-import-output/dup-test`.
+- Filled product suggestion workbook update on 2026-05-28:
+  - regenerated `local-import-output/ai-product-suggestions.xlsx` and `local-import-output/ai-product-suggestions-filled.xlsx` with categories, product types, sizes/material defaults, collections, holidays, tags, names, descriptions, confidence, and comments;
+  - classification used product-photo templates plus reference Excel topics; no products/photos were added to the site;
+  - auto-category counts: 517 `Подушки/наволочки`, 156 `Мешки для обуви`, 65 `Флаги`, 51 `Чехлы на чемодан`, 19 `Ремувки`;
+  - examples: `opt_00104` -> `Ремувка брелок`; `opt_22434` -> `Подушка Паттерны`; `opt_81486` actual local photo is a pillow with `День рождения`, not a flag;
+  - `app.js` variant display names now include selected size/material, except generic `Стандарт`, so cart/modal names can change with selected characteristics.
 
 ## Important Constraints
 
