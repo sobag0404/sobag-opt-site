@@ -332,6 +332,27 @@ const siteTextFields = [
 ];
 
 const productDrafts = [];
+const FAVORITES_KEY = "sobag.favorites";
+const PROTOTYPE_PRODUCT_IDS = new Set([
+  "aurora-cats",
+  "pixel-quest",
+  "winter-gift",
+  "brand-line",
+  "army-supply",
+  "cooler-love",
+  "meme-cloud",
+  "march-bloom",
+  "teacher-pattern",
+  "space-luggage",
+  "anime-cover",
+  "shoe-cyber",
+  "shoe-flower",
+  "cooler-brand",
+  "cooler-newyear",
+  "plaid-animal",
+  "plaid-meme",
+  "name-stars",
+]);
 
 const STORAGE = {
   user: "sobag.currentUser",
@@ -362,7 +383,7 @@ const state = {
   search: "",
   sort: "popular",
   cart: new Map(),
-  favorites: new Set(JSON.parse(localStorage.getItem("sobag.favorites") || "[]")),
+  favorites: new Set(cleanFavoriteIds(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"))),
   currentUser: localStorage.getItem(STORAGE.user) || "",
   activeProductId: null,
   activeVariant: {
@@ -855,7 +876,7 @@ function loadStoredProducts() {
 function isPrototypeProduct(product) {
   const sku = String(product?.baseSku || "");
   const images = [product?.image, ...(product?.gallery || [])].filter(Boolean).join(" ");
-  return sku.startsWith("SB-") || images.includes("assets/hero-products-");
+  return PROTOTYPE_PRODUCT_IDS.has(String(product?.id || "")) || sku.startsWith("SB-") || images.includes("assets/hero-products-");
 }
 
 function productKey(product) {
@@ -986,13 +1007,47 @@ function getCartKey() {
 }
 
 function isPrototypeCartLine(line) {
+  const productId = String(line?.productId || "");
   const sku = String(line?.variant?.sku || line?.variantSku || "");
   const image = String(line?.productImage || "");
-  return sku.startsWith("SB-") || image.includes("assets/hero-products-");
+  return PROTOTYPE_PRODUCT_IDS.has(productId) || sku.startsWith("SB-") || image.includes("assets/hero-products-");
 }
 
 function cleanCartEntries(entries) {
   return (Array.isArray(entries) ? entries : []).filter(([, line]) => !isPrototypeCartLine(line));
+}
+
+function cleanFavoriteIds(ids) {
+  return (Array.isArray(ids) ? ids : []).filter((id) => !PROTOTYPE_PRODUCT_IDS.has(String(id || "")));
+}
+
+function orderHasPrototypeItems(order) {
+  return (order?.items || []).some(isPrototypeCartLine);
+}
+
+function cleanPrototypeStorage() {
+  const storedProducts = loadStoredProducts();
+  localStorage.setItem(STORAGE.products, JSON.stringify(storedProducts));
+
+  const favorites = cleanFavoriteIds(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"));
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  state.favorites = new Set(favorites);
+
+  Object.keys(localStorage)
+    .filter((key) => key === STORAGE.guestCart || key.startsWith("sobag.cart."))
+    .forEach((key) => {
+      const entries = cleanCartEntries(JSON.parse(localStorage.getItem(key) || "[]"));
+      localStorage.setItem(key, JSON.stringify(entries));
+    });
+
+  const orders = getOrders().filter((order) => !orderHasPrototypeItems(order));
+  saveOrders(orders);
+
+  const users = getUsers();
+  Object.values(users).forEach((user) => {
+    user.orders = (user.orders || []).filter((order) => !orderHasPrototypeItems(order));
+  });
+  saveUsers(users);
 }
 
 function loadCart() {
@@ -2622,6 +2677,7 @@ function submitOrder(form) {
 
 function boot() {
   seedUsers();
+  cleanPrototypeStorage();
   initTheme();
   initCatalogRoute();
   loadCart();
@@ -2726,7 +2782,7 @@ function boot() {
     if (button.dataset.favorite) {
       if (state.favorites.has(button.dataset.favorite)) state.favorites.delete(button.dataset.favorite);
       else state.favorites.add(button.dataset.favorite);
-      localStorage.setItem("sobag.favorites", JSON.stringify([...state.favorites]));
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify([...state.favorites]));
       renderProducts();
       renderCart();
     }

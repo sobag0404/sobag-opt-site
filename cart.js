@@ -5,6 +5,26 @@ const ORDERS_KEY = "sobag.orders.v1";
 const CART_KEY = localStorage.getItem(CURRENT_USER_KEY)
   ? `sobag.cart.${localStorage.getItem(CURRENT_USER_KEY)}`
   : "sobag.cart.guest";
+const PROTOTYPE_PRODUCT_IDS = new Set([
+  "aurora-cats",
+  "pixel-quest",
+  "winter-gift",
+  "brand-line",
+  "army-supply",
+  "cooler-love",
+  "meme-cloud",
+  "march-bloom",
+  "teacher-pattern",
+  "space-luggage",
+  "anime-cover",
+  "shoe-cyber",
+  "shoe-flower",
+  "cooler-brand",
+  "cooler-newyear",
+  "plaid-animal",
+  "plaid-meme",
+  "name-stars",
+]);
 
 const quantityTiers = [
   { qty: 30, discount: 3 },
@@ -210,9 +230,10 @@ function saveCart() {
 }
 
 function isPrototypeCartLine(line) {
+  const productId = String(line?.productId || "");
   const sku = String(line?.variant?.sku || line?.variantSku || "");
   const image = String(line?.productImage || "");
-  return sku.startsWith("SB-") || image.includes("assets/hero-products-");
+  return PROTOTYPE_PRODUCT_IDS.has(productId) || sku.startsWith("SB-") || image.includes("assets/hero-products-");
 }
 
 function cleanCartEntries(entries) {

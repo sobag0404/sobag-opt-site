@@ -232,6 +232,10 @@ Latest production verification:
   - unit price now reflects the applied cart quantity discount in modal/cart displays;
   - discount hint now shows an approximate remaining basket amount to the next tier;
   - empty filter groups (for example holidays with no options in the current category) are hidden.
+- Domain setup on 2026-05-28:
+  - Vercel CLI is available via `npx.cmd vercel` and authenticated as `ashumakov0404-7596`;
+  - added `sobag-shop.online` and `www.sobag-shop.online` to Vercel project `sobag-opt-site`;
+  - DNS is still pending at REG.RU: current A record resolves to `194.58.112.174`, Vercel requires `A sobag-shop.online 76.76.21.21` and `A www.sobag-shop.online 76.76.21.21` (or switching nameservers to Vercel).
 
 ## Important Constraints
 
