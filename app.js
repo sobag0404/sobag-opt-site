@@ -110,6 +110,37 @@ const actualItems = [
   },
 ];
 
+const taxonomyAliases = {
+  однотонный: "Однотонные",
+  однотонная: "Однотонные",
+  однотонное: "Однотонные",
+  однотонные: "Однотонные",
+  детский: "Детские",
+  детская: "Детские",
+  детское: "Детские",
+  детские: "Детские",
+  дети: "Детские",
+  животное: "Животные",
+  животный: "Животные",
+  животные: "Животные",
+  мем: "Мемы",
+  мемы: "Мемы",
+  паттерн: "Паттерны",
+  паттерны: "Паттерны",
+  цветок: "Цветы",
+  цветы: "Цветы",
+  именной: "Именные",
+  именные: "Именные",
+  военный: "Военные",
+  военные: "Военные",
+  подарок: "Подарки",
+  подарки: "Подарки",
+  игра: "Игры",
+  игры: "Игры",
+  "9мая": "9 мая",
+  "9 мая": "9 мая",
+};
+
 const defaultSiteContent = {
   brandName: "Sobag Opt",
   brandLogo: "",
@@ -1063,23 +1094,37 @@ function skuSizePart(value) {
     .replace(/[^A-ZА-ЯЁ0-9ХX,.-]+/g, "");
 }
 
+function normalizeTaxonomyItem(value) {
+  const prepared = String(value || "").trim().replace(/\s+/g, " ");
+  if (!prepared) return "";
+  const key = prepared.toLocaleLowerCase("ru-RU");
+  if (taxonomyAliases[key]) return taxonomyAliases[key];
+  return prepared[0].toLocaleUpperCase("ru-RU") + prepared.slice(1);
+}
+
+function uniqueList(items, normalizer = (item) => String(item || "").trim()) {
+  const seen = new Set();
+  return items
+    .map(normalizer)
+    .filter(Boolean)
+    .filter((item) => {
+      const key = item.toLocaleLowerCase("ru-RU");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 function normalizeListField(product, key, fallback = []) {
   const value = product[key];
   const raw = Array.isArray(value) ? value : splitList(value);
   const backup = Array.isArray(fallback) ? fallback : splitList(fallback);
-  return [...new Set((raw.length ? raw : backup).filter(Boolean).map((item) => String(item).trim()).filter(Boolean))];
+  return uniqueList(raw.length ? raw : backup, normalizeTaxonomyItem);
 }
 
 function normalizeTags(product) {
   const rawTags = Array.isArray(product.tags) ? product.tags : splitList(product.tags);
-  return [
-    ...new Set(
-      [product.theme, ...normalizeListField(product, "collections"), ...normalizeListField(product, "holidays"), ...rawTags]
-        .filter(Boolean)
-        .map((tag) => String(tag).trim())
-        .filter(Boolean)
-    ),
-  ];
+  return uniqueList([product.theme, ...normalizeListField(product, "collections"), ...normalizeListField(product, "holidays"), ...rawTags], normalizeTaxonomyItem);
 }
 
 function productHasCollection(product, collection) {
@@ -1125,6 +1170,40 @@ function loadProducts() {
   const saved = JSON.parse(localStorage.getItem(STORAGE.products) || "null");
   const source = saved?.length ? saved : productDrafts;
   return source.map(normalizeProduct);
+}
+
+function productKey(product) {
+  return baseSkuKey(product.baseSku || product.id || product.name);
+}
+
+function mergeProducts(baseProducts, incomingProducts) {
+  const merged = new Map();
+  baseProducts.forEach((product) => merged.set(productKey(product), product));
+  incomingProducts.forEach((product) => {
+    const normalized = normalizeProduct(product);
+    const key = productKey(normalized);
+    if (!merged.has(key)) merged.set(key, normalized);
+  });
+  return [...merged.values()];
+}
+
+async function loadPublishedProducts() {
+  try {
+    const response = await fetch(`data/products-live.json?v=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) return;
+    const liveProducts = await response.json();
+    if (!Array.isArray(liveProducts) || !liveProducts.length) return;
+    const saved = JSON.parse(localStorage.getItem(STORAGE.products) || "null");
+    products = saved?.length ? mergeProducts(products, liveProducts) : liveProducts.map(normalizeProduct);
+    addMissingCatalogCategories(products);
+    renderSiteContent();
+    renderCatalogHome();
+    renderCatalogShell();
+    renderFilters();
+    renderProducts();
+  } catch {
+    // The static catalog file is optional in local prototype mode.
+  }
 }
 
 function saveProducts() {
@@ -2571,26 +2650,52 @@ function downloadVariantPricesCsv(source, fileName) {
 
 function addMissingCatalogCategories(sourceProducts) {
   const content = getSiteContent();
-  const existing = new Set(content.catalogCategories.map((category) => category.name.toLocaleLowerCase("ru-RU")));
-  const additions = [];
-  sourceProducts.forEach((product) => {
-    (product.categories || [product.category]).forEach((category) => {
-      const name = String(category || "").trim();
-      if (!name || existing.has(name.toLocaleLowerCase("ru-RU"))) return;
-      existing.add(name.toLocaleLowerCase("ru-RU"));
-      additions.push({
-        name,
-        icon: "tag",
-        description: "Категория добавлена из импорта. Эмблему и описание можно уточнить в админке.",
-        image: "",
-      });
-    });
-  });
-  if (!additions.length) return;
+  const catalogCategories = addMissingCatalogItems(
+    content.catalogCategories,
+    sourceProducts.flatMap((product) => product.categories || [product.category]),
+    (name) => ({
+      name,
+      icon: "tag",
+      description: "Категория добавлена из импорта. Эмблему и описание можно уточнить в админке.",
+      image: "",
+    })
+  );
+  const catalogCollections = addMissingCatalogItems(content.catalogCollections, sourceProducts.flatMap((product) => product.collections || []), (name) => ({
+    name,
+    icon: "tag",
+    image: "",
+  }));
+  const catalogHolidays = addMissingCatalogItems(content.catalogHolidays, sourceProducts.flatMap((product) => product.holidays || []), (name) => ({
+    name,
+    icon: "calendar-days",
+    image: "",
+  }));
+  if (
+    catalogCategories.length === content.catalogCategories.length &&
+    catalogCollections.length === content.catalogCollections.length &&
+    catalogHolidays.length === content.catalogHolidays.length
+  ) {
+    return;
+  }
   saveSiteContent({
     ...content,
-    catalogCategories: [...content.catalogCategories, ...additions],
+    catalogCategories,
+    catalogCollections,
+    catalogHolidays,
   });
+}
+
+function addMissingCatalogItems(currentItems, names, makeItem) {
+  const existing = new Set(currentItems.map((item) => normalizeTaxonomyItem(item.name).toLocaleLowerCase("ru-RU")));
+  const additions = [];
+  names.forEach((rawName) => {
+    const name = normalizeTaxonomyItem(rawName);
+    const key = name.toLocaleLowerCase("ru-RU");
+    if (!name || existing.has(key)) return;
+    existing.add(key);
+    additions.push(makeItem(name));
+  });
+  return additions.length ? [...currentItems, ...additions] : currentItems;
 }
 
 async function importExcel(file) {
@@ -2823,6 +2928,7 @@ function boot() {
   renderAccountButton();
   renderSiteContent();
   initActualSlider();
+  loadPublishedProducts();
 
   document.addEventListener("click", (event) => {
     if (event.target.dataset.closeModal !== undefined) {

@@ -206,6 +206,17 @@ Latest production verification:
   - admin now has CSV export buttons for variant prices (`sobag-variant-prices-all.csv` and filtered variants), where each row is one variant SKU with type, size, material, and price;
   - generated local editable files `local-import-output/variant-prices.xlsx` and `local-import-output/variant-prices.csv` from the current 808-product suggestion workbook; result: 10,733 variant rows;
   - local suggestion workbook was regenerated so `Основной артикул` values are `opt_...` (`opt_00104`, `opt_22434`, etc.).
+- First real product catalog publication on 2026-05-28:
+  - user edited `local-import-output/ai-product-suggestions.xlsx`; workbook cleanup normalized collections/tags/holidays, merging forms like `Однотонный`/`Однотонные`, `Детский`/`Детские`, and `9мая`/`9 мая`, and removed duplicate list entries;
+  - backup before cleanup: `local-import-output/ai-product-suggestions-before-taxonomy-cleanup.xlsx`;
+  - local import from the cleaned workbook produced 808 products with no duplicate base SKUs;
+  - published persistent static catalog files: `data/products-live.json` plus optimized WebP images under `assets/product-preview-live/`;
+  - optimized output: 2,768 WebP files, about 83 MB total; source copied import photos remain ignored locally under `assets/imported-products/` and are about 3.2 GB;
+  - `app.js` now fetches `data/products-live.json`; if no browser-local products exist, the live catalog replaces the old test drafts, and if local products exist, it merges without deleting them;
+  - published data automatically adds missing categories, collections, and holidays into site content in the browser; collections/holidays from the workbook therefore become visible even if not in the original defaults;
+  - regenerated local `variant-prices.xlsx/.csv` after the user's edits; result: 12,962 variant rows;
+  - local HTTP checks passed for `data/products-live.json` and sample image `assets/product-preview-live/opt-00104/1.webp`;
+  - full Playwright screenshot check was attempted but blocked because the Playwright browser binary is not installed (`npx playwright install` would be needed).
 
 ## Important Constraints
 
