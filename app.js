@@ -96,17 +96,17 @@ const actualItems = [
   {
     label: "Новый год",
     type: "holiday",
-    image: "assets/hero-products-2.png",
+    image: "assets/product-preview-live/opt-22434/1.webp",
   },
   {
     label: "Аниме",
     type: "collection",
-    image: "assets/hero-products-1.png",
+    image: "assets/product-preview-live/opt-22441/1.webp",
   },
   {
     label: "8 марта",
     type: "holiday",
-    image: "assets/hero-products-3.png",
+    image: "assets/product-preview-live/opt-98081/1.webp",
   },
 ];
 
@@ -331,350 +331,7 @@ const siteTextFields = [
   { key: "checkoutSubmitButton", label: "Форма заказа: кнопка отправки" },
 ];
 
-const productDrafts = [
-  {
-    id: "aurora-cats",
-    baseSku: "SB-PIL-AUR",
-    name: "Подушка Aurora Cats",
-    category: "Подушки",
-    theme: "Аниме",
-    collections: ["Аниме", "Животные", "Паттерны", "Подарки", "Именные"],
-    holidays: ["Новый год"],
-    tags: ["Аниме", "Подарки", "Животные", "Паттерны", "Новый год"],
-    stock: "ready",
-    badge: "Хит опта",
-    image: "assets/hero-products-1.png",
-    description: "Один принт, разные комплектации: подушка с наполнителем или наволочка для готовой линейки.",
-    types: TYPE_OPTIONS,
-    sizes: SIZE_OPTIONS,
-    materials: MATERIAL_OPTIONS,
-    basePrice: 210,
-    popular: 98,
-  },
-  {
-    id: "pixel-quest",
-    baseSku: "SB-PIL-PXQ",
-    name: "Наволочка Pixel Quest",
-    category: "Наволочки",
-    theme: "Игры",
-    collections: ["Игры", "Аниме", "Мемы", "Паттерны", "Бренд"],
-    holidays: ["День рождения"],
-    tags: ["Игры", "Аниме", "Подарки", "Паттерны", "Бренд"],
-    stock: "ready",
-    badge: "Маркетплейсы",
-    image: "assets/hero-products-3.png",
-    description: "Игровая подборка для селлеров: размеры от 30 до 50 см, два материала на выбор.",
-    types: TYPE_OPTIONS,
-    sizes: SIZE_OPTIONS,
-    materials: MATERIAL_OPTIONS,
-    basePrice: 230,
-    popular: 92,
-  },
-  {
-    id: "winter-gift",
-    baseSku: "SB-PIL-WIN",
-    name: "Плед Winter Gift",
-    category: "Пледы",
-    theme: "Новый год",
-    collections: ["Подарки", "Паттерны", "Животные", "Бренд", "Именные"],
-    holidays: ["Новый год", "День рождения"],
-    tags: ["Новый год", "Подарки", "Паттерны", "Животные", "Бренд"],
-    stock: "made",
-    badge: "Под заказ",
-    image: "assets/hero-products-2.png",
-    description: "Сезонный принт для подарочных витрин, корпоративных наборов и новогодних поставок.",
-    types: TYPE_OPTIONS,
-    sizes: SIZE_OPTIONS,
-    materials: MATERIAL_OPTIONS,
-    basePrice: 205,
-    popular: 84,
-  },
-  {
-    id: "brand-line",
-    baseSku: "SB-PIL-BRN",
-    name: "Чехол Brand Line",
-    category: "Чехлы на чемодан",
-    theme: "Бренд",
-    collections: ["Бренд", "Паттерны", "Подарки", "Космос", "Игры"],
-    holidays: ["23 февраля", "День рождения"],
-    tags: ["Бренд", "Паттерны", "Подарки", "Космос", "Игры"],
-    stock: "made",
-    badge: "Ваш принт",
-    image: "assets/hero-products-1.png",
-    description: "База для клиентских макетов: логотипы, фирменные паттерны, упаковка под конкретный бренд.",
-    types: TYPE_OPTIONS,
-    sizes: SIZE_OPTIONS,
-    materials: MATERIAL_OPTIONS,
-    basePrice: 240,
-    popular: 80,
-  },
-  {
-    id: "army-supply",
-    baseSku: "SB-BAG-ARM",
-    name: "Мешок Army Supply",
-    category: "Мешки для обуви",
-    theme: "Военные",
-    collections: ["Военные", "Паттерны", "Бренд", "Подарки", "Игры"],
-    holidays: ["23 февраля"],
-    tags: ["Военные", "Паттерны", "Бренд", "Подарки", "Игры"],
-    stock: "ready",
-    badge: "Новая серия",
-    image: "assets/hero-products-2.png",
-    description: "Мешки для обуви и спортивных наборов с камуфляжными и тактическими принтами.",
-    types: ["Мешок"],
-    sizes: ["30x40", "35x45", "40x50"],
-    materials: ["Габардин", "Оксфорд"],
-    basePrice: 165,
-    popular: 76,
-  },
-  {
-    id: "cooler-love",
-    baseSku: "SB-CLR-LOVE",
-    name: "Чехол Love Cooler",
-    category: "Чехлы на кулер",
-    theme: "14 февраля",
-    collections: ["Подарки", "Бренд", "Паттерны", "Космос", "Именные"],
-    holidays: ["14 февраля", "8 марта"],
-    tags: ["14 февраля", "Подарки", "Бренд", "Паттерны", "Космос"],
-    stock: "made",
-    badge: "Сезон",
-    image: "assets/hero-products-3.png",
-    description: "Чехлы для кулеров с сезонными и корпоративными принтами для офисов и подарков.",
-    types: ["Чехол"],
-    sizes: ["Стандарт", "XL"],
-    materials: ["Габардин", "Велюр"],
-    basePrice: 390,
-    popular: 72,
-  },
-  {
-    id: "meme-cloud",
-    baseSku: "SB-PIL-MEM",
-    name: "Подушка Meme Cloud",
-    category: "Подушки",
-    theme: "Мемы",
-    collections: ["Мемы", "Подарки", "Паттерны", "Именные", "Бренд"],
-    holidays: ["День рождения"],
-    tags: ["Мемы", "Подарки", "Именные", "День рождения", "Паттерны"],
-    stock: "ready",
-    badge: "Тест",
-    image: "assets/hero-products-3.png",
-    description: "Подушка с юмористическими принтами для маркетплейсов и подарочных витрин.",
-    types: TYPE_OPTIONS,
-    sizes: SIZE_OPTIONS,
-    materials: MATERIAL_OPTIONS,
-    basePrice: 225,
-    popular: 89,
-  },
-  {
-    id: "march-bloom",
-    baseSku: "SB-NAV-MAR",
-    name: "Наволочка March Bloom",
-    category: "Наволочки",
-    theme: "Подарки",
-    collections: ["Подарки", "Животные", "Паттерны", "Именные", "Бренд"],
-    holidays: ["8 марта", "День рождения"],
-    tags: ["8 марта", "Подарки", "Женские принты", "Цветы", "Именные"],
-    stock: "made",
-    badge: "Сезон",
-    image: "assets/hero-products-1.png",
-    description: "Подарочная серия наволочек с цветочными и именными принтами.",
-    types: TYPE_OPTIONS,
-    sizes: SIZE_OPTIONS,
-    materials: MATERIAL_OPTIONS,
-    basePrice: 215,
-    popular: 87,
-  },
-  {
-    id: "teacher-pattern",
-    baseSku: "SB-PIL-TCH",
-    name: "Подушка Teacher Pattern",
-    category: "Подушки",
-    theme: "Паттерны",
-    collections: ["Паттерны", "Подарки", "Именные", "Бренд", "Мемы"],
-    holidays: ["День учителя"],
-    tags: ["День учителя", "Паттерны", "Подарки", "Именные", "Школа"],
-    stock: "ready",
-    badge: "Школа",
-    image: "assets/hero-products-2.png",
-    description: "Тестовая школьная линейка для сезонных закупок и подарочных наборов.",
-    types: TYPE_OPTIONS,
-    sizes: SIZE_OPTIONS,
-    materials: MATERIAL_OPTIONS,
-    basePrice: 218,
-    popular: 82,
-  },
-  {
-    id: "space-luggage",
-    baseSku: "SB-CSH-SPC",
-    name: "Чехол Space Luggage",
-    category: "Чехлы на чемодан",
-    theme: "Космос",
-    collections: ["Космос", "Паттерны", "Бренд", "Подарки", "Игры"],
-    holidays: ["День рождения"],
-    tags: ["Космос", "Паттерны", "Чехол", "Подарки", "Бренд"],
-    stock: "made",
-    badge: "Travel",
-    image: "assets/hero-products-2.png",
-    description: "Чехлы на чемодан с яркими паттернами для туристических и корпоративных заказов.",
-    types: ["Чехол"],
-    sizes: ["Стандарт", "XL"],
-    materials: ["Габардин", "Велюр"],
-    basePrice: 420,
-    popular: 78,
-  },
-  {
-    id: "anime-cover",
-    baseSku: "SB-CSH-ANI",
-    name: "Чехол Anime Trip",
-    category: "Чехлы на чемодан",
-    theme: "Аниме",
-    collections: ["Аниме", "Игры", "Подарки", "Бренд", "Паттерны"],
-    holidays: ["День рождения"],
-    tags: ["Аниме", "Игры", "Чехол", "Подарки", "Паттерны"],
-    stock: "ready",
-    badge: "Хит",
-    image: "assets/hero-products-1.png",
-    description: "Аниме-серия для чемоданов, тестовая карточка под разные принты и размеры.",
-    types: ["Чехол"],
-    sizes: ["Стандарт", "XL"],
-    materials: ["Габардин", "Велюр"],
-    basePrice: 435,
-    popular: 86,
-  },
-  {
-    id: "shoe-cyber",
-    baseSku: "SB-BAG-CYB",
-    name: "Мешок Cyber Sport",
-    category: "Мешки для обуви",
-    theme: "Игры",
-    collections: ["Игры", "Мемы", "Космос", "Паттерны", "Бренд"],
-    holidays: ["23 февраля", "День рождения"],
-    tags: ["Игры", "Мемы", "Спорт", "Космос", "23 февраля"],
-    stock: "ready",
-    badge: "Спорт",
-    image: "assets/hero-products-3.png",
-    description: "Мешки для обуви с игровыми и спортивными принтами.",
-    types: ["Мешок"],
-    sizes: ["30x40", "35x45", "40x50"],
-    materials: ["Габардин", "Оксфорд"],
-    basePrice: 175,
-    popular: 81,
-  },
-  {
-    id: "shoe-flower",
-    baseSku: "SB-BAG-FLR",
-    name: "Мешок Flower Mood",
-    category: "Мешки для обуви",
-    theme: "Подарки",
-    collections: ["Подарки", "Животные", "Паттерны", "Именные", "Бренд"],
-    holidays: ["8 марта", "День рождения"],
-    tags: ["8 марта", "Подарки", "Цветы", "Мешок", "Именные"],
-    stock: "made",
-    badge: "Весна",
-    image: "assets/hero-products-1.png",
-    description: "Весенняя серия мешков для обуви и подарочных комплектов.",
-    types: ["Мешок"],
-    sizes: ["30x40", "35x45", "40x50"],
-    materials: ["Габардин", "Оксфорд"],
-    basePrice: 168,
-    popular: 74,
-  },
-  {
-    id: "cooler-brand",
-    baseSku: "SB-CLR-BRN",
-    name: "Чехол Corporate Cooler",
-    category: "Чехлы на кулер",
-    theme: "Бренд",
-    collections: ["Бренд", "Паттерны", "Подарки", "Именные", "Космос"],
-    holidays: ["23 февраля", "8 марта"],
-    tags: ["Бренд", "Кулер", "Корпоративные", "Подарки", "Паттерны"],
-    stock: "made",
-    badge: "Офис",
-    image: "assets/hero-products-2.png",
-    description: "Корпоративные чехлы на кулер с логотипами и паттернами компании.",
-    types: ["Чехол"],
-    sizes: ["Стандарт", "XL"],
-    materials: ["Габардин", "Велюр"],
-    basePrice: 405,
-    popular: 77,
-  },
-  {
-    id: "cooler-newyear",
-    baseSku: "SB-CLR-NY",
-    name: "Чехол Snow Office",
-    category: "Чехлы на кулер",
-    theme: "Новый год",
-    collections: ["Подарки", "Паттерны", "Бренд", "Именные", "Животные"],
-    holidays: ["Новый год"],
-    tags: ["Новый год", "Кулер", "Офис", "Подарки", "Паттерны"],
-    stock: "ready",
-    badge: "Зима",
-    image: "assets/hero-products-3.png",
-    description: "Новогодние офисные чехлы на кулер для сезонного оформления.",
-    types: ["Чехол"],
-    sizes: ["Стандарт", "XL"],
-    materials: ["Габардин", "Велюр"],
-    basePrice: 398,
-    popular: 83,
-  },
-  {
-    id: "plaid-animal",
-    baseSku: "SB-PLD-ANM",
-    name: "Плед Animal Soft",
-    category: "Пледы",
-    theme: "Животные",
-    collections: ["Животные", "Подарки", "Паттерны", "Именные", "Аниме"],
-    holidays: ["День рождения", "Новый год"],
-    tags: ["Животные", "Плед", "Подарки", "Новый год", "Именные"],
-    stock: "ready",
-    badge: "Soft",
-    image: "assets/hero-products-1.png",
-    description: "Пледы с животными и мягкими паттернами для подарочных подборок.",
-    types: TYPE_OPTIONS,
-    sizes: SIZE_OPTIONS,
-    materials: MATERIAL_OPTIONS,
-    basePrice: 260,
-    popular: 85,
-  },
-  {
-    id: "plaid-meme",
-    baseSku: "SB-PLD-MEM",
-    name: "Плед Meme Night",
-    category: "Пледы",
-    theme: "Мемы",
-    collections: ["Мемы", "Игры", "Подарки", "Паттерны", "Космос"],
-    holidays: ["День рождения"],
-    tags: ["Мемы", "Плед", "Игры", "Подарки", "День рождения"],
-    stock: "made",
-    badge: "Юмор",
-    image: "assets/hero-products-2.png",
-    description: "Тестовый плед с мемными принтами для молодежных подборок.",
-    types: TYPE_OPTIONS,
-    sizes: SIZE_OPTIONS,
-    materials: MATERIAL_OPTIONS,
-    basePrice: 255,
-    popular: 79,
-  },
-  {
-    id: "name-stars",
-    baseSku: "SB-NAV-NAM",
-    name: "Наволочка Name Stars",
-    category: "Наволочки",
-    theme: "Именные",
-    collections: ["Именные", "Космос", "Подарки", "Паттерны", "Бренд"],
-    holidays: ["День рождения", "8 марта"],
-    tags: ["Именные", "Космос", "Подарки", "Наволочка", "8 марта"],
-    stock: "made",
-    badge: "Персонализация",
-    image: "assets/hero-products-3.png",
-    description: "Именные наволочки для подарочных и корпоративных заказов.",
-    types: TYPE_OPTIONS,
-    sizes: SIZE_OPTIONS,
-    materials: MATERIAL_OPTIONS,
-    basePrice: 235,
-    popular: 88,
-  },
-];
+const productDrafts = [];
 
 const STORAGE = {
   user: "sobag.currentUser",
@@ -763,6 +420,12 @@ function normalizeCatalogList(items, fallbackItems, options = {}) {
     .filter((item) => item.name);
 }
 
+function replacePrototypeImage(image, index = 0) {
+  const prepared = String(image || "").trim();
+  if (!prepared.includes("assets/hero-products-")) return prepared;
+  return actualItems[index % actualItems.length]?.image || "assets/production-workshop-1.png";
+}
+
 function normalizeActualSlides(items) {
   const source = Array.isArray(items) && items.length ? items : defaultSiteContent.actualSlides;
   return source
@@ -771,7 +434,7 @@ function normalizeActualSlides(items) {
       return {
         label: String(item.label || fallback.label || "").trim(),
         type: item.type === "collection" ? "collection" : "holiday",
-        image: String(item.image || fallback.image || "assets/production-workshop-1.png").trim(),
+        image: replacePrototypeImage(item.image || fallback.image || "assets/production-workshop-1.png", index),
       };
     })
     .filter((item) => item.label);
@@ -782,7 +445,7 @@ function normalizeSiteContent(content = {}) {
   return {
     ...defaultSiteContent,
     ...content,
-    heroImages: [0, 1, 2].map((index) => heroImages[index] || defaultSiteContent.heroImages[index]),
+    heroImages: [0, 1, 2].map((index) => replacePrototypeImage(heroImages[index] || defaultSiteContent.heroImages[index], index)),
     catalogCategories: normalizeCatalogList(content.catalogCategories, defaultSiteContent.catalogCategories, { description: true }),
     catalogCollections: normalizeCatalogList(content.catalogCollections, defaultSiteContent.catalogCollections),
     catalogHolidays: normalizeCatalogList(content.catalogHolidays, defaultSiteContent.catalogHolidays),
@@ -1061,14 +724,26 @@ function variantNameForType(name, type, size, material) {
   const target = replacements.find(([word]) => preparedType.toLocaleLowerCase("ru-RU").includes(word.toLocaleLowerCase("ru-RU")))?.[0];
   if (!target) return preparedName;
 
-  const source = replacements.find(([word]) => new RegExp(`^${word}\\b`, "i").test(preparedName))?.[0];
+  const source = replacements.find(([word]) => startsWithProductWord(preparedName, word))?.[0];
   if (source && source !== target) {
-    return variantNameWithSpecs(preparedName.replace(new RegExp(`^${source}\\b`, "i"), target), size, material);
+    return variantNameWithSpecs(replaceLeadingProductWord(preparedName, source, target), size, material);
   }
-  if (!source && !new RegExp(`^${target}\\b`, "i").test(preparedName)) {
+  if (!source && !startsWithProductWord(preparedName, target)) {
     return variantNameWithSpecs(`${target} ${preparedName}`, size, material);
   }
   return variantNameWithSpecs(preparedName, size, material);
+}
+
+function startsWithProductWord(text, word) {
+  const preparedText = String(text || "").trim().toLocaleLowerCase("ru-RU");
+  const preparedWord = String(word || "").trim().toLocaleLowerCase("ru-RU");
+  if (!preparedText.startsWith(preparedWord)) return false;
+  const nextChar = preparedText.slice(preparedWord.length, preparedWord.length + 1);
+  return !nextChar || /[\s"'«».,:;()/-]/.test(nextChar);
+}
+
+function replaceLeadingProductWord(text, source, target) {
+  return `${target}${String(text || "").trim().slice(String(source || "").length)}`.replace(/\s+/g, " ").trim();
 }
 
 function variantNameWithSpecs(name, size, material) {
@@ -1152,10 +827,10 @@ function normalizeProduct(product) {
     collections: normalizeListField(product, "collections", product.theme ? [product.theme] : []),
     holidays: normalizeListField(product, "holidays"),
     tags: normalizeTags(product),
-    gallery: [...new Set([product.image, ...(product.gallery || []), "assets/hero-products-1.png", "assets/hero-products-2.png", "assets/hero-products-3.png"])].filter(Boolean),
+    gallery: [...new Set([product.image, ...(product.gallery || [])])].filter(Boolean),
     detailDescription:
       product.detailDescription ||
-      "Тестовая карточка показывает, как будет выглядеть товар с несколькими фотографиями, быстрыми тегами и настройкой варианта под оптовую заявку.",
+      "Карточка показывает товар с несколькими фотографиями, быстрыми тегами и настройкой варианта под оптовую заявку.",
     stock: product.stock || "made",
     popular: product.popular || 50,
     basePrice: Number(product.basePrice || 200),
@@ -1167,9 +842,20 @@ function normalizeProduct(product) {
 }
 
 function loadProducts() {
-  const saved = JSON.parse(localStorage.getItem(STORAGE.products) || "null");
-  const source = saved?.length ? saved : productDrafts;
+  const saved = loadStoredProducts();
+  const source = saved.length ? saved : productDrafts;
   return source.map(normalizeProduct);
+}
+
+function loadStoredProducts() {
+  const saved = JSON.parse(localStorage.getItem(STORAGE.products) || "null");
+  return Array.isArray(saved) ? saved.filter((product) => !isPrototypeProduct(product)) : [];
+}
+
+function isPrototypeProduct(product) {
+  const sku = String(product?.baseSku || "");
+  const images = [product?.image, ...(product?.gallery || [])].filter(Boolean).join(" ");
+  return sku.startsWith("SB-") || images.includes("assets/hero-products-");
 }
 
 function productKey(product) {
@@ -1193,7 +879,7 @@ async function loadPublishedProducts() {
     if (!response.ok) return;
     const liveProducts = await response.json();
     if (!Array.isArray(liveProducts) || !liveProducts.length) return;
-    const saved = JSON.parse(localStorage.getItem(STORAGE.products) || "null");
+    const saved = loadStoredProducts();
     products = saved?.length ? mergeProducts(products, liveProducts) : liveProducts.map(normalizeProduct);
     addMissingCatalogCategories(products);
     renderSiteContent();
@@ -1319,24 +1005,23 @@ function getQuantityDiscount(qty) {
   return quantityTiers.reduce((current, tier) => (qty >= tier.qty ? tier.discount : current), 0);
 }
 
-function lineTotals(line) {
+function discountedUnitPrice(price, discount) {
+  return Math.round(price * (1 - discount / 100));
+}
+
+function lineTotals(line, discount = getQuantityDiscount(line.qty)) {
   const subtotal = line.variant.price * line.qty;
-  const discount = getQuantityDiscount(line.qty);
-  const total = Math.round(subtotal * (1 - discount / 100));
+  const total = discountedUnitPrice(line.variant.price, discount) * line.qty;
   return { subtotal, discount, total };
 }
 
 function getCartTotals() {
-  return [...state.cart.values()].reduce(
-    (sum, line) => {
-      const totals = lineTotals(line);
-      sum.subtotal += totals.subtotal;
-      sum.total += totals.total;
-      sum.qty += line.qty;
-      return sum;
-    },
-    { subtotal: 0, total: 0, qty: 0 }
-  );
+  const lines = [...state.cart.values()];
+  const qty = lines.reduce((sum, line) => sum + line.qty, 0);
+  const subtotal = lines.reduce((sum, line) => sum + line.variant.price * line.qty, 0);
+  const discount = getQuantityDiscount(qty);
+  const total = Math.round(subtotal * (1 - discount / 100));
+  return { subtotal, total, qty, discount };
 }
 
 function showToast(message) {
@@ -1680,6 +1365,7 @@ function renderFilters() {
     .map((group) => {
       const query = (state.filterSearch[group.key] || "").toLowerCase();
       const options = uniqueOptions(group.key).filter((value) => group.label(value).toLowerCase().includes(query));
+      if (!options.length && !state.filters[group.key].size) return "";
       return `
         <div class="filters__block filter-group" data-filter-group="${group.key}">
           <h3>${group.title}</h3>
@@ -1758,19 +1444,19 @@ function renderProducts() {
 function renderCart() {
   const totals = getCartTotals();
   const lines = [...state.cart.values()];
-  const averageDiscount = totals.subtotal ? Math.round((1 - totals.total / totals.subtotal) * 100) : 0;
 
   if (cartItems) {
     cartItems.innerHTML = lines
       .map((line) => {
-        const totals = lineTotals(line);
+        const lineSummary = lineTotals(line, totals.discount);
+        const unitPrice = discountedUnitPrice(line.variant.price, totals.discount);
         return `
           <div class="cart-line">
             <div>
               <strong>${line.productName}</strong>
               <span>${line.variant.sku}</span>
               <span>${line.variant.type}, ${line.variant.size}, ${line.variant.material}</span>
-              <span>${line.qty} шт. × ${formatMoney(line.variant.price)} · скидка ${totals.discount}%</span>
+              <span>${line.qty} шт. × ${formatMoney(unitPrice)} · скидка ${lineSummary.discount}%</span>
             </div>
             <button type="button" title="Удалить" data-remove="${line.key}">
               <i data-lucide="x"></i>
@@ -1788,7 +1474,7 @@ function renderCart() {
   headerCartButton?.classList.toggle("is-empty", totals.qty === 0);
   if (favoriteCount) favoriteCount.textContent = state.favorites.size;
   if (subtotalNode) subtotalNode.textContent = formatMoney(totals.subtotal);
-  if (discountValue) discountValue.textContent = `${averageDiscount}%`;
+  if (discountValue) discountValue.textContent = `${totals.discount}%`;
   if (grandTotal) grandTotal.textContent = formatMoney(totals.total);
   const cartMinHint = document.querySelector("#cartMinHint");
   const checkoutButton = document.querySelector("#requestForm button[type='submit']");
@@ -1810,8 +1496,12 @@ function renderCart() {
   const maxTier = quantityTiers[quantityTiers.length - 1];
   if (discountProgress) discountProgress.style.width = `${Math.min((totals.qty / maxTier.qty) * 100, 100)}%`;
   if (discountHint) {
+    const averageUnitPrice = totals.qty ? totals.subtotal / totals.qty : 0;
+    const remainingAmount = nextTier ? Math.ceil((nextTier.qty - totals.qty) * averageUnitPrice) : 0;
     discountHint.textContent = nextTier
-      ? `До скидки ${nextTier.discount}% осталось ${nextTier.qty - totals.qty} шт. в корзине.`
+      ? totals.qty
+        ? `До скидки ${nextTier.discount}% осталось примерно ${formatMoney(remainingAmount)} в корзине.`
+        : `Добавьте товары, чтобы открыть скидку ${nextTier.discount}%.`
       : "Максимальная скидка по количеству применена.";
   }
 
@@ -1845,8 +1535,10 @@ function findVariant(product, selection = state.activeVariant) {
 
 function productModalHtml(product) {
   const variant = findVariant(product);
-  const discount = getQuantityDiscount(state.activeVariant.qty);
-  const total = Math.round(variant.price * state.activeVariant.qty * (1 - discount / 100));
+  const previewQty = getCartTotals().qty + state.activeVariant.qty;
+  const discount = getQuantityDiscount(previewQty);
+  const unitPrice = discountedUnitPrice(variant.price, discount);
+  const total = unitPrice * state.activeVariant.qty;
   const gallery = product.gallery?.length ? product.gallery : [product.image];
   return `
     <div class="modal is-visible" id="productModal" role="dialog" aria-modal="true">
@@ -1907,12 +1599,12 @@ function productModalHtml(product) {
               </label>
               <div class="detail-price">
                 <span>Цена за шт.</span>
-                <strong id="detailPrice">${formatMoney(variant.price)}</strong>
-                <small id="detailDiscount">Скидка ${discount}% от количества</small>
+                <strong id="detailPrice">${formatMoney(unitPrice)}</strong>
+                <small id="detailDiscount">Скидка ${discount}% по корзине</small>
               </div>
             </div>
             <div class="detail-total">
-              <span>Итого по позиции</span>
+              <span>ИТОГО</span>
               <strong id="detailTotal">${formatMoney(total)}</strong>
             </div>
             <button class="primary-button" type="button" data-add-variant="${product.id}">
@@ -1962,7 +1654,8 @@ function refreshProductModal() {
   const variant = findVariant(product);
   const qty = Math.max(1, Number(document.querySelector("#detailQty")?.value || state.activeVariant.qty));
   state.activeVariant.qty = qty;
-  const discount = getQuantityDiscount(qty);
+  const discount = getQuantityDiscount(getCartTotals().qty + qty);
+  const unitPrice = discountedUnitPrice(variant.price, discount);
   document.querySelector("#selectedSku").textContent = variant.sku;
   document.querySelector("#detailProductName").textContent = variant.name;
   const detailCopySkuButton = modal.querySelector(".copy-sku-button--detail");
@@ -1970,9 +1663,9 @@ function refreshProductModal() {
     detailCopySkuButton.dataset.copySku = variant.sku;
     detailCopySkuButton.setAttribute("aria-label", `Скопировать выбранный артикул ${variant.sku}`);
   }
-  document.querySelector("#detailPrice").textContent = formatMoney(variant.price);
-  document.querySelector("#detailDiscount").textContent = `Скидка ${discount}% от количества`;
-  document.querySelector("#detailTotal").textContent = formatMoney(Math.round(variant.price * qty * (1 - discount / 100)));
+  document.querySelector("#detailPrice").textContent = formatMoney(unitPrice);
+  document.querySelector("#detailDiscount").textContent = `Скидка ${discount}% по корзине`;
+  document.querySelector("#detailTotal").textContent = formatMoney(unitPrice * qty);
   modal.querySelectorAll(".variant-option").forEach((button) => {
     button.classList.toggle("is-active", state.activeVariant[button.dataset.variantKey] === button.dataset.variantValue);
   });
@@ -2582,7 +2275,7 @@ function downloadXlsxTemplate() {
 }
 
 function productGalleryForExport(product) {
-  const generatedImages = new Set(["assets/hero-products-1.png", "assets/hero-products-2.png", "assets/hero-products-3.png"]);
+  const generatedImages = new Set();
   return (product.gallery || [])
     .filter((image) => image && image !== product.image && !generatedImages.has(image))
     .join("; ");

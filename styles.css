@@ -1440,7 +1440,8 @@ h3 {
 }
 
 .product-detail__copy h2 {
-  font-size: clamp(30px, 3vw, 46px);
+  font-size: clamp(26px, 2.4vw, 38px);
+  line-height: 1.08;
 }
 
 .product-detail__copy > p:not(.eyebrow) {

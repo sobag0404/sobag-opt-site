@@ -222,6 +222,16 @@ Latest production verification:
   - production URL `https://sobag-opt-site.vercel.app/data/products-live.json` returned HTTP 200 with 808 products;
   - production sample image `https://sobag-opt-site.vercel.app/assets/product-preview-live/opt-00104/1.webp` returned HTTP 200 as `image/webp`;
   - production `app.js` contains the live catalog loader and `data/products-live.json` reference.
+- Product cleanup/fixes requested on 2026-05-28:
+  - removed embedded prototype product drafts and deleted old `assets/hero-products-*.png` test images;
+  - static "actual" images now point at real imported product WebP assets;
+  - product normalization no longer appends old generated images to every product gallery;
+  - stale localStorage prototype products are filtered out by `SB-` SKU / old image references;
+  - fixed Cyrillic variant name replacement so `Подушка Паттерны` becomes `Наволочка Паттерны ...` for cover variants instead of `Наволочка Подушка ...` or `Подушка Подушка ...`;
+  - modal title sizing was reduced, "Итого по позиции" was renamed to "ИТОГО";
+  - unit price now reflects the applied cart quantity discount in modal/cart displays;
+  - discount hint now shows an approximate remaining basket amount to the next tier;
+  - empty filter groups (for example holidays with no options in the current category) are hidden.
 
 ## Important Constraints
 

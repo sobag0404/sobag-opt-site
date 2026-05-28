@@ -213,6 +213,10 @@ function getQuantityDiscount(qty) {
   return quantityTiers.reduce((current, tier) => (qty >= tier.qty ? tier.discount : current), 0);
 }
 
+function discountedUnitPrice(price, discount) {
+  return Math.round(price * (1 - discount / 100));
+}
+
 function getTotals() {
   const lines = [...state.cart.values()];
   const qty = lines.reduce((sum, line) => sum + line.qty, 0);
@@ -244,8 +248,13 @@ function renderScale(qty) {
     .join("");
 
   const nextTier = quantityTiers.find((tier) => qty < tier.qty);
+  const totals = getTotals();
+  const averageUnitPrice = totals.qty ? totals.subtotal / totals.qty : 0;
+  const remainingAmount = nextTier ? Math.ceil((nextTier.qty - qty) * averageUnitPrice) : 0;
   nodes.discountHint.textContent = nextTier
-    ? `До скидки ${nextTier.discount}% осталось ${nextTier.qty - qty} шт.`
+    ? totals.qty
+      ? `До скидки ${nextTier.discount}% осталось примерно ${formatMoney(remainingAmount)} в корзине.`
+      : `Добавьте товары, чтобы открыть скидку ${nextTier.discount}%.`
     : "Максимальная скидка по количеству применена.";
 }
 
@@ -257,7 +266,7 @@ function renderCart() {
       (line) => `
         <article class="cart-page-line">
           <div class="cart-page-line__media">
-            <img src="${line.productImage || "assets/hero-products-1.png"}" alt="${line.productName}" />
+            <img src="${line.productImage || "assets/production-workshop-1.png"}" alt="${line.productName}" />
           </div>
           <div class="cart-page-line__body">
             <span>${line.variant.sku}</span>
@@ -274,8 +283,8 @@ function renderCart() {
             </button>
           </div>
           <div class="cart-page-line__price">
-            <strong>${formatMoney(line.variant.price * line.qty)}</strong>
-            <span>${formatMoney(line.variant.price)} / шт.</span>
+            <strong>${formatMoney(discountedUnitPrice(line.variant.price, totals.qtyDiscount) * line.qty)}</strong>
+            <span>${formatMoney(discountedUnitPrice(line.variant.price, totals.qtyDiscount))} / шт.</span>
           </div>
           <button class="cart-page-line__remove" type="button" data-remove-line="${line.key}" aria-label="Удалить">
             <i data-lucide="trash-2"></i>
