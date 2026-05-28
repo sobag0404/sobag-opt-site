@@ -22,7 +22,7 @@ from xml.etree import ElementTree as ET
 TEMPLATE_COLUMNS = [
     "Основной артикул",
     "Название",
-    "Категория",
+    "Категории",
     "Типы товара",
     "Размеры",
     "Материалы",
@@ -42,7 +42,7 @@ TEMPLATE_COLUMNS = [
 SAMPLE_ROW = [
     "10345",
     "Подушка Aurora Cats",
-    "Подушки",
+    "Подушки; Наволочки",
     "Подушка; Наволочка",
     "30x30; 35x35; 40x40; 45x45; 50x50",
     "Велюр; Габардин",
@@ -62,7 +62,7 @@ SAMPLE_ROW = [
 COLUMN_ALIASES = {
     "baseSku": ["Основной артикул", "Начальный артикул", "Артикул", "baseSku"],
     "name": ["Название", "Наименование", "name"],
-    "category": ["Категория", "category"],
+    "category": ["Категории", "Категория", "category", "categories"],
     "types": ["Типы товара", "Тип товара", "types"],
     "sizes": ["Размеры", "Размер", "sizes"],
     "materials": ["Материалы", "Материал", "materials"],
@@ -238,13 +238,15 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
     copied_images, warnings = copy_photos(base_sku, folder, assets_dir, project_root)
     gallery_from_table = split_list(row_value(row, "gallery"))
     collections = split_list(row_value(row, "collections") or row_value(row, "theme"))
+    categories = split_list(row_value(row, "category", "Подушки"))
     main_image = copied_images[0] if copied_images else row_value(row, "image") or "assets/production-workshop-1.png"
 
     product = {
         "id": f"{slug(base_sku)}-{hashlib.sha1(base_sku.encode('utf-8')).hexdigest()[:6]}",
         "baseSku": base_sku,
         "name": row_value(row, "name"),
-        "category": row_value(row, "category", "Подушки"),
+        "category": categories[0] if categories else "Подушки",
+        "categories": categories or ["Подушки"],
         "theme": row_value(row, "theme") or (collections[0] if collections else ""),
         "collections": collections,
         "holidays": split_list(row_value(row, "holidays")),
@@ -279,6 +281,20 @@ def write_report(path: Path, rows: list[dict[str, str]]) -> None:
         writer = csv.DictWriter(file, fieldnames=["baseSku", "name", "photoFolder", "photoCount", "mainImage", "warnings"], delimiter=";")
         writer.writeheader()
         writer.writerows(rows)
+
+
+def load_existing_products(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    return data if isinstance(data, list) else []
+
+
+def normalized_sku(value: str) -> str:
+    return str(value or "").strip().upper()
 
 
 def write_csv_rows(path: Path, rows: list[list[str]]) -> None:
@@ -453,19 +469,52 @@ def command_import(args: argparse.Namespace) -> None:
     report_path = (project_root / args.report).resolve()
 
     rows = read_table(table)
-    products: list[dict] = []
+    existing_products = [] if args.replace else load_existing_products(output)
+    existing_skus = {normalized_sku(product.get("baseSku", "")) for product in existing_products}
+    seen_skus: set[str] = set()
+    new_products: list[dict] = []
     report_rows: list[dict[str, str]] = []
+    skipped_duplicates = 0
     for row in rows:
         if not row_value(row, "baseSku") or not row_value(row, "name"):
             continue
+        base_sku = normalized_sku(row_value(row, "baseSku"))
+        if base_sku in existing_skus or base_sku in seen_skus:
+            skipped_duplicates += 1
+            report_rows.append(
+                {
+                    "baseSku": base_sku,
+                    "name": row_value(row, "name"),
+                    "photoFolder": row_value(row, "photoFolder", base_sku),
+                    "photoCount": "0",
+                    "mainImage": "",
+                    "warnings": "Дубль пропущен: товар с таким основным артикулом уже есть",
+                }
+            )
+            continue
+        seen_skus.add(base_sku)
         product, report = make_product(row, photos_root, assets_dir, project_root)
-        products.append(product)
+        new_products.append(product)
         report_rows.append(report)
 
+    products = existing_products + new_products
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
     write_report(report_path, report_rows)
-    print(json.dumps({"products": len(products), "output": str(output), "report": str(report_path)}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                "existingProductsKept": len(existing_products),
+                "newProducts": len(new_products),
+                "totalProducts": len(products),
+                "skippedDuplicates": skipped_duplicates,
+                "output": str(output),
+                "report": str(report_path),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
 
 def main() -> int:
@@ -495,6 +544,7 @@ def main() -> int:
     import_parser.add_argument("--assets", default="assets/imported-products", help="where copied photos are placed")
     import_parser.add_argument("--out", default="data/products.import.json", help="products JSON output path")
     import_parser.add_argument("--report", default="data/import-report.csv", help="CSV report output path")
+    import_parser.add_argument("--replace", action="store_true", help="replace output JSON instead of keeping existing products")
     import_parser.set_defaults(func=command_import)
 
     args = parser.parse_args()

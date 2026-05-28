@@ -1002,6 +1002,7 @@ function createVariants(product) {
           product.basePrice + (typeFactors[type] || 0) + (sizeFactors[size] || 0) + (materialFactors[material] || 0);
         return {
           sku: [product.baseSku, skuPart(type, 3), skuSizePart(size), skuPart(material, 3)].filter(Boolean).join("_"),
+          name: variantNameForType(product.name, type),
           type,
           size,
           material,
@@ -1010,6 +1011,33 @@ function createVariants(product) {
       })
     )
   );
+}
+
+function variantNameForType(name, type) {
+  const preparedName = String(name || "").trim();
+  const preparedType = String(type || "").trim();
+  if (!preparedName || !preparedType) return preparedName;
+
+  const replacements = [
+    ["Подушка", "Наволочка"],
+    ["Наволочка", "Подушка"],
+    ["Плед", "Плед"],
+    ["Мешок", "Мешок"],
+    ["Чехол", "Чехол"],
+    ["Флаг", "Флаг"],
+    ["Ремувка", "Ремувка"],
+  ];
+  const target = replacements.find(([word]) => preparedType.toLocaleLowerCase("ru-RU").includes(word.toLocaleLowerCase("ru-RU")))?.[0];
+  if (!target) return preparedName;
+
+  const source = replacements.find(([word]) => new RegExp(`^${word}\\b`, "i").test(preparedName))?.[0];
+  if (source && source !== target) {
+    return preparedName.replace(new RegExp(`^${source}\\b`, "i"), target);
+  }
+  if (!source && !new RegExp(`^${target}\\b`, "i").test(preparedName)) {
+    return `${target} ${preparedName}`;
+  }
+  return preparedName;
 }
 
 function skuPart(value, limit = Infinity) {
@@ -1054,9 +1082,17 @@ function productHasHoliday(product, holiday) {
   return product.holidays.includes(holiday);
 }
 
+function productHasCategory(product, category) {
+  return (product.categories || [product.category]).includes(category);
+}
+
 function normalizeProduct(product) {
+  const categories = normalizeListField(product, "categories", splitList(product.category || ""));
+  const normalizedCategories = categories.length ? categories : [product.category || "Подушки"];
   const normalized = {
     ...product,
+    categories: normalizedCategories,
+    category: normalizedCategories[0],
     types: product.types?.length ? product.types : TYPE_OPTIONS,
     sizes: product.sizes?.length ? product.sizes : SIZE_OPTIONS,
     materials: product.materials?.length ? product.materials : MATERIAL_OPTIONS,
@@ -1263,10 +1299,10 @@ function stockLabel(stock) {
 function productsForFilterOptions(key) {
   return products.filter((product) => {
     if (isFavoritesPage && !state.favorites.has(product.id)) return false;
-    if (state.selectedCategory && product.category !== state.selectedCategory) return false;
+    if (state.selectedCategory && !productHasCategory(product, state.selectedCategory)) return false;
     if (state.selectedCollection && !productHasCollection(product, state.selectedCollection)) return false;
     if (state.selectedHoliday && !productHasHoliday(product, state.selectedHoliday)) return false;
-    if (key !== "category" && state.filters.category.size && !state.filters.category.has(product.category)) return false;
+    if (key !== "category" && state.filters.category.size && ![...state.filters.category].some((category) => productHasCategory(product, category))) return false;
     if (key !== "collection" && state.filters.collection.size && ![...state.filters.collection].some((collection) => productHasCollection(product, collection))) return false;
     if (key !== "holiday" && state.filters.holiday.size && ![...state.filters.holiday].some((holiday) => productHasHoliday(product, holiday))) return false;
 
@@ -1300,15 +1336,16 @@ function uniqueOptions(key) {
   }
   if (key === "collection") return [...new Set(sourceProducts.flatMap((product) => product.collections))];
   if (key === "holiday") return [...new Set(sourceProducts.flatMap((product) => product.holidays))];
+  if (key === "category") return [...new Set(sourceProducts.flatMap((product) => product.categories || [product.category]))];
   return [...new Set(sourceProducts.map((product) => product[key]))];
 }
 
 function productMatchesFilters(product) {
   const filters = state.filters;
-  if (state.selectedCategory && product.category !== state.selectedCategory) return false;
+  if (state.selectedCategory && !productHasCategory(product, state.selectedCategory)) return false;
   if (state.selectedCollection && !productHasCollection(product, state.selectedCollection)) return false;
   if (state.selectedHoliday && !productHasHoliday(product, state.selectedHoliday)) return false;
-  if (filters.category.size && !filters.category.has(product.category)) return false;
+  if (filters.category.size && ![...filters.category].some((category) => productHasCategory(product, category))) return false;
   if (filters.collection.size && ![...filters.collection].some((collection) => productHasCollection(product, collection))) return false;
   if (filters.holiday.size && ![...filters.holiday].some((holiday) => productHasHoliday(product, holiday))) return false;
 
@@ -1331,7 +1368,7 @@ function searchScore(product) {
 
   const name = product.name.toLowerCase();
   if (name.includes(query)) return 3000;
-  const text = [product.collections.join(" "), product.holidays.join(" "), product.tags.join(" "), product.category, product.description]
+  const text = [product.collections.join(" "), product.holidays.join(" "), product.tags.join(" "), product.categories.join(" "), product.description]
     .join(" ")
     .toLowerCase();
   if (text.includes(query)) return 1000;
@@ -1362,7 +1399,9 @@ function renderCatalogHome() {
   const content = getSiteContent();
   const countByCategory = Object.fromEntries(content.catalogCategories.map((category) => [category.name, 0]));
   products.forEach((product) => {
-    countByCategory[product.category] = (countByCategory[product.category] || 0) + 1;
+    (product.categories || [product.category]).forEach((category) => {
+      countByCategory[category] = (countByCategory[category] || 0) + 1;
+    });
   });
 
   categoryTiles.innerHTML = content.catalogCategories
@@ -1745,11 +1784,13 @@ function productModalHtml(product) {
             </div>
             <div class="product-detail__copy">
               <p class="eyebrow">${product.baseSku}</p>
-              <h2>${product.name}</h2>
+              <h2 id="detailProductName">${variant.name}</h2>
               <p>${product.description}</p>
               <p class="product-detail__note">${product.detailDescription}</p>
               <div class="detail-tags" aria-label="Быстрые фильтры">
-                <button type="button" class="detail-tag" data-open-category="${product.category}">${product.category}</button>
+                ${(product.categories || [product.category])
+                  .map((category) => `<button type="button" class="detail-tag" data-open-category="${category}">${category}</button>`)
+                  .join("")}
                 ${product.collections
                   .map((tag) => `<button type="button" class="detail-tag" data-open-collection="${tag}">${tag}</button>`)
                   .join("")}
@@ -1836,6 +1877,7 @@ function refreshProductModal() {
   state.activeVariant.qty = qty;
   const discount = getQuantityDiscount(qty);
   document.querySelector("#selectedSku").textContent = variant.sku;
+  document.querySelector("#detailProductName").textContent = variant.name;
   const detailCopySkuButton = modal.querySelector(".copy-sku-button--detail");
   if (detailCopySkuButton) {
     detailCopySkuButton.dataset.copySku = variant.sku;
@@ -1858,7 +1900,7 @@ function addVariantToCart(productId) {
   state.cart.set(key, {
     key,
     productId: product.id,
-    productName: product.name,
+    productName: variant.name,
     productImage: product.image,
     variant,
     qty: existing ? existing.qty + qty : qty,
@@ -2018,7 +2060,7 @@ function escapeHtml(value) {
 const productTemplateColumns = [
   { key: "name", label: "Название" },
   { key: "baseSku", label: "Основной артикул" },
-  { key: "category", label: "Категория" },
+  { key: "category", label: "Категории" },
   { key: "theme", label: "Основная подборка" },
   { key: "collections", label: "Подборки" },
   { key: "holidays", label: "Праздники" },
@@ -2044,6 +2086,7 @@ const productExportColumns = [...productTemplateColumns, ...productExportOnlyCol
 
 const productColumnAliases = {
   baseSku: ["Начальный артикул", "Артикул", "Базовый артикул"],
+  category: ["Категория", "Категории"],
   image: ["Главное фото", "URL фото", "Фото"],
   theme: ["Тематика", "Основная тематика", "Основная подборка"],
   collections: ["Тематики", "Подборки"],
@@ -2208,8 +2251,8 @@ function adminModalHtml() {
             <input name="baseSku" type="text" placeholder="SB-PIL-NEW" value="SB-PIL-NEW" required />
           </label>
           <label>
-            Категория
-            <input name="category" type="text" placeholder="Подушки" value="Подушки" required />
+            Категории
+            <input name="category" type="text" placeholder="Подушки; Наволочки" value="Подушки; Наволочки" required />
           </label>
           <label>
             Основная подборка
@@ -2304,7 +2347,7 @@ function productFromForm(form) {
   const data = Object.fromEntries(new FormData(form).entries());
   return normalizeProduct({
     id: `${data.baseSku}-${Date.now()}`.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
-    baseSku: data.baseSku.trim().toUpperCase(),
+    baseSku: normalizeBaseSku(data.baseSku),
     name: data.name.trim(),
     category: data.category.trim(),
     theme: data.theme.trim(),
@@ -2321,6 +2364,10 @@ function productFromForm(form) {
     description: "Карточка создана массовым генератором вариантов.",
     popular: 60,
   });
+}
+
+function normalizeBaseSku(value) {
+  return String(value || "").trim().toLocaleUpperCase("ru-RU");
 }
 
 function renderAdminPreview(items) {
@@ -2347,15 +2394,28 @@ function saveGeneratedProducts() {
     showToast("Сначала сгенерируйте карточки.");
     return;
   }
-  products = [...state.adminPreview, ...products];
-  addMissingCatalogCategories(state.adminPreview);
+  const existingSkus = new Set(products.map((product) => normalizeBaseSku(product.baseSku)));
+  const seenSkus = new Set();
+  const uniqueProducts = state.adminPreview.filter((product) => {
+    const sku = normalizeBaseSku(product.baseSku);
+    if (!sku || existingSkus.has(sku) || seenSkus.has(sku)) return false;
+    seenSkus.add(sku);
+    return true;
+  });
+  const skipped = state.adminPreview.length - uniqueProducts.length;
+  if (!uniqueProducts.length) {
+    showToast("Новые карточки не добавлены: все артикулы уже есть в каталоге.");
+    return;
+  }
+  products = [...uniqueProducts, ...products];
+  addMissingCatalogCategories(uniqueProducts);
   saveProducts();
   renderCatalogHome();
   renderCatalogShell();
   renderFilters();
   renderProducts();
   renderAdminPreview([]);
-  showToast("Карточки добавлены в каталог.");
+  showToast(skipped ? `Карточки добавлены: ${uniqueProducts.length}. Дубли пропущены: ${skipped}.` : "Карточки добавлены в каталог.");
 }
 
 function setActualSlide(index) {
@@ -2403,7 +2463,7 @@ function downloadTemplate() {
     [
       "Коллекция Sample",
       "SB-PIL-SMP",
-      "Подушки",
+      "Подушки; Наволочки",
       "Аниме",
       "Аниме; Подарки",
       "Новый год",
@@ -2436,7 +2496,8 @@ function productGalleryForExport(product) {
 }
 
 function productExportValue(product, key) {
-  if (["types", "sizes", "materials", "collections", "holidays", "tags"].includes(key)) {
+  if (["category", "types", "sizes", "materials", "collections", "holidays", "tags"].includes(key)) {
+    if (key === "category") return product.categories || [product.category].filter(Boolean);
     return product[key] || [];
   }
   if (key === "gallery") return productGalleryForExport(product);
@@ -2459,14 +2520,16 @@ function addMissingCatalogCategories(sourceProducts) {
   const existing = new Set(content.catalogCategories.map((category) => category.name.toLocaleLowerCase("ru-RU")));
   const additions = [];
   sourceProducts.forEach((product) => {
-    const name = String(product.category || "").trim();
-    if (!name || existing.has(name.toLocaleLowerCase("ru-RU"))) return;
-    existing.add(name.toLocaleLowerCase("ru-RU"));
-    additions.push({
-      name,
-      icon: "tag",
-      description: "Категория добавлена из импорта. Эмблему и описание можно уточнить в админке.",
-      image: "",
+    (product.categories || [product.category]).forEach((category) => {
+      const name = String(category || "").trim();
+      if (!name || existing.has(name.toLocaleLowerCase("ru-RU"))) return;
+      existing.add(name.toLocaleLowerCase("ru-RU"));
+      additions.push({
+        name,
+        icon: "tag",
+        description: "Категория добавлена из импорта. Эмблему и описание можно уточнить в админке.",
+        image: "",
+      });
     });
   });
   if (!additions.length) return;
@@ -2480,14 +2543,24 @@ async function importExcel(file) {
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer);
   const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
-  const imported = rows
-    .filter((row) => rowValue(row, "name") && rowValue(row, "baseSku"))
-    .map((row) =>
+  const existingSkus = new Set(products.map((product) => normalizeBaseSku(product.baseSku)));
+  const seenSkus = new Set();
+  let skippedDuplicates = 0;
+  const imported = rows.reduce((items, row) => {
+    if (!rowValue(row, "name") || !rowValue(row, "baseSku")) return items;
+    const baseSku = normalizeBaseSku(rowValue(row, "baseSku"));
+    if (existingSkus.has(baseSku) || seenSkus.has(baseSku)) {
+      skippedDuplicates += 1;
+      return items;
+    }
+    seenSkus.add(baseSku);
+    items.push(
       normalizeProduct({
         id: `${rowValue(row, "baseSku")}-${Date.now()}-${Math.random().toString(16).slice(2)}`.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
-        baseSku: String(rowValue(row, "baseSku")).trim().toUpperCase(),
+        baseSku,
         name: String(rowValue(row, "name")).trim(),
         category: String(rowValue(row, "category") || "Подушки").trim(),
+        categories: splitList(rowValue(row, "category") || "Подушки"),
         theme: String(rowValue(row, "theme") || "").trim(),
         collections: splitList(rowValue(row, "collections") || rowValue(row, "theme") || ""),
         holidays: splitList(rowValue(row, "holidays") || ""),
@@ -2506,9 +2579,15 @@ async function importExcel(file) {
         popular: Number(rowValue(row, "popular") || 55),
       })
     );
+    return items;
+  }, []);
   addMissingCatalogCategories(imported);
   renderAdminPreview(imported);
-  showToast(`Из Excel загружено карточек: ${imported.length}.`);
+  showToast(
+    skippedDuplicates
+      ? `Из Excel загружено новых карточек: ${imported.length}. Дубли пропущены: ${skippedDuplicates}.`
+      : `Из Excel загружено новых карточек: ${imported.length}.`
+  );
 }
 
 function readContentFile(input) {

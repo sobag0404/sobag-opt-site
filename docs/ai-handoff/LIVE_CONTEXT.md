@@ -167,6 +167,33 @@ Latest production verification:
   - removed stale/mojibake text from older handoff docs;
   - documented the current production URLs, latest functional commit, local setup commands, import constraints, and no-secrets policy;
   - rebuilt `project-ai-handoff-latest.zip` from `docs/ai-handoff`.
+- Product-photo folder analysis on 2026-05-28:
+  - source folder: `C:\Users\SoBag\OneDrive\Рабочий стол\карточки сайт`;
+  - user asked to analyze only, not add to site;
+  - found 808 product folders and 2768 `.png` images;
+  - all first images are readable, square, and 1024x1024;
+  - no empty folders found;
+  - image counts per product folder: 484 have 3 images, 290 have 4, 22 have 6, and 12 have 2;
+  - structure is flat (`opt_...` product folders directly under root), so category/type must be inferred from image and/or folder name/reference Excel rather than parent folder;
+  - contact sheets generated locally under ignored folder `local-import-output/contact-sheets/` for visual QA.
+
+- Product suggestion workbook prepared on 2026-05-28:
+  - fixed one source folder typo by renaming trailing underscore folder `opt_65598_` to `opt_65598`;
+  - matched the photo folders against the extracted reference Excel folder `C:\Users\SoBag\OneDrive\Рабочий стол\опт`;
+  - generated editable workbook `local-import-output/ai-product-suggestions.xlsx` with 808 product rows and 808 embedded thumbnail images;
+  - generated semicolon-delimited mirror file `local-import-output/ai-product-suggestions.csv`;
+  - 515 articles matched reference Excel themes; 293 did not match and are marked in the comment column;
+  - category and product type columns are intentionally left blank because the user asked not to auto-fill category/type; collections, holidays, tags, names, descriptions, source photo paths, gallery image names, and confidence/comments are prefilled for review;
+  - no products or photos from this batch were added to the site.
+- Import rules updated on 2026-05-28:
+  - product tables now use `Категории` and support multiple categories in one cell separated by `;`, e.g. `Подушки; Наволочки`;
+  - old `Категория` column remains supported as an alias;
+  - frontend filtering, category tiles, search, export, and modal category tags now read `product.categories`;
+  - variants now carry display names generated from type, so `Подушка капибара` with type `Наволочка` displays as `Наволочка капибара` in the product modal/cart;
+  - browser Excel import and admin save now skip duplicate `Основной артикул` values and never remove existing catalog products;
+  - local `tools/product_importer.py import` now appends to an existing output JSON by default, skips duplicate base SKUs into the report, and only replaces output when explicitly run with `--replace`;
+  - regenerated `templates/sobag-products-template.csv/.xlsx`; local suggestion workbook was updated to use the `Категории` header.
+  - checks passed: `node --check app.js`, `python -m py_compile tools/product_importer.py`, template readback, and a duplicate-import smoke test under ignored `local-import-output/dup-test`.
 
 ## Important Constraints
 
