@@ -226,7 +226,7 @@ Latest production verification:
   - removed embedded prototype product drafts and deleted old `assets/hero-products-*.png` test images;
   - static "actual" images now point at real imported product WebP assets;
   - product normalization no longer appends old generated images to every product gallery;
-  - stale localStorage prototype products are filtered out by `SB-` SKU / old image references;
+  - stale localStorage prototype products and cart lines are filtered out by `SB-` SKU / old image references;
   - fixed Cyrillic variant name replacement so `Подушка Паттерны` becomes `Наволочка Паттерны ...` for cover variants instead of `Наволочка Подушка ...` or `Подушка Подушка ...`;
   - modal title sizing was reduced, "Итого по позиции" was renamed to "ИТОГО";
   - unit price now reflects the applied cart quantity discount in modal/cart displays;

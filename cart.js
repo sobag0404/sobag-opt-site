@@ -46,7 +46,7 @@ const defaultCartContent = {
 };
 
 const state = {
-  cart: new Map(JSON.parse(localStorage.getItem(CART_KEY) || "[]")),
+  cart: new Map(cleanCartEntries(JSON.parse(localStorage.getItem(CART_KEY) || "[]"))),
   promo: "",
 };
 
@@ -207,6 +207,16 @@ function renderCartContent() {
 
 function saveCart() {
   localStorage.setItem(CART_KEY, JSON.stringify([...state.cart.entries()]));
+}
+
+function isPrototypeCartLine(line) {
+  const sku = String(line?.variant?.sku || line?.variantSku || "");
+  const image = String(line?.productImage || "");
+  return sku.startsWith("SB-") || image.includes("assets/hero-products-");
+}
+
+function cleanCartEntries(entries) {
+  return (Array.isArray(entries) ? entries : []).filter(([, line]) => !isPrototypeCartLine(line));
 }
 
 function getQuantityDiscount(qty) {

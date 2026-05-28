@@ -985,8 +985,20 @@ function getCartKey() {
   return state.currentUser ? `sobag.cart.${state.currentUser}` : STORAGE.guestCart;
 }
 
+function isPrototypeCartLine(line) {
+  const sku = String(line?.variant?.sku || line?.variantSku || "");
+  const image = String(line?.productImage || "");
+  return sku.startsWith("SB-") || image.includes("assets/hero-products-");
+}
+
+function cleanCartEntries(entries) {
+  return (Array.isArray(entries) ? entries : []).filter(([, line]) => !isPrototypeCartLine(line));
+}
+
 function loadCart() {
-  state.cart = new Map(JSON.parse(localStorage.getItem(getCartKey()) || "[]"));
+  const entries = cleanCartEntries(JSON.parse(localStorage.getItem(getCartKey()) || "[]"));
+  state.cart = new Map(entries);
+  localStorage.setItem(getCartKey(), JSON.stringify(entries));
 }
 
 function saveCart() {
