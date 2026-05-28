@@ -256,6 +256,11 @@ Latest production verification:
   - catalog product name typography was reduced and SKU/name/copy/price button spacing was separated;
   - product detail now opens with quantity `0`, so the preview unit is not counted toward basket discount until the user increases quantity;
   - product detail quantity uses visible minus/plus buttons next to the number, and adding with zero quantity is blocked with a toast.
+- Flag photo order exception on 2026-05-28:
+  - Excel files contain 65 rows in category `Флаги`;
+  - current `data/products-live.json` was updated so only flag products use gallery order `1.webp, 2.webp, 3.webp...`;
+  - other products keep the "last numbered photo first" order;
+  - `tools/product_importer.py` and `tools/publish_imported_products.py` now preserve this category-specific rule for future imports/publications.
 
 ## Important Constraints
 

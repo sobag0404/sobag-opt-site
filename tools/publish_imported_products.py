@@ -15,6 +15,9 @@ from pathlib import Path
 from PIL import Image
 
 
+FLAG_CATEGORY = "Флаги"
+
+
 def convert_image(source: Path, target: Path, max_size: int, quality: int) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(source) as image:
@@ -33,14 +36,25 @@ def rewrite_image(path_value: str, source_root: Path, target_root: Path, project
     return target.relative_to(project_root).as_posix()
 
 
-def image_order_key(path_value: str) -> tuple[int, int | str]:
+def image_order_key(path_value: str, descending: bool) -> tuple[int, int | str]:
     stem = Path(path_value).stem.strip()
-    return (0, -int(stem)) if stem.isdigit() else (1, stem.lower())
+    if stem.isdigit():
+        number = int(stem)
+        return (0, -number if descending else number)
+    return (1, stem.lower())
+
+
+def is_flag_product(product: dict) -> bool:
+    categories = product.get("categories") or [product.get("category", "")]
+    return any(str(category).strip().casefold() == FLAG_CATEGORY.casefold() for category in categories)
 
 
 def order_product_images(product: dict) -> None:
     images = [product.get("image"), *(product.get("gallery") or [])]
-    ordered = sorted([image for image in images if image], key=image_order_key)
+    ordered = sorted(
+        [image for image in images if image],
+        key=lambda image: image_order_key(image, descending=not is_flag_product(product)),
+    )
     if not ordered:
         return
     product["image"] = ordered[0]

@@ -82,6 +82,7 @@ COLUMN_ALIASES = {
 }
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+FLAG_CATEGORY = "Флаги"
 
 
 def split_list(value: str) -> list[str]:
@@ -216,7 +217,24 @@ def find_photo_folder(photos_root: Path, folder_value: str) -> Path | None:
 
 def image_sort_key(path: Path) -> tuple[int, int | str]:
     stem = path.stem.strip()
-    return (0, -int(stem)) if stem.isdigit() else (1, stem.lower())
+    return (0, int(stem)) if stem.isdigit() else (1, stem.lower())
+
+
+def product_image_order_key(path_value: str, descending: bool) -> tuple[int, int | str]:
+    stem = Path(path_value).stem.strip()
+    if stem.isdigit():
+        number = int(stem)
+        return (0, -number if descending else number)
+    return (1, stem.lower())
+
+
+def is_flag_category(categories: list[str]) -> bool:
+    return any(category.strip().casefold() == FLAG_CATEGORY.casefold() for category in categories)
+
+
+def order_images_for_categories(images: list[str], categories: list[str]) -> list[str]:
+    descending = not is_flag_category(categories)
+    return sorted([image for image in images if image], key=lambda image: product_image_order_key(image, descending))
 
 
 def copy_photos(base_sku: str, photo_folder: Path | None, assets_dir: Path, project_root: Path) -> tuple[list[str], list[str]]:
@@ -247,7 +265,9 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
     gallery_from_table = split_list(row_value(row, "gallery"))
     collections = split_list(row_value(row, "collections") or row_value(row, "theme"))
     categories = split_list(row_value(row, "category", "Подушки"))
-    main_image = copied_images[0] if copied_images else row_value(row, "image") or "assets/production-workshop-1.png"
+    table_images = [row_value(row, "image"), *gallery_from_table]
+    ordered_images = order_images_for_categories(copied_images if copied_images else table_images, categories)
+    main_image = ordered_images[0] if ordered_images else "assets/production-workshop-1.png"
 
     product = {
         "id": f"{slug(base_sku)}-{hashlib.sha1(base_sku.encode('utf-8')).hexdigest()[:6]}",
@@ -264,7 +284,7 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
         "materials": split_list(row_value(row, "materials", "Велюр; Габардин")),
         "basePrice": clean_number(row_value(row, "basePrice"), 220),
         "image": main_image,
-        "gallery": copied_images[1:] if copied_images else gallery_from_table,
+        "gallery": ordered_images[1:],
         "photoFolder": photo_folder_name,
         "stock": row_value(row, "stock", "made"),
         "badge": row_value(row, "badge"),
