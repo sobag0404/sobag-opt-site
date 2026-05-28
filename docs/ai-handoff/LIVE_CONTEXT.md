@@ -217,6 +217,11 @@ Latest production verification:
   - regenerated local `variant-prices.xlsx/.csv` after the user's edits; result: 12,962 variant rows;
   - local HTTP checks passed for `data/products-live.json` and sample image `assets/product-preview-live/opt-00104/1.webp`;
   - full Playwright screenshot check was attempted but blocked because the Playwright browser binary is not installed (`npx playwright install` would be needed).
+- Deployment verification on 2026-05-28:
+  - committed and pushed `afc5876 Publish imported live product catalog` to `origin/main`;
+  - production URL `https://sobag-opt-site.vercel.app/data/products-live.json` returned HTTP 200 with 808 products;
+  - production sample image `https://sobag-opt-site.vercel.app/assets/product-preview-live/opt-00104/1.webp` returned HTTP 200 as `image/webp`;
+  - production `app.js` contains the live catalog loader and `data/products-live.json` reference.
 
 ## Important Constraints
 
