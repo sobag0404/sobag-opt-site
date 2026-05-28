@@ -1670,7 +1670,15 @@ function productModalHtml(product) {
             <div class="detail-qty">
               <label>
                 Количество, шт.
-                <input id="detailQty" type="number" min="1" step="1" value="${state.activeVariant.qty}" />
+                <div class="detail-qty-control">
+                  <button type="button" data-detail-qty-step="-1" aria-label="Уменьшить количество">
+                    <i data-lucide="minus"></i>
+                  </button>
+                  <input id="detailQty" type="number" min="0" step="1" value="${state.activeVariant.qty}" />
+                  <button type="button" data-detail-qty-step="1" aria-label="Увеличить количество">
+                    <i data-lucide="plus"></i>
+                  </button>
+                </div>
               </label>
               <div class="detail-price">
                 <span>Цена за шт.</span>
@@ -1716,7 +1724,7 @@ function openProduct(productId) {
     type: product.types[0],
     size: product.sizes.includes("40x40") ? "40x40" : product.sizes[0],
     material: product.materials[0],
-    qty: 1,
+    qty: 0,
   };
   document.body.insertAdjacentHTML("beforeend", productModalHtml(product));
   if (window.lucide) window.lucide.createIcons();
@@ -1727,8 +1735,10 @@ function refreshProductModal() {
   if (!modal) return;
   const product = products.find((item) => item.id === state.activeProductId);
   const variant = findVariant(product);
-  const qty = Math.max(1, Number(document.querySelector("#detailQty")?.value || state.activeVariant.qty));
+  const qty = Math.max(0, Number(document.querySelector("#detailQty")?.value || state.activeVariant.qty || 0));
   state.activeVariant.qty = qty;
+  const detailQtyInput = document.querySelector("#detailQty");
+  if (detailQtyInput) detailQtyInput.value = qty;
   const discount = getQuantityDiscount(getCartTotals().qty + qty);
   const unitPrice = discountedUnitPrice(variant.price, discount);
   const basketDiscountHint = getBasketDiscountHint(getCartTotals().subtotal + variant.price * qty);
@@ -1750,7 +1760,11 @@ function refreshProductModal() {
 function addVariantToCart(productId) {
   const product = products.find((item) => item.id === productId);
   const variant = findVariant(product);
-  const qty = Math.max(1, Number(document.querySelector("#detailQty")?.value || state.activeVariant.qty));
+  const qty = Math.max(0, Number(document.querySelector("#detailQty")?.value || state.activeVariant.qty || 0));
+  if (!qty) {
+    showToast("Укажите количество товара перед добавлением в корзину.");
+    return;
+  }
   const key = `${product.id}:${variant.sku}`;
   const existing = state.cart.get(key);
   state.cart.set(key, {
@@ -2786,6 +2800,14 @@ function boot() {
     if (button.dataset.variantKey) {
       state.activeVariant[button.dataset.variantKey] = button.dataset.variantValue;
       refreshProductModal();
+    }
+    if (button.dataset.detailQtyStep) {
+      const input = document.querySelector("#detailQty");
+      if (input) {
+        input.value = Math.max(0, Number(input.value || 0) + Number(button.dataset.detailQtyStep));
+        refreshProductModal();
+      }
+      return;
     }
     if (button.dataset.addVariant) addVariantToCart(button.dataset.addVariant);
     if (button.dataset.favorite) {

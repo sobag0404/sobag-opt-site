@@ -251,6 +251,12 @@ Latest production verification:
   - product modal copy spacing was normalized between title, short description, and detailed description;
   - basket discount hints now show a remaining ruble amount to the next basket discount tier, e.g. `29 440 ₽ до скидки 5%`, instead of a plain `0%` discount label.
 
+- Product card/detail polish on 2026-05-28:
+  - catalog favorite buttons were made smaller;
+  - catalog product name typography was reduced and SKU/name/copy/price button spacing was separated;
+  - product detail now opens with quantity `0`, so the preview unit is not counted toward basket discount until the user increases quantity;
+  - product detail quantity uses visible minus/plus buttons next to the number, and adding with zero quantity is blocked with a toast.
+
 ## Important Constraints
 
 - No backend exists yet.
