@@ -109,6 +109,14 @@ def normalize_match_key(value: str) -> str:
     return re.sub(r"[^0-9A-ZА-ЯЁ]+", "", str(value or "").upper())
 
 
+def article_from_folder_name(folder_name: str) -> str:
+    prepared = str(folder_name or "").strip().strip("_- ")
+    numbers = re.findall(r"\d+", prepared)
+    if not numbers:
+        return prepared
+    return f"opt_{numbers[-1]}"
+
+
 def slug(value: str) -> str:
     ascii_part = re.sub(r"[^a-z0-9]+", "-", str(value or "").lower()).strip("-")
     if ascii_part:
@@ -232,7 +240,7 @@ def copy_photos(base_sku: str, photo_folder: Path | None, assets_dir: Path, proj
 
 
 def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, project_root: Path) -> tuple[dict, dict]:
-    base_sku = row_value(row, "baseSku").upper()
+    base_sku = row_value(row, "baseSku")
     photo_folder_name = row_value(row, "photoFolder", base_sku)
     folder = find_photo_folder(photos_root, photo_folder_name)
     copied_images, warnings = copy_photos(base_sku, folder, assets_dir, project_root)
@@ -391,6 +399,8 @@ def relative_folder_value(photos_root: Path, folder: Path) -> str:
 
 
 def guess_base_sku(folder_name: str) -> str:
+    if re.search(r"\d", folder_name):
+        return article_from_folder_name(folder_name)
     starts_with_sku = re.match(r"^\s*([A-Za-zА-Яа-яЁё]+[-_\s]?\d+[A-Za-zА-Яа-яЁё0-9-]*)", folder_name)
     if starts_with_sku:
         return normalize_match_key(starts_with_sku.group(1))
@@ -478,8 +488,9 @@ def command_import(args: argparse.Namespace) -> None:
     for row in rows:
         if not row_value(row, "baseSku") or not row_value(row, "name"):
             continue
-        base_sku = normalized_sku(row_value(row, "baseSku"))
-        if base_sku in existing_skus or base_sku in seen_skus:
+        base_sku = row_value(row, "baseSku")
+        sku_key = normalized_sku(base_sku)
+        if sku_key in existing_skus or sku_key in seen_skus:
             skipped_duplicates += 1
             report_rows.append(
                 {
@@ -492,7 +503,7 @@ def command_import(args: argparse.Namespace) -> None:
                 }
             )
             continue
-        seen_skus.add(base_sku)
+        seen_skus.add(sku_key)
         product, report = make_product(row, photos_root, assets_dir, project_root)
         new_products.append(product)
         report_rows.append(report)

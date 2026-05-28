@@ -200,6 +200,12 @@ Latest production verification:
   - auto-category counts: 517 `Подушки/наволочки`, 156 `Мешки для обуви`, 65 `Флаги`, 51 `Чехлы на чемодан`, 19 `Ремувки`;
   - examples: `opt_00104` -> `Ремувка брелок`; `opt_22434` -> `Подушка Паттерны`; `opt_81486` actual local photo is a pillow with `День рождения`, not a flag;
   - `app.js` variant display names now include selected size/material, except generic `Стандарт`, so cart/modal names can change with selected characteristics.
+- Variant price export update on 2026-05-28:
+  - base SKUs generated from photo folders now keep the `opt_` prefix, e.g. folder/article `67895` becomes `opt_67895`;
+  - frontend no longer uppercases entered/imported base SKUs, but duplicate checks still compare case-insensitively;
+  - admin now has CSV export buttons for variant prices (`sobag-variant-prices-all.csv` and filtered variants), where each row is one variant SKU with type, size, material, and price;
+  - generated local editable files `local-import-output/variant-prices.xlsx` and `local-import-output/variant-prices.csv` from the current 808-product suggestion workbook; result: 10,733 variant rows;
+  - local suggestion workbook was regenerated so `Основной артикул` values are `opt_...` (`opt_00104`, `opt_22434`, etc.).
 
 ## Important Constraints
 

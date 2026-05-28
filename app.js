@@ -2323,6 +2323,8 @@ function adminModalHtml() {
           <div class="admin-actions">
             <button class="ghost-button" type="button" data-export-products>Скачать все товары</button>
             <button class="ghost-button" type="button" data-export-filtered-products>Скачать товары по текущим фильтрам</button>
+            <button class="ghost-button" type="button" data-export-variant-prices>Скачать цены вариантов</button>
+            <button class="ghost-button" type="button" data-export-filtered-variant-prices>Цены вариантов по фильтрам</button>
           </div>
         </div>
         <div class="admin-preview" id="adminPreview"></div>
@@ -2375,7 +2377,11 @@ function productFromForm(form) {
 }
 
 function normalizeBaseSku(value) {
-  return String(value || "").trim().toLocaleUpperCase("ru-RU");
+  return String(value || "").trim();
+}
+
+function baseSkuKey(value) {
+  return normalizeBaseSku(value).toLocaleUpperCase("ru-RU");
 }
 
 function renderAdminPreview(items) {
@@ -2402,10 +2408,10 @@ function saveGeneratedProducts() {
     showToast("Сначала сгенерируйте карточки.");
     return;
   }
-  const existingSkus = new Set(products.map((product) => normalizeBaseSku(product.baseSku)));
+  const existingSkus = new Set(products.map((product) => baseSkuKey(product.baseSku)));
   const seenSkus = new Set();
   const uniqueProducts = state.adminPreview.filter((product) => {
-    const sku = normalizeBaseSku(product.baseSku);
+    const sku = baseSkuKey(product.baseSku);
     if (!sku || existingSkus.has(sku) || seenSkus.has(sku)) return false;
     seenSkus.add(sku);
     return true;
@@ -2523,6 +2529,46 @@ function downloadProductsCsv(source, fileName) {
   showToast(`Скачано товаров: ${source.length}.`);
 }
 
+const variantPriceExportColumns = [
+  "Основной артикул",
+  "Артикул варианта",
+  "Название варианта",
+  "Тип товара",
+  "Размер",
+  "Материал",
+  "Цена варианта",
+  "Категории",
+  "Подборки",
+  "Праздники",
+  "Теги",
+  "Папка фото",
+];
+
+function productVariantPriceRows(source) {
+  return source.flatMap((product) =>
+    product.variants.map((variant) => [
+      product.baseSku,
+      variant.sku,
+      variant.name,
+      variant.type,
+      variant.size,
+      variant.material,
+      variant.price,
+      product.categories || [product.category].filter(Boolean),
+      product.collections || [],
+      product.holidays || [],
+      product.tags || [],
+      product.photoFolder || product.baseSku,
+    ])
+  );
+}
+
+function downloadVariantPricesCsv(source, fileName) {
+  const rows = productVariantPriceRows(source);
+  downloadCsv(fileName, [variantPriceExportColumns, ...rows]);
+  showToast(`Скачано вариантов: ${rows.length}.`);
+}
+
 function addMissingCatalogCategories(sourceProducts) {
   const content = getSiteContent();
   const existing = new Set(content.catalogCategories.map((category) => category.name.toLocaleLowerCase("ru-RU")));
@@ -2551,17 +2597,18 @@ async function importExcel(file) {
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer);
   const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
-  const existingSkus = new Set(products.map((product) => normalizeBaseSku(product.baseSku)));
+  const existingSkus = new Set(products.map((product) => baseSkuKey(product.baseSku)));
   const seenSkus = new Set();
   let skippedDuplicates = 0;
   const imported = rows.reduce((items, row) => {
     if (!rowValue(row, "name") || !rowValue(row, "baseSku")) return items;
     const baseSku = normalizeBaseSku(rowValue(row, "baseSku"));
-    if (existingSkus.has(baseSku) || seenSkus.has(baseSku)) {
+    const skuKey = baseSkuKey(baseSku);
+    if (existingSkus.has(skuKey) || seenSkus.has(skuKey)) {
       skippedDuplicates += 1;
       return items;
     }
-    seenSkus.add(baseSku);
+    seenSkus.add(skuKey);
     items.push(
       normalizeProduct({
         id: `${rowValue(row, "baseSku")}-${Date.now()}-${Math.random().toString(16).slice(2)}`.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
@@ -2910,6 +2957,8 @@ function boot() {
     if (button.dataset.downloadXlsxTemplate !== undefined) downloadXlsxTemplate();
     if (button.dataset.exportProducts !== undefined) downloadProductsCsv(products, "sobag-products-all.csv");
     if (button.dataset.exportFilteredProducts !== undefined) downloadProductsCsv(getFilteredProducts(), "sobag-products-filtered.csv");
+    if (button.dataset.exportVariantPrices !== undefined) downloadVariantPricesCsv(products, "sobag-variant-prices-all.csv");
+    if (button.dataset.exportFilteredVariantPrices !== undefined) downloadVariantPricesCsv(getFilteredProducts(), "sobag-variant-prices-filtered.csv");
     if (button.dataset.resetContent !== undefined) {
       localStorage.removeItem(STORAGE.content);
       renderSiteContent();
