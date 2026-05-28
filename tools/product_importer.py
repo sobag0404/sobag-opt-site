@@ -216,7 +216,7 @@ def find_photo_folder(photos_root: Path, folder_value: str) -> Path | None:
 
 def image_sort_key(path: Path) -> tuple[int, int | str]:
     stem = path.stem.strip()
-    return (0, int(stem)) if stem.isdigit() else (1, stem.lower())
+    return (0, -int(stem)) if stem.isdigit() else (1, stem.lower())
 
 
 def copy_photos(base_sku: str, photo_folder: Path | None, assets_dir: Path, project_root: Path) -> tuple[list[str], list[str]]:

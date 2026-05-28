@@ -96,17 +96,17 @@ const actualItems = [
   {
     label: "Новый год",
     type: "holiday",
-    image: "assets/product-preview-live/opt-22434/1.webp",
+    image: "assets/product-preview-live/opt-22434/3.webp",
   },
   {
     label: "Аниме",
     type: "collection",
-    image: "assets/product-preview-live/opt-22441/1.webp",
+    image: "assets/product-preview-live/opt-22441/3.webp",
   },
   {
     label: "8 марта",
     type: "holiday",
-    image: "assets/product-preview-live/opt-98081/1.webp",
+    image: "assets/product-preview-live/opt-98081/4.webp",
   },
 ];
 

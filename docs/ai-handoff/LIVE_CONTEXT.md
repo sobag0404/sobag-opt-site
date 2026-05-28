@@ -240,6 +240,12 @@ Latest production verification:
   - added `.vercelignore` to exclude local importer artifacts from CLI deploys; without it Vercel tried to upload local `assets/imported-products` (~3.2 GB);
   - manual `npx.cmd vercel deploy --prod -y` succeeded and aliased production to `https://sobag-shop.online`;
   - production `https://sobag-opt-site.vercel.app` now serves the latest prototype-data cleanup code.
+- Product photo order fix on 2026-05-28:
+  - user reported that numbered photo 3/4 should be the main product photo, not photo 1;
+  - current `data/products-live.json` was reordered so galleries run from the highest numeric filename down to 1, e.g. `4.webp, 3.webp, 2.webp, 1.webp`;
+  - `tools/product_importer.py` now copies numeric source photos in descending order for future imports;
+  - `tools/publish_imported_products.py` now reorders product `image`/`gallery` after WebP publishing so old imported JSON cannot republish the wrong main image order;
+  - static "actual" slide fallbacks were updated from `1.webp` to the highest available sample photo for the referenced product folders.
 
 ## Important Constraints
 

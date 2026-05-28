@@ -33,6 +33,20 @@ def rewrite_image(path_value: str, source_root: Path, target_root: Path, project
     return target.relative_to(project_root).as_posix()
 
 
+def image_order_key(path_value: str) -> tuple[int, int | str]:
+    stem = Path(path_value).stem.strip()
+    return (0, -int(stem)) if stem.isdigit() else (1, stem.lower())
+
+
+def order_product_images(product: dict) -> None:
+    images = [product.get("image"), *(product.get("gallery") or [])]
+    ordered = sorted([image for image in images if image], key=image_order_key)
+    if not ordered:
+        return
+    product["image"] = ordered[0]
+    product["gallery"] = ordered[1:]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Publish imported Sobag products as optimized static preview data")
     parser.add_argument("--input", default="data/products.import.json", help="imported products JSON")
@@ -67,6 +81,7 @@ def main() -> None:
             gallery.append(rewrite_image(image, source_root, target_root, project_root, args.max_size, args.quality))
             image_count += 1
         product["gallery"] = gallery
+        order_product_images(product)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
