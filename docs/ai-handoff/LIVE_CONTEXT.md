@@ -235,7 +235,11 @@ Latest production verification:
 - Domain setup on 2026-05-28:
   - Vercel CLI is available via `npx.cmd vercel` and authenticated as `ashumakov0404-7596`;
   - added `sobag-shop.online` and `www.sobag-shop.online` to Vercel project `sobag-opt-site`;
-  - DNS is still pending at REG.RU: current A record resolves to `194.58.112.174`, Vercel requires `A sobag-shop.online 76.76.21.21` and `A www.sobag-shop.online 76.76.21.21` (or switching nameservers to Vercel).
+  - user set REG.RU DNS records in the panel: `A @ 76.76.21.21` and `A www 76.76.21.21`;
+  - DNS propagation is still pending as of the latest check: `ns1.reg.ru` and public resolvers still return old `194.58.112.174`;
+  - added `.vercelignore` to exclude local importer artifacts from CLI deploys; without it Vercel tried to upload local `assets/imported-products` (~3.2 GB);
+  - manual `npx.cmd vercel deploy --prod -y` succeeded and aliased production to `https://sobag-shop.online`;
+  - production `https://sobag-opt-site.vercel.app` now serves the latest prototype-data cleanup code.
 
 ## Important Constraints
 
