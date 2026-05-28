@@ -68,6 +68,7 @@ Important files:
   - price;
   - `ПЕРЕЙТИ В КАРТОЧКУ`.
 - Product detail modal changes SKU and price by selected type, size, and material.
+- Variant SKU rule: `baseSku_ТИП_Размер_МАТ`, where `_` is the separator, type and material use the first 3 cleaned chars, and size is kept full.
 - Default quantity in product detail is `1`.
 - Cart minimum total is `30 000 ₽`.
 - Quantity discount tiers:

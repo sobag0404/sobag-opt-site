@@ -1,6 +1,6 @@
 # Live AI Context
 
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 ## Standing Reminder For Codex
 
@@ -37,6 +37,7 @@ Workspace:
 - Night scheme may use orange accents.
 - Buttons should use one standard: centered text, uppercase visual style, rectangular with small rounded corners.
 - Product cards should have square photos, SKU, name, price, and a card button only in listing.
+- Variant SKU rule as of 2026-05-28: `baseSku_ТИП_Размер_МАТ`, joined with `_`. Type and material use the first 3 cleaned chars; size is kept full. Examples: `Подушка` -> `ПОД`, `Наволочка` -> `НАВ`, `Велюр` -> `ВЕЛ`, `Габардин` -> `ГАБ`.
 - Use correct Russian pluralization: `1 товар`, `2 товара`, `5 товаров`.
 - Use agents only when a task naturally splits into meaningful parallel work; do not create agents for every small change.
 - Install extra skills only when they are clearly useful for the current work.

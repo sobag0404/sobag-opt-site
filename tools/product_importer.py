@@ -276,7 +276,7 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
 def write_report(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=["baseSku", "name", "photoFolder", "photoCount", "mainImage", "warnings"])
+        writer = csv.DictWriter(file, fieldnames=["baseSku", "name", "photoFolder", "photoCount", "mainImage", "warnings"], delimiter=";")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -284,7 +284,7 @@ def write_report(path: Path, rows: list[dict[str, str]]) -> None:
 def write_csv_rows(path: Path, rows: list[list[str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as file:
-        writer = csv.writer(file)
+        writer = csv.writer(file, delimiter=";")
         writer.writerows(rows)
 
 

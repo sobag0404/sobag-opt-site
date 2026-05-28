@@ -2,19 +2,6 @@ const TYPE_OPTIONS = ["Подушка", "Наволочка"];
 const SIZE_OPTIONS = ["30x30", "35x35", "40x40", "45x45", "50x50"];
 const MATERIAL_OPTIONS = ["Велюр", "Габардин"];
 
-const typeCodes = {
-  Подушка: "POD",
-  Наволочка: "NAV",
-  Мешок: "BAG",
-  Чехол: "CSH",
-};
-
-const materialCodes = {
-  Велюр: "VEL",
-  Габардин: "GAB",
-  Оксфорд: "OXF",
-};
-
 const sizeFactors = {
   "30x30": 0,
   "35x35": 35,
@@ -1014,9 +1001,7 @@ function createVariants(product) {
         const price =
           product.basePrice + (typeFactors[type] || 0) + (sizeFactors[size] || 0) + (materialFactors[material] || 0);
         return {
-          sku: `${product.baseSku}-${typeCodes[type] || optionCode(type)}-${optionCode(size)}-${
-            materialCodes[material] || optionCode(material)
-          }`,
+          sku: [product.baseSku, skuPart(type, 3), skuSizePart(size), skuPart(material, 3)].filter(Boolean).join("_"),
           type,
           size,
           material,
@@ -1027,11 +1012,19 @@ function createVariants(product) {
   );
 }
 
-function optionCode(value) {
+function skuPart(value, limit = Infinity) {
+  const prepared = String(value)
+    .toLocaleUpperCase("ru-RU")
+    .replace(/[^A-ZА-ЯЁ0-9]+/g, "");
+  return Number.isFinite(limit) ? prepared.slice(0, limit) : prepared;
+}
+
+function skuSizePart(value) {
   return String(value)
-    .toUpperCase()
-    .replace(/[^A-ZА-Я0-9]+/g, "")
-    .slice(0, 6);
+    .toLocaleUpperCase("ru-RU")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[^A-ZА-ЯЁ0-9ХX,.-]+/g, "");
 }
 
 function normalizeListField(product, key, fallback = []) {
@@ -2394,7 +2387,7 @@ function csvCell(value) {
 }
 
 function downloadCsv(fileName, rows) {
-  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const csv = rows.map((row) => row.map(csvCell).join(";")).join("\n");
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -2439,7 +2432,7 @@ function productGalleryForExport(product) {
   const generatedImages = new Set(["assets/hero-products-1.png", "assets/hero-products-2.png", "assets/hero-products-3.png"]);
   return (product.gallery || [])
     .filter((image) => image && image !== product.image && !generatedImages.has(image))
-    .join(", ");
+    .join("; ");
 }
 
 function productExportValue(product, key) {
