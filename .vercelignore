@@ -1,0 +1,9 @@
+.git
+.vercel
+assets/imported-products
+local-import-output
+qa-screenshots
+data/products.import.json
+data/import-report.csv
+sobag-*.png
+project-ai-handoff-latest.zip
