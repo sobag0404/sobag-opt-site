@@ -32,6 +32,12 @@ const quantityTiers = [
   { qty: 150, discount: 12 },
   { qty: 300, discount: 18 },
 ];
+const basketDiscountTiers = [
+  { amount: MIN_CART_TOTAL, discount: 5 },
+  { amount: 70000, discount: 7 },
+  { amount: 150000, discount: 12 },
+  { amount: 300000, discount: 18 },
+];
 
 const promoCodes = {
   SOBAG5: 5,
@@ -248,6 +254,12 @@ function discountedUnitPrice(price, discount) {
   return Math.round(price * (1 - discount / 100));
 }
 
+function getBasketDiscountHint(amount) {
+  const nextTier = basketDiscountTiers.find((tier) => amount < tier.amount);
+  if (!nextTier) return "Максимальная скидка по корзине применена";
+  return `${formatMoney(Math.max(nextTier.amount - amount, 0))} до скидки ${nextTier.discount}%`;
+}
+
 function getTotals() {
   const lines = [...state.cart.values()];
   const qty = lines.reduce((sum, line) => sum + line.qty, 0);
@@ -278,15 +290,8 @@ function renderScale(qty) {
     )
     .join("");
 
-  const nextTier = quantityTiers.find((tier) => qty < tier.qty);
   const totals = getTotals();
-  const averageUnitPrice = totals.qty ? totals.subtotal / totals.qty : 0;
-  const remainingAmount = nextTier ? Math.ceil((nextTier.qty - qty) * averageUnitPrice) : 0;
-  nodes.discountHint.textContent = nextTier
-    ? totals.qty
-      ? `До скидки ${nextTier.discount}% осталось примерно ${formatMoney(remainingAmount)} в корзине.`
-      : `Добавьте товары, чтобы открыть скидку ${nextTier.discount}%.`
-    : "Максимальная скидка по количеству применена.";
+  nodes.discountHint.textContent = getBasketDiscountHint(totals.subtotal);
 }
 
 function renderCart() {
@@ -329,7 +334,8 @@ function renderCart() {
   nodes.count.closest(".cart-page__header-note")?.classList.toggle("is-empty", totals.qty === 0);
   nodes.count.hidden = totals.qty === 0;
   nodes.subtotal.textContent = formatMoney(totals.subtotal);
-  nodes.qtyDiscount.textContent = `${totals.qtyDiscount}%`;
+  nodes.qtyDiscount.textContent = getBasketDiscountHint(totals.subtotal);
+  if (nodes.qtyDiscount.previousElementSibling) nodes.qtyDiscount.previousElementSibling.hidden = true;
   nodes.promoDiscount.textContent = `${totals.promoDiscount}%`;
   nodes.grandTotal.textContent = formatMoney(totals.total);
   nodes.checkoutButton.disabled = !totals.lines.length || totals.total < MIN_CART_TOTAL;

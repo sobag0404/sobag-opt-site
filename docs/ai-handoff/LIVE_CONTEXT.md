@@ -246,6 +246,10 @@ Latest production verification:
   - `tools/product_importer.py` now copies numeric source photos in descending order for future imports;
   - `tools/publish_imported_products.py` now reorders product `image`/`gallery` after WebP publishing so old imported JSON cannot republish the wrong main image order;
   - static "actual" slide fallbacks were updated from `1.webp` to the highest available sample photo for the referenced product folders.
+- Catalog card and discount hint adjustment on 2026-05-28:
+  - catalog product cards were compacted by replacing the "перейти в карточку" button text with the product price on the button itself;
+  - product modal copy spacing was normalized between title, short description, and detailed description;
+  - basket discount hints now show a remaining ruble amount to the next basket discount tier, e.g. `29 440 ₽ до скидки 5%`, instead of a plain `0%` discount label.
 
 ## Important Constraints
 

@@ -36,6 +36,12 @@ const quantityTiers = [
 ];
 
 const MIN_CART_TOTAL = 30000;
+const basketDiscountTiers = [
+  { amount: MIN_CART_TOTAL, discount: 5 },
+  { amount: 70000, discount: 7 },
+  { amount: 150000, discount: 12 },
+  { amount: 300000, discount: 18 },
+];
 
 const catalogCategories = [
   {
@@ -1076,6 +1082,12 @@ function discountedUnitPrice(price, discount) {
   return Math.round(price * (1 - discount / 100));
 }
 
+function getBasketDiscountHint(amount) {
+  const nextTier = basketDiscountTiers.find((tier) => amount < tier.amount);
+  if (!nextTier) return "Максимальная скидка по корзине применена";
+  return `${formatMoney(Math.max(nextTier.amount - amount, 0))} до скидки ${nextTier.discount}%`;
+}
+
 function lineTotals(line, discount = getQuantityDiscount(line.qty)) {
   const subtotal = line.variant.price * line.qty;
   const total = discountedUnitPrice(line.variant.price, discount) * line.qty;
@@ -1494,10 +1506,9 @@ function renderProducts() {
             </div>
             <h3>${product.name}</h3>
             <div class="product-card__bottom">
-              <div class="price">
-                <strong>от ${formatMoney(product.minPrice)}</strong>
-              </div>
-              <button class="add-button" type="button" data-open-product="${product.id}">перейти в карточку</button>
+              <button class="add-button product-card__price-button" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}">
+                <span>от ${formatMoney(product.minPrice)}</span>
+              </button>
             </div>
           </div>
         </article>
@@ -1541,7 +1552,10 @@ function renderCart() {
   headerCartButton?.classList.toggle("is-empty", totals.qty === 0);
   if (favoriteCount) favoriteCount.textContent = state.favorites.size;
   if (subtotalNode) subtotalNode.textContent = formatMoney(totals.subtotal);
-  if (discountValue) discountValue.textContent = `${totals.discount}%`;
+  if (discountValue) {
+    discountValue.textContent = getBasketDiscountHint(totals.subtotal);
+    if (discountValue.previousElementSibling) discountValue.previousElementSibling.hidden = true;
+  }
   if (grandTotal) grandTotal.textContent = formatMoney(totals.total);
   const cartMinHint = document.querySelector("#cartMinHint");
   const checkoutButton = document.querySelector("#requestForm button[type='submit']");
@@ -1559,17 +1573,10 @@ function renderCart() {
       : `<i data-lucide="lock"></i> ${buttonLabel(content.requestSubmitLocked)}`;
   }
 
-  const nextTier = quantityTiers.find((tier) => totals.qty < tier.qty);
   const maxTier = quantityTiers[quantityTiers.length - 1];
   if (discountProgress) discountProgress.style.width = `${Math.min((totals.qty / maxTier.qty) * 100, 100)}%`;
   if (discountHint) {
-    const averageUnitPrice = totals.qty ? totals.subtotal / totals.qty : 0;
-    const remainingAmount = nextTier ? Math.ceil((nextTier.qty - totals.qty) * averageUnitPrice) : 0;
-    discountHint.textContent = nextTier
-      ? totals.qty
-        ? `До скидки ${nextTier.discount}% осталось примерно ${formatMoney(remainingAmount)} в корзине.`
-        : `Добавьте товары, чтобы открыть скидку ${nextTier.discount}%.`
-      : "Максимальная скидка по количеству применена.";
+    discountHint.textContent = getBasketDiscountHint(totals.subtotal);
   }
 
   saveCart();
@@ -1606,6 +1613,7 @@ function productModalHtml(product) {
   const discount = getQuantityDiscount(previewQty);
   const unitPrice = discountedUnitPrice(variant.price, discount);
   const total = unitPrice * state.activeVariant.qty;
+  const basketDiscountHint = getBasketDiscountHint(getCartTotals().subtotal + variant.price * state.activeVariant.qty);
   const gallery = product.gallery?.length ? product.gallery : [product.image];
   return `
     <div class="modal is-visible" id="productModal" role="dialog" aria-modal="true">
@@ -1667,7 +1675,7 @@ function productModalHtml(product) {
               <div class="detail-price">
                 <span>Цена за шт.</span>
                 <strong id="detailPrice">${formatMoney(unitPrice)}</strong>
-                <small id="detailDiscount">Скидка ${discount}% по корзине</small>
+                <small id="detailDiscount">${basketDiscountHint}</small>
               </div>
             </div>
             <div class="detail-total">
@@ -1723,6 +1731,7 @@ function refreshProductModal() {
   state.activeVariant.qty = qty;
   const discount = getQuantityDiscount(getCartTotals().qty + qty);
   const unitPrice = discountedUnitPrice(variant.price, discount);
+  const basketDiscountHint = getBasketDiscountHint(getCartTotals().subtotal + variant.price * qty);
   document.querySelector("#selectedSku").textContent = variant.sku;
   document.querySelector("#detailProductName").textContent = variant.name;
   const detailCopySkuButton = modal.querySelector(".copy-sku-button--detail");
@@ -1731,7 +1740,7 @@ function refreshProductModal() {
     detailCopySkuButton.setAttribute("aria-label", `Скопировать выбранный артикул ${variant.sku}`);
   }
   document.querySelector("#detailPrice").textContent = formatMoney(unitPrice);
-  document.querySelector("#detailDiscount").textContent = `Скидка ${discount}% по корзине`;
+  document.querySelector("#detailDiscount").textContent = basketDiscountHint;
   document.querySelector("#detailTotal").textContent = formatMoney(unitPrice * qty);
   modal.querySelectorAll(".variant-option").forEach((button) => {
     button.classList.toggle("is-active", state.activeVariant[button.dataset.variantKey] === button.dataset.variantValue);
