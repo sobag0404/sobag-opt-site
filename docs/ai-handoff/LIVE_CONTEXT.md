@@ -343,3 +343,9 @@ Latest production verification:
   - modal open/close now animates in `app.js`, and cart checkout close animates in `cart.js`;
   - cart/favorites counters and key totals use a small pop animation only when values change;
   - form fields replay a small shake when validation fails.
+
+- Vercel storage setup on 2026-05-29:
+  - Upstash for Redis resource `upstash-kv-beige-lens` was provisioned through Vercel Marketplace and connected to `sobag-opt-site`;
+  - Vercel created encrypted `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `KV_REST_API_READ_ONLY_TOKEN`, `KV_URL`, and `REDIS_URL` for Production, Preview, and Development;
+  - `SOBAG_ADMIN_EMAIL` and `SOBAG_ADMIN_PASSWORD` were added as encrypted variables for Production and Development;
+  - Vercel CLI refused adding admin variables to Preview for the production branch `main`; production uses the configured variables.
