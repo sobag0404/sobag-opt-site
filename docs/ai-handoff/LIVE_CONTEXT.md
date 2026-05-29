@@ -276,6 +276,9 @@ Latest production verification:
   - search logic now ranks exact SKU first, exact product name second, then partial matches, and renders similar product suggestions under the search input when there is no exact match;
   - seeded admin account is now `admin@sobag` / `admin`, and the public login modal no longer displays admin credentials;
   - admin content settings are grouped by page so future new pages should be added to `siteTextFieldPages` immediately.
+- Theme toggle tweak on 2026-05-29:
+  - top nav links are borderless by default and show the border only on hover;
+  - the theme switcher is a compact toggle with the same height as top nav links and text `ночная тема` / `дневная тема`.
 
 ## Important Constraints
 

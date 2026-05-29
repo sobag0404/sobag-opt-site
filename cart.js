@@ -192,7 +192,7 @@ function applyTheme(theme) {
   document.body.classList.toggle("theme-night", isNight);
   document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
     button.setAttribute("aria-pressed", String(isNight));
-    button.innerHTML = `<i data-lucide="${isNight ? "sun" : "moon"}"></i><span>${isNight ? "дневная тема" : "ночная тема"}</span>`;
+    button.innerHTML = `<span>${isNight ? "дневная тема" : "ночная тема"}</span><b class="theme-toggle__track" aria-hidden="true"></b>`;
   });
   if (window.lucide) window.lucide.createIcons();
 }
