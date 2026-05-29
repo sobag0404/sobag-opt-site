@@ -155,6 +155,25 @@ function setTextWithPop(node, value) {
   if (changed) pulseNode(node);
 }
 
+function routeKey(pathname = window.location.pathname) {
+  const cleanPath = pathname.replace(/\/+$/, "");
+  const lastPart = cleanPath.split("/").filter(Boolean).pop() || "index";
+  return lastPart.replace(/\.html$/i, "") || "index";
+}
+
+function navigateWithinSite(url) {
+  const targetUrl = new URL(url, window.location.href);
+  if (targetUrl.origin !== window.location.origin) {
+    window.location.href = targetUrl.href;
+    return;
+  }
+  if (routeKey(targetUrl.pathname) === routeKey(window.location.pathname)) {
+    if (targetUrl.hash) document.querySelector(targetUrl.hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  window.location.href = targetUrl.href;
+}
+
 function ensureFieldError(field) {
   if (!field) return null;
   const form = field.closest("form");
@@ -601,6 +620,24 @@ document.addEventListener("click", (event) => {
   if (button.id === "useProfileButton") fillCheckoutFromProfile();
   if (button.dataset.closeCheckout !== undefined) closeCheckout();
   if (button.dataset.themeToggle !== undefined) toggleTheme();
+});
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest?.("a[href]");
+  if (!link) return;
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  if (link.target && link.target !== "_self") return;
+  const href = link.getAttribute("href") || "";
+  if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.endsWith(".pdf")) return;
+  if (href === "#") {
+    event.preventDefault();
+    return;
+  }
+  const targetUrl = new URL(href, window.location.href);
+  if (targetUrl.origin !== window.location.origin) return;
+  if (routeKey(targetUrl.pathname) !== routeKey(window.location.pathname)) return;
+  event.preventDefault();
+  navigateWithinSite(targetUrl.href);
 });
 
 document.addEventListener("input", (event) => {

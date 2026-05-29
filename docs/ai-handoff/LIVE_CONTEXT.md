@@ -372,3 +372,10 @@ Latest production verification:
   - catalog favorite clicks now update only matching favorite buttons and the header counter, without rebuilding the grid;
   - product listing cards no longer receive entrance animation classes from `renderProducts()`, so filter/sort/search redraws are quieter;
   - HTML app cache-bust was updated to `app.js?v=20260529-favorite-no-flash` so browsers fetch the fixed script.
+
+- Navigation flicker fix on 2026-05-29:
+  - added `navigateWithinSite()` to avoid full page reloads when a button/link points to the current route;
+  - header `Каталог` on an already-open catalog page now clears the catalog state in-place instead of reloading the page;
+  - same-page internal links and `href="#"` placeholders are intercepted so they do not jump/reload visually;
+  - cart page received the same same-route/placeholder link guard;
+  - catalog home tiles keep their entrance animation only on the first render, avoiding repeated reveal animations after data refreshes.

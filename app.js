@@ -472,6 +472,7 @@ let products = loadProducts();
 let actualSlideIndex = 0;
 let actualSlideTimer = null;
 let lastFocusedElement = null;
+let catalogHomeHasAnimated = false;
 const focusableSelector =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -685,6 +686,85 @@ function syncCatalogRoute() {
   if (state.search.trim()) params.set("q", state.search.trim());
   const nextUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
   window.history.replaceState({}, "", nextUrl);
+}
+
+function routeKey(pathname = window.location.pathname) {
+  const cleanPath = pathname.replace(/\/+$/, "");
+  const lastPart = cleanPath.split("/").filter(Boolean).pop() || "index";
+  return lastPart.replace(/\.html$/i, "") || "index";
+}
+
+function smoothScrollToHash(hash) {
+  if (!hash) return false;
+  const target = document.querySelector(hash);
+  if (!target) return false;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  return true;
+}
+
+function applyCatalogUrl(targetUrl) {
+  if (!catalogListing) return false;
+  const params = new URLSearchParams(targetUrl.search);
+  state.selectedCategory = params.get("category") || "";
+  state.selectedCollection = params.get("collection") || "";
+  state.selectedHoliday = params.get("holiday") || "";
+  state.search = params.get("q") || "";
+  if (searchInput) searchInput.value = state.search;
+  Object.values(state.filters).forEach((bucket) => bucket.clear());
+  syncCatalogRoute();
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
+  smoothScrollToHash(targetUrl.hash || "#catalog");
+  return true;
+}
+
+function hasActiveCatalogState() {
+  return Boolean(
+    state.selectedCategory ||
+      state.selectedCollection ||
+      state.selectedHoliday ||
+      state.search.trim() ||
+      Object.values(state.filters).some((bucket) => bucket.size)
+  );
+}
+
+function navigateWithinSite(url) {
+  const targetUrl = new URL(url, window.location.href);
+  if (targetUrl.origin !== window.location.origin) {
+    window.location.href = targetUrl.href;
+    return;
+  }
+
+  const currentRoute = routeKey(window.location.pathname);
+  const targetRoute = routeKey(targetUrl.pathname);
+  const sameRoute = currentRoute === targetRoute;
+
+  if (sameRoute && targetUrl.search === window.location.search && targetUrl.hash === window.location.hash) {
+    if (targetUrl.hash) smoothScrollToHash(targetUrl.hash);
+    return;
+  }
+
+  if (sameRoute && targetRoute === "catalog" && catalogListing) {
+    if (targetUrl.search) {
+      applyCatalogUrl(targetUrl);
+      return;
+    }
+    if (!hasActiveCatalogState() && !catalogListing.classList.contains("is-hidden")) return;
+    backToCatalogHome();
+    smoothScrollToHash(targetUrl.hash || "#catalog");
+    return;
+  }
+
+  if (sameRoute && targetUrl.hash && targetUrl.search === window.location.search) {
+    if (smoothScrollToHash(targetUrl.hash)) {
+      window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}${targetUrl.hash}`);
+      return;
+    }
+  }
+
+  if (sameRoute && !targetUrl.search && !targetUrl.hash) return;
+  window.location.href = targetUrl.href;
 }
 
 function updateYandexMap(address) {
@@ -1732,6 +1812,7 @@ function getFilteredProducts() {
 function renderCatalogHome() {
   if (!categoryTiles || !actualTiles || !collectionTiles || !holidayTiles) return;
   const content = getSiteContent();
+  const shouldAnimate = !catalogHomeHasAnimated;
   const countByCategory = Object.fromEntries(content.catalogCategories.map((category) => [category.name, 0]));
   products.forEach((product) => {
     (product.categories || [product.category]).forEach((category) => {
@@ -1742,7 +1823,7 @@ function renderCatalogHome() {
   categoryTiles.innerHTML = content.catalogCategories
     .map(
       (category, index) => `
-        <button class="category-tile motion-enter motion-delay-${Math.min(index, 8)}" type="button" data-open-category="${escapeHtml(category.name)}">
+        <button class="category-tile${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-category="${escapeHtml(category.name)}">
           <span class="category-tile__top">
             <span class="category-tile__icon"><i data-lucide="${escapeHtml(category.icon)}"></i></span>
             <span class="category-tile__schema" aria-hidden="true">
@@ -1762,7 +1843,7 @@ function renderCatalogHome() {
   actualTiles.innerHTML = content.actualSlides
     .map(
       (item, index) => `
-        <button class="actual-tile actual-tile--${(index % 3) + 1} motion-enter motion-delay-${Math.min(index, 8)}" type="button" data-open-${item.type}="${escapeHtml(item.label)}">
+        <button class="actual-tile actual-tile--${(index % 3) + 1}${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-${item.type}="${escapeHtml(item.label)}">
           <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.label)}" ${imageAttrs(640, 360)} />
           <span>${escapeHtml(item.label)}</span>
           <b>${escapeHtml(item.label)}</b>
@@ -1774,7 +1855,7 @@ function renderCatalogHome() {
   collectionTiles.innerHTML = content.catalogCollections
     .map(
       (collection, index) => `
-        <button class="theme-tile motion-enter motion-delay-${Math.min(index, 8)}" type="button" data-open-collection="${escapeHtml(collection.name)}">
+        <button class="theme-tile${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-collection="${escapeHtml(collection.name)}">
           ${collection.image ? `<img class="theme-tile__image" src="${escapeHtml(collection.image)}" alt="" ${imageAttrs(520, 320)} />` : `<i data-lucide="${escapeHtml(collection.icon)}"></i>`}
           <span>${escapeHtml(collection.name)}</span>
         </button>
@@ -1785,7 +1866,7 @@ function renderCatalogHome() {
   holidayTiles.innerHTML = content.catalogHolidays
     .map(
       (holiday, index) => `
-        <button class="theme-tile motion-enter motion-delay-${Math.min(index, 8)}" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
+        <button class="theme-tile${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
           ${holiday.image ? `<img class="theme-tile__image" src="${escapeHtml(holiday.image)}" alt="" ${imageAttrs(520, 320)} />` : `<i data-lucide="${escapeHtml(holiday.icon)}"></i>`}
           <span>${escapeHtml(holiday.name)}</span>
         </button>
@@ -1794,6 +1875,7 @@ function renderCatalogHome() {
     .join("");
 
   if (window.lucide) window.lucide.createIcons();
+  catalogHomeHasAnimated = true;
 }
 
 function renderCatalogShell() {
@@ -1838,7 +1920,7 @@ function updateFilterToggle() {
 
 function openCatalogCategory(category) {
   if (!catalogListing || document.body.classList.contains("home-page")) {
-    window.location.href = `catalog.html?category=${encodeURIComponent(category)}`;
+    navigateWithinSite(`catalog.html?category=${encodeURIComponent(category)}`);
     return;
   }
   state.selectedCategory = category;
@@ -1854,7 +1936,7 @@ function openCatalogCategory(category) {
 
 function openCatalogCollection(collection) {
   if (!catalogListing || document.body.classList.contains("home-page")) {
-    window.location.href = `catalog.html?collection=${encodeURIComponent(collection)}`;
+    navigateWithinSite(`catalog.html?collection=${encodeURIComponent(collection)}`);
     return;
   }
   state.selectedCategory = "";
@@ -1870,7 +1952,7 @@ function openCatalogCollection(collection) {
 
 function openCatalogHoliday(holiday) {
   if (!catalogListing || document.body.classList.contains("home-page")) {
-    window.location.href = `catalog.html?holiday=${encodeURIComponent(holiday)}`;
+    navigateWithinSite(`catalog.html?holiday=${encodeURIComponent(holiday)}`);
     return;
   }
   state.selectedCategory = "";
@@ -1902,7 +1984,7 @@ function initCatalogRoute() {
 
 function backToCatalogHome() {
   if (!catalogListing) {
-    window.location.href = "catalog.html";
+    navigateWithinSite("catalog.html");
     return;
   }
   state.selectedCategory = "";
@@ -3326,11 +3408,11 @@ function boot() {
       return;
     }
     if (button.dataset.nav) {
-      window.location.href = button.dataset.nav;
+      navigateWithinSite(button.dataset.nav);
       return;
     }
     if (button.dataset.openCart !== undefined) {
-      window.location.href = "cart.html";
+      navigateWithinSite("cart.html");
       return;
     }
     if (button.dataset.scroll) {
@@ -3345,7 +3427,7 @@ function boot() {
           "#marketplaces": "marketplaces.html",
           "#wholesale": "index.html#wholesale",
         };
-        if (routes[button.dataset.scroll]) window.location.href = routes[button.dataset.scroll];
+        if (routes[button.dataset.scroll]) navigateWithinSite(routes[button.dataset.scroll]);
       }
       return;
     }
@@ -3490,6 +3572,24 @@ function boot() {
       showToast("Контент сброшен к тестовым значениям.");
       return;
     }
+  });
+
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest?.("a[href]");
+    if (!link) return;
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (link.target && link.target !== "_self") return;
+    const href = link.getAttribute("href") || "";
+    if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.endsWith(".pdf")) return;
+    if (href === "#") {
+      event.preventDefault();
+      return;
+    }
+    const targetUrl = new URL(href, window.location.href);
+    if (targetUrl.origin !== window.location.origin) return;
+    if (routeKey(targetUrl.pathname) !== routeKey(window.location.pathname)) return;
+    event.preventDefault();
+    navigateWithinSite(targetUrl.href);
   });
 
   document.addEventListener("keydown", (event) => {
