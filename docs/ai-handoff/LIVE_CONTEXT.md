@@ -271,6 +271,11 @@ Latest production verification:
 - Header nav tweak on 2026-05-29:
   - top navigation order changed so `Мы на маркетплейсах` comes before `Условия для бизнеса`;
   - all four top navigation links now share the same button styling and equal width based on the widest phrase.
+- Current header/search/admin tweak on 2026-05-29:
+  - top navigation was made shorter and lighter, with smaller animated equal-width buttons;
+  - search logic now ranks exact SKU first, exact product name second, then partial matches, and renders similar product suggestions under the search input when there is no exact match;
+  - seeded admin account is now `admin@sobag` / `admin`, and the public login modal no longer displays admin credentials;
+  - admin content settings are grouped by page so future new pages should be added to `siteTextFieldPages` immediately.
 
 ## Important Constraints
 

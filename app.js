@@ -343,6 +343,49 @@ const siteTextFields = [
   { key: "checkoutSubmitButton", label: "Форма заказа: кнопка отправки" },
 ];
 
+
+const siteTextFieldPages = [
+  {
+    title: "Общие настройки сайта",
+    note: "Название, верхнее меню, кнопки шапки и корзина. Эти элементы видны почти на всех страницах.",
+    keys: ["toplinePrimary", "toplineSecondary", "toplineTertiary", "navCatalogButton", "navBusinessButton", "navMarketplacesButton", "navAboutButton", "navContactsButton", "cartButton"],
+  },
+  {
+    title: "Страница: главная",
+    note: "Первый экран, блок Актуально, преимущества и условия для бизнеса на главной странице.",
+    keys: ["heroTitle", "heroLead", "heroPrimaryButton", "heroCustomButton", "actualTitle", "heroSpecOneValue", "heroSpecOneText", "heroSpecTwoValue", "heroSpecTwoText", "heroSpecThreeValue", "heroSpecThreeText", "benefitOneTitle", "benefitOneText", "benefitTwoTitle", "benefitTwoText", "benefitThreeTitle", "benefitThreeText", "benefitFourTitle", "benefitFourText", "wholesaleTitle", "tierOneLabel", "tierOneValue", "tierOneText", "tierTwoLabel", "tierTwoValue", "tierTwoText", "tierThreeLabel", "tierThreeValue", "tierThreeText", "tierFourLabel", "tierFourValue", "tierFourText"],
+  },
+  {
+    title: "Страница: каталог",
+    note: "Главная каталога, фильтры и боковая мини-корзина внутри каталога.",
+    keys: ["catalogTitleDefault", "catalogBackButton", "catalogHomeTitle", "catalogHomeSubtitle", "catalogActualTitle", "catalogCollectionsTitle", "catalogHolidaysTitle", "filterOpenButton", "filterCloseButton", "requestEyebrow", "requestTitle", "requestEmptyText", "requestMinHint", "requestSubmitReady", "requestSubmitLocked"],
+  },
+  {
+    title: "Страница: мы на маркетплейсах",
+    note: "Отдельная страница со ссылками и описаниями витрин.",
+    keys: ["marketplacesTitle", "marketplacesText", "marketplaceOneName", "marketplaceOneTitle", "marketplaceOneText", "marketplaceTwoName", "marketplaceTwoTitle", "marketplaceTwoText", "marketplaceThreeName", "marketplaceThreeTitle", "marketplaceThreeText"],
+  },
+  {
+    title: "Страница: изделия с вашим принтом",
+    note: "Текст калькулятора/брифа для заказов под макет клиента.",
+    keys: ["customTitle", "customText", "customStepOne", "customStepTwo", "customStepThree", "customStepFour", "customSubmitButton"],
+  },
+  {
+    title: "Страница: корзина и оформление",
+    note: "Отдельная страница корзины, промокод и модальное окно оформления заказа.",
+    keys: ["cartPageTitle", "cartPageBackButton", "cartPageEmptyTitle", "cartPageEmptyText", "cartDiscountTitle", "cartPromoTitle", "cartPromoPlaceholder", "cartPromoButton", "cartCheckoutButton", "checkoutTitle", "checkoutSubmitButton"],
+  },
+  {
+    title: "Контакты и подвал",
+    note: "Нижний блок сайта и контактные данные отдела опта.",
+    keys: ["footerBrand", "footerText", "footerSalesLabel", "footerEmail", "footerPhone"],
+  },
+];
+
+const siteTextFieldGroups = siteTextFieldPages.map((group) => ({
+  ...group,
+  fields: group.keys.map((key) => siteTextFields.find((field) => field.key === key)).filter(Boolean),
+}));
 const productDrafts = [];
 const FAVORITES_KEY = "sobag.favorites";
 const PROTOTYPE_PRODUCT_IDS = new Set([
@@ -930,20 +973,29 @@ function saveProducts() {
 }
 
 function seedUsers() {
-  const users = JSON.parse(localStorage.getItem(STORAGE.users) || "null");
-  if (users) return users;
-  const seeded = {
-    "admin@sobag.local": {
-      email: "admin@sobag.local",
-      password: "admin",
-      name: "Администратор",
-      phone: "+7 900 000-00-00",
-      role: "admin",
-      orders: [],
-    },
+  const users = JSON.parse(localStorage.getItem(STORAGE.users) || "null") || {};
+  const legacyAdmin = users["admin@sobag.local"];
+  const currentAdmin = users["admin@sobag"];
+  const adminOrders = currentAdmin?.orders || legacyAdmin?.orders || [];
+
+  users["admin@sobag"] = {
+    ...currentAdmin,
+    email: "admin@sobag",
+    password: "admin",
+    name: currentAdmin?.name || legacyAdmin?.name || "\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440",
+    phone: currentAdmin?.phone || legacyAdmin?.phone || "+7 900 000-00-00",
+    role: "admin",
+    orders: adminOrders,
   };
-  localStorage.setItem(STORAGE.users, JSON.stringify(seeded));
-  return seeded;
+
+  if (legacyAdmin) delete users["admin@sobag.local"];
+  if (localStorage.getItem(STORAGE.user) === "admin@sobag.local") {
+    localStorage.setItem(STORAGE.user, "admin@sobag");
+    state.currentUser = "admin@sobag";
+  }
+
+  localStorage.setItem(STORAGE.users, JSON.stringify(users));
+  return users;
 }
 
 function getUsers() {
@@ -1211,24 +1263,110 @@ function productMatchesFilters(product) {
   );
 }
 
-function searchScore(product) {
-  const query = state.search.trim().toLowerCase();
+function normalizeSearchText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\u0451/g, "\u0435")
+    .replace(/[\s_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function skuSearchKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
+}
+
+function productSearchText(product) {
+  return normalizeSearchText(
+    [
+      product.name,
+      product.baseSku,
+      product.description,
+      product.collections.join(" "),
+      product.holidays.join(" "),
+      product.tags.join(" "),
+      (product.categories || []).join(" "),
+      product.variants.map((variant) => variant.sku).join(" "),
+    ].join(" ")
+  );
+}
+
+function productHasExactSearchMatch(product, rawQuery) {
+  const query = normalizeSearchText(rawQuery);
+  const querySku = skuSearchKey(rawQuery);
+  if (!query || !querySku) return false;
+  const skuMatch = [product.baseSku, ...product.variants.map((variant) => variant.sku)].some((sku) => skuSearchKey(sku) === querySku);
+  return skuMatch || normalizeSearchText(product.name) === query;
+}
+
+function searchScore(product, rawQuery = state.search) {
+  const query = normalizeSearchText(rawQuery);
+  const querySku = skuSearchKey(rawQuery);
   if (!query) return 1;
 
-  const variantSkus = product.variants.map((variant) => variant.sku.toLowerCase());
-  const baseSku = product.baseSku.toLowerCase();
-  const exactSku = baseSku === query || variantSkus.includes(query);
-  if (exactSku) return 10000;
-  if (baseSku.startsWith(query) || variantSkus.some((sku) => sku.startsWith(query))) return 7000;
-  if (baseSku.includes(query) || variantSkus.some((sku) => sku.includes(query))) return 5000;
+  const skuKeys = [product.baseSku, ...product.variants.map((variant) => variant.sku)].map(skuSearchKey);
+  if (querySku && skuKeys.includes(querySku)) return 10000;
+  if (normalizeSearchText(product.name) === query) return 9000;
+  if (querySku && skuKeys.some((sku) => sku.startsWith(querySku))) return 7000;
+  if (querySku && skuKeys.some((sku) => sku.includes(querySku))) return 5000;
 
-  const name = product.name.toLowerCase();
+  const name = normalizeSearchText(product.name);
+  if (name.startsWith(query)) return 4000;
   if (name.includes(query)) return 3000;
-  const text = [product.collections.join(" "), product.holidays.join(" "), product.tags.join(" "), product.categories.join(" "), product.description]
-    .join(" ")
-    .toLowerCase();
-  if (text.includes(query)) return 1000;
+
+  const text = productSearchText(product);
+  if (text.includes(query)) return 1600;
+  const tokens = query.split(" ").filter((token) => token.length > 2);
+  if (tokens.length && tokens.every((token) => text.includes(token))) return 1200;
+  if (tokens.length && tokens.some((token) => text.includes(token))) return 650;
   return 0;
+}
+
+function getSearchSuggestions() {
+  const query = state.search.trim();
+  if (normalizeSearchText(query).length < 2) return [];
+  if (products.some((product) => productHasExactSearchMatch(product, query))) return [];
+  return products
+    .map((product) => ({ product, score: searchScore(product, query) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score || b.product.popular - a.product.popular)
+    .slice(0, 5)
+    .map(({ product }) => product);
+}
+
+function renderSearchSuggestions() {
+  const searchBox = searchInput?.closest(".search");
+  if (!searchBox) return;
+  let node = searchBox.querySelector(".search-suggestions");
+  if (!node) {
+    node = document.createElement("div");
+    node.className = "search-suggestions";
+    node.setAttribute("aria-live", "polite");
+    searchBox.appendChild(node);
+  }
+  const suggestions = getSearchSuggestions();
+  if (!suggestions.length) {
+    node.hidden = true;
+    node.innerHTML = "";
+    return;
+  }
+  node.hidden = false;
+  node.innerHTML = `
+    <span>Похожие товары</span>
+    ${suggestions
+      .map(
+        (product) => `
+          <button type="button" data-open-product="${escapeHtml(product.id)}">
+            <strong>${escapeHtml(product.baseSku)}</strong>
+            <em>${escapeHtml(product.name)}</em>
+          </button>
+        `
+      )
+      .join("")}
+  `;
 }
 
 function getFilteredProducts() {
@@ -1476,6 +1614,7 @@ function renderFilters() {
 function renderProducts() {
   if (!productGrid || !productCount) return;
   const list = getFilteredProducts();
+  renderSearchSuggestions();
   productCount.textContent = `${list.length} ${productWord(list.length)}`;
   if (!list.length) {
     productGrid.innerHTML = `
@@ -1910,7 +2049,6 @@ function accountModalHtml() {
                   <button class="primary-button" type="submit" data-auth-mode="login">Войти</button>
                   <button class="ghost-button" type="submit" data-auth-mode="register">Зарегистрироваться</button>
                 </div>
-                <p class="form-note">Тестовый админ: admin@sobag.local / admin</p>
               </form>
             `
         }
@@ -2039,6 +2177,19 @@ function adminListTextarea(name, title, value, note) {
   `;
 }
 
+function adminTextGroupHtml(group, content, extraHtml = "") {
+  return `
+    <div class="admin-content-section admin-content-section--page">
+      <h3>${group.title}</h3>
+      <p class="admin-section-note">${group.note}</p>
+      <div class="admin-content-grid">
+        ${extraHtml}
+        ${group.fields.map((field) => renderTextField(field, content)).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function adminCatalogImagesHtml(kind, items, title, note) {
   if (!items.length) return "";
   return `
@@ -2064,29 +2215,33 @@ function adminModalHtml() {
           <p>Тестовое управление контентом. Изображения и тексты сохраняются в этом браузере; для постоянного хранения нужен backend.</p>
         </div>
         <form class="admin-content-form" id="adminContentForm">
-          <div class="admin-content-grid">
-            <label>
-              Название сайта
+          ${adminTextGroupHtml(
+            siteTextFieldGroups[0],
+            content,
+            `<label>
+              Название сайта в шапке
               <input name="brandName" type="text" value="${escapeHtml(content.brandName)}" />
-            </label>
-            ${siteTextFields.map((field) => renderTextField(field, content)).join("")}
-          </div>
-          <div class="admin-content-section">
-            <h3>Логотип в шапке</h3>
+            </label>`
+          )}
+          <div class="admin-content-section admin-content-section--page">
+            <h3>Общие настройки сайта: логотип</h3>
+            <p class="admin-section-note">Квадратный логотип в шапке сайта. Рекомендуем сразу готовить файл в едином размере.</p>
             <div class="admin-image-grid admin-image-grid--logo">
               ${adminImageUploadHtml("brandLogo", 0, content.brandLogo, "Логотип", "Рекомендуем: PNG/WebP 512x512 px, прозрачный фон, до 1.5 МБ.")}
             </div>
           </div>
-          <div class="admin-content-section">
-            <h3>Фото главной страницы</h3>
+          ${adminTextGroupHtml(siteTextFieldGroups[1], content)}
+          <div class="admin-content-section admin-content-section--page">
+            <h3>Страница: главная — фото первого экрана</h3>
+            <p class="admin-section-note">Изображения используются в верхнем слайдшоу главной страницы.</p>
             <div class="admin-image-grid">
               ${content.heroImages
-                .map((image, index) => adminImageUploadHtml("heroImages", index, image, `Главное фото ${index + 1}`, "Рекомендуем: 1920x1200 px, JPG/WebP до 1.5 МБ."))
+                .map((image, index) => adminImageUploadHtml("heroImages", index, image, `Главное фото ${index + 1}`, "Рекомендуем: 1920x1200 px, JPG/WebP до 1.5 МБ.") )
                 .join("")}
             </div>
           </div>
-          <div class="admin-content-section">
-            <h3>Вкладка Актуально</h3>
+          <div class="admin-content-section admin-content-section--page">
+            <h3>Страница: главная — блок Актуально</h3>
             <div class="admin-content-grid">
               ${adminListTextarea("actualSlidesText", "Список актуального", serializeActualList(content.actualSlides), "Одна строка = один слайд. Формат: название | collection или holiday. После добавления новой строки сохраните контент, откройте админку снова и загрузите фото.")}
             </div>
@@ -2094,8 +2249,9 @@ function adminModalHtml() {
               ${content.actualSlides.map((slide, index) => adminActualSlideHtml(slide, index)).join("")}
             </div>
           </div>
-          <div class="admin-content-section">
-            <h3>Категории, подборки и праздники</h3>
+          ${adminTextGroupHtml(siteTextFieldGroups[2], content)}
+          <div class="admin-content-section admin-content-section--page">
+            <h3>Страница: каталог — категории, подборки и праздники</h3>
             <p class="admin-section-note">Редактируются справочники, которые видит покупатель на главной странице каталога. Иконки указываются названиями Lucide, например: square-stack, gift, heart, palette.</p>
             <div class="admin-content-grid">
               ${adminListTextarea("catalogCategoriesText", "Категории", serializeCategoryList(content.catalogCategories), "Одна строка = категория. Формат: название | описание | иконка. Фото категорий пока не используем, оставляем схему.")}
@@ -2105,6 +2261,7 @@ function adminModalHtml() {
             ${adminCatalogImagesHtml("catalogCollections", content.catalogCollections, "Фото подборок", "Рекомендуем: 900x520 px, JPG/WebP до 1.5 МБ.")}
             ${adminCatalogImagesHtml("catalogHolidays", content.catalogHolidays, "Фото праздников", "Рекомендуем: 900x520 px, JPG/WebP до 1.5 МБ.")}
           </div>
+          ${siteTextFieldGroups.slice(3).map((group) => adminTextGroupHtml(group, content)).join("")}
           <div class="admin-actions">
             <button class="primary-button" type="submit">Сохранить контент</button>
             <button class="ghost-button" type="button" data-reset-content>Сбросить контент</button>
