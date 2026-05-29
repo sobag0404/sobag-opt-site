@@ -299,3 +299,14 @@ Latest production verification:
 - Design and build the real product import workflow: Excel/CSV + local photo folders -> normalized products + uploaded photo URLs.
 - Add legal/personal data pages and real consent text.
 - Build production order submission path.
+
+## Latest Update 2026-05-29
+
+- Search control was softened: no heavy inner/focus frame, larger radius, subtle focus shadow only.
+- Top navigation spacing was equalized, and the daytime hover state for the theme toggle keeps readable text.
+- `about.html` and `contacts.html` were added as separate pages, and all top links now point to those pages instead of old anchors.
+- Contacts page includes an address field and Yandex Maps iframe/link without an API key.
+- Admin content settings now include fields for the new about/contact pages and footer columns.
+- Shared footer was expanded into columns (`Компания`, `Клиентам`, `Партнерам`, `Контакты`) across pages, including the cart page.
+- Registration now requires a personal-data consent checkbox only when registering, not when logging in.
+- Draft consent files were added at `assets/legal/personal-data-consent.html` and `assets/legal/personal-data-consent.pdf`; this is a draft template and needs legal review before production use.

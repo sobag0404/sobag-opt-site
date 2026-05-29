@@ -227,11 +227,32 @@ const defaultSiteContent = {
   customStepThree: "Печать и пошив",
   customStepFour: "Упаковка и отгрузка",
   customSubmitButton: "получить расчет",
+  aboutPageTitle: "О компании",
+  aboutPageLead:
+    "Sobag Opt — тестовая витрина для оптовых продаж текстиля с принтами и заказов на производство под ваш макет.",
+  aboutPageText:
+    "Здесь позже появится история компании, описание производства, сильные стороны команды и условия работы с оптовыми покупателями.",
+  aboutPageProductionTitle: "Производство и опт",
+  aboutPageProductionText:
+    "Мы готовим партии для маркетплейсов, магазинов и корпоративных клиентов: печать, пошив, комплектация и подготовка к отгрузке.",
+  contactsPageTitle: "Контакты",
+  contactsPageLead: "Здесь будут контакты отдела опта, адрес производства и карта.",
+  contactsAddress: "Москва, Новоданиловская набережная, 4",
+  contactsSchedule: "Пн-Пт, 10:00-18:00",
+  contactsMapButton: "показать на карте",
   footerBrand: "SOBAG OPT",
   footerText: "Тестовый прототип B2B-сайта для оптовых продаж текстиля с принтами.",
   footerSalesLabel: "Отдел опта",
   footerEmail: "opt@sobag-shop.ru",
   footerPhone: "+7 900 000-00-00",
+  footerCompanyTitle: "Компания",
+  footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Пользовательское соглашение",
+  footerClientsTitle: "Клиентам",
+  footerClientsLinks: "Как оформить заказ|Доставка товара|Оплата товара|Возврат товара|Изделия с вашим принтом",
+  footerPartnersTitle: "Партнерам",
+  footerPartnersLinks: "Условия для бизнеса|Мы на маркетплейсах|Поддержка селлеров|Оптовые партии",
+  footerContactsTitle: "Контакты",
+  footerAddress: "Адрес производства будет уточнен",
   cartPageTitle: "Корзина",
   cartPageBackButton: "вернуться в каталог",
   cartPageEmptyTitle: "Корзина пока пустая",
@@ -325,11 +346,29 @@ const siteTextFields = [
   { key: "customStepThree", label: "Свой принт: шаг 3" },
   { key: "customStepFour", label: "Свой принт: шаг 4" },
   { key: "customSubmitButton", label: "Кнопка: получить расчет" },
+  { key: "aboutPageTitle", label: "О компании: заголовок" },
+  { key: "aboutPageLead", label: "О компании: вступление", multiline: true, wide: true },
+  { key: "aboutPageText", label: "О компании: основной текст", multiline: true, wide: true },
+  { key: "aboutPageProductionTitle", label: "О компании: блок производства" },
+  { key: "aboutPageProductionText", label: "О компании: текст производства", multiline: true, wide: true },
+  { key: "contactsPageTitle", label: "Контакты: заголовок" },
+  { key: "contactsPageLead", label: "Контакты: вступление", multiline: true, wide: true },
+  { key: "contactsAddress", label: "Контакты: адрес для Яндекс Карт" },
+  { key: "contactsSchedule", label: "Контакты: график" },
+  { key: "contactsMapButton", label: "Контакты: кнопка карты" },
   { key: "footerBrand", label: "Подвал: название" },
   { key: "footerText", label: "Подвал: описание", multiline: true, wide: true },
   { key: "footerSalesLabel", label: "Подвал: отдел" },
   { key: "footerEmail", label: "Подвал: email" },
   { key: "footerPhone", label: "Подвал: телефон" },
+  { key: "footerCompanyTitle", label: "Подвал: колонка Компания" },
+  { key: "footerCompanyLinks", label: "Подвал: ссылки Компания через |", multiline: true, wide: true },
+  { key: "footerClientsTitle", label: "Подвал: колонка Клиентам" },
+  { key: "footerClientsLinks", label: "Подвал: ссылки Клиентам через |", multiline: true, wide: true },
+  { key: "footerPartnersTitle", label: "Подвал: колонка Партнерам" },
+  { key: "footerPartnersLinks", label: "Подвал: ссылки Партнерам через |", multiline: true, wide: true },
+  { key: "footerContactsTitle", label: "Подвал: колонка Контакты" },
+  { key: "footerAddress", label: "Подвал: адрес", multiline: true, wide: true },
   { key: "cartPageTitle", label: "Страница корзины: заголовок" },
   { key: "cartPageBackButton", label: "Страница корзины: кнопка назад" },
   { key: "cartPageEmptyTitle", label: "Страница корзины: пустая корзина" },
@@ -371,6 +410,16 @@ const siteTextFieldPages = [
     keys: ["customTitle", "customText", "customStepOne", "customStepTwo", "customStepThree", "customStepFour", "customSubmitButton"],
   },
   {
+    title: "Страница: о компании",
+    note: "Отдельная страница с описанием компании, производства и оптового направления.",
+    keys: ["aboutPageTitle", "aboutPageLead", "aboutPageText", "aboutPageProductionTitle", "aboutPageProductionText"],
+  },
+  {
+    title: "Страница: контакты",
+    note: "Отдельная страница контактов, адрес для Яндекс Карт и график работы.",
+    keys: ["contactsPageTitle", "contactsPageLead", "contactsAddress", "contactsSchedule", "contactsMapButton"],
+  },
+  {
     title: "Страница: корзина и оформление",
     note: "Отдельная страница корзины, промокод и модальное окно оформления заказа.",
     keys: ["cartPageTitle", "cartPageBackButton", "cartPageEmptyTitle", "cartPageEmptyText", "cartDiscountTitle", "cartPromoTitle", "cartPromoPlaceholder", "cartPromoButton", "cartCheckoutButton", "checkoutTitle", "checkoutSubmitButton"],
@@ -378,7 +427,7 @@ const siteTextFieldPages = [
   {
     title: "Контакты и подвал",
     note: "Нижний блок сайта и контактные данные отдела опта.",
-    keys: ["footerBrand", "footerText", "footerSalesLabel", "footerEmail", "footerPhone"],
+    keys: ["footerBrand", "footerText", "footerSalesLabel", "footerEmail", "footerPhone", "footerCompanyTitle", "footerCompanyLinks", "footerClientsTitle", "footerClientsLinks", "footerPartnersTitle", "footerPartnersLinks", "footerContactsTitle", "footerAddress"],
   },
 ];
 
@@ -581,6 +630,37 @@ function setButtonText(selector, value) {
   document.querySelectorAll(selector).forEach((button) => updateButtonText(button, value));
 }
 
+function footerLinkUrl(label = "") {
+  const prepared = String(label).trim().toLocaleLowerCase("ru-RU");
+  if (prepared.includes("о компании")) return "about.html";
+  if (prepared.includes("контакт")) return "contacts.html";
+  if (prepared.includes("маркетплейс")) return "marketplaces.html";
+  if (prepared.includes("свой") || prepared.includes("принт")) return "custom.html";
+  if (prepared.includes("услов")) return "index.html#wholesale";
+  if (prepared.includes("политик") || prepared.includes("персональ")) return "assets/legal/personal-data-consent.pdf";
+  return "#";
+}
+
+function renderFooterLinks(selector, value) {
+  document.querySelectorAll(selector).forEach((list) => {
+    list.innerHTML = String(value || "")
+      .split("|")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => `<a href="${footerLinkUrl(item)}">${escapeHtml(item)}</a>`)
+      .join("");
+  });
+}
+
+function updateYandexMap(address) {
+  const prepared = String(address || "").trim() || defaultSiteContent.contactsAddress;
+  const encoded = encodeURIComponent(prepared);
+  const frame = document.querySelector("#yandexMapFrame");
+  const link = document.querySelector("#yandexMapLink");
+  if (frame) frame.src = `https://yandex.ru/map-widget/v1/?text=${encoded}&z=16`;
+  if (link) link.href = `https://yandex.ru/maps/?text=${encoded}`;
+}
+
 function pluralRu(count, one, few, many) {
   const value = Math.abs(Number(count));
   const mod10 = value % 10;
@@ -712,6 +792,19 @@ function renderSiteContent() {
   });
   setText(".marketplaces h2", content.marketplacesTitle);
   setText(".marketplaces .section-head p", content.marketplacesText);
+  setText("[data-about-page-title]", content.aboutPageTitle);
+  setText("[data-about-page-lead]", content.aboutPageLead);
+  setText("[data-about-page-text]", content.aboutPageText);
+  setText("[data-about-production-title]", content.aboutPageProductionTitle);
+  setText("[data-about-production-text]", content.aboutPageProductionText);
+  setText("[data-contacts-page-title]", content.contactsPageTitle);
+  setText("[data-contacts-page-lead]", content.contactsPageLead);
+  setText("[data-contacts-address]", content.contactsAddress);
+  setText("[data-contacts-schedule]", content.contactsSchedule);
+  setText("[data-contacts-map-button]", buttonLabel(content.contactsMapButton));
+  const mapAddressInput = document.querySelector("#mapAddressInput");
+  if (mapAddressInput && !mapAddressInput.dataset.userEdited) mapAddressInput.value = content.contactsAddress;
+  updateYandexMap(mapAddressInput?.value || content.contactsAddress);
   const marketplaceCards = document.querySelectorAll(".marketplace-card");
   [
     [content.marketplaceOneName, content.marketplaceOneTitle, content.marketplaceOneText],
@@ -732,19 +825,26 @@ function renderSiteContent() {
   setButtonText("#briefForm .primary-button", content.customSubmitButton);
   const footer = document.querySelector(".footer");
   if (footer) {
-    const footerBrand = footer.querySelector("strong");
-    const footerText = footer.querySelector("p");
-    const footerLabel = footer.querySelector("span");
-    const footerEmail = footer.querySelector('a[href^="mailto:"]');
-    const footerPhone = footer.querySelector('a[href^="tel:"]');
-    if (footerBrand) footerBrand.textContent = content.footerBrand;
-    if (footerText) footerText.textContent = content.footerText;
-    if (footerLabel) footerLabel.textContent = content.footerSalesLabel;
-    if (footerEmail) {
+    const footerEmails = footer.querySelectorAll("[data-footer-email]");
+    const footerPhones = footer.querySelectorAll("[data-footer-phone]");
+    setText("[data-footer-brand]", content.footerBrand);
+    setText("[data-footer-text]", content.footerText);
+    setText("[data-footer-sales-label]", content.footerSalesLabel);
+    setText("[data-footer-company-title]", content.footerCompanyTitle);
+    setText("[data-footer-clients-title]", content.footerClientsTitle);
+    setText("[data-footer-partners-title]", content.footerPartnersTitle);
+    setText("[data-footer-contacts-title]", content.footerContactsTitle);
+    setText("[data-footer-address]", content.footerAddress);
+    renderFooterLinks("[data-footer-company-links]", content.footerCompanyLinks);
+    renderFooterLinks("[data-footer-clients-links]", content.footerClientsLinks);
+    renderFooterLinks("[data-footer-partners-links]", content.footerPartnersLinks);
+    footerEmails.forEach((footerEmail) => {
       footerEmail.textContent = content.footerEmail;
       footerEmail.href = `mailto:${content.footerEmail}`;
-    }
-    if (footerPhone) footerPhone.textContent = content.footerPhone;
+    });
+    footerPhones.forEach((footerPhone) => {
+      footerPhone.textContent = content.footerPhone;
+    });
   }
   if (
     catalogTitle &&
@@ -2045,6 +2145,15 @@ function accountModalHtml() {
                 <input name="email" type="email" placeholder="Email" required />
                 <input name="phone" type="tel" placeholder="Телефон" />
                 <input name="password" type="password" placeholder="Пароль" required />
+                <label class="consent-check auth-consent">
+                  <input name="personalDataConsent" type="checkbox" />
+                  <span>
+                    Согласен на
+                    <a href="assets/legal/personal-data-consent.pdf" target="_blank" rel="noopener">
+                      обработку персональных данных
+                    </a>
+                  </span>
+                </label>
                 <div class="auth-actions">
                   <button class="primary-button" type="submit" data-auth-mode="login">Войти</button>
                   <button class="ghost-button" type="submit" data-auth-mode="register">Зарегистрироваться</button>
@@ -3035,6 +3144,9 @@ function boot() {
       renderCatalogShell();
       renderProducts();
     }
+    if (event.target.id === "mapAddressInput") {
+      event.target.dataset.userEdited = "true";
+    }
     if (event.target.dataset.filterSearch) {
       const key = event.target.dataset.filterSearch;
       state.filterSearch[event.target.dataset.filterSearch] = event.target.value;
@@ -3072,6 +3184,12 @@ function boot() {
       event.target.reset();
       showToast("Бриф принят. В следующей версии добавим загрузку макета.");
     }
+    if (event.target.id === "mapAddressForm") {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      updateYandexMap(data.mapAddress);
+      showToast("Карта обновлена по введенному адресу.");
+    }
     if (event.target.id === "authForm") {
       event.preventDefault();
       const submitter = event.submitter;
@@ -3087,6 +3205,10 @@ function boot() {
           showToast("Для регистрации укажите имя и телефон.");
           return;
         }
+        if (data.personalDataConsent !== "on") {
+          showToast("Для регистрации подтвердите согласие на обработку персональных данных.");
+          return;
+        }
         if (existingEmailKey) {
           showToast("Этот email уже зарегистрирован в системе.");
           return;
@@ -3098,6 +3220,9 @@ function boot() {
           phone,
           role: "buyer",
           orders: [],
+          personalDataConsent: true,
+          consentAt: new Date().toISOString(),
+          consentTextVersion: "personal-data-consent-2026-05-29",
         };
         saveUsers(users);
       }

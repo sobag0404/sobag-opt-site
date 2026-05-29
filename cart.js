@@ -63,6 +63,14 @@ const defaultCartContent = {
   footerSalesLabel: "Отдел опта",
   footerEmail: "opt@sobag-shop.ru",
   footerPhone: "+7 900 000-00-00",
+  footerCompanyTitle: "Компания",
+  footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Пользовательское соглашение",
+  footerClientsTitle: "Клиентам",
+  footerClientsLinks: "Как оформить заказ|Доставка товара|Оплата товара|Возврат товара|Изделия с вашим принтом",
+  footerPartnersTitle: "Партнерам",
+  footerPartnersLinks: "Условия для бизнеса|Мы на маркетплейсах|Поддержка селлеров|Оптовые партии",
+  footerContactsTitle: "Контакты",
+  footerAddress: "Адрес производства будет уточнен",
   cartPageTitle: "Корзина",
   cartPageBackButton: "вернуться в каталог",
   cartPageEmptyTitle: "Корзина пока пустая",
@@ -180,6 +188,28 @@ function setText(selector, value) {
   });
 }
 
+function footerLinkUrl(label = "") {
+  const prepared = String(label).trim().toLocaleLowerCase("ru-RU");
+  if (prepared.includes("о компании")) return "about.html";
+  if (prepared.includes("контакт")) return "contacts.html";
+  if (prepared.includes("маркетплейс")) return "marketplaces.html";
+  if (prepared.includes("свой") || prepared.includes("принт")) return "custom.html";
+  if (prepared.includes("услов")) return "index.html#wholesale";
+  if (prepared.includes("политик") || prepared.includes("персональ")) return "assets/legal/personal-data-consent.pdf";
+  return "#";
+}
+
+function renderFooterLinks(selector, value) {
+  document.querySelectorAll(selector).forEach((list) => {
+    list.innerHTML = String(value || "")
+      .split("|")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => `<a href="${footerLinkUrl(item)}">${escapeHtml(item)}</a>`)
+      .join("");
+  });
+}
+
 function setButtonText(selector, value) {
   document.querySelectorAll(selector).forEach((button) => {
     const icon = button.querySelector("i")?.outerHTML || "";
@@ -239,16 +269,26 @@ function renderCartContent() {
   setButtonText(".checkout-form .primary-button", content.checkoutSubmitButton);
   const footer = document.querySelector(".footer");
   if (footer) {
-    footer.querySelector("strong").textContent = content.footerBrand;
-    footer.querySelector("p").textContent = content.footerText;
-    footer.querySelector("span").textContent = content.footerSalesLabel;
-    const email = footer.querySelector('a[href^="mailto:"]');
-    const phone = footer.querySelector('a[href^="tel:"]');
-    if (email) {
+    setText("[data-footer-brand]", content.footerBrand);
+    setText("[data-footer-text]", content.footerText);
+    setText("[data-footer-sales-label]", content.footerSalesLabel);
+    setText("[data-footer-company-title]", content.footerCompanyTitle);
+    setText("[data-footer-clients-title]", content.footerClientsTitle);
+    setText("[data-footer-partners-title]", content.footerPartnersTitle);
+    setText("[data-footer-contacts-title]", content.footerContactsTitle);
+    setText("[data-footer-address]", content.footerAddress);
+    renderFooterLinks("[data-footer-company-links]", content.footerCompanyLinks);
+    renderFooterLinks("[data-footer-clients-links]", content.footerClientsLinks);
+    renderFooterLinks("[data-footer-partners-links]", content.footerPartnersLinks);
+    const emails = footer.querySelectorAll("[data-footer-email]");
+    const phones = footer.querySelectorAll("[data-footer-phone]");
+    emails.forEach((email) => {
       email.textContent = content.footerEmail;
       email.href = `mailto:${content.footerEmail}`;
-    }
-    if (phone) phone.textContent = content.footerPhone;
+    });
+    phones.forEach((phone) => {
+      phone.textContent = content.footerPhone;
+    });
   }
 }
 
