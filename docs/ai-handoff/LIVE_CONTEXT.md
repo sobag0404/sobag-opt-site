@@ -22,7 +22,8 @@ Repository:
 - branch: `main`
 
 Production:
-- `https://sobag-opt-site.vercel.app/`
+- `https://sobag-shop.online/`
+- fallback Vercel domain: `https://sobag-opt-site.vercel.app/`
 
 Workspace:
 - `C:\Users\SoBag\OneDrive\Документы\New project\sobag-opt-site`
@@ -379,3 +380,9 @@ Latest production verification:
   - same-page internal links and `href="#"` placeholders are intercepted so they do not jump/reload visually;
   - cart page received the same same-route/placeholder link guard;
   - catalog home tiles keep their entrance animation only on the first render, avoiding repeated reveal animations after data refreshes.
+
+- Device handoff prep on 2026-05-29:
+  - refreshed `AI_HANDOFF.md`, `CURRENT_STATUS.md`, `NEW_CHAT_PROMPT.md`, `NEW_DEVICE_SETUP.md`, and `SERVER_HANDOFF_STORAGE.md` with current production domain, latest commit, Vercel API/KV state, GitHub access audit, navigation flicker fixes, and no-secrets constraints;
+  - primary production domain is now `https://sobag-shop.online/`; `https://sobag-opt-site.vercel.app/` remains the fallback Vercel domain;
+  - latest functional commit before handoff docs update is `6c7eb4a Prevent same-page navigation flicker`;
+  - if work continues on a different device over the weekend, repeat handoff prep there before switching back.

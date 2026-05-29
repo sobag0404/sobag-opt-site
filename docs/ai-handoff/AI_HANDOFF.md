@@ -1,77 +1,105 @@
 # Sobag Opt Site AI Handoff
 
-Last updated: 2026-05-27
+Last updated: 2026-05-29
 
 ## Project
 
-Sobag Opt is a static prototype for a B2B wholesale textile website: printed pillows, pillowcases, blankets, bags, covers, custom-print requests, cart, discounts, prototype accounts, admin content controls, and local product import tooling.
+Sobag Opt is a B2B wholesale textile/catalog prototype for printed textile products: pillows, pillowcases, blankets, shoe bags, cooler covers, luggage covers, flags, removki/keychains, custom-print requests, carts, discounts, prototype accounts, admin/manager order handling, editable site content, and local bulk product import tooling.
 
 Repository:
 - GitHub: `https://github.com/sobag0404/sobag-opt-site`
 - Branch: `main`
-- Production: `https://sobag-opt-site.vercel.app/`
-- Catalog: `https://sobag-opt-site.vercel.app/catalog`
-- Cart: `https://sobag-opt-site.vercel.app/cart`
-- Favorites: `https://sobag-opt-site.vercel.app/favorites`
+- Primary production domain: `https://sobag-shop.online/`
+- Vercel fallback/project domain: `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-- `7bc2760 Add favorites page and semicolon import lists`
+- `6c7eb4a Prevent same-page navigation flicker`
 
 ## Current State
 
-The project is still a frontend-only static prototype. There is no backend, no database, no real authorization, no payment system, no CRM integration, and no production file storage yet.
+The project is a mostly static frontend with a small Vercel API layer.
 
-Important files:
+Frontend:
+- Pages are plain HTML files with shared JavaScript and CSS.
+- Shared shell markup lives in `components/site-shell.js`.
+- Main UI/state logic lives in `app.js`.
+- Cart page logic lives in `cart.js`.
+- Styling lives in `styles.css`.
+
+Backend/storage:
+- Vercel API routes under `api/` support auth, sessions, orders, admin role/order updates, and health checks.
+- Upstash Redis / Vercel KV-compatible storage is configured in Vercel.
+- Do not store or paste env values in chat or docs.
+- Health check: `https://sobag-shop.online/api/health` should return `{"ok":true,"storage":"ready"}`.
+
+## Important Files
+
 - `index.html`: home page.
 - `catalog.html`: catalog page with category home and product listing.
 - `favorites.html`: separate favorites page.
 - `custom.html`: custom-print request page.
-- `marketplaces.html`: marketplaces page.
+- `marketplaces.html`: marketplace page.
+- `about.html`: about page.
+- `contacts.html`: contacts page with Yandex map iframe/link.
 - `cart.html`: separate cart page.
-- `app.js`: main site logic, products, filters, favorites, account/admin prototype, import/export, product modal.
+- `components/site-shell.js`: shared top line, header, cart header, and footer.
+- `app.js`: main site logic, catalog, filters, favorites, accounts, admin panel, content editing, orders, import/export.
 - `cart.js`: cart page logic, checkout modal, discounts, promo code prototype.
-- `styles.css`: shared UI styling and responsive layout.
+- `styles.css`: shared UI styling, day/night themes, responsive layout, transitions.
+- `api/`: Vercel API layer.
 - `tools/product_importer.py`: local CSV/XLSX + photo-folder importer.
-- `tools/publish_imported_products.py`: static preview product publisher for optimized image previews.
+- `tools/publish_imported_products.py`: static preview product publisher for optimized WebP previews.
+- `tools/autofix.mjs`: repository checks.
 - `templates/sobag-products-template.csv` and `.xlsx`: downloadable product import templates.
 - `docs/product-import.md`: current import workflow notes.
-- `vercel.json`: clean URLs enabled.
+- `docs/backend-security.md`: backend/security setup notes.
+- `vercel.json`: Vercel clean URLs, headers, and caching.
 
-## What Was Recently Completed
+## Recently Completed
 
-- Removed the previously published test imported product assets and test `data/products-live.json`.
-- Added `favorites.html`.
-- Header heart buttons now navigate to the favorites page.
-- Favorites page shows only products stored in `sobag.favorites`.
-- Empty favorites page has a clear empty state and a catalog button.
-- Product import list fields now prefer `;` instead of comma:
-  - `Типы товара`
-  - `Размеры`
-  - `Материалы`
-  - `Подборки`
-  - `Праздники`
-  - `Теги`
-  - `Фото галереи`
-- Old comma-only list cells are still readable for backward compatibility.
-- Import templates were regenerated with `;` examples.
-- Local ignored CSV `local-import-output/products-from-photo-folders.csv` was converted to `;` in list fields.
+- Custom domain `sobag-shop.online` is connected to Vercel.
+- Upstash Redis / Vercel KV storage is configured in Vercel.
+- Production admin env variables are configured in Vercel without exposing values in repo.
+- Header/footer shell was extracted into `components/site-shell.js`.
+- Large pages were split so each page owns only its own content sections.
+- AutoFix now checks shell ownership, page section ownership, image hints, and inline style regressions.
+- Motion/transition layer was added, then tuned to avoid catalog flicker.
+- Product-card favorite clicks now update only the clicked state and header counter instead of rebuilding the entire product grid.
+- Same-page navigation flicker was fixed:
+  - clicking `Каталог` while already in catalog no longer reloads the page;
+  - same-route links and `href="#"` placeholders no longer jump/reload visually;
+  - cart page has the same same-route/placeholder guard.
+- Catalog product cards no longer replay entrance animation on every product render.
+- Catalog home tiles animate only on first render.
+- GitHub access audit was performed:
+  - repo is private;
+  - only collaborator found: `sobag0404`;
+  - no pending invitations;
+  - no deploy keys;
+  - no webhooks;
+  - no forks;
+  - no tracked high-risk secret patterns found.
 
 ## Current UX / Business Rules
 
 - Day theme should stay black, white, and gray. Do not reintroduce orange into day theme.
 - Night theme can use orange accents.
 - Buttons should be uppercase, centered, and visually consistent.
-- Product card in catalog should show only:
+- Product cards in catalog show:
   - square photo;
   - base SKU with copy button;
   - product name;
-  - price;
-  - `ПЕРЕЙТИ В КАРТОЧКУ`.
-- Product detail modal changes SKU and price by selected type, size, and material.
+  - price as the button text.
+- Product detail modal changes SKU, product name, unit price, and total by selected type, size, material, and quantity.
+- Product detail default quantity is `0`, so opening a card does not affect basket discount until the buyer increases quantity.
 - Variant SKU rule: `baseSku_ТИП_Размер_МАТ`, where `_` is the separator, type and material use the first 3 cleaned chars, and size is kept full.
-- Default quantity in product detail is `1`.
 - Cart minimum total is `30 000 ₽`.
-- Quantity discount tiers:
+- Basket discount tiers by cart sum:
+  - `30 000 ₽`: 5%
+  - `70 000 ₽`: 7%
+  - `150 000 ₽`: 12%
+  - `300 000 ₽`: 18%
+- Quantity tiers still exist for some UI/calculation flows:
   - 30 items: 3%
   - 70 items: 7%
   - 150 items: 12%
@@ -82,23 +110,28 @@ Important files:
 
 ## Product Import Notes
 
-Recommended first-batch workflow:
-1. Put photos in folders shaped like `Категория / Основной артикул / фото`.
-2. Run `tools/product_importer.py scan-photos` to generate a draft CSV/XLSX from folder names.
-3. Edit the generated table manually.
-4. Use `;` inside list cells, especially for sizes, so decimal comma values like `3,5` remain valid.
-5. Run the local importer against the edited table and photo root.
-6. Publish only prepared/optimized preview assets when intentionally testing static preview data.
+Recommended workflow:
+1. Keep photos outside Git, for example in a local folder or synced Yandex Disk folder.
+2. Use folder shape like `Фото товаров / Категория / Основной артикул / фото` when categories are known.
+3. Run `tools/product_importer.py scan-photos` to generate a draft CSV/XLSX from folders.
+4. Edit the generated table manually.
+5. Use `;` inside list cells, especially for sizes, so decimal comma values like `3,5` remain valid.
+6. Run the local importer against the edited table and photo root.
+7. Publish only optimized/static preview assets intentionally.
 
-Local generated import outputs are intentionally ignored by Git:
+Important import rules:
+- Multiple categories are supported in `Категории` with `;`.
+- If `Типы товара` contains `Подушка;Наволочка`, display names should adapt by type.
+- Duplicate imports must be skipped/updated intentionally; do not delete existing products unless explicitly commanded.
+- For flags, photo order is `1,2,3...`; for most other product categories, the highest numbered photo is main.
+
+Ignored/generated import outputs:
 - `local-import-output/`
 - `assets/imported-products/`
-- `assets/product-preview/`
 - `data/products.import.json`
 - `data/import-report.csv`
-- `data/products-live.json`
 
-Do not commit thousands of raw product photos to GitHub/Vercel.
+Large product-photo folders must not be committed to GitHub/Vercel.
 
 ## Important Constraints
 
@@ -109,32 +142,30 @@ Do not commit thousands of raw product photos to GitHub/Vercel.
   - no `.env`;
   - no SSH keys;
   - no cookies;
-  - no database dumps.
-- Prototype users, carts, favorites, orders, content edits, and admin uploads are localStorage-only.
-- Admin image uploads in the browser are not permanent across devices.
-- A browser page cannot automatically read arbitrary folders from the PC; photo matching needs either a user-selected folder or the local importer script.
-- For 10k+ products, use real backend/storage later. Do not keep the production catalog in `app.js`, localStorage, or Git-tracked static JSON forever.
+  - no database dumps;
+  - no production credentials.
+- Browser-local data is still used for some prototype UI states and admin content previews.
+- Admin image uploads in the browser are not permanent production storage.
+- A browser page cannot automatically read arbitrary folders from the user's PC; photo matching needs an explicit local importer or user-selected folder flow.
+- For 10k+ products, keep moving toward real backend/database/object storage instead of Git-tracked static catalog data.
 
 ## Verification Status
 
-Latest verified checks before this handoff:
+Latest verified checks before this handoff update:
 - `node --check app.js`
 - `node --check cart.js`
-- `python -m py_compile tools/product_importer.py tools/publish_imported_products.py`
-- Local browser check:
-  - `/favorites.html` empty state works.
-  - catalog heart click -> header favorites button -> `/favorites.html` shows `1 товар`.
-- Production check:
-  - `/favorites` returns 200.
-  - production page serves `app.js?v=20260527-favorites-semicolon`.
-  - production template CSV uses `;` list examples.
-  - removed test `data/products-live.json` returns 404.
+- `npm run check`
+- `git diff --check`
+- Production `https://sobag-shop.online/catalog` serves `app.js?v=20260529-nav-no-flash`.
+- Production `https://sobag-shop.online/cart` serves `cart.js?v=20260529-nav-no-flash`.
+- Production `https://sobag-shop.online/api/health` returns storage ready.
 
 ## Current Focus
 
-The user is preparing the project for real product import. The next likely feature work is:
-- improve bulk product loading from local/Yandex Disk photo folders;
-- create price-editing files per variant;
-- avoid duplicate imports on repeated scans;
-- possibly infer short descriptions, tags, and collections from product photos later;
-- eventually replace localStorage prototypes with backend storage.
+Current focus is stabilizing the prototype before continuing larger catalog/import/backend work:
+- keep navigation smooth, without reload-like flicker;
+- keep handoff docs current before moving between devices;
+- continue polishing catalog/cart/admin UX;
+- continue real product import workflow later.
+
+If moving again after weekend work, repeat handoff preparation on that device before switching back.

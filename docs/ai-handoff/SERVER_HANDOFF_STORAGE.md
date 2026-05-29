@@ -1,60 +1,93 @@
 # Server And Storage Handoff
 
-## Current Hosting
+Last updated: 2026-05-29
 
-There is no custom backend server.
+## Hosting
 
-The site is deployed as static files on Vercel from GitHub:
-- `index.html`
-- `catalog.html`
-- `favorites.html`
-- `custom.html`
-- `marketplaces.html`
-- `cart.html`
-- `app.js`
-- `cart.js`
-- `styles.css`
-- `assets/*`
-- `templates/*`
+The site is deployed on Vercel from GitHub repo:
+- `sobag0404/sobag-opt-site`
+- branch: `main`
 
-`vercel.json`:
+Primary production domain:
+- `https://sobag-shop.online/`
 
-```json
-{
-  "cleanUrls": true,
-  "trailingSlash": false
-}
-```
+Fallback Vercel domain:
+- `https://sobag-opt-site.vercel.app/`
 
-Clean URL examples:
+Clean URLs are enabled through `vercel.json`, for example:
 - `/catalog` serves `catalog.html`
 - `/cart` serves `cart.html`
 - `/favorites` serves `favorites.html`
+- `/about` serves `about.html`
+- `/contacts` serves `contacts.html`
 
-## Current Storage
+## API Layer
 
-All dynamic state is browser localStorage prototype data.
+There is a Vercel API layer under `api/`.
 
-Known localStorage keys:
-- `sobag.currentUser`: selected prototype user email.
-- `sobag.users`: prototype users and roles.
-- `sobag.orders.v1`: prototype order history for buyers/admins/managers.
-- `sobag.products.v8`: optional product catalog override from admin/import prototype.
-- `sobag.cart.guest`: guest cart.
-- `sobag.cart.<email>`: per-user cart.
-- `sobag.favorites`: favorite product IDs.
-- `sobag.siteContent.v1`: editable site content from admin prototype.
-- `sobag.theme`: day/night theme.
+Current purpose:
+- auth/login/session/logout;
+- prototype server-backed user/session flow;
+- order storage and retrieval;
+- admin/manager order status updates;
+- admin role updates;
+- health check.
 
-No real database exists.
+Health check:
+- `https://sobag-shop.online/api/health`
 
-## Product Data
+Expected response:
 
-Demo products are currently in `app.js`.
+```json
+{"ok":true,"storage":"ready"}
+```
 
-Removed test imported data should stay removed unless intentionally testing a new import:
-- `data/products-live.json`
-- `assets/product-preview/`
+## Storage
+
+Upstash Redis / Vercel KV-compatible storage is connected in Vercel.
+
+Configured in Vercel without exposing values in repo:
+- `KV_REST_API_URL`
+- `KV_REST_API_TOKEN`
+- related Upstash/Vercel KV variables
+- `SOBAG_ADMIN_EMAIL`
+- `SOBAG_ADMIN_PASSWORD`
+
+Do not put these values in:
+- chat;
+- Git;
+- docs;
+- ZIP handoff;
+- screenshots.
+
+If a new device needs Vercel operations, authenticate through official CLI/dashboard:
+
+```powershell
+vercel login
+```
+
+Do not ask the user to paste secrets into chat.
+
+## Browser Prototype Storage
+
+Some UI state still uses browser localStorage for prototype behavior and admin preview data.
+
+Known localStorage keys include:
+- `sobag.currentUser`
+- `sobag.users`
+- `sobag.orders.v1`
+- `sobag.products.v8`
+- `sobag.cart.guest`
+- `sobag.cart.<email>`
+- `sobag.favorites`
+- `sobag.siteContent.v1`
+- `sobag.theme.v1`
+
+Do not treat localStorage-only roles/content as production security.
+
+## Product Data And Images
+
+The current catalog can load imported/static product preview data when intentionally published, but large raw photos must stay out of Git.
 
 Generated local import outputs are ignored and should not be committed by default:
 - `local-import-output/`
@@ -62,20 +95,16 @@ Generated local import outputs are ignored and should not be committed by defaul
 - `data/products.import.json`
 - `data/import-report.csv`
 
-## Import Storage Direction
-
-For real production, do not rely on localStorage or Git-tracked static files for 10k+ products.
-
-Recommended future storage:
-- product catalog database;
+Large production direction:
+- database for product/catalog/order data;
 - object storage for images;
-- background import job for Excel/CSV + images;
-- duplicate detection by base SKU and photo folder;
+- backend import job for Excel/CSV + image folders;
+- duplicate detection by base SKU and import batch;
 - import report with created/updated/skipped rows.
 
 ## Future Backend Entities
 
-Recommended first backend model:
+Recommended first real backend model:
 - User
 - Role
 - Product
@@ -95,12 +124,24 @@ Recommended first backend model:
 
 ## Security Notes
 
-Do not treat current prototype login/roles as real security.
+Current state is better than the early localStorage-only prototype but still not final production security.
 
-Before real production:
-- add proper authentication;
-- add server-side authorization for admin and manager roles;
-- store orders server-side;
-- move admin uploads to real storage;
-- add privacy policy and personal data consent pages;
-- add audit trail for order status changes and imports.
+Before full production:
+- finish server-side authorization for admin/manager endpoints;
+- avoid trusting browser-local role state;
+- store orders and users only server-side;
+- move admin uploads to durable object storage;
+- finalize privacy policy/personal data consent with legal review;
+- add audit trail for order status changes and imports;
+- review GitHub/Vercel access periodically.
+
+Most recent GitHub access audit:
+- repo is private;
+- only collaborator found: `sobag0404`;
+- no pending invitations;
+- no deploy keys;
+- no webhooks;
+- no forks;
+- no tracked high-risk secret patterns found.
+
+Vercel GitHub access is expected and should remain installed.

@@ -1,47 +1,62 @@
 # Current Status Snapshot
 
-Date: 2026-05-27
+Date: 2026-05-29
 
 Latest functional commit before this handoff update:
-- `7bc2760 Add favorites page and semicolon import lists`
+- `6c7eb4a Prevent same-page navigation flicker`
 
 Working tree at the start of handoff preparation:
 - clean
 
+Repository:
+- `https://github.com/sobag0404/sobag-opt-site`
+- branch: `main`
+- repo visibility: private
+
 Production URLs:
-- Main: `https://sobag-opt-site.vercel.app/`
-- Catalog: `https://sobag-opt-site.vercel.app/catalog`
-- Cart: `https://sobag-opt-site.vercel.app/cart`
-- Favorites: `https://sobag-opt-site.vercel.app/favorites`
+- Main: `https://sobag-shop.online/`
+- Catalog: `https://sobag-shop.online/catalog`
+- Cart: `https://sobag-shop.online/cart`
+- Favorites: `https://sobag-shop.online/favorites`
+- Custom print: `https://sobag-shop.online/custom`
+- Marketplaces: `https://sobag-shop.online/marketplaces`
+- About: `https://sobag-shop.online/about`
+- Contacts: `https://sobag-shop.online/contacts`
 
 Current focus:
 - preparing the project to continue from another device;
 - keeping handoff docs and ZIP current;
-- continuing product-import workflow next.
+- next work likely continues UI polish, catalog behavior, admin/content controls, and product import workflow.
 
 Completed most recently:
-- removed test imported product assets and `data/products-live.json`;
-- added separate favorites page;
-- made header heart button open favorites;
-- kept favorites as localStorage prototype data;
-- changed import list examples from comma to `;`;
-- regenerated product templates;
-- updated product-import documentation.
+- fixed favorite-heart flicker by avoiding full product-grid rebuilds;
+- fixed same-page navigation flicker, especially repeated clicks on `Каталог`;
+- added same-route/placeholder link guards in both `app.js` and `cart.js`;
+- kept catalog entrance animations from replaying after every data refresh;
+- verified production script versions and storage health;
+- confirmed GitHub repo is private with no outside collaborators, invitations, deploy keys, webhooks, or forks.
 
-Remaining work:
+Backend/storage state:
+- Vercel API routes exist under `api/`;
+- Upstash Redis / Vercel KV-compatible storage is configured in Vercel;
+- `/api/health` on production returns storage ready;
+- do not expose env values in chat/docs/repo.
+
+Important remaining work:
+- continue visual polish and bug fixing;
+- harden real backend/auth/order flows beyond prototype behavior;
 - real product import workflow for large batches;
 - duplicate-safe import/update process;
 - optional AI-assisted descriptions/tags/collections from photos;
 - separate price-editing file per variant;
-- real backend and persistent storage;
-- real user accounts and server-side roles;
-- real order submission and manager/admin processing;
-- legal pages and consent text;
-- designer-provided product/category/actual images.
+- durable storage for admin uploads/product images;
+- legal pages and final consent/privacy text review.
 
 Important constraints:
 - no secrets in repo/docs/ZIP/chat;
 - do not use old Tilda site or old images;
 - do not commit raw bulk product photo folders;
 - day theme should remain black/white/gray;
-- localStorage data is prototype-only.
+- night theme may use orange accents;
+- use `;` for multi-value Excel/CSV cells;
+- local/generated import output should stay ignored unless explicitly requested.

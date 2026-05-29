@@ -1,16 +1,30 @@
 # New Device Setup
 
-This project currently does not require secrets to run locally. It is a static frontend prototype.
+This project can be cloned and run locally without copying secrets. Do not copy `.env.local` or any tokens through chat.
 
-## Install
+## Install On The New Device
 
-Install on the new device:
+Install:
 - Git
-- Node.js
+- Node.js / npm
 - Python
-- GitHub CLI (`gh`), optional but useful for authentication and deployment checks
+- GitHub CLI (`gh`)
+- Vercel CLI only if you want manual deploy/inspection from the device
 
-Vercel CLI is not required for normal work because Vercel is connected to GitHub.
+Optional but useful:
+
+```powershell
+npm install -g vercel
+```
+
+Use official login flows only:
+
+```powershell
+gh auth login
+vercel login
+```
+
+Do not paste tokens or passwords into chat.
 
 ## Clone
 
@@ -20,13 +34,15 @@ git clone https://github.com/sobag0404/sobag-opt-site.git
 cd sobag-opt-site
 ```
 
-If GitHub asks for access, use official authentication:
+If the repo cannot be cloned, check that the GitHub account is logged in and has access to private repo `sobag0404/sobag-opt-site`.
+
+## Install Local Dependencies
 
 ```powershell
-gh auth login
+npm install
 ```
 
-Do not paste tokens or passwords into chat.
+The project is mostly static, but `npm install` is useful for scripts and API dependency lockfile consistency.
 
 ## Run Locally
 
@@ -39,28 +55,36 @@ Open:
 - `http://127.0.0.1:4173/catalog.html`
 - `http://127.0.0.1:4173/cart.html`
 - `http://127.0.0.1:4173/favorites.html`
+- `http://127.0.0.1:4173/about.html`
+- `http://127.0.0.1:4173/contacts.html`
+
+Local static server does not emulate Vercel API routes. For API/server checks use Vercel production/preview or `vercel dev` after official Vercel login.
 
 ## Basic Verification
 
 ```powershell
 node --check app.js
 node --check cart.js
+node --check components\site-shell.js
+node --check tools\autofix.mjs
 python -m py_compile tools/product_importer.py tools/publish_imported_products.py
+npm run check
 git status --short
 ```
 
 Manual checks:
 - home page opens;
 - catalog page opens;
-- heart button in the header opens favorites;
-- adding a product to favorites makes it appear on favorites page;
+- clicking `Каталог` while already in catalog does not visually reload;
+- heart button toggles favorite without flashing the full product grid;
+- favorites page opens;
 - cart page opens;
-- downloadable import template exists under `templates/`;
+- downloadable import templates exist under `templates/`;
 - product import list values use `;`.
 
 ## Work And Deploy
 
-Pushing to `main` triggers Vercel.
+Normal flow:
 
 ```powershell
 git status --short
@@ -69,20 +93,29 @@ git commit -m "Your message"
 git push origin main
 ```
 
-Production URL:
-`https://sobag-opt-site.vercel.app/`
+Vercel is connected to GitHub. Pushing to `main` should trigger deployment. Manual production deploy is also possible when Vercel CLI is authenticated:
 
-Useful production checks:
-- `https://sobag-opt-site.vercel.app/catalog`
-- `https://sobag-opt-site.vercel.app/cart`
-- `https://sobag-opt-site.vercel.app/favorites`
-- `https://sobag-opt-site.vercel.app/templates/sobag-products-template.csv`
+```powershell
+npx vercel deploy --prod -y
+```
+
+Production:
+- `https://sobag-shop.online/`
+- `https://sobag-shop.online/catalog`
+- `https://sobag-shop.online/cart`
+- `https://sobag-shop.online/api/health`
+
+Expected health result:
+
+```json
+{"ok":true,"storage":"ready"}
+```
 
 ## Moving Local Product Photos
 
-Bulk product photos are not stored in Git. If testing import on a new device, copy or sync the photo source folder separately, for example through Yandex Disk.
+Bulk product photos are not stored in Git. If testing import on a new device, copy or sync the source photo folder separately, for example through Yandex Disk.
 
-Expected shape:
+Expected shape when categories are known:
 
 ```text
 Фото товаров/
@@ -93,7 +126,7 @@ Expected shape:
       3.jpg
 ```
 
-Then generate a draft table:
+Generate a draft table:
 
 ```powershell
 python tools/product_importer.py scan-photos --photos "C:\Path\To\Фото товаров" --out local-import-output\products-from-photo-folders.xlsx
@@ -103,6 +136,7 @@ python tools/product_importer.py scan-photos --photos "C:\Path\To\Фото то�
 
 Do not copy into repo or share in chat:
 - `.env`
+- `.env.local`
 - tokens
 - passwords
 - SSH keys
@@ -110,3 +144,12 @@ Do not copy into repo or share in chat:
 - database dumps
 - production credentials
 - raw 10k+ product photo folders
+- local import output unless explicitly requested
+
+## Before Switching Back
+
+If work continues on the new device over the weekend, run the same handoff preparation there before returning to this device:
+- update `docs/ai-handoff/*`;
+- rebuild `project-ai-handoff-latest.zip`;
+- push to GitHub;
+- verify Vercel/production if site behavior changed.
