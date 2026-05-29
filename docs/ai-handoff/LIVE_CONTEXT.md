@@ -268,6 +268,9 @@ Latest production verification:
   - old top text snippets and lower-row marketplace/business buttons were removed from shared pages;
   - `benefits` sections now have `id="about"` and footers have `id="contacts"` so new top links have targets;
   - cart page received the same top navigation and local theme-toggle handling in `cart.js`.
+- Header nav tweak on 2026-05-29:
+  - top navigation order changed so `Мы на маркетплейсах` comes before `Условия для бизнеса`;
+  - all four top navigation links now share the same button styling and equal width based on the widest phrase.
 
 ## Important Constraints
 
