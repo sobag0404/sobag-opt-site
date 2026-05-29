@@ -135,6 +135,26 @@ function imageAttrs(width, height, loading = "lazy") {
   return `width="${width}" height="${height}" loading="${loading}" decoding="async"`;
 }
 
+function prefersReducedMotion() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+}
+
+function pulseNode(node, className = "is-pop") {
+  if (!node || prefersReducedMotion()) return;
+  node.classList.remove(className);
+  void node.offsetWidth;
+  node.classList.add(className);
+}
+
+function setTextWithPop(node, value) {
+  if (!node) return;
+  const next = String(value);
+  const changed = node.dataset.motionValue !== undefined && node.dataset.motionValue !== next;
+  node.textContent = next;
+  node.dataset.motionValue = next;
+  if (changed) pulseNode(node);
+}
+
 function ensureFieldError(field) {
   if (!field) return null;
   const form = field.closest("form");
@@ -171,6 +191,9 @@ function setFieldError(form, name, message) {
     error.textContent = message;
     error.hidden = false;
   }
+  field.classList.remove("is-shaking");
+  void field.offsetWidth;
+  field.classList.add("is-shaking");
   field.focus();
   return false;
 }
@@ -485,14 +508,14 @@ function renderCart() {
     )
     .join("");
 
-  nodes.count.textContent = totals.qty;
+  setTextWithPop(nodes.count, totals.qty);
   nodes.count.closest(".cart-page__header-note")?.classList.toggle("is-empty", totals.qty === 0);
   nodes.count.hidden = totals.qty === 0;
-  nodes.subtotal.textContent = formatMoney(totals.subtotal);
+  setTextWithPop(nodes.subtotal, formatMoney(totals.subtotal));
   nodes.qtyDiscount.textContent = getBasketDiscountHint(totals.subtotal);
   if (nodes.qtyDiscount.previousElementSibling) nodes.qtyDiscount.previousElementSibling.hidden = true;
   nodes.promoDiscount.textContent = `${totals.promoDiscount}%`;
-  nodes.grandTotal.textContent = formatMoney(totals.total);
+  setTextWithPop(nodes.grandTotal, formatMoney(totals.total));
   nodes.checkoutButton.disabled = !totals.lines.length || totals.total < MIN_CART_TOTAL;
   setButtonText("#checkoutButton", getSiteContent().cartCheckoutButton);
   nodes.minHint.textContent =
@@ -546,11 +569,21 @@ function fillCheckoutFromProfile() {
 }
 
 function closeCheckout() {
-  nodes.checkoutModal.classList.remove("is-visible");
-  document.body.classList.remove("modal-open");
-  clearFormErrors(document.querySelector("#checkoutForm"));
-  if (lastFocusedElement && typeof lastFocusedElement.focus === "function") lastFocusedElement.focus();
-  lastFocusedElement = null;
+  const modal = nodes.checkoutModal;
+  if (!modal?.classList.contains("is-visible")) return;
+  const finish = () => {
+    modal.classList.remove("is-visible", "is-closing");
+    document.body.classList.remove("modal-open");
+    clearFormErrors(document.querySelector("#checkoutForm"));
+    if (lastFocusedElement && typeof lastFocusedElement.focus === "function") lastFocusedElement.focus();
+    lastFocusedElement = null;
+  };
+  if (prefersReducedMotion()) {
+    finish();
+    return;
+  }
+  modal.classList.add("is-closing");
+  window.setTimeout(finish, 220);
 }
 
 document.addEventListener("click", (event) => {

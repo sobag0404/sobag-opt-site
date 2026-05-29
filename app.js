@@ -744,6 +744,26 @@ function imageAttrs(width, height, loading = "lazy", fetchPriority = "") {
   return `width="${width}" height="${height}" loading="${loading}" decoding="async"${priority}`;
 }
 
+function prefersReducedMotion() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+}
+
+function pulseNode(node, className = "is-pop") {
+  if (!node || prefersReducedMotion()) return;
+  node.classList.remove(className);
+  void node.offsetWidth;
+  node.classList.add(className);
+}
+
+function setTextWithPop(node, value) {
+  if (!node) return;
+  const next = String(value);
+  const changed = node.dataset.motionValue !== undefined && node.dataset.motionValue !== next;
+  node.textContent = next;
+  node.dataset.motionValue = next;
+  if (changed) pulseNode(node);
+}
+
 function ensureFieldError(field) {
   if (!field) return null;
   const form = field.closest("form");
@@ -780,6 +800,9 @@ function setFieldError(form, name, message) {
     error.textContent = message;
     error.hidden = false;
   }
+  field.classList.remove("is-shaking");
+  void field.offsetWidth;
+  field.classList.add("is-shaking");
   field.focus();
   return false;
 }
@@ -1707,8 +1730,8 @@ function renderCatalogHome() {
 
   categoryTiles.innerHTML = content.catalogCategories
     .map(
-      (category) => `
-        <button class="category-tile" type="button" data-open-category="${escapeHtml(category.name)}">
+      (category, index) => `
+        <button class="category-tile motion-enter" style="--motion-delay: ${Math.min(index, 8) * 34}ms" type="button" data-open-category="${escapeHtml(category.name)}">
           <span class="category-tile__top">
             <span class="category-tile__icon"><i data-lucide="${escapeHtml(category.icon)}"></i></span>
             <span class="category-tile__schema" aria-hidden="true">
@@ -1728,7 +1751,7 @@ function renderCatalogHome() {
   actualTiles.innerHTML = content.actualSlides
     .map(
       (item, index) => `
-        <button class="actual-tile actual-tile--${(index % 3) + 1}" type="button" data-open-${item.type}="${escapeHtml(item.label)}">
+        <button class="actual-tile actual-tile--${(index % 3) + 1} motion-enter" style="--motion-delay: ${Math.min(index, 8) * 34}ms" type="button" data-open-${item.type}="${escapeHtml(item.label)}">
           <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.label)}" ${imageAttrs(640, 360)} />
           <span>${escapeHtml(item.label)}</span>
           <b>${escapeHtml(item.label)}</b>
@@ -1739,8 +1762,8 @@ function renderCatalogHome() {
 
   collectionTiles.innerHTML = content.catalogCollections
     .map(
-      (collection) => `
-        <button class="theme-tile" type="button" data-open-collection="${escapeHtml(collection.name)}">
+      (collection, index) => `
+        <button class="theme-tile motion-enter" style="--motion-delay: ${Math.min(index, 8) * 34}ms" type="button" data-open-collection="${escapeHtml(collection.name)}">
           ${collection.image ? `<img class="theme-tile__image" src="${escapeHtml(collection.image)}" alt="" ${imageAttrs(520, 320)} />` : `<i data-lucide="${escapeHtml(collection.icon)}"></i>`}
           <span>${escapeHtml(collection.name)}</span>
         </button>
@@ -1750,8 +1773,8 @@ function renderCatalogHome() {
 
   holidayTiles.innerHTML = content.catalogHolidays
     .map(
-      (holiday) => `
-        <button class="theme-tile" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
+      (holiday, index) => `
+        <button class="theme-tile motion-enter" style="--motion-delay: ${Math.min(index, 8) * 34}ms" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
           ${holiday.image ? `<img class="theme-tile__image" src="${escapeHtml(holiday.image)}" alt="" ${imageAttrs(520, 320)} />` : `<i data-lucide="${escapeHtml(holiday.icon)}"></i>`}
           <span>${escapeHtml(holiday.name)}</span>
         </button>
@@ -1940,10 +1963,10 @@ function renderProducts() {
     return;
   }
   productGrid.innerHTML = list
-    .map((product) => {
+    .map((product, index) => {
       const favorite = state.favorites.has(product.id) ? " is-active" : "";
       return `
-        <article class="product-card">
+        <article class="product-card motion-enter" style="--motion-delay: ${(index % 8) * 34}ms">
           <div class="product-card__image">
             <button class="product-card__image-button" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}">
               <img src="${product.image}" alt="${product.name}" ${imageAttrs(640, 640)} />
@@ -2001,11 +2024,11 @@ function renderCart() {
   }
 
   cartEmpty?.classList.toggle("is-hidden", lines.length > 0);
-  if (cartCount) cartCount.textContent = totals.qty;
-  if (cartHeaderTotal) cartHeaderTotal.textContent = formatMoney(totals.total);
+  setTextWithPop(cartCount, totals.qty);
+  setTextWithPop(cartHeaderTotal, formatMoney(totals.total));
   const headerCartButton = cartCount?.closest(".cart-button");
   headerCartButton?.classList.toggle("is-empty", totals.qty === 0);
-  if (favoriteCount) favoriteCount.textContent = state.favorites.size;
+  setTextWithPop(favoriteCount, state.favorites.size);
   if (subtotalNode) subtotalNode.textContent = formatMoney(totals.subtotal);
   if (discountValue) {
     discountValue.textContent = getBasketDiscountHint(totals.subtotal);
@@ -3146,13 +3169,30 @@ function contentFromAdminForm(form) {
   });
 }
 
-function closeModal() {
-  document.querySelectorAll(".modal").forEach((modal) => modal.remove());
+function finishModalClose() {
   document.body.classList.remove("modal-open");
   if (lastFocusedElement && typeof lastFocusedElement.focus === "function") {
     lastFocusedElement.focus();
   }
   lastFocusedElement = null;
+}
+
+function closeModal() {
+  const modals = [...document.querySelectorAll(".modal")];
+  if (!modals.length) return;
+  if (prefersReducedMotion()) {
+    modals.forEach((modal) => modal.remove());
+    finishModalClose();
+    return;
+  }
+  modals.forEach((modal) => {
+    modal.classList.remove("is-visible");
+    modal.classList.add("is-closing");
+  });
+  window.setTimeout(() => {
+    modals.forEach((modal) => modal.remove());
+    finishModalClose();
+  }, 220);
 }
 
 async function submitOrder(form) {

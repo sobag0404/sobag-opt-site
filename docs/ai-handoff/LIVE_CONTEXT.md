@@ -336,3 +336,10 @@ Latest production verification:
   - hero stats block was moved up into the previous `Актуально` position, while `Актуально` was moved lower on the right;
   - hero stats copy now reads `30 000 ₽ / минимальная сумма заказа`, `7 дней / тестовый запуск партии`, `до 18% / скидка при заказе`;
   - `normalizeSiteContent()` softly migrates old saved hero stats strings from browser content storage.
+
+- Motion layer on 2026-05-29:
+  - added a centralized CSS motion layer inspired by transitions.dev, with reduced-motion support;
+  - product/category/theme/actual cards now reveal softly on render and keep subtle hover movement without changing the day/night palette;
+  - modal open/close now animates in `app.js`, and cart checkout close animates in `cart.js`;
+  - cart/favorites counters and key totals use a small pop animation only when values change;
+  - form fields replay a small shake when validation fails.
