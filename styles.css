@@ -2343,11 +2343,14 @@ h3,
 }
 
 .hero__grid {
+  position: static;
   grid-template-columns: minmax(0, 1fr);
   padding: 72px 0 56px;
 }
 
 .hero__content {
+  position: relative;
+  z-index: 2;
   max-width: 680px;
 }
 
@@ -2396,8 +2399,8 @@ h3 {
 .hero__specs {
   position: absolute;
   z-index: 3;
-  top: 28px;
-  right: max(12px, calc((100vw - 1440px) / 2 + 12px));
+  top: 12px;
+  right: 24px;
   bottom: auto;
   width: min(480px, calc(100vw - 48px));
   grid-template-columns: repeat(3, 1fr);
@@ -3225,8 +3228,8 @@ main {
 .hero__actual {
   position: absolute;
   z-index: 2;
-  top: 152px;
-  right: max(12px, calc((100vw - 1440px) / 2 + 12px));
+  top: 214px;
+  right: 24px;
   display: grid;
   width: min(480px, calc(100vw - 48px));
   color: var(--canvas);

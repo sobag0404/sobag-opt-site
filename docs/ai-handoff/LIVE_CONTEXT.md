@@ -1,6 +1,6 @@
 # Live AI Context
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Standing Reminder For Codex
 
@@ -78,6 +78,7 @@ Recently completed:
 - Fixed catalog listing layout after unified button styling made the desktop filter toggle participate in the grid.
 - Product cards now use an adaptive grid so the catalog does not collapse into very narrow cards when sidebars are visible.
 - Catalog title preservation now uses `selectedCategory`, `selectedCollection`, `selectedHoliday`, and search state instead of stale `current*` fields.
+- Home hero layout was refined after visual QA: the `30 000 ₽ / 7 дней / до 18%` stats block is now pinned higher and farther right, while the `Актуально` slider sits farther right and lower on desktop; mobile remains stacked.
 - Theme toggle labels now say `ночная тема` and `дневная тема` instead of `ночная схема` / `дневная схема`.
 - Registration now blocks duplicate emails and requires name + phone for new users.
 - User profiles store phone numbers and can fill checkout contact fields from the profile.
