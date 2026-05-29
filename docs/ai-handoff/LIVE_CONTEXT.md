@@ -262,6 +262,13 @@ Latest production verification:
   - other products keep the "last numbered photo first" order;
   - `tools/product_importer.py` and `tools/publish_imported_products.py` now preserve this category-specific rule for future imports/publications.
 
+- Header redesign on 2026-05-29:
+  - top line became compact navigation: `Условия для бизнеса`, `Мы на маркетплейсах`, `О компании`, `Контакты`, plus the theme toggle;
+  - lower header now keeps only the larger Sobag Opt logo, catalog button, search, account, favorites, and cart;
+  - old top text snippets and lower-row marketplace/business buttons were removed from shared pages;
+  - `benefits` sections now have `id="about"` and footers have `id="contacts"` so new top links have targets;
+  - cart page received the same top navigation and local theme-toggle handling in `cart.js`.
+
 ## Important Constraints
 
 - No backend exists yet.

@@ -154,7 +154,10 @@ const defaultSiteContent = {
   toplineSecondary: "Печать и пошив под заказ",
   toplineTertiary: "Каталог для селлеров и магазинов",
   navCatalogButton: "каталог",
+  navBusinessButton: "условия для бизнеса",
   navMarketplacesButton: "мы на маркетплейсах",
+  navAboutButton: "о компании",
+  navContactsButton: "контакты",
   cartButton: "корзина",
   heroTitle: "Оптовый текстиль с принтами",
   heroLead:
@@ -252,7 +255,10 @@ const siteTextFields = [
   { key: "toplineSecondary", label: "Верхняя строка 2" },
   { key: "toplineTertiary", label: "Верхняя строка 3" },
   { key: "navCatalogButton", label: "Кнопка шапки: каталог" },
+  { key: "navBusinessButton", label: "Кнопка шапки: условия" },
   { key: "navMarketplacesButton", label: "Кнопка шапки: маркетплейсы" },
+  { key: "navAboutButton", label: "Кнопка шапки: о компании" },
+  { key: "navContactsButton", label: "Кнопка шапки: контакты" },
   { key: "cartButton", label: "Кнопка шапки: корзина" },
   { key: "heroTitle", label: "Заголовок главной" },
   { key: "heroLead", label: "Текст главной", multiline: true, wide: true },
@@ -600,7 +606,6 @@ function renderSiteContent() {
   const brandName = document.querySelector(".brand__name");
   const heroTitle = document.querySelector(".hero h1");
   const heroLead = document.querySelector(".hero__lead");
-  const toplineItems = document.querySelectorAll(".topline__inner > span");
   if (brand) brand.setAttribute("aria-label", content.brandName);
   if (brandMark) {
     brandMark.innerHTML = content.brandLogo
@@ -608,13 +613,13 @@ function renderSiteContent() {
       : escapeHtml(String(content.brandName || "S").trim().charAt(0) || "S");
   }
   if (brandName) brandName.innerHTML = brandNameHtml(content.brandName);
-  [content.toplinePrimary, content.toplineSecondary, content.toplineTertiary].forEach((value, index) => {
-    if (toplineItems[index]) toplineItems[index].textContent = value;
-  });
   if (heroTitle) heroTitle.textContent = content.heroTitle;
   if (heroLead) heroLead.textContent = content.heroLead;
   setButtonText(".catalog-button", content.navCatalogButton);
-  setButtonText(".nav-link-button", content.navMarketplacesButton);
+  setText("[data-top-business]", buttonLabel(content.navBusinessButton));
+  setText("[data-top-marketplaces]", buttonLabel(content.navMarketplacesButton));
+  setText("[data-top-about]", buttonLabel(content.navAboutButton));
+  setText("[data-top-contacts]", buttonLabel(content.navContactsButton));
   setText(".cart-button span", buttonLabel(content.cartButton));
   setButtonText(".hero__actions .primary-button", content.heroPrimaryButton);
   setButtonText(".hero__actions .ghost-button", content.heroCustomButton);

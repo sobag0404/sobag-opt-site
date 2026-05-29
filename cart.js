@@ -2,6 +2,7 @@ const MIN_CART_TOTAL = 30000;
 const CURRENT_USER_KEY = "sobag.currentUser";
 const USERS_KEY = "sobag.users";
 const ORDERS_KEY = "sobag.orders.v1";
+const THEME_KEY = "sobag.theme.v1";
 const CART_KEY = localStorage.getItem(CURRENT_USER_KEY)
   ? `sobag.cart.${localStorage.getItem(CURRENT_USER_KEY)}`
   : "sobag.cart.guest";
@@ -52,6 +53,10 @@ const defaultCartContent = {
   toplineSecondary: "Печать и пошив под заказ",
   toplineTertiary: "Каталог для селлеров и магазинов",
   navCatalogButton: "каталог",
+  navBusinessButton: "условия для бизнеса",
+  navMarketplacesButton: "мы на маркетплейсах",
+  navAboutButton: "о компании",
+  navContactsButton: "контакты",
   cartButton: "корзина",
   footerBrand: "SOBAG OPT",
   footerText: "Тестовый прототип B2B-сайта для оптовых продаж текстиля с принтами.",
@@ -182,6 +187,22 @@ function setButtonText(selector, value) {
   });
 }
 
+function applyTheme(theme) {
+  const isNight = theme === "night";
+  document.body.classList.toggle("theme-night", isNight);
+  document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(isNight));
+    button.innerHTML = `<i data-lucide="${isNight ? "sun" : "moon"}"></i><span>${isNight ? "дневная тема" : "ночная тема"}</span>`;
+  });
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function toggleTheme() {
+  const nextTheme = document.body.classList.contains("theme-night") ? "default" : "night";
+  localStorage.setItem(THEME_KEY, nextTheme);
+  applyTheme(nextTheme);
+}
+
 function brandNameHtml(name) {
   const parts = String(name || defaultCartContent.brandName).trim().split(/\s+/);
   if (parts.length < 2) return escapeHtml(parts[0] || defaultCartContent.brandName);
@@ -191,10 +212,10 @@ function brandNameHtml(name) {
 
 function renderCartContent() {
   const content = getSiteContent();
-  const toplineItems = document.querySelectorAll(".topline__inner > span");
-  [content.toplinePrimary, content.toplineSecondary, content.toplineTertiary].forEach((value, index) => {
-    if (toplineItems[index]) toplineItems[index].textContent = value;
-  });
+  setText("[data-top-business]", buttonLabel(content.navBusinessButton));
+  setText("[data-top-marketplaces]", buttonLabel(content.navMarketplacesButton));
+  setText("[data-top-about]", buttonLabel(content.navAboutButton));
+  setText("[data-top-contacts]", buttonLabel(content.navContactsButton));
   const brandMark = document.querySelector(".brand__mark");
   const brandName = document.querySelector(".brand__name");
   if (brandMark) {
@@ -404,6 +425,7 @@ document.addEventListener("click", (event) => {
   if (button.id === "checkoutButton") openCheckout();
   if (button.id === "useProfileButton") fillCheckoutFromProfile();
   if (button.dataset.closeCheckout !== undefined) closeCheckout();
+  if (button.dataset.themeToggle !== undefined) toggleTheme();
 });
 
 document.addEventListener("input", (event) => {
@@ -451,5 +473,6 @@ document.querySelector("#checkoutForm").addEventListener("submit", (event) => {
 });
 
 renderCartContent();
+applyTheme(localStorage.getItem(THEME_KEY) || "default");
 renderCart();
 if (window.lucide) window.lucide.createIcons();

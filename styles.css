@@ -4378,6 +4378,104 @@ body.theme-night .modal__close {
   margin-top: 0;
 }
 
+.topline {
+  color: var(--on-dark);
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--hairline-strong);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.topline__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 42px;
+  padding: 6px 0;
+  overflow: visible;
+}
+
+.topline__nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.topline__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  color: var(--body);
+  border: 1px solid transparent;
+  border-radius: var(--control-radius);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.topline__link:hover {
+  color: var(--on-dark);
+  background: var(--canvas);
+  border-color: var(--hairline);
+}
+
+.topline__link:first-child {
+  color: var(--on-dark);
+  background: var(--canvas);
+  border-color: var(--hairline);
+}
+
+.header__inner {
+  grid-template-columns: auto auto minmax(280px, 1fr) auto;
+}
+
+.brand {
+  min-width: 228px;
+  gap: 14px;
+}
+
+.brand__name {
+  font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI", Arial, sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  line-height: 1;
+  transform: scaleY(1.08);
+  transform-origin: left center;
+}
+
+.brand__name b {
+  color: var(--on-dark);
+}
+
+.theme-toggle {
+  flex: 0 0 auto;
+  margin-left: 0;
+}
+
+body.theme-night .topline {
+  background: var(--surface-soft);
+  border-bottom-color: rgba(255, 138, 31, 0.38);
+}
+
+body.theme-night .topline__link {
+  color: var(--body);
+  border-color: transparent;
+}
+
+body.theme-night .topline__link:hover,
+body.theme-night .topline__link:first-child {
+  color: var(--on-dark);
+  background: rgba(255, 138, 31, 0.12);
+  border-color: rgba(255, 138, 31, 0.62);
+}
+
 .product-card .favorite-button {
   right: 10px;
   top: 10px;
@@ -4452,6 +4550,42 @@ body.theme-night .modal__close {
 }
 
 @media (max-width: 640px) {
+  .topline__inner,
+  .topline__nav {
+    align-items: stretch;
+  }
+
+  .topline__inner {
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .topline__nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .topline__link {
+    justify-content: center;
+    min-height: 34px;
+  }
+
+  .theme-toggle {
+    width: 100%;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .brand__name {
+    font-size: 19px;
+  }
+
   .product-card__body {
     padding: 12px 10px 10px;
     gap: 8px;
