@@ -1731,7 +1731,7 @@ function renderCatalogHome() {
   categoryTiles.innerHTML = content.catalogCategories
     .map(
       (category, index) => `
-        <button class="category-tile motion-enter" style="--motion-delay: ${Math.min(index, 8) * 34}ms" type="button" data-open-category="${escapeHtml(category.name)}">
+        <button class="category-tile motion-enter motion-delay-${Math.min(index, 8)}" type="button" data-open-category="${escapeHtml(category.name)}">
           <span class="category-tile__top">
             <span class="category-tile__icon"><i data-lucide="${escapeHtml(category.icon)}"></i></span>
             <span class="category-tile__schema" aria-hidden="true">
@@ -1751,7 +1751,7 @@ function renderCatalogHome() {
   actualTiles.innerHTML = content.actualSlides
     .map(
       (item, index) => `
-        <button class="actual-tile actual-tile--${(index % 3) + 1} motion-enter" style="--motion-delay: ${Math.min(index, 8) * 34}ms" type="button" data-open-${item.type}="${escapeHtml(item.label)}">
+        <button class="actual-tile actual-tile--${(index % 3) + 1} motion-enter motion-delay-${Math.min(index, 8)}" type="button" data-open-${item.type}="${escapeHtml(item.label)}">
           <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.label)}" ${imageAttrs(640, 360)} />
           <span>${escapeHtml(item.label)}</span>
           <b>${escapeHtml(item.label)}</b>
@@ -1763,7 +1763,7 @@ function renderCatalogHome() {
   collectionTiles.innerHTML = content.catalogCollections
     .map(
       (collection, index) => `
-        <button class="theme-tile motion-enter" style="--motion-delay: ${Math.min(index, 8) * 34}ms" type="button" data-open-collection="${escapeHtml(collection.name)}">
+        <button class="theme-tile motion-enter motion-delay-${Math.min(index, 8)}" type="button" data-open-collection="${escapeHtml(collection.name)}">
           ${collection.image ? `<img class="theme-tile__image" src="${escapeHtml(collection.image)}" alt="" ${imageAttrs(520, 320)} />` : `<i data-lucide="${escapeHtml(collection.icon)}"></i>`}
           <span>${escapeHtml(collection.name)}</span>
         </button>
@@ -1774,7 +1774,7 @@ function renderCatalogHome() {
   holidayTiles.innerHTML = content.catalogHolidays
     .map(
       (holiday, index) => `
-        <button class="theme-tile motion-enter" style="--motion-delay: ${Math.min(index, 8) * 34}ms" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
+        <button class="theme-tile motion-enter motion-delay-${Math.min(index, 8)}" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
           ${holiday.image ? `<img class="theme-tile__image" src="${escapeHtml(holiday.image)}" alt="" ${imageAttrs(520, 320)} />` : `<i data-lucide="${escapeHtml(holiday.icon)}"></i>`}
           <span>${escapeHtml(holiday.name)}</span>
         </button>
@@ -1966,7 +1966,7 @@ function renderProducts() {
     .map((product, index) => {
       const favorite = state.favorites.has(product.id) ? " is-active" : "";
       return `
-        <article class="product-card motion-enter" style="--motion-delay: ${(index % 8) * 34}ms">
+        <article class="product-card motion-enter motion-delay-${index % 8}">
           <div class="product-card__image">
             <button class="product-card__image-button" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}">
               <img src="${product.image}" alt="${product.name}" ${imageAttrs(640, 640)} />

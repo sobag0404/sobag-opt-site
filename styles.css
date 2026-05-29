@@ -5034,6 +5034,38 @@ body.theme-night .theme-toggle__track::after {
   animation-delay: var(--motion-delay, 0ms);
 }
 
+.motion-delay-1 {
+  --motion-delay: 34ms;
+}
+
+.motion-delay-2 {
+  --motion-delay: 68ms;
+}
+
+.motion-delay-3 {
+  --motion-delay: 102ms;
+}
+
+.motion-delay-4 {
+  --motion-delay: 136ms;
+}
+
+.motion-delay-5 {
+  --motion-delay: 170ms;
+}
+
+.motion-delay-6 {
+  --motion-delay: 204ms;
+}
+
+.motion-delay-7 {
+  --motion-delay: 238ms;
+}
+
+.motion-delay-8 {
+  --motion-delay: 272ms;
+}
+
 .modal {
   transition: opacity var(--motion-base) ease;
 }

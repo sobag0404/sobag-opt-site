@@ -349,3 +349,10 @@ Latest production verification:
   - Vercel created encrypted `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `KV_REST_API_READ_ONLY_TOKEN`, `KV_URL`, and `REDIS_URL` for Production, Preview, and Development;
   - `SOBAG_ADMIN_EMAIL` and `SOBAG_ADMIN_PASSWORD` were added as encrypted variables for Production and Development;
   - Vercel CLI refused adding admin variables to Preview for the production branch `main`; production uses the configured variables.
+
+- UI refactoring pass on 2026-05-29:
+  - backup created at `C:\Users\SoBag\OneDrive\Документы\New project\backups\sobag-opt-site-backup-20260529-145930.zip` without `.env`, `.git`, `.vercel`, `node_modules`, or large QA screenshots;
+  - shared `topline`, commerce header, cart header, and footer were moved into `components/site-shell.js`;
+  - HTML pages now keep only semantic shell placeholders (`data-site-topline`, `data-site-header`, `data-site-footer`) and page-specific content;
+  - product/category animation delays were moved from inline `style` attributes to CSS classes `motion-delay-*`;
+  - `tools/autofix.mjs` now checks `components/site-shell.js`, rejects duplicated header/footer shell markup in HTML pages, and rejects inline `style=` in HTML/JS outside the shell component.

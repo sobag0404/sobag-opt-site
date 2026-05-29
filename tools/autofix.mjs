@@ -31,6 +31,26 @@ function assertNoPattern(file, pattern, message) {
   if (pattern.test(text)) throw new Error(`${file}: ${message}`);
 }
 
+function checkUiShellOwnership() {
+  const offenders = [];
+  for (const file of walk(root, (item) => item.endsWith(".html"))) {
+    const text = readFileSync(file, "utf8");
+    const relative = file.replace(root, ".");
+    if (/<header\s+class=["']topline["']/.test(text)) offenders.push(`${relative}: duplicate topline markup`);
+    if (/<nav\s+class=["']header["']/.test(text)) offenders.push(`${relative}: duplicate header markup`);
+    if (/<footer\s+class=["']footer["']/.test(text)) offenders.push(`${relative}: duplicate footer markup`);
+    if (/\sstyle=/.test(text)) offenders.push(`${relative}: inline style attribute`);
+  }
+  for (const file of walk(root, (item) => item.endsWith(".js"))) {
+    if (file.endsWith(join("components", "site-shell.js"))) continue;
+    const text = readFileSync(file, "utf8");
+    if (/\sstyle=/.test(text)) offenders.push(`${file.replace(root, ".")}: inline style attribute`);
+  }
+  if (offenders.length) {
+    throw new Error(`UI shell ownership checks failed:\n${offenders.slice(0, 20).join("\n")}`);
+  }
+}
+
 function checkImageHints() {
   const files = walk(root, (file) => file.endsWith(".html") || file.endsWith(".js"));
   const offenders = [];
@@ -55,9 +75,10 @@ function main() {
   parseJson("vercel.json");
   parseJson("data/products-live.json");
   walk(join(root, "api"), (file) => file.endsWith(".js")).forEach((file) => run("node", ["--check", file]));
-  ["app.js", "cart.js"].forEach((file) => run("node", ["--check", file]));
+  ["app.js", "cart.js", "components/site-shell.js"].forEach((file) => run("node", ["--check", file]));
   assertNoPattern("app.js", /products-live\.json\?v=\$\{Date\.now\(\)\}/, "нельзя отключать кэш каталога через Date.now()");
   assertNoPattern("cart.js", /password:\s*["'`]/, "пароли не должны появляться в cart.js");
+  checkUiShellOwnership();
   checkImageHints();
   console.log("AutoFix: checks passed");
 }
