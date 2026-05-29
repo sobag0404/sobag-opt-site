@@ -386,3 +386,7 @@ Latest production verification:
   - primary production domain is now `https://sobag-shop.online/`; `https://sobag-opt-site.vercel.app/` remains the fallback Vercel domain;
   - latest functional commit before handoff docs update is `6c7eb4a Prevent same-page navigation flicker`;
   - if work continues on a different device over the weekend, repeat handoff prep there before switching back.
+  - handoff docs and ZIP were committed and pushed in `11bf9b8 Refresh device handoff package`;
+  - rebuilt `project-ai-handoff-latest.zip` from `docs/ai-handoff`; size is 23,251 bytes; the ZIP is tracked in GitHub but intentionally excluded from Vercel by `.vercelignore`, so a public Vercel 404 for this ZIP is expected;
+  - production deploy after handoff docs succeeded and was aliased to `https://sobag-shop.online/`;
+  - `https://sobag-shop.online/api/health` returned storage ready, and published handoff markdown on Vercel contains the current production domain and latest functional commit.
