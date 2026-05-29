@@ -175,6 +175,27 @@ function setFieldError(form, name, message) {
   return false;
 }
 
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {
+    method: options.method || "GET",
+    credentials: "same-origin",
+    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.message || "Backend недоступен.");
+    error.status = response.status;
+    error.code = data.error;
+    throw error;
+  }
+  return data;
+}
+
+function isBackendUnavailable(error) {
+  return error?.status === 503 || error?.code === "storage_not_configured" || error instanceof TypeError;
+}
+
 function initFormEnhancements(root = document) {
   root.querySelectorAll('input[name="name"]').forEach((field) => field.setAttribute("autocomplete", "name"));
   root.querySelectorAll('input[name="email"]').forEach((field) => field.setAttribute("autocomplete", "email"));
@@ -583,7 +604,7 @@ document.querySelector("#promoForm").addEventListener("submit", (event) => {
   renderCart();
 });
 
-document.querySelector("#checkoutForm").addEventListener("submit", (event) => {
+document.querySelector("#checkoutForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   clearFormErrors(event.target);
   const totals = getTotals();
@@ -616,6 +637,33 @@ document.querySelector("#checkoutForm").addEventListener("submit", (event) => {
     total: totals.total,
     promo: state.promo,
   };
+  try {
+    const result = await apiRequest("/api/orders", {
+      method: "POST",
+      body: {
+        customer: order.customer,
+        items: totals.lines,
+        total: totals.total,
+        promo: state.promo,
+        source: "cart",
+      },
+    });
+    if (result.order) {
+      localStorage.setItem("sobag.lastOrder", JSON.stringify(result.order));
+      saveOrderRecord(result.order);
+    }
+    state.cart.clear();
+    closeCheckout();
+    event.target.reset();
+    renderCart();
+    showToast("Заказ отправлен и сохранен на сервере.");
+    return;
+  } catch (error) {
+    if (!isBackendUnavailable(error)) {
+      showToast(error.message || "Не удалось отправить заказ.");
+      return;
+    }
+  }
   localStorage.setItem("sobag.lastOrder", JSON.stringify(order));
   saveOrderRecord(order);
   state.cart.clear();

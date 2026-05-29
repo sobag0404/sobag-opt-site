@@ -784,6 +784,88 @@ function setFieldError(form, name, message) {
   return false;
 }
 
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {
+    method: options.method || "GET",
+    credentials: "same-origin",
+    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.message || "Backend недоступен.");
+    error.status = response.status;
+    error.code = data.error;
+    throw error;
+  }
+  return data;
+}
+
+function isBackendUnavailable(error) {
+  return error?.status === 503 || error?.code === "storage_not_configured" || error instanceof TypeError;
+}
+
+function saveServerUserProfile(profile) {
+  if (!profile?.email) return;
+  const users = getUsers();
+  users[profile.email] = {
+    ...(users[profile.email] || {}),
+    ...profile,
+    password: "__server__",
+    orders: profile.orders || users[profile.email]?.orders || [],
+  };
+  saveUsers(users);
+  state.currentUser = profile.email;
+  localStorage.setItem(STORAGE.user, profile.email);
+}
+
+function mirrorServerOrder(order, userEmail = state.currentUser) {
+  if (!order?.id) return;
+  const orders = getOrders().filter((item) => item.id !== order.id);
+  saveOrders([order, ...orders]);
+  const users = getUsers();
+  if (userEmail && users[userEmail]) {
+    users[userEmail].orders = [order, ...(users[userEmail].orders || []).filter((item) => item.id !== order.id)];
+    saveUsers(users);
+  }
+}
+
+async function loadBackendAccountData() {
+  try {
+    const session = await apiRequest("/api/auth/me");
+    if (!session.user) return false;
+    saveServerUserProfile(session.user);
+    if (["admin", "manager"].includes(session.user.role)) {
+      const ordersData = await apiRequest("/api/admin/orders");
+      if (Array.isArray(ordersData.orders)) saveOrders(ordersData.orders);
+    }
+    if (session.user.role === "admin") {
+      const usersData = await apiRequest("/api/admin/users");
+      if (Array.isArray(usersData.users)) {
+        const users = getUsers();
+        usersData.users.forEach((user) => {
+          users[user.email] = { ...(users[user.email] || {}), ...user, password: users[user.email]?.password || "__server__" };
+        });
+        saveUsers(users);
+      }
+    }
+    return true;
+  } catch (error) {
+    if (!isBackendUnavailable(error)) console.warn(error);
+    return false;
+  }
+}
+
+async function refreshAccountFromBackend() {
+  const changed = await loadBackendAccountData();
+  const modal = document.querySelector("#accountModal");
+  if (!changed || !modal) return;
+  modal.remove();
+  document.body.insertAdjacentHTML("beforeend", accountModalHtml());
+  activateModal(document.querySelector("#accountModal"));
+  if (window.lucide) window.lucide.createIcons();
+}
+
 function initFormEnhancements(root = document) {
   root.querySelectorAll('input[name="name"]').forEach((field) => field.setAttribute("autocomplete", "name"));
   root.querySelectorAll('input[name="company"]').forEach((field) => field.setAttribute("autocomplete", "organization"));
@@ -2300,6 +2382,7 @@ function openAccount() {
   document.body.insertAdjacentHTML("beforeend", accountModalHtml());
   activateModal(document.querySelector("#accountModal"));
   if (window.lucide) window.lucide.createIcons();
+  refreshAccountFromBackend();
 }
 
 function escapeHtml(value) {
@@ -3072,7 +3155,7 @@ function closeModal() {
   lastFocusedElement = null;
 }
 
-function submitOrder(form) {
+async function submitOrder(form) {
   clearFormErrors(form);
   if (state.cart.size === 0) {
     showToast("Сначала добавьте товары в корзину.");
@@ -3105,6 +3188,28 @@ function submitOrder(form) {
     email: data.email || user?.email || "",
     comment: data.comment || "",
   };
+  try {
+    const result = await apiRequest("/api/orders", {
+      method: "POST",
+      body: {
+        customer,
+        items: [...state.cart.values()],
+        total: totals.total,
+        source: "catalog",
+      },
+    });
+    mirrorServerOrder(result.order, state.currentUser);
+    form.reset();
+    state.cart.clear();
+    renderCart();
+    showToast("Заказ отправлен и сохранен на сервере.");
+    return;
+  } catch (error) {
+    if (!isBackendUnavailable(error)) {
+      showToast(error.message || "Не удалось отправить заказ.");
+      return;
+    }
+  }
   saveOrderRecord(
     {
       id: `SO-${Date.now().toString().slice(-6)}`,
@@ -3138,8 +3243,14 @@ function boot() {
   initActualSlider();
   loadPublishedProducts();
   initFormEnhancements();
+  loadBackendAccountData().then((changed) => {
+    if (!changed) return;
+    loadCart();
+    renderCart();
+    renderAccountButton();
+  });
 
-  document.addEventListener("click", (event) => {
+  document.addEventListener("click", async (event) => {
     if (event.target.dataset.closeModal !== undefined) {
       closeModal();
       return;
@@ -3253,6 +3364,11 @@ function boot() {
       showToast("Корзина очищена.");
     }
     if (button.dataset.logout !== undefined) {
+      try {
+        await apiRequest("/api/auth/logout", { method: "POST" });
+      } catch (error) {
+        if (!isBackendUnavailable(error)) console.warn(error);
+      }
       localStorage.removeItem(STORAGE.user);
       state.currentUser = "";
       loadCart();
@@ -3261,14 +3377,42 @@ function boot() {
       renderAccountButton();
     }
     if (button.dataset.orderStatus) {
-      updateOrderStatus(button.dataset.orderStatus, button.dataset.statusValue || "new");
+      const status = button.dataset.statusValue || "new";
+      try {
+        await apiRequest("/api/admin/orders", { method: "PATCH", body: { id: button.dataset.orderStatus, status } });
+        await loadBackendAccountData();
+      } catch (error) {
+        if (!isBackendUnavailable(error)) {
+          showToast(error.message || "Не удалось обновить статус заказа.");
+          return;
+        }
+        updateOrderStatus(button.dataset.orderStatus, status);
+      }
       closeModal();
       openAccount();
       showToast("Статус заказа обновлен.");
       return;
     }
     if (button.dataset.setRole) {
-      const updated = setUserRole(button.dataset.setRole, button.dataset.roleValue || "buyer");
+      let updated = false;
+      try {
+        const result = await apiRequest("/api/admin/users", {
+          method: "PATCH",
+          body: { email: button.dataset.setRole, role: button.dataset.roleValue || "buyer" },
+        });
+        if (result.user) {
+          const users = getUsers();
+          users[result.user.email] = { ...(users[result.user.email] || {}), ...result.user, password: users[result.user.email]?.password || "__server__" };
+          saveUsers(users);
+          updated = true;
+        }
+      } catch (error) {
+        if (!isBackendUnavailable(error)) {
+          showToast(error.message || "Не удалось обновить роль.");
+          return;
+        }
+        updated = setUserRole(button.dataset.setRole, button.dataset.roleValue || "buyer");
+      }
       closeModal();
       openAccount();
       showToast(updated ? "Роль пользователя обновлена." : "Роль пользователя не изменена.");
@@ -3354,10 +3498,10 @@ function boot() {
     if (event.target.dataset.contentImage) readContentFile(event.target);
   });
 
-  document.addEventListener("submit", (event) => {
+  document.addEventListener("submit", async (event) => {
     if (event.target.id === "requestForm") {
       event.preventDefault();
-      submitOrder(event.target);
+      await submitOrder(event.target);
     }
     if (event.target.id === "briefForm") {
       event.preventDefault();
@@ -3410,6 +3554,32 @@ function boot() {
           showToast("Этот email уже зарегистрирован в системе.");
           return;
         }
+        try {
+          const result = await apiRequest("/api/auth/register", {
+            method: "POST",
+            body: {
+              email,
+              password,
+              name,
+              phone,
+              personalDataConsent: data.personalDataConsent === "on",
+            },
+          });
+          saveServerUserProfile(result.user);
+          await loadBackendAccountData();
+          loadCart();
+          closeModal();
+          renderCart();
+          renderAccountButton();
+          showToast("Вы зарегистрированы. Аккаунт сохранен на сервере.");
+          return;
+        } catch (error) {
+          if (!isBackendUnavailable(error)) {
+            setFieldError(event.target, error.code === "email_exists" ? "email" : "password", error.message);
+            showToast(error.message);
+            return;
+          }
+        }
         users[email] = {
           email,
           password,
@@ -3422,6 +3592,25 @@ function boot() {
           consentTextVersion: "personal-data-consent-2026-05-29",
         };
         saveUsers(users);
+      }
+      if (submitter.dataset.authMode !== "register") {
+        try {
+          const result = await apiRequest("/api/auth/login", { method: "POST", body: { email, password } });
+          saveServerUserProfile(result.user);
+          await loadBackendAccountData();
+          loadCart();
+          closeModal();
+          renderCart();
+          renderAccountButton();
+          showToast("Вы вошли. Серверная сессия активна.");
+          return;
+        } catch (error) {
+          if (!isBackendUnavailable(error)) {
+            setFieldError(event.target, "password", error.message);
+            showToast(error.message);
+            return;
+          }
+        }
       }
       const userKey = existingEmailKey || email;
       if (!users[userKey] || users[userKey].password !== password) {

@@ -84,7 +84,14 @@ Recently completed:
   - product catalog JSON no longer uses timestamp cache busting, while Vercel gives browser cache + stale revalidation to assets and revalidation to `products-live.json`;
   - registration, request, and checkout forms now use autocomplete and inline field errors;
   - account/product/admin/checkout modals have Escape close, focus management, focus trap, and better dialog labels.
-- Security/backend item 5 is still a separate required phase before real launch: move passwords, roles, orders, and personal data out of `localStorage` into backend/database and add production security controls.
+- Security/backend item 5 started:
+  - Added Vercel API layer in `api/` for auth, HttpOnly sessions, orders, admin order status updates, and admin user role updates.
+  - Server passwords are hashed with PBKDF2; server sessions are stored in Upstash Redis/Vercel KV-compatible storage.
+  - Added `docs/backend-security.md` with required Vercel env vars. Do not commit secrets.
+  - Frontend now tries server API first for auth/order/role/status flows, then falls back to prototype `localStorage` if backend storage is not configured.
+  - Added `npm run check` / `npm run autofix` and GitHub Actions `autofix-check` on push, PR, and weekly schedule.
+  - Added baseline security headers in `vercel.json`.
+  - Remaining production task: connect Upstash Redis/Vercel KV env vars and set `SOBAG_ADMIN_EMAIL` / `SOBAG_ADMIN_PASSWORD` in Vercel.
 - Theme toggle labels now say `ночная тема` and `дневная тема` instead of `ночная схема` / `дневная схема`.
 - Registration now blocks duplicate emails and requires name + phone for new users.
 - User profiles store phone numbers and can fill checkout contact fields from the profile.

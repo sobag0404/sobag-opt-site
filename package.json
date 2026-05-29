@@ -1,0 +1,11 @@
+{
+  "name": "sobag-opt-site",
+  "private": true,
+  "scripts": {
+    "check": "node tools/autofix.mjs --check",
+    "autofix": "node tools/autofix.mjs --write"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.38.0"
+  }
+}
