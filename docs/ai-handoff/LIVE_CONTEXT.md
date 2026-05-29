@@ -310,3 +310,6 @@ Latest production verification:
 - Shared footer was expanded into columns (`Компания`, `Клиентам`, `Партнерам`, `Контакты`) across pages, including the cart page.
 - Registration now requires a personal-data consent checkbox only when registering, not when logging in.
 - Draft consent files were added at `assets/legal/personal-data-consent.html` and `assets/legal/personal-data-consent.pdf`; this is a draft template and needs legal review before production use.
+- Follow-up on 2026-05-29:
+  - footer links that resolve to PDF documents now render with `target="_blank" rel="noopener"` even when generated from admin-editable footer text;
+  - catalog section state is now synced into the URL on category/collection/holiday/search changes, so refresh keeps the same catalog section via `?category=...`, `?collection=...`, `?holiday=...`, and `?q=...`.

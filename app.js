@@ -647,9 +647,24 @@ function renderFooterLinks(selector, value) {
       .split("|")
       .map((item) => item.trim())
       .filter(Boolean)
-      .map((item) => `<a href="${footerLinkUrl(item)}">${escapeHtml(item)}</a>`)
+      .map((item) => {
+        const href = footerLinkUrl(item);
+        const externalAttrs = href.endsWith(".pdf") ? ' target="_blank" rel="noopener"' : "";
+        return `<a href="${href}"${externalAttrs}>${escapeHtml(item)}</a>`;
+      })
       .join("");
   });
+}
+
+function syncCatalogRoute() {
+  if (!catalogListing || document.body.classList.contains("home-page")) return;
+  const params = new URLSearchParams();
+  if (state.selectedCategory) params.set("category", state.selectedCategory);
+  if (state.selectedCollection) params.set("collection", state.selectedCollection);
+  if (state.selectedHoliday) params.set("holiday", state.selectedHoliday);
+  if (state.search.trim()) params.set("q", state.search.trim());
+  const nextUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+  window.history.replaceState({}, "", nextUrl);
 }
 
 function updateYandexMap(address) {
@@ -1604,6 +1619,7 @@ function openCatalogCategory(category) {
   state.selectedCollection = "";
   state.selectedHoliday = "";
   state.filters.category.clear();
+  syncCatalogRoute();
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -1619,6 +1635,7 @@ function openCatalogCollection(collection) {
   state.selectedCollection = collection;
   state.selectedHoliday = "";
   state.filters.collection.clear();
+  syncCatalogRoute();
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -1634,6 +1651,7 @@ function openCatalogHoliday(holiday) {
   state.selectedCollection = "";
   state.selectedHoliday = holiday;
   state.filters.holiday.clear();
+  syncCatalogRoute();
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -1667,6 +1685,7 @@ function backToCatalogHome() {
   state.search = "";
   if (searchInput) searchInput.value = "";
   Object.values(state.filters).forEach((bucket) => bucket.clear());
+  syncCatalogRoute();
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -3141,6 +3160,7 @@ function boot() {
   document.addEventListener("input", (event) => {
     if (event.target.id === "searchInput") {
       state.search = event.target.value;
+      syncCatalogRoute();
       renderCatalogShell();
       renderProducts();
     }

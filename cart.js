@@ -205,7 +205,11 @@ function renderFooterLinks(selector, value) {
       .split("|")
       .map((item) => item.trim())
       .filter(Boolean)
-      .map((item) => `<a href="${footerLinkUrl(item)}">${escapeHtml(item)}</a>`)
+      .map((item) => {
+        const href = footerLinkUrl(item);
+        const externalAttrs = href.endsWith(".pdf") ? ' target="_blank" rel="noopener"' : "";
+        return `<a href="${href}"${externalAttrs}>${escapeHtml(item)}</a>`;
+      })
       .join("");
   });
 }
