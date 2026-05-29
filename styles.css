@@ -4075,28 +4075,6 @@ body.theme-night .copy-sku-button:hover {
   }
 }
 
-/* Multi-page split: each static page keeps shared markup but shows only its main scenario. */
-.home-page .catalog-section,
-.home-page .custom,
-.home-page .marketplaces,
-.catalog-page .hero,
-.catalog-page .benefits,
-.catalog-page .wholesale,
-.catalog-page .custom,
-.catalog-page .marketplaces,
-.custom-page .hero,
-.custom-page .benefits,
-.custom-page .catalog-section,
-.custom-page .wholesale,
-.custom-page .marketplaces,
-.marketplaces-page .hero,
-.marketplaces-page .benefits,
-.marketplaces-page .catalog-section,
-.marketplaces-page .wholesale,
-.marketplaces-page .custom {
-  display: none;
-}
-
 .page-back {
   display: flex;
   align-items: center;

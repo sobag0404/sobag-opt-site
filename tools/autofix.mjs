@@ -51,6 +51,32 @@ function checkUiShellOwnership() {
   }
 }
 
+function checkPageSectionOwnership() {
+  const expected = {
+    "index.html": ["hero", "benefits", "wholesale"],
+    "catalog.html": ["catalog-section"],
+    "favorites.html": ["catalog-section"],
+    "custom.html": ["custom"],
+    "marketplaces.html": ["marketplaces"],
+    "about.html": [],
+    "contacts.html": [],
+    "cart.html": [],
+  };
+  const scenarioClasses = new Set(["hero", "benefits", "catalog-section", "wholesale", "marketplaces", "custom"]);
+  const offenders = [];
+  Object.entries(expected).forEach(([file, allowed]) => {
+    const text = readFileSync(join(root, file), "utf8");
+    const found = [...text.matchAll(/<section\s+class=["']([^"']+)["']/g)]
+      .flatMap((match) => match[1].split(/\s+/))
+      .filter((className) => scenarioClasses.has(className));
+    found.filter((className) => !allowed.includes(className)).forEach((className) => offenders.push(`${file}: unexpected scenario section ${className}`));
+    allowed.filter((className) => !found.includes(className)).forEach((className) => offenders.push(`${file}: missing scenario section ${className}`));
+  });
+  if (offenders.length) {
+    throw new Error(`Page section ownership checks failed:\n${offenders.slice(0, 20).join("\n")}`);
+  }
+}
+
 function checkImageHints() {
   const files = walk(root, (file) => file.endsWith(".html") || file.endsWith(".js"));
   const offenders = [];
@@ -79,6 +105,7 @@ function main() {
   assertNoPattern("app.js", /products-live\.json\?v=\$\{Date\.now\(\)\}/, "нельзя отключать кэш каталога через Date.now()");
   assertNoPattern("cart.js", /password:\s*["'`]/, "пароли не должны появляться в cart.js");
   checkUiShellOwnership();
+  checkPageSectionOwnership();
   checkImageHints();
   console.log("AutoFix: checks passed");
 }

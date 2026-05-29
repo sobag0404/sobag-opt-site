@@ -356,3 +356,9 @@ Latest production verification:
   - HTML pages now keep only semantic shell placeholders (`data-site-topline`, `data-site-header`, `data-site-footer`) and page-specific content;
   - product/category animation delays were moved from inline `style` attributes to CSS classes `motion-delay-*`;
   - `tools/autofix.mjs` now checks `components/site-shell.js`, rejects duplicated header/footer shell markup in HTML pages, and rejects inline `style=` in HTML/JS outside the shell component.
+
+- UI page split pass on 2026-05-29:
+  - `index.html`, `catalog.html`, `favorites.html`, `custom.html`, and `marketplaces.html` were split into true page-specific composition files instead of carrying repeated sections hidden by CSS;
+  - the old cross-page `display: none` routing layer was removed from `styles.css`;
+  - `tools/autofix.mjs` now verifies section ownership for the large pages so hidden duplicate sections are not accidentally reintroduced;
+  - local visual QA was run for home, catalog, favorites, custom print, marketplaces, and mobile catalog via Playwright screenshots under ignored `output/playwright/`.
