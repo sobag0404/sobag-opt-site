@@ -2400,7 +2400,7 @@ h3 {
   position: absolute;
   z-index: 3;
   top: 12px;
-  right: 24px;
+  right: max(20px, calc((100vw - 1440px) / 2));
   bottom: auto;
   width: min(480px, calc(100vw - 48px));
   grid-template-columns: repeat(3, 1fr);
@@ -3228,8 +3228,9 @@ main {
 .hero__actual {
   position: absolute;
   z-index: 2;
-  top: 214px;
-  right: 24px;
+  top: auto;
+  right: max(20px, calc((100vw - 1440px) / 2));
+  bottom: 56px;
   display: grid;
   width: min(480px, calc(100vw - 48px));
   color: var(--canvas);
@@ -3435,6 +3436,7 @@ main {
   .hero__actual {
     top: 106px;
     right: 16px;
+    bottom: auto;
     width: min(340px, calc(100vw - 32px));
   }
 
