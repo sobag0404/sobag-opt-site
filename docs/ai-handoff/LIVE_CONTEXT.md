@@ -313,3 +313,8 @@ Latest production verification:
 - Follow-up on 2026-05-29:
   - footer links that resolve to PDF documents now render with `target="_blank" rel="noopener"` even when generated from admin-editable footer text;
   - catalog section state is now synced into the URL on category/collection/holiday/search changes, so refresh keeps the same catalog section via `?category=...`, `?collection=...`, `?holiday=...`, and `?q=...`.
+- Home benefits copy update on 2026-05-29:
+  - first benefit became `Скидка от суммы заказа`: basket total controls discount and recalculates immediately;
+  - production/marketplace benefits were rewritten;
+  - fourth benefit became `Прямая связь`: personal manager and direct communication with production;
+  - `normalizeSiteContent()` softly migrates old default benefit phrases from saved localStorage content to the new copy.

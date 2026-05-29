@@ -171,14 +171,14 @@ const defaultSiteContent = {
   heroSpecTwoText: "тестовый срок запуска партии",
   heroSpecThreeValue: "18%",
   heroSpecThreeText: "максимальная скидка по шкале",
-  benefitOneTitle: "Скидки по количеству",
-  benefitOneText: "Чем больше штук в корзине, тем ниже цена. Уровень считается сразу.",
+  benefitOneTitle: "Скидка от суммы заказа",
+  benefitOneText: "Чем больше сумма в корзине, тем ниже цена. Скидка пересчитывается сразу.",
   benefitTwoTitle: "Свое производство",
-  benefitTwoText: "Печать, пошив, упаковка и подготовка к отгрузке в одном процессе.",
-  benefitThreeTitle: "Под маркетплейсы",
-  benefitThreeText: "Штрихкоды, упаковка, комплектация и поставки партиями.",
-  benefitFourTitle: "Корзина без оплаты",
-  benefitFourText: "Покупатель собирает корзину, менеджер уточняет наличие и условия.",
+  benefitTwoText: "Печать, пошив, упаковка и подготовка к отгрузке в одном месте.",
+  benefitThreeTitle: "Для маркетплейсов",
+  benefitThreeText: "Производство, упаковка, штрихкоды, комплектация и поставки партиями.",
+  benefitFourTitle: "Прямая связь",
+  benefitFourText: "Личный менеджер и общение напрямую с производством по каждому заказу.",
   catalogTitleDefault: "Каталог продукции",
   catalogBackButton: "категории",
   catalogHomeTitle: "Выберите категорию",
@@ -567,14 +567,27 @@ function normalizeActualSlides(items) {
 
 function normalizeSiteContent(content = {}) {
   const heroImages = Array.isArray(content.heroImages) && content.heroImages.length ? content.heroImages : defaultSiteContent.heroImages;
+  const migrated = { ...content };
+  const benefitReplacements = {
+    benefitOneTitle: ["Скидки по количеству", defaultSiteContent.benefitOneTitle],
+    benefitOneText: ["Чем больше штук в корзине, тем ниже цена. Уровень считается сразу.", defaultSiteContent.benefitOneText],
+    benefitTwoText: ["Печать, пошив, упаковка и подготовка к отгрузке в одном процессе.", defaultSiteContent.benefitTwoText],
+    benefitThreeTitle: ["Под маркетплейсы", defaultSiteContent.benefitThreeTitle],
+    benefitThreeText: ["Штрихкоды, упаковка, комплектация и поставки партиями.", defaultSiteContent.benefitThreeText],
+    benefitFourTitle: ["Корзина без оплаты", defaultSiteContent.benefitFourTitle],
+    benefitFourText: ["Покупатель собирает корзину, менеджер уточняет наличие и условия.", defaultSiteContent.benefitFourText],
+  };
+  Object.entries(benefitReplacements).forEach(([key, [oldValue, newValue]]) => {
+    if (migrated[key] === oldValue) migrated[key] = newValue;
+  });
   return {
     ...defaultSiteContent,
-    ...content,
+    ...migrated,
     heroImages: [0, 1, 2].map((index) => replacePrototypeImage(heroImages[index] || defaultSiteContent.heroImages[index], index)),
-    catalogCategories: normalizeCatalogList(content.catalogCategories, defaultSiteContent.catalogCategories, { description: true }),
-    catalogCollections: normalizeCatalogList(content.catalogCollections, defaultSiteContent.catalogCollections),
-    catalogHolidays: normalizeCatalogList(content.catalogHolidays, defaultSiteContent.catalogHolidays),
-    actualSlides: normalizeActualSlides(content.actualSlides),
+    catalogCategories: normalizeCatalogList(migrated.catalogCategories, defaultSiteContent.catalogCategories, { description: true }),
+    catalogCollections: normalizeCatalogList(migrated.catalogCollections, defaultSiteContent.catalogCollections),
+    catalogHolidays: normalizeCatalogList(migrated.catalogHolidays, defaultSiteContent.catalogHolidays),
+    actualSlides: normalizeActualSlides(migrated.actualSlides),
   };
 }
 
