@@ -166,11 +166,11 @@ const defaultSiteContent = {
   heroCustomButton: "изделия с вашим принтом",
   actualTitle: "Актуально",
   heroSpecOneValue: "30 000 ₽",
-  heroSpecOneText: "минимальная сумма корзины",
+  heroSpecOneText: "минимальная сумма заказа",
   heroSpecTwoValue: "7 дней",
-  heroSpecTwoText: "тестовый срок запуска партии",
-  heroSpecThreeValue: "18%",
-  heroSpecThreeText: "максимальная скидка по шкале",
+  heroSpecTwoText: "тестовый запуск партии",
+  heroSpecThreeValue: "до 18%",
+  heroSpecThreeText: "скидка при заказе",
   benefitOneTitle: "Скидка от суммы заказа",
   benefitOneText: "Чем больше сумма в корзине, тем ниже цена. Скидка пересчитывается сразу.",
   benefitTwoTitle: "Свое производство",
@@ -569,6 +569,10 @@ function normalizeSiteContent(content = {}) {
   const heroImages = Array.isArray(content.heroImages) && content.heroImages.length ? content.heroImages : defaultSiteContent.heroImages;
   const migrated = { ...content };
   const benefitReplacements = {
+    heroSpecOneText: ["минимальная сумма корзины", defaultSiteContent.heroSpecOneText],
+    heroSpecTwoText: ["тестовый срок запуска партии", defaultSiteContent.heroSpecTwoText],
+    heroSpecThreeValue: ["18%", defaultSiteContent.heroSpecThreeValue],
+    heroSpecThreeText: ["максимальная скидка по шкале", defaultSiteContent.heroSpecThreeText],
     benefitOneTitle: ["Скидки по количеству", defaultSiteContent.benefitOneTitle],
     benefitOneText: ["Чем больше штук в корзине, тем ниже цена. Уровень считается сразу.", defaultSiteContent.benefitOneText],
     benefitTwoText: ["Печать, пошив, упаковка и подготовка к отгрузке в одном процессе.", defaultSiteContent.benefitTwoText],

@@ -2395,9 +2395,11 @@ h3 {
 
 .hero__specs {
   position: absolute;
-  right: 24px;
-  bottom: 24px;
-  width: min(420px, calc(100% - 48px));
+  z-index: 3;
+  top: 28px;
+  right: max(12px, calc((100vw - 1440px) / 2 + 12px));
+  bottom: auto;
+  width: min(480px, calc(100vw - 48px));
   grid-template-columns: repeat(3, 1fr);
   background: rgba(255, 255, 255, 0.92);
   border: 0;
@@ -2731,6 +2733,7 @@ h3 {
   .hero__specs {
     position: relative;
     right: auto;
+    top: auto;
     bottom: auto;
     width: 100%;
     margin-top: 24px;
@@ -2763,7 +2766,8 @@ h3 {
   }
 
   .hero__grid {
-    padding: 52px 0 28px;
+    position: static;
+    padding: 304px 0 28px;
   }
 
   .container {
@@ -2785,9 +2789,14 @@ h3 {
   }
 
   .hero__specs {
+    position: absolute;
+    top: 14px;
+    right: 12px;
+    left: 12px;
+    width: auto;
     grid-template-columns: repeat(3, 1fr);
     gap: 0;
-    margin-top: 18px;
+    margin-top: 0;
   }
 
   .hero__specs article {
@@ -3216,7 +3225,7 @@ main {
 .hero__actual {
   position: absolute;
   z-index: 2;
-  top: 28px;
+  top: 152px;
   right: max(12px, calc((100vw - 1440px) / 2 + 12px));
   display: grid;
   width: min(480px, calc(100vw - 48px));
@@ -3421,7 +3430,7 @@ main {
   }
 
   .hero__actual {
-    top: 16px;
+    top: 106px;
     right: 16px;
     width: min(340px, calc(100vw - 32px));
   }

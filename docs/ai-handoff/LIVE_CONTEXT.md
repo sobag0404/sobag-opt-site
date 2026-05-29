@@ -318,3 +318,7 @@ Latest production verification:
   - production/marketplace benefits were rewritten;
   - fourth benefit became `Прямая связь`: personal manager and direct communication with production;
   - `normalizeSiteContent()` softly migrates old default benefit phrases from saved localStorage content to the new copy.
+- Hero stats swap on 2026-05-29:
+  - hero stats block was moved up into the previous `Актуально` position, while `Актуально` was moved lower on the right;
+  - hero stats copy now reads `30 000 ₽ / минимальная сумма заказа`, `7 дней / тестовый запуск партии`, `до 18% / скидка при заказе`;
+  - `normalizeSiteContent()` softly migrates old saved hero stats strings from browser content storage.
