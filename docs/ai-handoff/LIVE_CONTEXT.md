@@ -362,3 +362,6 @@ Latest production verification:
   - the old cross-page `display: none` routing layer was removed from `styles.css`;
   - `tools/autofix.mjs` now verifies section ownership for the large pages so hidden duplicate sections are not accidentally reintroduced;
   - local visual QA was run for home, catalog, favorites, custom print, marketplaces, and mobile catalog via Playwright screenshots under ignored `output/playwright/`.
+  - committed as `b7f05c0 Split page-specific sections` and pushed to `origin/main`;
+  - production deploy succeeded on Vercel, aliased to `https://sobag-shop.online`;
+  - production QA screenshots passed for home, catalog, custom print, and marketplaces; `https://sobag-shop.online/api/health` returned `{"ok":true,"storage":"ready"}`.
