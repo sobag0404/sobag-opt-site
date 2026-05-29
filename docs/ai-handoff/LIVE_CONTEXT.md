@@ -365,3 +365,10 @@ Latest production verification:
   - committed as `b7f05c0 Split page-specific sections` and pushed to `origin/main`;
   - production deploy succeeded on Vercel, aliased to `https://sobag-shop.online`;
   - production QA screenshots passed for home, catalog, custom print, and marketplaces; `https://sobag-shop.online/api/health` returned `{"ok":true,"storage":"ready"}`.
+
+- Favorite click flicker fix on 2026-05-29:
+  - user video showed the catalog visually blinking when clicking favorite hearts;
+  - root cause: favorite clicks called `renderProducts()`, rebuilding the whole product grid, while product cards replayed `motion-enter` animations on every rebuild;
+  - catalog favorite clicks now update only matching favorite buttons and the header counter, without rebuilding the grid;
+  - product listing cards no longer receive entrance animation classes from `renderProducts()`, so filter/sort/search redraws are quieter;
+  - HTML app cache-bust was updated to `app.js?v=20260529-favorite-no-flash` so browsers fetch the fixed script.

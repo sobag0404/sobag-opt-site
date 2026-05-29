@@ -764,6 +764,17 @@ function setTextWithPop(node, value) {
   if (changed) pulseNode(node);
 }
 
+function updateFavoriteButtons(productId) {
+  const active = state.favorites.has(productId);
+  document.querySelectorAll("[data-favorite]").forEach((button) => {
+    if (button.dataset.favorite !== productId) return;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    button.title = active ? "Убрать из избранного" : "В избранное";
+  });
+  setTextWithPop(favoriteCount, state.favorites.size);
+}
+
 function ensureFieldError(field) {
   if (!field) return null;
   const form = field.closest("form");
@@ -1963,15 +1974,16 @@ function renderProducts() {
     return;
   }
   productGrid.innerHTML = list
-    .map((product, index) => {
+    .map((product) => {
       const favorite = state.favorites.has(product.id) ? " is-active" : "";
+      const favoritePressed = state.favorites.has(product.id) ? "true" : "false";
       return `
-        <article class="product-card motion-enter motion-delay-${index % 8}">
+        <article class="product-card">
           <div class="product-card__image">
             <button class="product-card__image-button" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}">
               <img src="${product.image}" alt="${product.name}" ${imageAttrs(640, 640)} />
             </button>
-            <button class="favorite-button${favorite}" type="button" title="В избранное" data-favorite="${product.id}">
+            <button class="favorite-button${favorite}" type="button" title="${favoritePressed === "true" ? "Убрать из избранного" : "В избранное"}" data-favorite="${product.id}" aria-pressed="${favoritePressed}">
               <i data-lucide="heart"></i>
             </button>
           </div>
@@ -3390,7 +3402,11 @@ function boot() {
       if (state.favorites.has(button.dataset.favorite)) state.favorites.delete(button.dataset.favorite);
       else state.favorites.add(button.dataset.favorite);
       localStorage.setItem(FAVORITES_KEY, JSON.stringify([...state.favorites]));
-      renderProducts();
+      if (isFavoritesPage && !state.favorites.has(button.dataset.favorite)) {
+        renderProducts();
+      } else {
+        updateFavoriteButtons(button.dataset.favorite);
+      }
       renderCart();
     }
     if (button.dataset.remove) {
