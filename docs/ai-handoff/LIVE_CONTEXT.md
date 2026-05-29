@@ -79,6 +79,12 @@ Recently completed:
 - Product cards now use an adaptive grid so the catalog does not collapse into very narrow cards when sidebars are visible.
 - Catalog title preservation now uses `selectedCategory`, `selectedCollection`, `selectedHoliday`, and search state instead of stale `current*` fields.
 - Home hero layout was refined after visual QA: the `30 000 ₽ / 7 дней / до 18%` stats block now follows the same right edge as the header/cart area so it does not drift past the cart at zoomed page scales; the `Актуально` slider is lower and its bottom aligns with the hero action buttons on desktop; mobile remains stacked.
+- Applied modern web guidance pass for items 1-4:
+  - image tags now include explicit dimensions, lazy/eager loading, async decoding, and priority hints for hero/active images;
+  - product catalog JSON no longer uses timestamp cache busting, while Vercel gives browser cache + stale revalidation to assets and revalidation to `products-live.json`;
+  - registration, request, and checkout forms now use autocomplete and inline field errors;
+  - account/product/admin/checkout modals have Escape close, focus management, focus trap, and better dialog labels.
+- Security/backend item 5 is still a separate required phase before real launch: move passwords, roles, orders, and personal data out of `localStorage` into backend/database and add production security controls.
 - Theme toggle labels now say `ночная тема` and `дневная тема` instead of `ночная схема` / `дневная схема`.
 - Registration now blocks duplicate emails and requires name + phone for new users.
 - User profiles store phone numbers and can fill checkout contact fields from the profile.

@@ -107,6 +107,10 @@ const nodes = {
   toast: document.querySelector("#toast"),
 };
 
+let lastFocusedElement = null;
+const focusableSelector =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 function formatMoney(value) {
   return new Intl.NumberFormat("ru-RU", {
     style: "currency",
@@ -125,6 +129,71 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+function imageAttrs(width, height, loading = "lazy") {
+  return `width="${width}" height="${height}" loading="${loading}" decoding="async"`;
+}
+
+function ensureFieldError(field) {
+  if (!field) return null;
+  const form = field.closest("form");
+  const name = field.name || field.id || "field";
+  const id = `${form?.id || "form"}-${name}-error`;
+  let error = form?.querySelector(`#${CSS.escape(id)}`);
+  if (!error) {
+    error = document.createElement("span");
+    error.className = "field-error";
+    error.id = id;
+    error.setAttribute("role", "alert");
+    const placementTarget = field.type === "checkbox" && field.closest("label") ? field.closest("label") : field;
+    placementTarget.insertAdjacentElement("afterend", error);
+  }
+  field.setAttribute("aria-describedby", id);
+  return error;
+}
+
+function clearFormErrors(form) {
+  if (!form) return;
+  form.querySelectorAll("[aria-invalid='true']").forEach((field) => field.removeAttribute("aria-invalid"));
+  form.querySelectorAll(".field-error").forEach((error) => {
+    error.textContent = "";
+    error.hidden = true;
+  });
+}
+
+function setFieldError(form, name, message) {
+  const field = form?.elements?.[name];
+  if (!field) return false;
+  const error = ensureFieldError(field);
+  field.setAttribute("aria-invalid", "true");
+  if (error) {
+    error.textContent = message;
+    error.hidden = false;
+  }
+  field.focus();
+  return false;
+}
+
+function initFormEnhancements(root = document) {
+  root.querySelectorAll('input[name="name"]').forEach((field) => field.setAttribute("autocomplete", "name"));
+  root.querySelectorAll('input[name="email"]').forEach((field) => field.setAttribute("autocomplete", "email"));
+  root.querySelectorAll('input[name="phone"]').forEach((field) => field.setAttribute("autocomplete", "tel"));
+}
+
+function trapCheckoutFocus(event) {
+  if (!nodes.checkoutModal?.classList.contains("is-visible") || event.key !== "Tab") return;
+  const focusable = [...nodes.checkoutModal.querySelectorAll(focusableSelector)].filter((node) => node.offsetParent !== null);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 function getSiteContent() {
@@ -254,7 +323,7 @@ function renderCartContent() {
   const brandName = document.querySelector(".brand__name");
   if (brandMark) {
     brandMark.innerHTML = content.brandLogo
-      ? `<img src="${content.brandLogo}" alt="" />`
+      ? `<img src="${content.brandLogo}" alt="" width="54" height="54" decoding="async" />`
       : String(content.brandName || "S").trim().charAt(0);
   }
   if (brandName) brandName.innerHTML = brandNameHtml(content.brandName);
@@ -367,7 +436,7 @@ function renderCart() {
       (line) => `
         <article class="cart-page-line">
           <div class="cart-page-line__media">
-            <img src="${line.productImage || "assets/production-workshop-1.png"}" alt="${line.productName}" />
+            <img src="${line.productImage || "assets/production-workshop-1.png"}" alt="${line.productName}" ${imageAttrs(180, 180)} />
           </div>
           <div class="cart-page-line__body">
             <span>${line.variant.sku}</span>
@@ -435,6 +504,11 @@ function openCheckout() {
   }
   nodes.checkoutModal.classList.add("is-visible");
   document.body.classList.add("modal-open");
+  lastFocusedElement = document.activeElement;
+  initFormEnhancements(nodes.checkoutModal);
+  requestAnimationFrame(() => {
+    nodes.checkoutModal.querySelector("input, button")?.focus();
+  });
 }
 
 function fillCheckoutFromProfile() {
@@ -453,6 +527,9 @@ function fillCheckoutFromProfile() {
 function closeCheckout() {
   nodes.checkoutModal.classList.remove("is-visible");
   document.body.classList.remove("modal-open");
+  clearFormErrors(document.querySelector("#checkoutForm"));
+  if (lastFocusedElement && typeof lastFocusedElement.focus === "function") lastFocusedElement.focus();
+  lastFocusedElement = null;
 }
 
 document.addEventListener("click", (event) => {
@@ -474,6 +551,16 @@ document.addEventListener("click", (event) => {
 
 document.addEventListener("input", (event) => {
   if (event.target.dataset.qtyInput) changeQty(event.target.dataset.qtyInput, Number(event.target.value || 1));
+});
+
+document.addEventListener("keydown", (event) => {
+  if (!nodes.checkoutModal?.classList.contains("is-visible")) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeCheckout();
+    return;
+  }
+  trapCheckoutFocus(event);
 });
 
 document.querySelector("#promoForm").addEventListener("submit", (event) => {
@@ -498,11 +585,33 @@ document.querySelector("#promoForm").addEventListener("submit", (event) => {
 
 document.querySelector("#checkoutForm").addEventListener("submit", (event) => {
   event.preventDefault();
+  clearFormErrors(event.target);
   const totals = getTotals();
+  const data = Object.fromEntries(new FormData(event.target).entries());
+  if (!String(data.name || "").trim()) {
+    setFieldError(event.target, "name", "Укажите имя.");
+    return;
+  }
+  if (!String(data.email || "").trim()) {
+    setFieldError(event.target, "email", "Укажите email.");
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.email || "").trim())) {
+    setFieldError(event.target, "email", "Проверьте формат email.");
+    return;
+  }
+  if (!String(data.phone || "").trim()) {
+    setFieldError(event.target, "phone", "Укажите телефон.");
+    return;
+  }
+  if (data.consent !== "on") {
+    setFieldError(event.target, "consent", "Подтвердите согласие на обработку персональных данных.");
+    return;
+  }
   const order = {
     id: `SO-${Date.now().toString().slice(-6)}`,
     date: new Date().toLocaleString("ru-RU"),
-    customer: Object.fromEntries(new FormData(event.target).entries()),
+    customer: data,
     items: totals.lines,
     total: totals.total,
     promo: state.promo,
@@ -517,6 +626,7 @@ document.querySelector("#checkoutForm").addEventListener("submit", (event) => {
 });
 
 renderCartContent();
+initFormEnhancements();
 applyTheme(localStorage.getItem(THEME_KEY) || "default");
 renderCart();
 if (window.lucide) window.lucide.createIcons();

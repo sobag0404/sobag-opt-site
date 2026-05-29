@@ -1219,6 +1219,26 @@ h3 {
   text-underline-offset: 3px;
 }
 
+.field-error {
+  display: block;
+  margin-top: -4px;
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.field-error[hidden] {
+  display: none;
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"] {
+  border-color: #b42318 !important;
+  outline: 2px solid rgba(180, 35, 24, 0.18);
+}
+
 .request-form textarea {
   min-height: 96px;
   padding-top: 14px;

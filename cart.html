@@ -103,17 +103,22 @@
           <p class="eyebrow">Оформление</p>
           <h2 id="checkoutTitle">Контакты покупателя</h2>
         </div>
-        <form class="checkout-form" id="checkoutForm">
+        <form class="checkout-form" id="checkoutForm" novalidate>
           <button class="ghost-button checkout-profile-button" id="useProfileButton" type="button">
             <i data-lucide="user-check"></i>
             Использовать информацию из профиля
           </button>
-          <input name="name" type="text" placeholder="Имя" required />
-          <input name="email" type="email" placeholder="Почта" required />
-          <input name="phone" type="tel" placeholder="Номер телефона" required />
+          <input name="name" type="text" placeholder="Имя" autocomplete="name" required />
+          <input name="email" type="email" placeholder="Почта" autocomplete="email" required />
+          <input name="phone" type="tel" placeholder="Номер телефона" autocomplete="tel" required />
           <label class="consent-check">
             <input name="consent" type="checkbox" required />
-            <span>Согласен на обработку персональных данных</span>
+            <span>
+              Согласен на
+              <a href="assets/legal/personal-data-consent.pdf" target="_blank" rel="noopener">
+                обработку персональных данных
+              </a>
+            </span>
           </label>
           <button class="primary-button" type="submit">
             <i data-lucide="check"></i>

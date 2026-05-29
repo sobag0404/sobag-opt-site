@@ -471,6 +471,9 @@ const STORAGE = {
 let products = loadProducts();
 let actualSlideIndex = 0;
 let actualSlideTimer = null;
+let lastFocusedElement = null;
+const focusableSelector =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const state = {
   filters: {
@@ -736,6 +739,96 @@ function renderTextField(field, content) {
   `;
 }
 
+function imageAttrs(width, height, loading = "lazy", fetchPriority = "") {
+  const priority = fetchPriority ? ` fetchpriority="${fetchPriority}"` : "";
+  return `width="${width}" height="${height}" loading="${loading}" decoding="async"${priority}`;
+}
+
+function ensureFieldError(field) {
+  if (!field) return null;
+  const form = field.closest("form");
+  const name = field.name || field.id || "field";
+  const id = `${form?.id || "form"}-${name}-error`;
+  let error = form?.querySelector(`#${CSS.escape(id)}`);
+  if (!error) {
+    error = document.createElement("span");
+    error.className = "field-error";
+    error.id = id;
+    error.setAttribute("role", "alert");
+    const placementTarget = field.type === "checkbox" && field.closest("label") ? field.closest("label") : field;
+    placementTarget.insertAdjacentElement("afterend", error);
+  }
+  field.setAttribute("aria-describedby", id);
+  return error;
+}
+
+function clearFormErrors(form) {
+  if (!form) return;
+  form.querySelectorAll("[aria-invalid='true']").forEach((field) => field.removeAttribute("aria-invalid"));
+  form.querySelectorAll(".field-error").forEach((error) => {
+    error.textContent = "";
+    error.hidden = true;
+  });
+}
+
+function setFieldError(form, name, message) {
+  const field = form?.elements?.[name];
+  if (!field) return false;
+  const error = ensureFieldError(field);
+  field.setAttribute("aria-invalid", "true");
+  if (error) {
+    error.textContent = message;
+    error.hidden = false;
+  }
+  field.focus();
+  return false;
+}
+
+function initFormEnhancements(root = document) {
+  root.querySelectorAll('input[name="name"]').forEach((field) => field.setAttribute("autocomplete", "name"));
+  root.querySelectorAll('input[name="company"]').forEach((field) => field.setAttribute("autocomplete", "organization"));
+  root.querySelectorAll('input[name="email"]').forEach((field) => field.setAttribute("autocomplete", "email"));
+  root.querySelectorAll('input[name="phone"]').forEach((field) => field.setAttribute("autocomplete", "tel"));
+  root.querySelectorAll('input[name="password"]').forEach((field) => field.setAttribute("autocomplete", "current-password"));
+}
+
+function activeModal() {
+  return [...document.querySelectorAll(".modal")].find((modal) => modal.classList.contains("is-visible")) || document.querySelector(".modal");
+}
+
+function activateModal(modal = activeModal()) {
+  if (!modal) return;
+  lastFocusedElement = document.activeElement;
+  document.body.classList.add("modal-open");
+  const panel = modal.querySelector(".modal__panel") || modal;
+  panel.setAttribute("tabindex", "-1");
+  initFormEnhancements(modal);
+  requestAnimationFrame(() => {
+    const first = modal.querySelector(focusableSelector);
+    (first || panel).focus();
+  });
+}
+
+function trapModalFocus(event) {
+  const modal = activeModal();
+  if (!modal || event.key !== "Tab") return;
+  const focusable = [...modal.querySelectorAll(focusableSelector)].filter((node) => node.offsetParent !== null);
+  if (!focusable.length) {
+    event.preventDefault();
+    modal.focus();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function renderHeroActualSlides(content = getSiteContent()) {
   const actual = document.querySelector(".hero__actual");
   if (!actual) return;
@@ -745,7 +838,7 @@ function renderHeroActualSlides(content = getSiteContent()) {
       const type = slide.type === "collection" ? "collection" : "holiday";
       return `
         <button class="hero__actual-card${index === actualSlideIndex ? " is-active" : ""}" type="button" data-actual-slide data-open-${type}="${slide.label}">
-          <img src="${slide.image}" alt="${slide.label}" />
+          <img src="${slide.image}" alt="${slide.label}" ${imageAttrs(640, 360, index === 0 ? "eager" : "lazy", index === 0 ? "high" : "")} />
           <b>${slide.label}</b>
         </button>
       `;
@@ -764,7 +857,7 @@ function renderSiteContent() {
   if (brand) brand.setAttribute("aria-label", content.brandName);
   if (brandMark) {
     brandMark.innerHTML = content.brandLogo
-      ? `<img src="${content.brandLogo}" alt="" />`
+      ? `<img src="${content.brandLogo}" alt="" width="54" height="54" decoding="async" />`
       : escapeHtml(String(content.brandName || "S").trim().charAt(0) || "S");
   }
   if (brandName) brandName.innerHTML = brandNameHtml(content.brandName);
@@ -1082,7 +1175,7 @@ function mergeProducts(baseProducts, incomingProducts) {
 
 async function loadPublishedProducts() {
   try {
-    const response = await fetch(`data/products-live.json?v=${Date.now()}`, { cache: "no-store" });
+    const response = await fetch("data/products-live.json", { cache: "default" });
     if (!response.ok) return;
     const liveProducts = await response.json();
     if (!Array.isArray(liveProducts) || !liveProducts.length) return;
@@ -1554,7 +1647,7 @@ function renderCatalogHome() {
     .map(
       (item, index) => `
         <button class="actual-tile actual-tile--${(index % 3) + 1}" type="button" data-open-${item.type}="${escapeHtml(item.label)}">
-          <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.label)}" loading="lazy" />
+          <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.label)}" ${imageAttrs(640, 360)} />
           <span>${escapeHtml(item.label)}</span>
           <b>${escapeHtml(item.label)}</b>
         </button>
@@ -1566,7 +1659,7 @@ function renderCatalogHome() {
     .map(
       (collection) => `
         <button class="theme-tile" type="button" data-open-collection="${escapeHtml(collection.name)}">
-          ${collection.image ? `<img class="theme-tile__image" src="${escapeHtml(collection.image)}" alt="" loading="lazy" />` : `<i data-lucide="${escapeHtml(collection.icon)}"></i>`}
+          ${collection.image ? `<img class="theme-tile__image" src="${escapeHtml(collection.image)}" alt="" ${imageAttrs(520, 320)} />` : `<i data-lucide="${escapeHtml(collection.icon)}"></i>`}
           <span>${escapeHtml(collection.name)}</span>
         </button>
       `
@@ -1577,7 +1670,7 @@ function renderCatalogHome() {
     .map(
       (holiday) => `
         <button class="theme-tile" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
-          ${holiday.image ? `<img class="theme-tile__image" src="${escapeHtml(holiday.image)}" alt="" loading="lazy" />` : `<i data-lucide="${escapeHtml(holiday.icon)}"></i>`}
+          ${holiday.image ? `<img class="theme-tile__image" src="${escapeHtml(holiday.image)}" alt="" ${imageAttrs(520, 320)} />` : `<i data-lucide="${escapeHtml(holiday.icon)}"></i>`}
           <span>${escapeHtml(holiday.name)}</span>
         </button>
       `
@@ -1771,7 +1864,7 @@ function renderProducts() {
         <article class="product-card">
           <div class="product-card__image">
             <button class="product-card__image-button" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}">
-              <img src="${product.image}" alt="${product.name}" loading="lazy" />
+              <img src="${product.image}" alt="${product.name}" ${imageAttrs(640, 640)} />
             </button>
             <button class="favorite-button${favorite}" type="button" title="В избранное" data-favorite="${product.id}">
               <i data-lucide="heart"></i>
@@ -1896,20 +1989,20 @@ function productModalHtml(product) {
   const basketDiscountHint = getBasketDiscountHint(getCartTotals().subtotal + variant.price * state.activeVariant.qty);
   const gallery = product.gallery?.length ? product.gallery : [product.image];
   return `
-    <div class="modal is-visible" id="productModal" role="dialog" aria-modal="true">
+    <div class="modal is-visible" id="productModal" role="dialog" aria-modal="true" aria-labelledby="detailProductName">
       <div class="modal__backdrop" data-close-modal></div>
       <section class="modal__panel product-detail">
         <button class="modal__close" type="button" data-close-modal><i data-lucide="x"></i></button>
         <div class="product-detail__layout">
           <div class="product-detail__main">
             <div class="product-detail__media">
-              <img id="detailMainImage" src="${gallery[0]}" alt="${product.name}" />
+              <img id="detailMainImage" src="${gallery[0]}" alt="${product.name}" ${imageAttrs(900, 900, "eager", "high")} />
               <div class="product-gallery" aria-label="Фотографии товара">
                 ${gallery
                   .map(
                     (image, index) => `
                       <button class="product-gallery__thumb${index === 0 ? " is-active" : ""}" type="button" data-detail-image="${image}" aria-label="Фото ${index + 1}">
-                        <img src="${image}" alt="" loading="lazy" />
+                        <img src="${image}" alt="" ${imageAttrs(160, 160)} />
                       </button>
                     `
                   )
@@ -2007,6 +2100,7 @@ function openProduct(productId) {
     qty: 0,
   };
   document.body.insertAdjacentHTML("beforeend", productModalHtml(product));
+  activateModal(document.querySelector("#productModal"));
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -2141,13 +2235,13 @@ function accountModalHtml() {
   const user = users[state.currentUser];
   const orders = user?.orders || [];
   return `
-    <div class="modal is-visible" id="accountModal" role="dialog" aria-modal="true">
+    <div class="modal is-visible" id="accountModal" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
       <div class="modal__backdrop" data-close-modal></div>
       <section class="modal__panel account-panel">
         <button class="modal__close" type="button" data-close-modal><i data-lucide="x"></i></button>
         <div>
           <p class="eyebrow">Account</p>
-          <h2>${user ? "Личный кабинет" : "Вход и регистрация"}</h2>
+          <h2 id="accountModalTitle">${user ? "Личный кабинет" : "Вход и регистрация"}</h2>
         </div>
         ${
           user
@@ -2176,11 +2270,11 @@ function accountModalHtml() {
               ${userManagementHtml(user)}
             `
             : `
-              <form class="auth-form" id="authForm">
-                <input name="name" type="text" placeholder="Имя или компания" />
-                <input name="email" type="email" placeholder="Email" required />
-                <input name="phone" type="tel" placeholder="Телефон" />
-                <input name="password" type="password" placeholder="Пароль" required />
+              <form class="auth-form" id="authForm" novalidate>
+                <input name="name" type="text" placeholder="Имя или компания" autocomplete="name" />
+                <input name="email" type="email" placeholder="Email" autocomplete="email" required />
+                <input name="phone" type="tel" placeholder="Телефон" autocomplete="tel" />
+                <input name="password" type="password" placeholder="Пароль" autocomplete="current-password" required />
                 <label class="consent-check auth-consent">
                   <input name="personalDataConsent" type="checkbox" />
                   <span>
@@ -2204,6 +2298,7 @@ function accountModalHtml() {
 
 function openAccount() {
   document.body.insertAdjacentHTML("beforeend", accountModalHtml());
+  activateModal(document.querySelector("#accountModal"));
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -2270,7 +2365,7 @@ function adminImageUploadHtml(kind, index, image, title, note) {
   return `
     <label class="admin-image-upload admin-image-upload--${kind}">
       <span>${title}</span>
-      <img src="${escapeHtml(image || adminImageFallback(kind))}" alt="${escapeHtml(title)}" />
+      <img src="${escapeHtml(image || adminImageFallback(kind))}" alt="${escapeHtml(title)}" ${imageAttrs(520, 320)} />
       <input type="file" accept="image/*" data-content-image="${kind}" data-content-index="${index}" />
       <small>${note}</small>
     </label>
@@ -2350,13 +2445,13 @@ function adminCatalogImagesHtml(kind, items, title, note) {
 function adminModalHtml() {
   const content = getSiteContent();
   return `
-    <div class="modal is-visible" id="adminModal" role="dialog" aria-modal="true">
+    <div class="modal is-visible" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
       <div class="modal__backdrop" data-close-modal></div>
       <section class="modal__panel admin-panel">
         <button class="modal__close" type="button" data-close-modal><i data-lucide="x"></i></button>
         <div>
           <p class="eyebrow">Content</p>
-          <h2>Контент сайта</h2>
+          <h2 id="adminModalTitle">Контент сайта</h2>
           <p>Тестовое управление контентом. Изображения и тексты сохраняются в этом браузере; для постоянного хранения нужен backend.</p>
         </div>
         <form class="admin-content-form" id="adminContentForm">
@@ -2509,6 +2604,7 @@ function openAdmin() {
   }
   document.querySelector("#accountModal")?.remove();
   document.body.insertAdjacentHTML("beforeend", adminModalHtml());
+  activateModal(document.querySelector("#adminModal"));
   renderAdminPreview([]);
   if (window.lucide) window.lucide.createIcons();
 }
@@ -2606,7 +2702,10 @@ function setActualSlide(index) {
   if (!slides.length) return;
   actualSlideIndex = (index + slides.length) % slides.length;
   slides.forEach((slide, slideIndex) => {
-    slide.classList.toggle("is-active", slideIndex === actualSlideIndex);
+    const active = slideIndex === actualSlideIndex;
+    slide.classList.toggle("is-active", active);
+    slide.setAttribute("aria-hidden", String(!active));
+    slide.tabIndex = active ? 0 : -1;
   });
 }
 
@@ -2966,9 +3065,15 @@ function contentFromAdminForm(form) {
 
 function closeModal() {
   document.querySelectorAll(".modal").forEach((modal) => modal.remove());
+  document.body.classList.remove("modal-open");
+  if (lastFocusedElement && typeof lastFocusedElement.focus === "function") {
+    lastFocusedElement.focus();
+  }
+  lastFocusedElement = null;
 }
 
 function submitOrder(form) {
+  clearFormErrors(form);
   if (state.cart.size === 0) {
     showToast("Сначала добавьте товары в корзину.");
     return;
@@ -2981,6 +3086,18 @@ function submitOrder(form) {
     return;
   }
   const data = Object.fromEntries(new FormData(form).entries());
+  if (!String(data.company || "").trim()) {
+    setFieldError(form, "company", "Укажите компанию или ИП.");
+    return;
+  }
+  if (!String(data.phone || "").trim()) {
+    setFieldError(form, "phone", "Укажите телефон для связи.");
+    return;
+  }
+  if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.email).trim())) {
+    setFieldError(form, "email", "Проверьте формат email.");
+    return;
+  }
   const customer = {
     name: user?.name || data.company || "",
     company: data.company || "",
@@ -3020,6 +3137,7 @@ function boot() {
   renderSiteContent();
   initActualSlider();
   loadPublishedProducts();
+  initFormEnhancements();
 
   document.addEventListener("click", (event) => {
     if (event.target.dataset.closeModal !== undefined) {
@@ -3174,6 +3292,31 @@ function boot() {
     }
   });
 
+  document.addEventListener("keydown", (event) => {
+    const modal = activeModal();
+    if (modal) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeModal();
+        return;
+      }
+      trapModalFocus(event);
+      return;
+    }
+    if (event.target.closest?.(".hero__actual")) {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        nextActualSlide(-1);
+        startActualSlider();
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        nextActualSlide(1);
+        startActualSlider();
+      }
+    }
+  });
+
   document.addEventListener("input", (event) => {
     if (event.target.id === "searchInput") {
       state.search = event.target.value;
@@ -3229,6 +3372,7 @@ function boot() {
     }
     if (event.target.id === "authForm") {
       event.preventDefault();
+      clearFormErrors(event.target);
       const submitter = event.submitter;
       const data = Object.fromEntries(new FormData(event.target).entries());
       const users = getUsers();
@@ -3237,16 +3381,32 @@ function boot() {
       const name = String(data.name || "").trim();
       const phone = String(data.phone || "").trim();
       const existingEmailKey = Object.keys(users).find((key) => key.toLowerCase() === email);
+      if (!email) {
+        setFieldError(event.target, "email", "Укажите email.");
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email !== "admin@sobag") {
+        setFieldError(event.target, "email", "Проверьте формат email.");
+        return;
+      }
+      if (!password) {
+        setFieldError(event.target, "password", "Укажите пароль.");
+        return;
+      }
       if (submitter.dataset.authMode === "register") {
         if (!name || !phone) {
+          if (!name) setFieldError(event.target, "name", "Для регистрации укажите имя или компанию.");
+          else setFieldError(event.target, "phone", "Для регистрации укажите телефон.");
           showToast("Для регистрации укажите имя и телефон.");
           return;
         }
         if (data.personalDataConsent !== "on") {
+          setFieldError(event.target, "personalDataConsent", "Подтвердите согласие на обработку персональных данных.");
           showToast("Для регистрации подтвердите согласие на обработку персональных данных.");
           return;
         }
         if (existingEmailKey) {
+          setFieldError(event.target, "email", "Этот email уже зарегистрирован в системе.");
           showToast("Этот email уже зарегистрирован в системе.");
           return;
         }
@@ -3265,6 +3425,7 @@ function boot() {
       }
       const userKey = existingEmailKey || email;
       if (!users[userKey] || users[userKey].password !== password) {
+        setFieldError(event.target, "password", "Проверьте email и пароль.");
         showToast("Проверьте email и пароль.");
         return;
       }
