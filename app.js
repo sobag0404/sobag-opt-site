@@ -1466,6 +1466,11 @@ function saveProducts() {
   return syncProductsToBackend(clean);
 }
 
+async function syncCatalogNow() {
+  const saved = await saveProducts();
+  if (!saved) showToast("Каталог сохранен локально. Для серверного сохранения войдите через админ-аккаунт.");
+}
+
 function seedUsers() {
   const users = JSON.parse(localStorage.getItem(STORAGE.users) || "null") || {};
   const legacyAdmin = users["admin@sobag.local"];
@@ -2781,6 +2786,7 @@ function adminProductsPageHtml() {
         <span><b>${hiddenCount}</b> скрыто</span>
       </div>
       <div class="admin-product-export">
+        <button class="ghost-button" type="button" data-admin-sync-catalog>Сохранить каталог на сервере</button>
         <button class="ghost-button" type="button" data-admin-export-products>Экспорт выбранных товаров</button>
         <button class="ghost-button" type="button" data-admin-export-variants>Экспорт вариантов и цен</button>
         <span>Если ничего не выбрано, экспортируются товары по текущему фильтру.</span>
@@ -3135,6 +3141,7 @@ function adminPricesPageHtml() {
         <button class="ghost-button" type="button" data-admin-apply-price-preview>Применить предпросмотр</button>
       </form>
       <div class="admin-product-export">
+        <button class="ghost-button" type="button" data-admin-sync-catalog>Сохранить каталог на сервере</button>
         <button class="ghost-button" type="button" data-admin-export-price-rows>Экспорт цен</button>
         <button class="ghost-button" type="button" data-admin-export-price-products>Экспорт товаров с ценами</button>
         <label class="ghost-button admin-price-import">
@@ -4505,6 +4512,10 @@ function boot() {
     if (button.dataset.exportVariantPrices !== undefined) downloadVariantPricesCsv(products, "sobag-variant-prices-all.csv");
     if (button.dataset.exportFilteredVariantPrices !== undefined) downloadVariantPricesCsv(getFilteredProducts(), "sobag-variant-prices-filtered.csv");
     if (button.dataset.exportOrders !== undefined) downloadOrdersCsv();
+    if (button.dataset.adminSyncCatalog !== undefined) {
+      syncCatalogNow();
+      return;
+    }
     if (button.dataset.adminExportProducts !== undefined) downloadProductsCsv(selectedAdminProducts(), "sobag-admin-products-selected.csv");
     if (button.dataset.adminExportVariants !== undefined) downloadVariantPricesCsv(selectedAdminProducts(), "sobag-admin-variant-prices-selected.csv");
     if (button.dataset.adminExportPriceRows !== undefined) downloadAdminPriceRowsCsv(selectedAdminPriceRows(), "sobag-admin-prices-selected.csv");

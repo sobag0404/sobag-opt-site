@@ -483,6 +483,7 @@ Latest production verification:
   - added admin-only `GET/PUT /api/admin/catalog` for saving the full cleaned product catalog, including `variantPrices`;
   - frontend catalog loading now prefers `/api/catalog`, treats a real server catalog as authoritative across devices, and only merges local products when the API source is the static fallback;
   - `saveProducts()` still writes a local fallback but also debounces a server save for signed-in admins, so product edits, hidden flags, and variant price overrides can be shared across devices;
+  - admin products and prices pages include a `Сохранить каталог на сервере` button for the first explicit catalog sync without making a fake product edit;
   - local checks passed: API syntax checks, `npm.cmd run check`, public API fallback smoke, and `npm.cmd run ui:smoke`.
   - committed and pushed as `230d3a1 Persist catalog changes on server`;
   - production deploy succeeded on Vercel and was aliased to `https://sobag-shop.online`;
