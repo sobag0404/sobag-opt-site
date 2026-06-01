@@ -456,3 +456,11 @@ Latest production verification:
   - content sections now have stable anchors and mini schematic previews so it is clearer which text belongs to which page/block;
   - local checks passed: `npm.cmd run check`, `npm.cmd run ui:smoke`, and a Playwright spot-check for `admin-orders.html` plus admin content map.
   - skill repository review: keep ideas from Composio `webapp-testing`, frontend design QA, and 1C skills as references; do not bulk-install external skill packs because of noise/OAuth/action risks.
+
+- Admin products workspace pass on 2026-06-01:
+  - added `admin-products.html`, an admin-only product management page;
+  - product admin supports search by SKU/name/tag text, filters by category, collection, holiday, size, material, and visibility;
+  - each product row has quick product-card preview, copy SKU, editable name/base price/short description/detail description, variant details, and hide/show action;
+  - no product delete action was added; hiding sets `hidden: true`, `saveProducts()` preserves the product, and public catalog/filter/category counts ignore hidden products;
+  - CSV exports support selected products or, when nothing is selected, the currently filtered product list; variant price export uses the same selection/filter scope;
+  - local checks passed: `npm.cmd run check`, `npm.cmd run ui:smoke`, and a Playwright spot-check that edited `opt_00104` price locally and toggled hidden without deleting the product.

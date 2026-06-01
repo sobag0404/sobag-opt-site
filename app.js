@@ -536,6 +536,7 @@ const isFavoritesPage = document.body.classList.contains("favorites-page");
 const isAdminOrdersPage = document.body.classList.contains("admin-orders-page");
 const isAdminOrderPage = document.body.classList.contains("admin-order-page");
 const isAdminCustomerPage = document.body.classList.contains("admin-customer-page");
+const isAdminProductsPage = document.body.classList.contains("admin-products-page");
 
 function normalizeCatalogList(items, fallbackItems, options = {}) {
   const source = Array.isArray(items) && items.length ? items : fallbackItems;
@@ -1395,6 +1396,7 @@ async function loadPublishedProducts() {
     renderCatalogShell();
     renderFilters();
     renderProducts();
+    renderAdminProductsPage();
   } catch {
     // The static catalog file is optional in local prototype mode.
   }
@@ -1660,6 +1662,7 @@ function stockLabel(stock) {
 
 function productsForFilterOptions(key) {
   return products.filter((product) => {
+    if (product.hidden) return false;
     if (isFavoritesPage && !state.favorites.has(product.id)) return false;
     if (state.selectedCategory && !productHasCategory(product, state.selectedCategory)) return false;
     if (state.selectedCollection && !productHasCollection(product, state.selectedCollection)) return false;
@@ -1782,8 +1785,9 @@ function searchScore(product, rawQuery = state.search) {
 function getSearchSuggestions() {
   const query = state.search.trim();
   if (normalizeSearchText(query).length < 2) return [];
-  if (products.some((product) => productHasExactSearchMatch(product, query))) return [];
+  if (products.some((product) => !product.hidden && productHasExactSearchMatch(product, query))) return [];
   return products
+    .filter((product) => !product.hidden)
     .map((product) => ({ product, score: searchScore(product, query) }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score || b.product.popular - a.product.popular)
@@ -1828,6 +1832,7 @@ function getFilteredProducts() {
     .map((product) => ({ product, score: searchScore(product) }))
     .filter(
       ({ product, score }) =>
+        !product.hidden &&
         (!isFavoritesPage || state.favorites.has(product.id)) &&
         productMatchesFilters(product) &&
         (state.search.trim() ? score > 0 : true)
@@ -2560,6 +2565,174 @@ function adminOrdersPageHtml() {
   `;
 }
 
+function canManageProducts(user) {
+  return user?.role === "admin";
+}
+
+function adminProductOptions(key) {
+  const values = new Set();
+  products.filter((product) => !product.hidden).forEach((product) => {
+    if (key === "category") (product.categories || [product.category]).forEach((value) => values.add(value));
+    else if (key === "collection") product.collections.forEach((value) => values.add(value));
+    else if (key === "holiday") product.holidays.forEach((value) => values.add(value));
+    else if (key === "size") product.sizes.forEach((value) => values.add(value));
+    else if (key === "material") product.materials.forEach((value) => values.add(value));
+  });
+  return [...values].filter(Boolean).sort((a, b) => a.localeCompare(b, "ru"));
+}
+
+function adminProductMatches(product, params) {
+  const query = normalizeSearchText(params.get("q") || "");
+  const hidden = params.get("hidden") || "visible";
+  const category = params.get("category") || "";
+  const collection = params.get("collection") || "";
+  const holiday = params.get("holiday") || "";
+  const size = params.get("size") || "";
+  const material = params.get("material") || "";
+  if (hidden === "visible" && product.hidden) return false;
+  if (hidden === "hidden" && !product.hidden) return false;
+  if (category && !productHasCategory(product, category)) return false;
+  if (collection && !productHasCollection(product, collection)) return false;
+  if (holiday && !productHasHoliday(product, holiday)) return false;
+  if (size && !product.sizes.includes(size)) return false;
+  if (material && !product.materials.includes(material)) return false;
+  if (query && !productSearchText(product).includes(query) && !skuSearchKey(product.baseSku).includes(skuSearchKey(query))) return false;
+  return true;
+}
+
+function filteredAdminProducts(params = new URLSearchParams(window.location.search)) {
+  return products
+    .filter((product) => adminProductMatches(product, params))
+    .sort((a, b) => String(a.baseSku).localeCompare(String(b.baseSku), "ru", { numeric: true }));
+}
+
+function adminSelectHtml(name, label, value, options, allLabel = "Все") {
+  return `
+    <label>
+      ${label}
+      <select name="${name}">
+        <option value="">${allLabel}</option>
+        ${options.map((option) => `<option value="${escapeHtml(option)}"${option === value ? " selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+      </select>
+    </label>
+  `;
+}
+
+function adminProductCardHtml(product) {
+  const hiddenLabel = product.hidden ? `<span class="admin-product-badge admin-product-badge--hidden">Скрыт</span>` : "";
+  return `
+    <article class="admin-product-card">
+      <label class="admin-product-card__select">
+        <input type="checkbox" data-admin-product-select="${escapeHtml(product.id)}" />
+        <span>Выбрать</span>
+      </label>
+      <div class="admin-product-card__media">
+        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" ${imageAttrs(160, 160)} />
+      </div>
+      <form class="admin-product-card__body" data-admin-product-form="${escapeHtml(product.id)}">
+        <div class="admin-product-card__head">
+          <div>
+            <strong>${escapeHtml(product.baseSku)}</strong>
+            ${hiddenLabel}
+            <button class="copy-sku-button" type="button" data-copy-sku="${escapeHtml(product.baseSku)}" title="Скопировать артикул">
+              <i data-lucide="copy"></i>
+            </button>
+          </div>
+          <span>${escapeHtml((product.categories || [product.category]).join(", "))}</span>
+        </div>
+        <div class="admin-product-fields">
+          <label>
+            Наименование
+            <input name="name" type="text" value="${escapeHtml(product.name)}" />
+          </label>
+          <label>
+            Базовая цена
+            <input name="basePrice" type="number" min="0" step="1" value="${Number(product.basePrice || 0)}" />
+          </label>
+          <label class="admin-product-fields__wide">
+            Краткое описание
+            <textarea name="description" rows="2">${escapeHtml(product.description || "")}</textarea>
+          </label>
+          <label class="admin-product-fields__wide">
+            Описание в карточке
+            <textarea name="detailDescription" rows="3">${escapeHtml(product.detailDescription || "")}</textarea>
+          </label>
+        </div>
+        <div class="admin-product-meta">
+          <span>${product.variants.length} ${variantWord(product.variants.length)}</span>
+          <span>от ${formatMoney(product.minPrice)} до ${formatMoney(product.maxPrice)}</span>
+          <span>${escapeHtml(product.collections.join(", ") || "без подборок")}</span>
+        </div>
+        <details class="admin-product-variants">
+          <summary>Варианты товара</summary>
+          <div>
+            ${product.variants
+              .slice(0, 80)
+              .map((variant) => `<span><b>${escapeHtml(variant.sku)}</b><em>${escapeHtml(variant.type)}, ${escapeHtml(variant.size)}, ${escapeHtml(variant.material)} · ${formatMoney(variant.price)}</em></span>`)
+              .join("")}
+          </div>
+        </details>
+        <div class="order-actions">
+          <button class="primary-button" type="submit">Сохранить</button>
+          <button class="ghost-button" type="button" data-open-product="${escapeHtml(product.id)}">Просмотр карточки</button>
+          <button class="ghost-button" type="button" data-admin-toggle-product="${escapeHtml(product.id)}">${product.hidden ? "Показать товар" : "Скрыть товар"}</button>
+        </div>
+      </form>
+    </article>
+  `;
+}
+
+function selectedAdminProducts() {
+  const ids = [...document.querySelectorAll("[data-admin-product-select]:checked")].map((input) => input.dataset.adminProductSelect);
+  if (!ids.length) return filteredAdminProducts();
+  const selected = new Set(ids);
+  return products.filter((product) => selected.has(product.id));
+}
+
+function adminProductsPageHtml() {
+  const params = new URLSearchParams(window.location.search);
+  const list = filteredAdminProducts(params);
+  const hiddenCount = products.filter((product) => product.hidden).length;
+  return `
+    <div class="admin-products-toolbar">
+      <form class="admin-products-filter" action="admin-products.html" method="get">
+        <label>
+          Поиск
+          <input name="q" type="search" value="${escapeHtml(params.get("q") || "")}" placeholder="Артикул, название, тег" />
+        </label>
+        ${adminSelectHtml("category", "Категория", params.get("category") || "", adminProductOptions("category"))}
+        ${adminSelectHtml("collection", "Подборка", params.get("collection") || "", adminProductOptions("collection"))}
+        ${adminSelectHtml("holiday", "Праздник", params.get("holiday") || "", adminProductOptions("holiday"))}
+        ${adminSelectHtml("size", "Размер", params.get("size") || "", adminProductOptions("size"))}
+        ${adminSelectHtml("material", "Материал", params.get("material") || "", adminProductOptions("material"))}
+        <label>
+          Видимость
+          <select name="hidden">
+            <option value="visible"${(params.get("hidden") || "visible") === "visible" ? " selected" : ""}>Только видимые</option>
+            <option value="all"${params.get("hidden") === "all" ? " selected" : ""}>Все товары</option>
+            <option value="hidden"${params.get("hidden") === "hidden" ? " selected" : ""}>Только скрытые</option>
+          </select>
+        </label>
+        <button class="primary-button" type="submit">Найти</button>
+        <a class="ghost-button" href="admin-products.html">Сбросить</a>
+      </form>
+      <div class="admin-orders-summary">
+        <span><b>${products.length}</b> ${productWord(products.length)} всего</span>
+        <span><b>${list.length}</b> найдено</span>
+        <span><b>${hiddenCount}</b> скрыто</span>
+      </div>
+      <div class="admin-product-export">
+        <button class="ghost-button" type="button" data-admin-export-products>Экспорт выбранных товаров</button>
+        <button class="ghost-button" type="button" data-admin-export-variants>Экспорт вариантов и цен</button>
+        <span>Если ничего не выбрано, экспортируются товары по текущему фильтру.</span>
+      </div>
+    </div>
+    <div class="admin-products-list">
+      ${list.length ? list.map(adminProductCardHtml).join("") : "<p>Товаров по выбранным условиям нет.</p>"}
+    </div>
+  `;
+}
+
 function currentManagerUser() {
   return getUsers()[state.currentUser];
 }
@@ -2691,6 +2864,19 @@ function renderManagementPages() {
   if (window.lucide) window.lucide.createIcons();
 }
 
+function renderAdminProductsPage() {
+  const node = document.querySelector("#adminProductsPage");
+  if (!node) return;
+  const user = currentManagerUser();
+  if (!canManageProducts(user)) {
+    node.innerHTML = managementAccessHtml();
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+  node.innerHTML = adminProductsPageHtml();
+  if (window.lucide) window.lucide.createIcons();
+}
+
 function userManagementHtml(user) {
   if (user?.role !== "admin") return "";
   const users = getUsers();
@@ -2750,6 +2936,8 @@ function accountModalHtml() {
               </div>
               <div class="account-actions">
                 ${user.role === "admin" ? '<button class="primary-button" type="button" data-open-admin><i data-lucide="settings"></i> Админка</button>' : ""}
+                ${user.role === "admin" ? '<a class="ghost-button" href="admin-products.html" target="_blank" rel="noopener">Товары</a>' : ""}
+                ${canManageOrders(user) ? '<a class="ghost-button" href="admin-orders.html" target="_blank" rel="noopener">Заказы</a>' : ""}
                 <button class="ghost-button" type="button" data-logout>Выйти</button>
               </div>
               <h3>История заказов</h3>
@@ -3743,6 +3931,7 @@ function boot() {
   renderAccountButton();
   renderSiteContent();
   renderManagementPages();
+  renderAdminProductsPage();
   initActualSlider();
   loadPublishedProducts();
   initFormEnhancements();
@@ -3752,6 +3941,7 @@ function boot() {
     renderCart();
     renderAccountButton();
     renderManagementPages();
+    renderAdminProductsPage();
   });
 
   document.addEventListener("click", async (event) => {
@@ -3940,6 +4130,21 @@ function boot() {
     if (button.dataset.exportVariantPrices !== undefined) downloadVariantPricesCsv(products, "sobag-variant-prices-all.csv");
     if (button.dataset.exportFilteredVariantPrices !== undefined) downloadVariantPricesCsv(getFilteredProducts(), "sobag-variant-prices-filtered.csv");
     if (button.dataset.exportOrders !== undefined) downloadOrdersCsv();
+    if (button.dataset.adminExportProducts !== undefined) downloadProductsCsv(selectedAdminProducts(), "sobag-admin-products-selected.csv");
+    if (button.dataset.adminExportVariants !== undefined) downloadVariantPricesCsv(selectedAdminProducts(), "sobag-admin-variant-prices-selected.csv");
+    if (button.dataset.adminToggleProduct) {
+      const product = products.find((item) => item.id === button.dataset.adminToggleProduct);
+      if (product) {
+        product.hidden = !product.hidden;
+        saveProducts();
+        renderCatalogHome();
+        renderFilters();
+        renderProducts();
+        renderAdminProductsPage();
+        showToast(product.hidden ? "Товар скрыт из каталога." : "Товар снова виден в каталоге.");
+      }
+      return;
+    }
     if (button.dataset.resetContent !== undefined) {
       localStorage.removeItem(STORAGE.content);
       renderSiteContent();
@@ -4157,6 +4362,28 @@ function boot() {
       renderCart();
       renderAccountButton();
       showToast("Вы вошли. Корзина и заказы сохраняются за аккаунтом.");
+    }
+    if (event.target.dataset.adminProductForm) {
+      event.preventDefault();
+      const product = products.find((item) => item.id === event.target.dataset.adminProductForm);
+      if (!product) {
+        showToast("Товар не найден.");
+        return;
+      }
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      product.name = String(data.name || product.name).trim() || product.name;
+      product.basePrice = Math.max(0, Number(data.basePrice || product.basePrice || 0));
+      product.description = String(data.description || "").trim();
+      product.detailDescription = String(data.detailDescription || "").trim();
+      const normalized = normalizeProduct(product);
+      Object.assign(product, normalized);
+      saveProducts();
+      renderCatalogHome();
+      renderFilters();
+      renderProducts();
+      renderAdminProductsPage();
+      showToast("Товар сохранен. Варианты и цены пересчитаны.");
+      return;
     }
     if (event.target.id === "adminGenerator") {
       event.preventDefault();
