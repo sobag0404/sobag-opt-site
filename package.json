@@ -3,9 +3,13 @@
   "private": true,
   "scripts": {
     "check": "node tools/autofix.mjs --check",
-    "autofix": "node tools/autofix.mjs --write"
+    "autofix": "node tools/autofix.mjs --write",
+    "ui:smoke": "playwright test tools/ui-smoke.spec.js"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
   }
 }

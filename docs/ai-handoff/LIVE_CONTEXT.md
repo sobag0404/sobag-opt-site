@@ -390,3 +390,11 @@ Latest production verification:
   - rebuilt `project-ai-handoff-latest.zip` from `docs/ai-handoff`; size is 23,251 bytes; the ZIP is tracked in GitHub but intentionally excluded from Vercel by `.vercelignore`, so a public Vercel 404 for this ZIP is expected;
   - production deploy after handoff docs succeeded and was aliased to `https://sobag-shop.online/`;
   - `https://sobag-shop.online/api/health` returned storage ready, and published handoff markdown on Vercel contains the current production domain and latest functional commit.
+
+- Stability/data pass on 2026-06-01:
+  - continued on the same device; no weekend device switch happened;
+  - added `tools/validate-products.mjs` and wired it into `npm run check` through `tools/autofix.mjs`;
+  - product validation now checks duplicate base SKUs, required taxonomy arrays, duplicate taxonomy values, missing images, prototype/test image references, generated variant SKU uniqueness, and positive generated prices;
+  - current `data/products-live.json` validates as 808 base products and 12,962 generated variants;
+  - added Playwright smoke tests in `tools/ui-smoke.spec.js` plus `npm run ui:smoke`; tests cover catalog navigation without same-document reload, favorite toggles, filters, product modal, variant SKU changes, cart add, exact SKU search, and fuzzy suggestions;
+  - local verification passed with `npm run check` and `SOBAG_BASE_URL=http://127.0.0.1:4173 npm run ui:smoke`.

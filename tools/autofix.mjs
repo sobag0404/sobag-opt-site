@@ -102,6 +102,7 @@ function main() {
   parseJson("data/products-live.json");
   walk(join(root, "api"), (file) => file.endsWith(".js")).forEach((file) => run("node", ["--check", file]));
   ["app.js", "cart.js", "components/site-shell.js"].forEach((file) => run("node", ["--check", file]));
+  run("node", ["tools/validate-products.mjs"]);
   assertNoPattern("app.js", /products-live\.json\?v=\$\{Date\.now\(\)\}/, "нельзя отключать кэш каталога через Date.now()");
   assertNoPattern("cart.js", /password:\s*["'`]/, "пароли не должны появляться в cart.js");
   checkUiShellOwnership();

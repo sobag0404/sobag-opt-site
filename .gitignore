@@ -4,6 +4,7 @@ assets/imported-products/
 data/products.import.json
 data/import-report.csv
 node_modules
+test-results/
 __pycache__/
 *.log
 *.png
