@@ -1388,30 +1388,82 @@ function mergeProducts(baseProducts, incomingProducts) {
   return [...merged.values()];
 }
 
+function applyLoadedProducts(incomingProducts, options = {}) {
+  if (!Array.isArray(incomingProducts) || !incomingProducts.length) return false;
+  products = options.mergeWithStored
+    ? mergeProducts(products, incomingProducts)
+    : incomingProducts.map(normalizeProduct);
+  addMissingCatalogCategories(products);
+  renderSiteContent();
+  renderCatalogHome();
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
+  renderAdminProductsPage();
+  renderAdminPricesPage();
+  return true;
+}
+
+async function loadServerProducts() {
+  try {
+    const data = await apiRequest("/api/catalog");
+    if (!Array.isArray(data.products) || !data.products.length) return false;
+    const saved = loadStoredProducts();
+    const loaded = applyLoadedProducts(data.products, { mergeWithStored: data.source !== "server" && Boolean(saved?.length) });
+    if (loaded && data.source === "server") localStorage.setItem(STORAGE.products, JSON.stringify(cleanProductsForStorage()));
+    return loaded;
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
+    return false;
+  }
+}
+
 async function loadPublishedProducts() {
+  if (await loadServerProducts()) return;
   try {
     const response = await fetch("data/products-live.json", { cache: "default" });
     if (!response.ok) return;
     const liveProducts = await response.json();
-    if (!Array.isArray(liveProducts) || !liveProducts.length) return;
     const saved = loadStoredProducts();
-    products = saved?.length ? mergeProducts(products, liveProducts) : liveProducts.map(normalizeProduct);
-    addMissingCatalogCategories(products);
-    renderSiteContent();
-    renderCatalogHome();
-    renderCatalogShell();
-    renderFilters();
-    renderProducts();
-    renderAdminProductsPage();
-    renderAdminPricesPage();
+    applyLoadedProducts(liveProducts, { mergeWithStored: Boolean(saved?.length) });
   } catch {
     // The static catalog file is optional in local prototype mode.
   }
 }
 
+function cleanProductsForStorage() {
+  return products.map(({ variants, minPrice, maxPrice, ...product }) => product);
+}
+
+let productServerSaveTimer = null;
+let productServerSavePromise = Promise.resolve(false);
+
+function syncProductsToBackend(cleanProducts) {
+  const user = getUsers()[state.currentUser];
+  if (!canManageProducts(user)) return Promise.resolve(false);
+  window.clearTimeout(productServerSaveTimer);
+  productServerSavePromise = new Promise((resolve) => {
+    productServerSaveTimer = window.setTimeout(async () => {
+      try {
+        const result = await apiRequest("/api/admin/catalog", { method: "PUT", body: { products: cleanProducts } });
+        showToast(`Каталог сохранен на сервере: ${result.count || cleanProducts.length} товаров.`);
+        resolve(true);
+      } catch (error) {
+        if (!isBackendUnavailable(error)) {
+          console.warn(error);
+          showToast("Каталог сохранен локально, но серверное сохранение не прошло.");
+        }
+        resolve(false);
+      }
+    }, 250);
+  });
+  return productServerSavePromise;
+}
+
 function saveProducts() {
-  const clean = products.map(({ variants, minPrice, maxPrice, ...product }) => product);
+  const clean = cleanProductsForStorage();
   localStorage.setItem(STORAGE.products, JSON.stringify(clean));
+  return syncProductsToBackend(clean);
 }
 
 function seedUsers() {
