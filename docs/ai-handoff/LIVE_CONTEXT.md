@@ -399,3 +399,14 @@ Latest production verification:
   - added Playwright smoke tests in `tools/ui-smoke.spec.js` plus `npm run ui:smoke`; tests cover catalog navigation without same-document reload, favorite toggles, filters, product modal, variant SKU changes, cart add, exact SKU search, and fuzzy suggestions;
   - local verification passed with `npm run check` and `SOBAG_BASE_URL=http://127.0.0.1:4173 npm run ui:smoke`;
   - production smoke verification also passed with `SOBAG_BASE_URL=https://sobag-shop.online npm run ui:smoke`; the test accepts both local `/catalog.html` and Vercel clean URL `/catalog`.
+
+- Import pipeline hardening on 2026-06-01:
+  - strengthened `tools/product_importer.py` for the next mass-import pass;
+  - numeric base SKUs from tables now normalize to `opt_...`, for example `67895` becomes `opt_67895`;
+  - if `data/products.import.json` is missing, importer now uses `data/products-live.json` as the base catalog, so a new small batch does not accidentally replace all live products;
+  - import reports now include statuses such as `created`, `duplicate_skipped`, and `variant_duplicate_skipped`;
+  - importer now generates `variant-prices.xlsx` and `variant-prices.csv` with one row per calculated variant;
+  - importer now checks generated variant SKU collisions during import, not only later in product validation;
+  - `tools/publish_imported_products.py` now builds optimized images in a temporary folder and replaces the target folder only after a successful build; fallback/external images outside imported assets are left untouched;
+  - `npm run check` now also compiles the Python importer/publisher scripts;
+  - smoke-tested importer with a temporary two-row CSV: one `opt_67895` product was created, the duplicate row was skipped, old 808 live products were kept, and variant price files were created.

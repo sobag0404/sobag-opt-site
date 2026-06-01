@@ -83,12 +83,70 @@ COLUMN_ALIASES = {
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 FLAG_CATEGORY = "Флаги"
+STANDARD_OPTION = "Стандарт"
+
+TYPE_FACTORS = {
+    "Подушка": 0,
+    "Наволочка": -20,
+}
+
+SIZE_FACTORS = {
+    "30x30": -40,
+    "35x35": -20,
+    "40x40": 0,
+    "45x45": 25,
+    "50x50": 55,
+    "70x70": 160,
+}
+
+MATERIAL_FACTORS = {
+    "Велюр": 0,
+    "Габардин": -30,
+}
+
+TYPE_BY_CATEGORY = [
+    ("подуш", "Подушка"),
+    ("навол", "Наволочка"),
+    ("плед", "Плед"),
+    ("меш", "Мешок"),
+    ("флаг", "Флаг"),
+    ("ремув", "Ремувка"),
+    ("чех", "Чехол"),
+]
+
+VARIANT_PRICE_COLUMNS = [
+    "Основной артикул",
+    "Артикул варианта",
+    "Название варианта",
+    "Тип товара",
+    "Размер",
+    "Материал",
+    "Цена варианта",
+    "Категории",
+    "Подборки",
+    "Праздники",
+    "Теги",
+    "Папка фото",
+]
 
 
 def split_list(value: str) -> list[str]:
     prepared = str(value or "")
     delimiter = ";" if ";" in prepared else ","
     return [item.strip() for item in prepared.split(delimiter) if item.strip()]
+
+
+def unique_list(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in items:
+        prepared = str(item or "").strip()
+        key = prepared.casefold()
+        if not prepared or key in seen:
+            continue
+        seen.add(key)
+        result.append(prepared)
+    return result
 
 
 def clean_number(value: str, fallback: int) -> int:
@@ -116,6 +174,15 @@ def article_from_folder_name(folder_name: str) -> str:
     if not numbers:
         return prepared
     return f"opt_{numbers[-1]}"
+
+
+def normalize_base_sku(value: str) -> str:
+    prepared = str(value or "").strip().strip("_- ")
+    if not prepared:
+        return ""
+    if re.fullmatch(r"\d+", prepared):
+        return f"opt_{prepared}"
+    return prepared
 
 
 def slug(value: str) -> str:
@@ -232,6 +299,17 @@ def is_flag_category(categories: list[str]) -> bool:
     return any(category.strip().casefold() == FLAG_CATEGORY.casefold() for category in categories)
 
 
+def infer_types_from_categories(categories: list[str]) -> list[str]:
+    inferred: list[str] = []
+    for category in categories:
+        prepared = str(category or "").casefold()
+        for marker, product_type in TYPE_BY_CATEGORY:
+            if marker in prepared:
+                inferred.append(product_type)
+                break
+    return unique_list(inferred) or [STANDARD_OPTION]
+
+
 def order_images_for_categories(images: list[str], categories: list[str]) -> list[str]:
     descending = not is_flag_category(categories)
     return sorted([image for image in images if image], key=lambda image: product_image_order_key(image, descending))
@@ -258,13 +336,16 @@ def copy_photos(base_sku: str, photo_folder: Path | None, assets_dir: Path, proj
 
 
 def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, project_root: Path) -> tuple[dict, dict]:
-    base_sku = row_value(row, "baseSku")
+    base_sku = normalize_base_sku(row_value(row, "baseSku"))
     photo_folder_name = row_value(row, "photoFolder", base_sku)
     folder = find_photo_folder(photos_root, photo_folder_name)
     copied_images, warnings = copy_photos(base_sku, folder, assets_dir, project_root)
     gallery_from_table = split_list(row_value(row, "gallery"))
     collections = split_list(row_value(row, "collections") or row_value(row, "theme"))
     categories = split_list(row_value(row, "category", "Подушки"))
+    product_types = split_list(row_value(row, "types")) or infer_types_from_categories(categories)
+    sizes = split_list(row_value(row, "sizes")) or [STANDARD_OPTION]
+    materials = split_list(row_value(row, "materials")) or [STANDARD_OPTION]
     table_images = [row_value(row, "image"), *gallery_from_table]
     ordered_images = order_images_for_categories(copied_images if copied_images else table_images, categories)
     main_image = ordered_images[0] if ordered_images else "assets/production-workshop-1.png"
@@ -279,9 +360,9 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
         "collections": collections,
         "holidays": split_list(row_value(row, "holidays")),
         "tags": split_list(row_value(row, "tags")),
-        "types": split_list(row_value(row, "types", "Подушка; Наволочка")),
-        "sizes": split_list(row_value(row, "sizes", "40x40")),
-        "materials": split_list(row_value(row, "materials", "Велюр; Габардин")),
+        "types": product_types,
+        "sizes": sizes,
+        "materials": materials,
         "basePrice": clean_number(row_value(row, "basePrice"), 220),
         "image": main_image,
         "gallery": ordered_images[1:],
@@ -298,6 +379,7 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
         "photoFolder": photo_folder_name,
         "photoCount": str(len(copied_images)),
         "mainImage": main_image,
+        "status": "created",
         "warnings": "; ".join(warnings),
     }
     return product, report
@@ -306,7 +388,7 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
 def write_report(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=["baseSku", "name", "photoFolder", "photoCount", "mainImage", "warnings"], delimiter=";")
+        writer = csv.DictWriter(file, fieldnames=["baseSku", "name", "photoFolder", "photoCount", "mainImage", "status", "warnings"], delimiter=";")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -323,6 +405,112 @@ def load_existing_products(path: Path) -> list[dict]:
 
 def normalized_sku(value: str) -> str:
     return str(value or "").strip().upper()
+
+
+def sku_part(value: str, limit: int | None = None) -> str:
+    prepared = re.sub(r"[^A-ZА-ЯЁ0-9]+", "", str(value or "").upper())
+    return prepared[:limit] if limit else prepared
+
+
+def sku_size_part(value: str) -> str:
+    return re.sub(r"[^A-ZА-ЯЁ0-9ХX,.-]+", "", str(value or "").upper().replace(" ", ""))
+
+
+def starts_with_product_word(text: str, word: str) -> bool:
+    prepared_text = str(text or "").strip().casefold()
+    prepared_word = str(word or "").strip().casefold()
+    if not prepared_text.startswith(prepared_word):
+        return False
+    next_char = prepared_text[len(prepared_word) : len(prepared_word) + 1]
+    return not next_char or bool(re.match(r"""[\s"'«».,:;()/-]""", next_char))
+
+
+def variant_name_with_specs(name: str, size: str, material: str) -> str:
+    specs = [value for value in [size, material] if value and value.casefold() != STANDARD_OPTION.casefold()]
+    return f"{name} {' '.join(specs)}".strip() if specs else name
+
+
+def variant_name_for_type(name: str, product_type: str, size: str, material: str) -> str:
+    prepared_name = str(name or "").strip()
+    prepared_type = str(product_type or "").strip()
+    if not prepared_name or not prepared_type:
+        return prepared_name
+
+    product_words = ["Подушка", "Наволочка", "Плед", "Мешок", "Чехол", "Флаг", "Ремувка"]
+    target = next((word for word in product_words if word.casefold() in prepared_type.casefold()), "")
+    if not target:
+        return variant_name_with_specs(prepared_name, size, material)
+
+    source = next((word for word in product_words if starts_with_product_word(prepared_name, word)), "")
+    if source and source != target:
+        return variant_name_with_specs(f"{target}{prepared_name[len(source):]}".replace("  ", " ").strip(), size, material)
+    if not source and not starts_with_product_word(prepared_name, target):
+        return variant_name_with_specs(f"{target} {prepared_name}", size, material)
+    return variant_name_with_specs(prepared_name, size, material)
+
+
+def product_variants(product: dict) -> list[dict[str, str | int]]:
+    variants: list[dict[str, str | int]] = []
+    for product_type in product.get("types") or []:
+        for size in product.get("sizes") or []:
+            for material in product.get("materials") or []:
+                price = int(product.get("basePrice") or 0) + TYPE_FACTORS.get(product_type, 0) + SIZE_FACTORS.get(size, 0) + MATERIAL_FACTORS.get(material, 0)
+                variants.append(
+                    {
+                        "sku": "_".join(
+                            part
+                            for part in [
+                                str(product.get("baseSku") or "").strip(),
+                                sku_part(product_type, 3),
+                                sku_size_part(size),
+                                sku_part(material, 3),
+                            ]
+                            if part
+                        ),
+                        "name": variant_name_for_type(str(product.get("name") or ""), product_type, size, material),
+                        "type": product_type,
+                        "size": size,
+                        "material": material,
+                        "price": max(price, 1),
+                    }
+                )
+    return variants
+
+
+def variant_sku_set(products: list[dict]) -> set[str]:
+    return {normalized_sku(str(variant.get("sku", ""))) for product in products for variant in product_variants(product) if variant.get("sku")}
+
+
+def variant_price_rows(products: list[dict]) -> list[list[str]]:
+    rows = [VARIANT_PRICE_COLUMNS]
+    for product in products:
+        for variant in product_variants(product):
+            rows.append(
+                [
+                    str(product.get("baseSku", "")),
+                    str(variant["sku"]),
+                    str(variant["name"]),
+                    str(variant["type"]),
+                    str(variant["size"]),
+                    str(variant["material"]),
+                    str(variant["price"]),
+                    "; ".join(product.get("categories") or [product.get("category", "")]),
+                    "; ".join(product.get("collections") or []),
+                    "; ".join(product.get("holidays") or []),
+                    "; ".join(product.get("tags") or []),
+                    str(product.get("photoFolder") or product.get("baseSku") or ""),
+                ]
+            )
+    return rows
+
+
+def write_variant_price_files(path: Path, products: list[dict]) -> dict[str, str]:
+    csv_path = path if path.suffix.lower() == ".csv" else path.with_suffix(".csv")
+    xlsx_path = path if path.suffix.lower() == ".xlsx" else path.with_suffix(".xlsx")
+    rows = variant_price_rows(products)
+    write_csv_rows(csv_path, rows)
+    write_xlsx_rows(xlsx_path, rows)
+    return {"csv": str(csv_path), "xlsx": str(xlsx_path), "variants": str(max(len(rows) - 1, 0))}
 
 
 def write_csv_rows(path: Path, rows: list[list[str]]) -> None:
@@ -347,6 +535,7 @@ def column_name(index: int) -> str:
 
 def write_xlsx_rows(path: Path, rows: list[list[str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    max_columns = max((len(row) for row in rows), default=1)
     sheet_rows = []
     for row_index, row in enumerate(rows, start=1):
         cells = []
@@ -358,7 +547,7 @@ def write_xlsx_rows(path: Path, rows: list[list[str]]) -> None:
     sheet_xml = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        f'<dimension ref="A1:{column_name(len(TEMPLATE_COLUMNS) - 1)}{len(rows)}"/>'
+        f'<dimension ref="A1:{column_name(max_columns - 1)}{len(rows)}"/>'
         f'<sheetData>{"".join(sheet_rows)}</sheetData>'
         "</worksheet>"
     )
@@ -474,6 +663,7 @@ def command_scan_photos(args: argparse.Namespace) -> None:
                 "photoFolder": relative_folder,
                 "photoCount": str(count),
                 "mainImage": "",
+                "status": "scanned",
                 "warnings": "" if count else "В папке нет фото",
             }
         )
@@ -496,19 +686,31 @@ def command_import(args: argparse.Namespace) -> None:
     photos_root = Path(args.photos).resolve()
     assets_dir = (project_root / args.assets).resolve()
     output = (project_root / args.out).resolve()
+    base_path = (project_root / args.base).resolve()
     report_path = (project_root / args.report).resolve()
+    variant_prices_path = (project_root / args.variant_prices).resolve()
 
     rows = read_table(table)
-    existing_products = [] if args.replace else load_existing_products(output)
+    existing_products = []
+    existing_source = ""
+    if not args.replace:
+        existing_products = load_existing_products(output)
+        existing_source = str(output) if existing_products else ""
+        if not existing_products:
+            existing_products = load_existing_products(base_path)
+            existing_source = str(base_path) if existing_products else ""
     existing_skus = {normalized_sku(product.get("baseSku", "")) for product in existing_products}
+    existing_variant_skus = variant_sku_set(existing_products)
     seen_skus: set[str] = set()
+    seen_variant_skus: set[str] = set()
     new_products: list[dict] = []
     report_rows: list[dict[str, str]] = []
     skipped_duplicates = 0
+    skipped_variant_duplicates = 0
     for row in rows:
         if not row_value(row, "baseSku") or not row_value(row, "name"):
             continue
-        base_sku = row_value(row, "baseSku")
+        base_sku = normalize_base_sku(row_value(row, "baseSku"))
         sku_key = normalized_sku(base_sku)
         if sku_key in existing_skus or sku_key in seen_skus:
             skipped_duplicates += 1
@@ -519,12 +721,30 @@ def command_import(args: argparse.Namespace) -> None:
                     "photoFolder": row_value(row, "photoFolder", base_sku),
                     "photoCount": "0",
                     "mainImage": "",
+                    "status": "duplicate_skipped",
                     "warnings": "Дубль пропущен: товар с таким основным артикулом уже есть",
                 }
             )
             continue
         seen_skus.add(sku_key)
         product, report = make_product(row, photos_root, assets_dir, project_root)
+        product_variant_skus = {normalized_sku(str(variant["sku"])) for variant in product_variants(product)}
+        colliding_variants = sorted((product_variant_skus & existing_variant_skus) | (product_variant_skus & seen_variant_skus))
+        if colliding_variants:
+            skipped_variant_duplicates += 1
+            report_rows.append(
+                {
+                    "baseSku": base_sku,
+                    "name": row_value(row, "name"),
+                    "photoFolder": row_value(row, "photoFolder", base_sku),
+                    "photoCount": str(len([product.get("image"), *(product.get("gallery") or [])])),
+                    "mainImage": product.get("image", ""),
+                    "status": "variant_duplicate_skipped",
+                    "warnings": f"Дубль пропущен: совпали артикулы вариантов: {', '.join(colliding_variants[:5])}",
+                }
+            )
+            continue
+        seen_variant_skus.update(product_variant_skus)
         new_products.append(product)
         report_rows.append(report)
 
@@ -532,15 +752,19 @@ def command_import(args: argparse.Namespace) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
     write_report(report_path, report_rows)
+    variant_price_result = write_variant_price_files(variant_prices_path, products)
     print(
         json.dumps(
             {
+                "existingSource": existing_source,
                 "existingProductsKept": len(existing_products),
                 "newProducts": len(new_products),
                 "totalProducts": len(products),
                 "skippedDuplicates": skipped_duplicates,
+                "skippedVariantDuplicates": skipped_variant_duplicates,
                 "output": str(output),
                 "report": str(report_path),
+                "variantPrices": variant_price_result,
             },
             ensure_ascii=False,
             indent=2,
@@ -574,7 +798,9 @@ def main() -> int:
     import_parser.add_argument("--project-root", default=".", help="site project root")
     import_parser.add_argument("--assets", default="assets/imported-products", help="where copied photos are placed")
     import_parser.add_argument("--out", default="data/products.import.json", help="products JSON output path")
+    import_parser.add_argument("--base", default="data/products-live.json", help="base products JSON used when --out does not exist")
     import_parser.add_argument("--report", default="data/import-report.csv", help="CSV report output path")
+    import_parser.add_argument("--variant-prices", default="local-import-output/variant-prices.xlsx", help="CSV/XLSX variant price export path")
     import_parser.add_argument("--replace", action="store_true", help="replace output JSON instead of keeping existing products")
     import_parser.set_defaults(func=command_import)
 

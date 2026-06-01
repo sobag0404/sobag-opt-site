@@ -30,7 +30,10 @@ def rewrite_image(path_value: str, source_root: Path, target_root: Path, project
     source = project_root / path_value
     if not source.exists():
         return path_value
-    relative = source.relative_to(source_root)
+    try:
+        relative = source.relative_to(source_root)
+    except ValueError:
+        return path_value
     target = target_root / relative.with_suffix(".webp")
     convert_image(source, target, max_size, quality)
     return target.relative_to(project_root).as_posix()
@@ -46,7 +49,7 @@ def image_order_key(path_value: str, descending: bool) -> tuple[int, int | str]:
 
 def is_flag_product(product: dict) -> bool:
     categories = product.get("categories") or [product.get("category", "")]
-    return any(str(category).strip().casefold() == FLAG_CATEGORY.casefold() for category in categories)
+    return any("флаг" in str(category).strip().casefold() for category in categories)
 
 
 def order_product_images(product: dict) -> None:
@@ -80,24 +83,33 @@ def main() -> None:
     if not input_path.exists():
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
-    if target_root.exists():
-        shutil.rmtree(target_root)
-    target_root.mkdir(parents=True, exist_ok=True)
+    temp_target_root = target_root.with_name(f"{target_root.name}.__tmp__")
+    backup_target_root = target_root.with_name(f"{target_root.name}.__backup__")
+    if temp_target_root.exists():
+        shutil.rmtree(temp_target_root)
+    temp_target_root.mkdir(parents=True, exist_ok=True)
 
     products = json.loads(input_path.read_text(encoding="utf-8"))
     image_count = 0
     for product in products:
         if product.get("image"):
-            product["image"] = rewrite_image(product["image"], source_root, target_root, project_root, args.max_size, args.quality)
+            product["image"] = rewrite_image(product["image"], source_root, temp_target_root, project_root, args.max_size, args.quality)
             image_count += 1
         gallery = []
         for image in product.get("gallery", []):
-            gallery.append(rewrite_image(image, source_root, target_root, project_root, args.max_size, args.quality))
+            gallery.append(rewrite_image(image, source_root, temp_target_root, project_root, args.max_size, args.quality))
             image_count += 1
         product["gallery"] = gallery
         order_product_images(product)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    if backup_target_root.exists():
+        shutil.rmtree(backup_target_root)
+    if target_root.exists():
+        target_root.rename(backup_target_root)
+    temp_target_root.rename(target_root)
+    if backup_target_root.exists():
+        shutil.rmtree(backup_target_root)
     output_path.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"products": len(products), "images": image_count, "output": str(output_path)}, ensure_ascii=False, indent=2))
 

@@ -76,7 +76,17 @@ python tools/product_importer.py scan-photos --photos "C:\Path\YandexDisk\Фот
 python tools/product_importer.py import --table local-import-output\products-from-photo-folders.xlsx --photos "C:\Path\YandexDisk\Фото товаров"
 ```
 
-По умолчанию локальный импортер тоже сохраняет старые товары в `data/products.import.json` и добавляет только новые артикулы. Дубли попадают в отчет `data/import-report.csv` со статусом `Дубль пропущен`. Полностью заменить выходной JSON можно только явной командой с флагом `--replace`.
+По умолчанию локальный импортер сохраняет старые товары в `data/products.import.json` и добавляет только новые артикулы. Если `data/products.import.json` еще не создан, он берет базу из `data/products-live.json`, чтобы случайно не опубликовать только новую маленькую партию вместо всего каталога.
+
+Если в таблице написан чистый числовой артикул, например `67895`, импортер сам приводит его к виду `opt_67895`. Повторная загрузка того же файла не должна создавать копии товаров: дубли по основному артикулу и дубли рассчитанных артикулов вариантов пропускаются и записываются в отчет.
+
+После импорта создаются:
+
+- `data/products.import.json` - полный черновой каталог: старые товары + новые товары;
+- `data/import-report.csv` - отчет со статусами `created`, `duplicate_skipped`, `variant_duplicate_skipped`;
+- `local-import-output/variant-prices.xlsx` и `local-import-output/variant-prices.csv` - таблица цен всех рассчитанных вариантов.
+
+Полностью заменить выходной JSON можно только явной командой с флагом `--replace`.
 
 Результат:
 
@@ -85,6 +95,19 @@ python tools/product_importer.py import --table local-import-output\products-fro
 - `data/import-report.csv` - отчет по строкам и фото.
 
 Эти выходные папки сейчас добавлены в `.gitignore`, чтобы случайно не загрузить тысячи фото в GitHub.
+
+## Публикация импортированной партии на сайт
+
+После проверки `data/products.import.json` и отчета можно подготовить live-данные и оптимизированные WebP:
+
+```powershell
+python tools/publish_imported_products.py --input data/products.import.json --out data/products-live.json --source-assets assets/imported-products --target-assets assets/product-preview-live
+npm run check
+```
+
+Публикация теперь собирает изображения во временную папку и заменяет целевую папку только после успешной подготовки. Это снижает риск потерять уже оптимизированные изображения, если сборка оборвется. Фото вне `assets/imported-products` не трогаются: например fallback-изображения остаются как есть.
+
+Для флагов порядок фото сохраняется `1, 2, 3`. Для остальных категорий главное фото выбирается с конца списка, как мы договорились после прошлой загрузки. Категория считается флаговой, если в названии категории есть корень `флаг`.
 
 ## Яндекс Диск
 
