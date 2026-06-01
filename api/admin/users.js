@@ -6,9 +6,35 @@ const allowedRoles = new Set(["buyer", "manager"]);
 
 module.exports = async function handler(req, res) {
   try {
-    const { store } = await requireUser(req, ["admin"]);
-    if (req.method === "GET") return sendJson(res, 200, { users: Object.values(store.users).map(publicUser) });
+    const { store, user } = await requireUser(req, ["admin", "manager"]);
+    if (req.method === "GET") {
+      const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      const email = String(url.searchParams.get("email") || "").trim().toLowerCase();
+      if (email) {
+        const found = store.users[email];
+        const orders = store.orders.filter((order) => order.userEmail === email || order.customer?.email === email);
+        if (!found && !orders.length) return sendJson(res, 404, { error: "not_found", message: "Пользователь не найден." });
+        if (!found) {
+          const latestCustomer = orders[0]?.customer || {};
+          return sendJson(res, 200, {
+            user: {
+              email,
+              name: latestCustomer.name || latestCustomer.company || email,
+              phone: latestCustomer.phone || "",
+              role: "buyer",
+              address: latestCustomer.address || "",
+              addresses: [...new Set(orders.map((order) => order.customer?.address).filter(Boolean))],
+              lastCustomer: latestCustomer,
+              orders,
+            },
+          });
+        }
+        return sendJson(res, 200, { user: { ...publicUser(found), orders } });
+      }
+      return sendJson(res, 200, { users: Object.values(store.users).map(publicUser) });
+    }
     if (req.method !== "PATCH") return methodNotAllowed(res);
+    if (user.role !== "admin") return sendJson(res, 403, { error: "forbidden", message: "Роли может менять только администратор." });
 
     const data = await readJson(req);
     const email = String(data.email || "").trim().toLowerCase();

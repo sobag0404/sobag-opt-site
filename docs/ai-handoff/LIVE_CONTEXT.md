@@ -432,3 +432,15 @@ Latest production verification:
   - also fixed the ignored local working import file `data/products.import.json` so a local republish does not reintroduce the split size;
   - catalog audit now reports 12,943 generated variants instead of 12,962 because each remuvka now has one size variant rather than two;
   - `local-import-output/catalog-audit/data-quality.csv` no longer contains `Размеры` rows for the remuvki decimal-size issue.
+
+- Order management/customer profile pass on 2026-06-01:
+  - empty planned categories are hidden from the catalog start page when they have 0 live products;
+  - added standalone management pages `admin-order.html` and `admin-customer.html`;
+  - admins and managers can open an order in a new tab, change its status, assign a manager, save a manager note, and open the buyer profile/history in a new tab;
+  - current order statuses: `new`, `processing`, `waiting`, `done`, `canceled`;
+  - admin API now allows managers to read users/orders, while role changes remain admin-only;
+  - customer address is stored with new orders and mirrored into the registered user's profile, address history, and last customer data;
+  - guest customer profile pages can be synthesized from order history, so managers can inspect non-registered buyers too;
+  - order CSV export now includes customer address;
+  - cart/catalog request forms include address field with browser autocomplete;
+  - local checks passed: `npm.cmd run check`, `npm.cmd run ui:smoke`; smoke now includes admin order/customer pages for a guest customer.

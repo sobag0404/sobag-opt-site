@@ -300,15 +300,20 @@ function getOrders() {
 function saveOrderRecord(order) {
   const userKey = localStorage.getItem(CURRENT_USER_KEY) || "";
   const users = getUsers();
+  const customer = order.customer || {};
   const record = {
     status: "new",
     source: "cart",
-    userEmail: userKey || order.customer?.email || "",
+    userEmail: userKey || customer.email || "",
     ...order,
   };
   localStorage.setItem(ORDERS_KEY, JSON.stringify([record, ...getOrders()]));
   if (userKey && users[userKey]) {
     users[userKey].orders = [record, ...(users[userKey].orders || [])];
+    users[userKey].phone = customer.phone || users[userKey].phone || "";
+    users[userKey].address = customer.address || users[userKey].address || "";
+    users[userKey].addresses = [...new Set([customer.address, ...(users[userKey].addresses || [])].filter(Boolean))].slice(0, 10);
+    users[userKey].lastCustomer = customer;
     saveUsers(users);
   }
   return record;
@@ -584,6 +589,7 @@ function fillCheckoutFromProfile() {
   form.elements.name.value = profile.name || "";
   form.elements.email.value = profile.email || "";
   form.elements.phone.value = profile.phone || "";
+  if (form.elements.address) form.elements.address.value = profile.address || profile.lastCustomer?.address || profile.addresses?.[0] || "";
   showToast("Данные профиля подставлены в форму заказа.");
 }
 

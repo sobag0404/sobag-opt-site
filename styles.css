@@ -1780,6 +1780,114 @@ select[aria-invalid="true"] {
   font-size: 12px;
 }
 
+.order-actions .ghost-button.is-active {
+  color: var(--canvas);
+  background: var(--on-dark);
+}
+
+.account-section__head,
+.order-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.order-status {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--canvas);
+  background: var(--on-dark);
+  border-radius: var(--control-radius);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.order-status--waiting {
+  color: var(--on-dark);
+  background: #f2f2f2;
+}
+
+.order-status--done {
+  background: #1f7a45;
+}
+
+.order-status--canceled {
+  background: #8a1f1f;
+}
+
+.order-manager-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+}
+
+.order-manager-form label,
+.admin-detail-list {
+  display: grid;
+  gap: 6px;
+}
+
+.order-manager-form label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.order-manager-form select,
+.order-manager-form textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  color: var(--on-dark);
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+}
+
+.order-card__note,
+.order-card__items {
+  margin-top: 10px;
+}
+
+.order-card__items ul,
+.admin-detail-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.order-card__items li,
+.admin-order-lines div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.admin-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 16px;
+}
+
+.admin-detail-grid__wide {
+  grid-column: 1 / -1;
+}
+
+.admin-order-lines {
+  display: grid;
+  gap: 0;
+}
+
 .orders-list article,
 .admin-preview article,
 .excel-import {
@@ -5174,6 +5282,10 @@ textarea.is-shaking {
 }
 
 @media (max-width: 900px) {
+  .admin-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
   .header__inner {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;

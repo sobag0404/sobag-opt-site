@@ -25,6 +25,31 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test("manager order pages can open guest customer history", async ({ page }) => {
+  const order = {
+    id: "SO-QA-GUEST",
+    status: "new",
+    date: "01.06.2026",
+    total: 12345,
+    userEmail: "",
+    customer: { email: "guest@example.com", name: "Guest Buyer", phone: "+79990000000", address: "Moscow" },
+    items: [{ qty: 2, variant: { sku: "opt_test_POD_40x40_VEL", name: "Test pillow", price: 1000 } }],
+  };
+  await page.evaluate((record) => {
+    localStorage.setItem("sobag.orders.v1", JSON.stringify([record]));
+    localStorage.setItem("sobag.currentUser", "admin@sobag");
+    localStorage.setItem("sobag.users", JSON.stringify({ "admin@sobag": { email: "admin@sobag", name: "Admin", role: "admin", orders: [] } }));
+  }, order);
+
+  await page.goto(`${BASE_URL}/admin-order.html?id=SO-QA-GUEST`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#adminOrderPage")).toContainText("SO-QA-GUEST");
+  await expect(page.locator("#adminOrderPage")).toContainText("Guest Buyer");
+
+  await page.goto(`${BASE_URL}/admin-customer.html?email=guest@example.com`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#adminCustomerPage")).toContainText("Guest Buyer");
+  await expect(page.locator("#adminCustomerPage")).toContainText("SO-QA-GUEST");
+});
+
 async function waitForLiveProducts(page) {
   await page.waitForFunction(() => document.querySelectorAll(".product-card").length > 10);
 }

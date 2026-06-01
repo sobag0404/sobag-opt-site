@@ -530,6 +530,8 @@ const discountHint = document.querySelector("#discountHint");
 const toast = document.querySelector("#toast");
 const themeToggle = document.querySelector("[data-theme-toggle]");
 const isFavoritesPage = document.body.classList.contains("favorites-page");
+const isAdminOrderPage = document.body.classList.contains("admin-order-page");
+const isAdminCustomerPage = document.body.classList.contains("admin-customer-page");
 
 function normalizeCatalogList(items, fallbackItems, options = {}) {
   const source = Array.isArray(items) && items.length ? items : fallbackItems;
@@ -939,7 +941,12 @@ function mirrorServerOrder(order, userEmail = state.currentUser) {
   saveOrders([order, ...orders]);
   const users = getUsers();
   if (userEmail && users[userEmail]) {
+    const customer = order.customer || {};
     users[userEmail].orders = [order, ...(users[userEmail].orders || []).filter((item) => item.id !== order.id)];
+    users[userEmail].phone = customer.phone || users[userEmail].phone || "";
+    users[userEmail].address = customer.address || users[userEmail].address || "";
+    users[userEmail].addresses = [...new Set([customer.address, ...(users[userEmail].addresses || [])].filter(Boolean))].slice(0, 10);
+    users[userEmail].lastCustomer = customer;
     saveUsers(users);
   }
 }
@@ -953,7 +960,7 @@ async function loadBackendAccountData() {
       const ordersData = await apiRequest("/api/admin/orders");
       if (Array.isArray(ordersData.orders)) saveOrders(ordersData.orders);
     }
-    if (session.user.role === "admin") {
+    if (["admin", "manager"].includes(session.user.role)) {
       const usersData = await apiRequest("/api/admin/users");
       if (Array.isArray(usersData.users)) {
         const users = getUsers();
@@ -985,6 +992,7 @@ function initFormEnhancements(root = document) {
   root.querySelectorAll('input[name="company"]').forEach((field) => field.setAttribute("autocomplete", "organization"));
   root.querySelectorAll('input[name="email"]').forEach((field) => field.setAttribute("autocomplete", "email"));
   root.querySelectorAll('input[name="phone"]').forEach((field) => field.setAttribute("autocomplete", "tel"));
+  root.querySelectorAll('input[name="address"]').forEach((field) => field.setAttribute("autocomplete", "street-address"));
   root.querySelectorAll('input[name="password"]').forEach((field) => field.setAttribute("autocomplete", "current-password"));
 }
 
@@ -1442,10 +1450,21 @@ function roleLabel(role) {
 }
 
 function orderStatusLabel(status) {
+  if (status === "new") return "Новый";
   if (status === "processing") return "В работе";
+  if (status === "waiting") return "Ждет клиента";
   if (status === "done") return "Выполнен";
+  if (status === "canceled") return "Отменен";
   return "Новый";
 }
+
+const orderStatusOptions = [
+  ["new", "Новый"],
+  ["processing", "В работе"],
+  ["waiting", "Ждет клиента"],
+  ["done", "Выполнен"],
+  ["canceled", "Отменен"],
+];
 
 function canManageOrders(user) {
   return user?.role === "admin" || user?.role === "manager";
@@ -1454,28 +1473,38 @@ function canManageOrders(user) {
 function saveOrderRecord(order, userKey = state.currentUser) {
   const users = getUsers();
   const orders = getOrders();
+  const customer = order.customer || {};
   const record = {
     status: "new",
     source: "cart",
-    userEmail: userKey || order.customer?.email || "",
+    userEmail: userKey || customer.email || "",
     ...order,
   };
   saveOrders([record, ...orders]);
   if (userKey && users[userKey]) {
     users[userKey].orders = [record, ...(users[userKey].orders || [])];
+    users[userKey].phone = customer.phone || users[userKey].phone || "";
+    users[userKey].address = customer.address || users[userKey].address || "";
+    users[userKey].addresses = [...new Set([customer.address, ...(users[userKey].addresses || [])].filter(Boolean))].slice(0, 10);
+    users[userKey].lastCustomer = customer;
     saveUsers(users);
   }
   return record;
 }
 
-function updateOrderStatus(orderId, status) {
-  const orders = getOrders().map((order) => (order.id === orderId ? { ...order, status } : order));
+function updateOrderRecord(orderId, patch) {
+  const prepared = { ...patch, updatedAt: new Date().toISOString() };
+  const orders = getOrders().map((order) => (order.id === orderId ? { ...order, ...prepared } : order));
   const users = getUsers();
   Object.values(users).forEach((user) => {
-    user.orders = (user.orders || []).map((order) => (order.id === orderId ? { ...order, status } : order));
+    user.orders = (user.orders || []).map((order) => (order.id === orderId ? { ...order, ...prepared } : order));
   });
   saveOrders(orders);
   saveUsers(users);
+}
+
+function updateOrderStatus(orderId, status) {
+  updateOrderRecord(orderId, { status });
 }
 
 function setUserRole(email, role) {
@@ -1820,7 +1849,8 @@ function renderCatalogHome() {
     });
   });
 
-  categoryTiles.innerHTML = content.catalogCategories
+  const visibleCategories = content.catalogCategories.filter((category) => (countByCategory[category.name] || 0) > 0);
+  categoryTiles.innerHTML = visibleCategories
     .map(
       (category, index) => `
         <button class="category-tile${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-category="${escapeHtml(category.name)}">
@@ -2353,22 +2383,77 @@ function addVariantToCart(productId) {
   showToast("Вариант добавлен в корзину и сохранен за текущим пользователем.");
 }
 
+function orderManagerOptions(selectedEmail = "") {
+  const users = getUsers();
+  const managers = Object.values(users).filter((user) => user.role === "admin" || user.role === "manager");
+  const options = ['<option value="">Не назначен</option>'];
+  managers.forEach((user) => {
+    const email = user.email || "";
+    options.push(`<option value="${escapeHtml(email)}"${email === selectedEmail ? " selected" : ""}>${escapeHtml(user.name || email)} · ${escapeHtml(roleLabel(user.role))}</option>`);
+  });
+  return options.join("");
+}
+
+function orderItemsPreview(items) {
+  if (!items.length) return "";
+  return `
+    <details class="order-card__items">
+      <summary>Позиции: ${items.length}</summary>
+      <ul>
+        ${items
+          .map((line) => {
+            const variant = line.variant || {};
+            return `<li><b>${escapeHtml(variant.sku || line.variantSku || "")}</b><span>${escapeHtml(variant.name || line.productName || "")} · ${line.qty || 0} шт.</span></li>`;
+          })
+          .join("")}
+      </ul>
+    </details>
+  `;
+}
+
 function orderCardHtml(order, managerMode = false) {
   const items = order.items || [];
   const customer = order.customer || {};
+  const managerEmail = order.managerEmail || "";
+  const managerName = order.managerName || managerEmail || "";
+  const customerEmail = customer.email || order.userEmail || "";
   return `
     <article class="order-card">
-      <strong>${order.id}</strong>
-      <span>${order.date}</span>
-      <span>${items.length} позиций · ${formatMoney(order.total || 0)}</span>
-      <span>${customer.name || customer.company || order.userEmail || "Покупатель"} · ${customer.phone || customer.email || ""}</span>
-      <span>Статус: ${orderStatusLabel(order.status)}</span>
+      <div class="order-card__head">
+        <strong>${escapeHtml(order.id || "")}</strong>
+        <span class="order-status order-status--${escapeHtml(order.status || "new")}">${escapeHtml(orderStatusLabel(order.status))}</span>
+      </div>
+      <span>${escapeHtml(order.date || "")}</span>
+      <span>${items.length} ${productWord(items.length)} · ${formatMoney(order.total || 0)}</span>
+      <span>${escapeHtml(customer.name || customer.company || order.userEmail || "Покупатель")} · ${escapeHtml(customer.phone || customer.email || "")}</span>
+      ${managerName ? `<span>Менеджер: ${escapeHtml(managerName)}</span>` : ""}
+      ${order.managerNote ? `<p class="order-card__note">${escapeHtml(order.managerNote)}</p>` : ""}
+      ${orderItemsPreview(items)}
       ${
         managerMode
           ? `
+            <div class="order-actions order-actions--links">
+              <a class="ghost-button" href="${adminOrderUrl(order.id)}" target="_blank" rel="noopener">Открыть заказ</a>
+              ${customerEmail ? `<a class="ghost-button" href="${adminCustomerUrl(customerEmail)}" target="_blank" rel="noopener">Профиль покупателя</a>` : ""}
+            </div>
+            <form class="order-manager-form" data-order-manager-form="${escapeHtml(order.id || "")}">
+              <label>
+                <span>Менеджер</span>
+                <select name="managerEmail">${orderManagerOptions(managerEmail)}</select>
+              </label>
+              <label>
+                <span>Комментарий менеджера</span>
+                <textarea name="managerNote" rows="2" placeholder="Например: клиенту позвонили, ждем макет">${escapeHtml(order.managerNote || "")}</textarea>
+              </label>
+              <button class="ghost-button" type="submit">Сохранить</button>
+            </form>
             <div class="order-actions">
-              <button class="ghost-button" type="button" data-order-status="${order.id}" data-status-value="processing">В работу</button>
-              <button class="ghost-button" type="button" data-order-status="${order.id}" data-status-value="done">Выполнен</button>
+              ${orderStatusOptions
+                .map(
+                  ([status, label]) =>
+                    `<button class="ghost-button${order.status === status ? " is-active" : ""}" type="button" data-order-status="${escapeHtml(order.id || "")}" data-status-value="${status}">${escapeHtml(label)}</button>`
+                )
+                .join("")}
             </div>
           `
           : ""
@@ -2382,7 +2467,10 @@ function managementOrdersHtml(user) {
   const orders = getOrders();
   return `
     <div class="account-section">
-      <h3>Заказы покупателей</h3>
+      <div class="account-section__head">
+        <h3>Заказы покупателей</h3>
+        <button class="ghost-button" type="button" data-export-orders>Экспорт заказов CSV</button>
+      </div>
       <div class="orders-list">
         ${
           orders.length
@@ -2392,6 +2480,134 @@ function managementOrdersHtml(user) {
       </div>
     </div>
   `;
+}
+
+function currentManagerUser() {
+  return getUsers()[state.currentUser];
+}
+
+function managementAccessHtml() {
+  return `
+    <article class="info-page__panel">
+      <h2>Нужен доступ</h2>
+      <p>Эта страница доступна администратору и менеджерам. Войдите в аккаунт с нужной ролью.</p>
+      <button class="primary-button" type="button" data-open-account><i data-lucide="user"></i> Войти</button>
+    </article>
+  `;
+}
+
+function findManagedOrder(orderId) {
+  return getOrders().find((order) => order.id === orderId);
+}
+
+function customerFromOrders(email) {
+  const normalizedEmail = String(email || "").toLowerCase();
+  const orders = getOrders().filter((order) => String(order.userEmail || order.customer?.email || "").toLowerCase() === normalizedEmail);
+  if (!orders.length) return null;
+  const latestCustomer = orders[0].customer || {};
+  return {
+    email: normalizedEmail,
+    name: latestCustomer.name || latestCustomer.company || normalizedEmail,
+    role: "buyer",
+    phone: latestCustomer.phone || "",
+    address: latestCustomer.address || "",
+    addresses: [...new Set(orders.map((order) => order.customer?.address).filter(Boolean))],
+    lastCustomer: latestCustomer,
+    orders,
+  };
+}
+
+function orderDetailHtml(order) {
+  if (!order) {
+    return `<article class="info-page__panel"><h2>Заказ не найден</h2><p>Проверьте ссылку или откройте заказ из списка в личном кабинете.</p></article>`;
+  }
+  const customer = order.customer || {};
+  const customerEmail = customer.email || order.userEmail || "";
+  return `
+    <div class="admin-detail-grid">
+      <article class="info-page__panel">
+        <h2>${escapeHtml(order.id || "Заказ")}</h2>
+        ${orderCardHtml(order, true)}
+      </article>
+      <article class="info-page__panel">
+        <h2>Покупатель</h2>
+        <div class="admin-detail-list">
+          <span>Имя: <b>${escapeHtml(customer.name || "Не указано")}</b></span>
+          <span>Компания: <b>${escapeHtml(customer.company || "Не указана")}</b></span>
+          <span>Телефон: <b>${escapeHtml(customer.phone || "Не указан")}</b></span>
+          <span>Email: <b>${escapeHtml(customerEmail || "Не указан")}</b></span>
+          <span>Адрес: <b>${escapeHtml(customer.address || "Не указан")}</b></span>
+          ${customer.comment ? `<span>Комментарий: <b>${escapeHtml(customer.comment)}</b></span>` : ""}
+        </div>
+        ${customerEmail ? `<a class="primary-button" href="${adminCustomerUrl(customerEmail)}" target="_blank" rel="noopener"><i data-lucide="external-link"></i> Открыть профиль покупателя</a>` : ""}
+      </article>
+      <article class="info-page__panel admin-detail-grid__wide">
+        <h2>Позиции заказа</h2>
+        <div class="admin-order-lines">
+          ${(order.items || [])
+            .map((line) => {
+              const variant = line.variant || {};
+              return `
+                <div>
+                  <strong>${escapeHtml(variant.sku || "")}</strong>
+                  <span>${escapeHtml(variant.name || line.productName || "")}</span>
+                  <b>${line.qty || 0} шт. · ${formatMoney((variant.price || 0) * (line.qty || 0))}</b>
+                </div>
+              `;
+            })
+            .join("")}
+        </div>
+      </article>
+    </div>
+  `;
+}
+
+function customerDetailHtml(customer) {
+  if (!customer) {
+    return `<article class="info-page__panel"><h2>Покупатель не найден</h2><p>Проверьте email или откройте профиль из заказа.</p></article>`;
+  }
+  const orders = customer.orders || getOrders().filter((order) => order.userEmail === customer.email || order.customer?.email === customer.email);
+  return `
+    <div class="admin-detail-grid">
+      <article class="info-page__panel">
+        <h2>${escapeHtml(customer.name || customer.email)}</h2>
+        <div class="admin-detail-list">
+          <span>Email: <b>${escapeHtml(customer.email || "")}</b></span>
+          <span>Телефон: <b>${escapeHtml(customer.phone || customer.lastCustomer?.phone || "Не указан")}</b></span>
+          <span>Роль: <b>${escapeHtml(roleLabel(customer.role))}</b></span>
+          <span>Адрес: <b>${escapeHtml(customer.address || customer.lastCustomer?.address || "Не указан")}</b></span>
+          <span>Заказов: <b>${orders.length}</b></span>
+        </div>
+        ${(customer.addresses || []).length ? `<h3>Адреса</h3><ul class="admin-detail-list">${customer.addresses.map((address) => `<li>${escapeHtml(address)}</li>`).join("")}</ul>` : ""}
+      </article>
+      <article class="info-page__panel admin-detail-grid__wide">
+        <h2>История заказов</h2>
+        <div class="orders-list">
+          ${orders.length ? orders.map((order) => orderCardHtml(order, true)).join("") : "<p>Заказов пока нет.</p>"}
+        </div>
+      </article>
+    </div>
+  `;
+}
+
+function renderManagementPages() {
+  const user = currentManagerUser();
+  const orderNode = document.querySelector("#adminOrderPage");
+  const customerNode = document.querySelector("#adminCustomerPage");
+  if (!orderNode && !customerNode) return;
+  if (!canManageOrders(user)) {
+    if (orderNode) orderNode.innerHTML = managementAccessHtml();
+    if (customerNode) customerNode.innerHTML = managementAccessHtml();
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+  const params = new URLSearchParams(window.location.search);
+  if (orderNode) orderNode.innerHTML = orderDetailHtml(findManagedOrder(params.get("id") || ""));
+  if (customerNode) {
+    const email = String(params.get("email") || "").toLowerCase();
+    customerNode.innerHTML = customerDetailHtml(getUsers()[email] || customerFromOrders(email));
+  }
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function userManagementHtml(user) {
@@ -3037,6 +3253,43 @@ function downloadVariantPricesCsv(source, fileName) {
   showToast(`Скачано вариантов: ${rows.length}.`);
 }
 
+function downloadOrdersCsv() {
+  const rows = getOrders().map((order) => {
+    const customer = order.customer || {};
+    const items = order.items || [];
+    return [
+      order.id || "",
+      order.date || order.createdAt || "",
+      orderStatusLabel(order.status),
+      order.managerName || order.managerEmail || "",
+      customer.name || "",
+      customer.company || "",
+      customer.phone || "",
+      customer.email || order.userEmail || "",
+      customer.address || "",
+      order.total || 0,
+      order.promo || "",
+      items.length,
+      items.map((line) => `${line.variant?.sku || ""} x ${line.qty || 0}`).join("; "),
+      order.managerNote || "",
+      customer.comment || "",
+    ];
+  });
+  downloadCsv("sobag-orders.csv", [
+    ["Номер", "Дата", "Статус", "Менеджер", "Имя", "Компания", "Телефон", "Email", "Адрес", "Сумма", "Промокод", "Позиций", "Артикулы", "Комментарий менеджера", "Комментарий клиента"],
+    ...rows,
+  ]);
+  showToast(`Скачано заказов: ${rows.length}.`);
+}
+
+function adminOrderUrl(orderId) {
+  return `admin-order.html?id=${encodeURIComponent(orderId || "")}`;
+}
+
+function adminCustomerUrl(email) {
+  return `admin-customer.html?email=${encodeURIComponent(email || "")}`;
+}
+
 function addMissingCatalogCategories(sourceProducts) {
   const content = getSiteContent();
   const catalogCategories = addMissingCatalogItems(
@@ -3320,6 +3573,7 @@ async function submitOrder(form) {
     company: data.company || "",
     phone: data.phone || user?.phone || "",
     email: data.email || user?.email || "",
+    address: data.address || user?.address || "",
     comment: data.comment || "",
   };
   try {
@@ -3374,6 +3628,7 @@ function boot() {
   renderCart();
   renderAccountButton();
   renderSiteContent();
+  renderManagementPages();
   initActualSlider();
   loadPublishedProducts();
   initFormEnhancements();
@@ -3382,6 +3637,7 @@ function boot() {
     loadCart();
     renderCart();
     renderAccountButton();
+    renderManagementPages();
   });
 
   document.addEventListener("click", async (event) => {
@@ -3459,7 +3715,7 @@ function boot() {
       copyText(button.dataset.copySku);
       return;
     }
-    if (button.id === "accountButton") openAccount();
+    if (button.id === "accountButton" || button.dataset.openAccount !== undefined) openAccount();
     if (button.dataset.closeModal !== undefined) closeModal();
     if (button.dataset.openProduct) openProduct(button.dataset.openProduct);
     if (button.dataset.detailImage) {
@@ -3526,6 +3782,11 @@ function boot() {
         }
         updateOrderStatus(button.dataset.orderStatus, status);
       }
+      if (isAdminOrderPage || isAdminCustomerPage) {
+        renderManagementPages();
+        showToast("Статус заказа обновлен.");
+        return;
+      }
       closeModal();
       openAccount();
       showToast("Статус заказа обновлен.");
@@ -3564,6 +3825,7 @@ function boot() {
     if (button.dataset.exportFilteredProducts !== undefined) downloadProductsCsv(getFilteredProducts(), "sobag-products-filtered.csv");
     if (button.dataset.exportVariantPrices !== undefined) downloadVariantPricesCsv(products, "sobag-variant-prices-all.csv");
     if (button.dataset.exportFilteredVariantPrices !== undefined) downloadVariantPricesCsv(getFilteredProducts(), "sobag-variant-prices-filtered.csv");
+    if (button.dataset.exportOrders !== undefined) downloadOrdersCsv();
     if (button.dataset.resetContent !== undefined) {
       localStorage.removeItem(STORAGE.content);
       renderSiteContent();
@@ -3791,6 +4053,37 @@ function boot() {
       saveSiteContent(contentFromAdminForm(event.target));
       renderSiteContent();
       showToast("Контент сайта сохранен в этом браузере.");
+    }
+    if (event.target.dataset.orderManagerForm) {
+      event.preventDefault();
+      const formData = new FormData(event.target);
+      const managerEmail = String(formData.get("managerEmail") || "");
+      const manager = managerEmail ? getUsers()[managerEmail] : null;
+      const patch = {
+        managerEmail,
+        managerName: manager ? manager.name || manager.email : "",
+        managerNote: String(formData.get("managerNote") || "").trim(),
+      };
+      try {
+        const result = await apiRequest("/api/admin/orders", { method: "PATCH", body: { id: event.target.dataset.orderManagerForm, ...patch } });
+        if (result.order) mirrorServerOrder(result.order, result.order.userEmail || "");
+        await loadBackendAccountData();
+      } catch (error) {
+        if (!isBackendUnavailable(error)) {
+          showToast(error.message || "Не удалось сохранить данные заказа.");
+          return;
+        }
+        updateOrderRecord(event.target.dataset.orderManagerForm, patch);
+      }
+      if (isAdminOrderPage || isAdminCustomerPage) {
+        renderManagementPages();
+        showToast("Данные заказа сохранены.");
+        return;
+      }
+      closeModal();
+      openAccount();
+      showToast("Данные заказа сохранены.");
+      return;
     }
   });
 

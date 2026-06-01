@@ -20,6 +20,10 @@ function sanitizeLine(line) {
   };
 }
 
+function uniqueNonEmpty(items) {
+  return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return methodNotAllowed(res);
   try {
@@ -43,6 +47,7 @@ module.exports = async function handler(req, res) {
         company: String(customer.company || ""),
         phone: String(customer.phone || user?.phone || ""),
         email: String(customer.email || user?.email || ""),
+        address: String(customer.address || user?.address || ""),
         comment: String(customer.comment || ""),
       },
       items,
@@ -52,6 +57,20 @@ module.exports = async function handler(req, res) {
     };
 
     store.orders = [record, ...store.orders];
+    if (user?.email && store.users[user.email]) {
+      const existing = store.users[user.email];
+      const address = String(record.customer.address || "").trim();
+      store.users[user.email] = {
+        ...existing,
+        name: existing.name || record.customer.name,
+        phone: record.customer.phone || existing.phone || "",
+        email: existing.email,
+        address: address || existing.address || "",
+        addresses: uniqueNonEmpty([address, ...(existing.addresses || [])]).slice(0, 10),
+        lastCustomer: record.customer,
+        updatedAt: new Date().toISOString(),
+      };
+    }
     await saveStore(store);
     sendJson(res, 201, { order: record });
   } catch (error) {
