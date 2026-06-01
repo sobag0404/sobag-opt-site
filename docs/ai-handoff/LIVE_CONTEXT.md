@@ -489,3 +489,4 @@ Latest production verification:
   - production deploy succeeded on Vercel and was aliased to `https://sobag-shop.online`;
   - production verification passed for `/`, `/catalog`, `/admin-prices`, `/admin-products`, `/api/health`, `/api/catalog`, and production `tools/ui-smoke.spec.js`;
   - `/api/catalog` currently reports `source=static` and 808 products until an admin performs the first server-backed catalog save.
+  - follow-up commit `e187e50 Add manual catalog server sync` added a manual `Сохранить каталог на сервере` button to product and price admin pages; production deploy and smoke passed after this change.
