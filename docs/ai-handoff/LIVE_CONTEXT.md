@@ -444,3 +444,6 @@ Latest production verification:
   - order CSV export now includes customer address;
   - cart/catalog request forms include address field with browser autocomplete;
   - local checks passed: `npm.cmd run check`, `npm.cmd run ui:smoke`; smoke now includes admin order/customer pages for a guest customer.
+  - committed and pushed as `0b21384 Add order management pages`;
+  - production deploy succeeded on Vercel and was aliased to `https://sobag-shop.online`;
+  - production verification passed: `/`, `/catalog`, `/admin-order`, `/admin-customer` returned 200 after Vercel clean-route redirects where applicable, `/api/health` returned storage ready, and production `npm run ui:smoke` passed.
