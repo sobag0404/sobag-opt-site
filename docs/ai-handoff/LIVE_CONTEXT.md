@@ -410,3 +410,16 @@ Latest production verification:
   - `tools/publish_imported_products.py` now builds optimized images in a temporary folder and replaces the target folder only after a successful build; fallback/external images outside imported assets are left untouched;
   - `npm run check` now also compiles the Python importer/publisher scripts;
   - smoke-tested importer with a temporary two-row CSV: one `opt_67895` product was created, the duplicate row was skipped, old 808 live products were kept, and variant price files were created.
+
+- Catalog audit pass on 2026-06-01:
+  - user asked to audit points 1-6 for the currently loaded products: categories, names, collections/tags, photos, prices/variants, and storefront UI;
+  - added `tools/audit_catalog.py` and `npm run audit:catalog`; output is intentionally local/ignored under `local-import-output/catalog-audit`;
+  - latest local report file is `local-import-output/catalog-audit/catalog-audit.xlsx` with companion CSV/Markdown reports;
+  - the audit workbook includes a `Замечания` sheet for manual cleanup items such as empty collections, planned categories with zero products, remuvki size splits, and risky brand/theme names;
+  - audit result: 808 products, 12,962 calculated variants, 6 categories, 33 collections, 5 holidays;
+  - no duplicate base SKUs, no generated variant SKU collisions from validation, no missing product images, and all checked live images are standardized square assets;
+  - category counts: `Подушки` 517, `Наволочки` 517, `Мешки для обуви` 170, `Флаги` 65, `Чехлы на чемодан` 37, `Ремувки` 19; `Пледы` and `Чехлы на кулер` are planned categories but currently have 0 real products;
+  - data-quality notes: 101 products have empty collections, remuvki sizes appear split as `13х3` plus `5` instead of likely `13х3,5`, and many products have theme-level duplicate names such as `Подушка Паттерны` or `Подушка Цветы`;
+  - added a mobile overflow smoke test in `tools/ui-smoke.spec.js` for home, catalog, cart, favorites, marketplaces, about, and contacts pages;
+  - fixed mobile header overflow in `styles.css` by restoring the compact two-column mobile grid after later desktop header overrides;
+  - local checks passed: `npm run audit:catalog`, `npm run check`, and local `npm run ui:smoke` against `http://127.0.0.1:4173`.

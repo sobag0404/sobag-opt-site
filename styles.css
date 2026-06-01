@@ -5173,6 +5173,71 @@ textarea.is-shaking {
   transform: translateY(-1px) scale(1.04);
 }
 
+@media (max-width: 900px) {
+  .header__inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .brand__name {
+    font-size: clamp(18px, 5vw, 24px);
+  }
+
+  .catalog-button,
+  .search {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .header__actions {
+    justify-content: end;
+    min-width: 0;
+  }
+
+  .cart-button {
+    min-width: 48px;
+    padding: 0 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .header__inner {
+    min-width: 0;
+  }
+
+  .brand {
+    gap: 10px;
+  }
+
+  .brand__mark {
+    flex: 0 0 auto;
+  }
+
+  .brand__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .header__actions {
+    gap: 6px;
+  }
+
+  .icon-button,
+  .cart-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

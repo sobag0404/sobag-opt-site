@@ -4,7 +4,8 @@
   "scripts": {
     "check": "node tools/autofix.mjs --check",
     "autofix": "node tools/autofix.mjs --write",
-    "ui:smoke": "playwright test tools/ui-smoke.spec.js"
+    "ui:smoke": "playwright test tools/ui-smoke.spec.js",
+    "audit:catalog": "python tools/audit_catalog.py"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0"

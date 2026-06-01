@@ -29,6 +29,33 @@ async function waitForLiveProducts(page) {
   await page.waitForFunction(() => document.querySelectorAll(".product-card").length > 10);
 }
 
+async function expectNoHorizontalOverflow(page) {
+  const overflow = await page.evaluate(() => {
+    const root = document.documentElement;
+    return Math.ceil(root.scrollWidth - root.clientWidth);
+  });
+  expect(overflow).toBeLessThanOrEqual(1);
+}
+
+test("mobile pages do not create horizontal overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const routes = [
+    "/",
+    `/catalog.html?category=${encodeURIComponent("Подушки")}`,
+    "/cart.html",
+    "/favorites.html",
+    "/marketplaces.html",
+    "/about.html",
+    "/contacts.html",
+  ];
+
+  for (const route of routes) {
+    await page.goto(`${BASE_URL}${route}`, { waitUntil: "domcontentloaded" });
+    if (route.includes("catalog")) await waitForLiveProducts(page);
+    await expectNoHorizontalOverflow(page);
+  }
+});
+
 test("catalog navigation and favorite toggles do not reload the same document", async ({ page }) => {
   await page.goto(`${BASE_URL}/catalog.html?category=${encodeURIComponent("Подушки")}`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
