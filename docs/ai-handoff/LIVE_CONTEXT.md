@@ -425,3 +425,10 @@ Latest production verification:
   - local checks passed: `npm run audit:catalog`, `npm run check`, and local `npm run ui:smoke` against `http://127.0.0.1:4173`.
   - committed and pushed as `e09b416 Add catalog audit workflow`; production deploy succeeded on Vercel and was aliased to `https://sobag-shop.online`;
   - production verification passed: home/catalog returned HTTP 200, `/api/health` returned `{"ok":true,"storage":"ready"}`, production `npm run ui:smoke` passed, and mobile overflow is 0px on home, catalog, and cart at 390px width.
+
+- Remuvki size cleanup on 2026-06-01:
+  - user confirmed remuvki should have one size `13х3,5`;
+  - fixed 19 remuvki in `data/products-live.json`, replacing split sizes `13х3` and `5` with one size `13х3,5`;
+  - also fixed the ignored local working import file `data/products.import.json` so a local republish does not reintroduce the split size;
+  - catalog audit now reports 12,943 generated variants instead of 12,962 because each remuvka now has one size variant rather than two;
+  - `local-import-output/catalog-audit/data-quality.csv` no longer contains `Размеры` rows for the remuvki decimal-size issue.
