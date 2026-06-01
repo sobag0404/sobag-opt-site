@@ -473,3 +473,6 @@ Latest production verification:
   - manual per-row price edits, CSV/XLSX import, and bulk tools all build a preview first; changes are saved only after clicking apply;
   - visible table is capped at 500 rows for performance, while exports and bulk actions use the full current filter when nothing is selected;
   - local checks passed: `npm.cmd run check`, `npm.cmd run ui:smoke`, manual Playwright spot-check for manual preview/apply to `variantPrices`, and CSV import preview.
+  - committed and pushed as `e0ad76a Add variant price admin page`;
+  - production deploy succeeded on Vercel and was aliased to `https://sobag-shop.online`;
+  - production verification passed for `/`, `/catalog`, `/admin-prices`, `/admin-products`, `/api/health`, and production `tools/ui-smoke.spec.js`.
