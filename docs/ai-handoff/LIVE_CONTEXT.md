@@ -423,3 +423,5 @@ Latest production verification:
   - added a mobile overflow smoke test in `tools/ui-smoke.spec.js` for home, catalog, cart, favorites, marketplaces, about, and contacts pages;
   - fixed mobile header overflow in `styles.css` by restoring the compact two-column mobile grid after later desktop header overrides;
   - local checks passed: `npm run audit:catalog`, `npm run check`, and local `npm run ui:smoke` against `http://127.0.0.1:4173`.
+  - committed and pushed as `e09b416 Add catalog audit workflow`; production deploy succeeded on Vercel and was aliased to `https://sobag-shop.online`;
+  - production verification passed: home/catalog returned HTTP 200, `/api/health` returned `{"ok":true,"storage":"ready"}`, production `npm run ui:smoke` passed, and mobile overflow is 0px on home, catalog, and cart at 390px width.
