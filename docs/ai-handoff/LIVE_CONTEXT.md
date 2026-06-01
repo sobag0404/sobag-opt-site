@@ -447,3 +447,12 @@ Latest production verification:
   - committed and pushed as `0b21384 Add order management pages`;
   - production deploy succeeded on Vercel and was aliased to `https://sobag-shop.online`;
   - production verification passed: `/`, `/catalog`, `/admin-order`, `/admin-customer` returned 200 after Vercel clean-route redirects where applicable, `/api/health` returned storage ready, and production `npm run ui:smoke` passed.
+
+- Admin orders/workspace pass on 2026-06-01:
+  - added `admin-orders.html`, a standalone manager/admin work page for all orders;
+  - order list supports status filtering, text search by order/customer/SKU data, status counters, CSV export, and direct links to each order/customer profile in new tabs;
+  - the account modal now links managers/admins to the full orders page instead of forcing all order work inside the profile modal;
+  - content admin modal now starts with a 9-card visual section map: header/global, home, catalog, marketplaces, custom print, about, contacts, cart, and footer;
+  - content sections now have stable anchors and mini schematic previews so it is clearer which text belongs to which page/block;
+  - local checks passed: `npm.cmd run check`, `npm.cmd run ui:smoke`, and a Playwright spot-check for `admin-orders.html` plus admin content map.
+  - skill repository review: keep ideas from Composio `webapp-testing`, frontend design QA, and 1C skills as references; do not bulk-install external skill packs because of noise/OAuth/action risks.

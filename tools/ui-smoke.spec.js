@@ -48,6 +48,10 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await page.goto(`${BASE_URL}/admin-customer.html?email=guest@example.com`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminCustomerPage")).toContainText("Guest Buyer");
   await expect(page.locator("#adminCustomerPage")).toContainText("SO-QA-GUEST");
+
+  await page.goto(`${BASE_URL}/admin-orders.html?q=guest`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#adminOrdersPage")).toContainText("SO-QA-GUEST");
+  await expect(page.locator("#adminOrdersPage")).toContainText("Guest Buyer");
 });
 
 async function waitForLiveProducts(page) {
@@ -69,6 +73,7 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
     `/catalog.html?category=${encodeURIComponent("Подушки")}`,
     "/cart.html",
     "/favorites.html",
+    "/admin-orders.html",
     "/marketplaces.html",
     "/about.html",
     "/contacts.html",

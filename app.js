@@ -431,8 +431,11 @@ const siteTextFieldPages = [
   },
 ];
 
-const siteTextFieldGroups = siteTextFieldPages.map((group) => ({
+const adminPageAnchors = ["global", "home", "catalog", "marketplaces", "custom", "about", "contacts", "cart", "footer"];
+
+const siteTextFieldGroups = siteTextFieldPages.map((group, index) => ({
   ...group,
+  anchor: adminPageAnchors[index] || `section-${index + 1}`,
   fields: group.keys.map((key) => siteTextFields.find((field) => field.key === key)).filter(Boolean),
 }));
 const productDrafts = [];
@@ -530,6 +533,7 @@ const discountHint = document.querySelector("#discountHint");
 const toast = document.querySelector("#toast");
 const themeToggle = document.querySelector("[data-theme-toggle]");
 const isFavoritesPage = document.body.classList.contains("favorites-page");
+const isAdminOrdersPage = document.body.classList.contains("admin-orders-page");
 const isAdminOrderPage = document.body.classList.contains("admin-order-page");
 const isAdminCustomerPage = document.body.classList.contains("admin-customer-page");
 
@@ -2469,7 +2473,10 @@ function managementOrdersHtml(user) {
     <div class="account-section">
       <div class="account-section__head">
         <h3>Заказы покупателей</h3>
-        <button class="ghost-button" type="button" data-export-orders>Экспорт заказов CSV</button>
+        <div class="order-actions">
+          <a class="ghost-button" href="admin-orders.html" target="_blank" rel="noopener">Открыть все заказы</a>
+          <button class="ghost-button" type="button" data-export-orders>Экспорт заказов CSV</button>
+        </div>
       </div>
       <div class="orders-list">
         ${
@@ -2478,6 +2485,77 @@ function managementOrdersHtml(user) {
             : "<p>Заказов пока нет. Новые заказы покупателей появятся здесь.</p>"
         }
       </div>
+    </div>
+  `;
+}
+
+function orderSearchText(order) {
+  const customer = order.customer || {};
+  const itemText = (order.items || [])
+    .map((line) => `${line.variant?.sku || ""} ${line.variant?.name || ""} ${line.productName || ""}`)
+    .join(" ");
+  return [
+    order.id,
+    order.status,
+    order.date,
+    order.managerName,
+    order.managerEmail,
+    customer.name,
+    customer.company,
+    customer.phone,
+    customer.email,
+    customer.address,
+    customer.comment,
+    itemText,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function filteredAdminOrders(params = new URLSearchParams(window.location.search)) {
+  const status = String(params.get("status") || "all");
+  const query = String(params.get("q") || "").trim().toLowerCase();
+  return getOrders().filter((order) => {
+    if (status !== "all" && (order.status || "new") !== status) return false;
+    if (query && !orderSearchText(order).includes(query)) return false;
+    return true;
+  });
+}
+
+function adminOrdersPageHtml() {
+  const params = new URLSearchParams(window.location.search);
+  const status = String(params.get("status") || "all");
+  const query = String(params.get("q") || "");
+  const allOrders = getOrders();
+  const orders = filteredAdminOrders(params);
+  const total = allOrders.length;
+  const statusCounts = Object.fromEntries(orderStatusOptions.map(([key]) => [key, allOrders.filter((order) => (order.status || "new") === key).length]));
+  return `
+    <div class="admin-orders-toolbar">
+      <form class="admin-orders-filter" action="admin-orders.html" method="get">
+        <label>
+          Статус
+          <select name="status">
+            <option value="all"${status === "all" ? " selected" : ""}>Все статусы</option>
+            ${orderStatusOptions.map(([key, label]) => `<option value="${key}"${status === key ? " selected" : ""}>${label}</option>`).join("")}
+          </select>
+        </label>
+        <label>
+          Поиск
+          <input name="q" type="search" value="${escapeHtml(query)}" placeholder="Номер, email, телефон, артикул" />
+        </label>
+        <button class="primary-button" type="submit">Найти</button>
+        <a class="ghost-button" href="admin-orders.html">Сбросить</a>
+        <button class="ghost-button" type="button" data-export-orders>Экспорт CSV</button>
+      </form>
+      <div class="admin-orders-summary" aria-label="Сводка по заказам">
+        <span><b>${total}</b> ${pluralRu(total, "заказ", "заказа", "заказов")}</span>
+        ${orderStatusOptions.map(([key, label]) => `<span><b>${statusCounts[key] || 0}</b> ${label.toLowerCase()}</span>`).join("")}
+      </div>
+    </div>
+    <div class="orders-list admin-orders-list">
+      ${orders.length ? orders.map((order) => orderCardHtml(order, true)).join("") : "<p>Заказов по выбранным условиям нет.</p>"}
     </div>
   `;
 }
@@ -2592,16 +2670,19 @@ function customerDetailHtml(customer) {
 
 function renderManagementPages() {
   const user = currentManagerUser();
+  const ordersNode = document.querySelector("#adminOrdersPage");
   const orderNode = document.querySelector("#adminOrderPage");
   const customerNode = document.querySelector("#adminCustomerPage");
-  if (!orderNode && !customerNode) return;
+  if (!ordersNode && !orderNode && !customerNode) return;
   if (!canManageOrders(user)) {
+    if (ordersNode) ordersNode.innerHTML = managementAccessHtml();
     if (orderNode) orderNode.innerHTML = managementAccessHtml();
     if (customerNode) customerNode.innerHTML = managementAccessHtml();
     if (window.lucide) window.lucide.createIcons();
     return;
   }
   const params = new URLSearchParams(window.location.search);
+  if (ordersNode) ordersNode.innerHTML = adminOrdersPageHtml();
   if (orderNode) orderNode.innerHTML = orderDetailHtml(findManagedOrder(params.get("id") || ""));
   if (customerNode) {
     const email = String(params.get("email") || "").toLowerCase();
@@ -2833,9 +2914,41 @@ function adminListTextarea(name, title, value, note) {
   `;
 }
 
-function adminTextGroupHtml(group, content, extraHtml = "") {
+function adminSectionMapHtml() {
+  const items = [
+    { anchor: "global", title: "Шапка и общие", note: "Логотип, название, верхние кнопки", shot: "header" },
+    { anchor: "home", title: "Главная", note: "Первый экран, актуально, преимущества", shot: "home" },
+    { anchor: "catalog", title: "Каталог", note: "Категории, подборки, праздники, фильтры", shot: "catalog" },
+    { anchor: "marketplaces", title: "Маркетплейсы", note: "Отдельная страница витрин", shot: "page" },
+    { anchor: "custom", title: "Свой принт", note: "Калькулятор и бриф", shot: "page" },
+    { anchor: "about", title: "О компании", note: "Описание производства", shot: "page" },
+    { anchor: "contacts", title: "Контакты", note: "Адрес, карта, график", shot: "contacts" },
+    { anchor: "cart", title: "Корзина", note: "Оформление и промокод", shot: "cart" },
+    { anchor: "footer", title: "Подвал", note: "Нижнее меню и контакты", shot: "footer" },
+  ];
   return `
-    <div class="admin-content-section admin-content-section--page">
+    <div class="admin-content-map" aria-label="Разделы настройки контента">
+      ${items
+        .map(
+          (item) => `
+            <a class="admin-content-map__card" href="#admin-section-${item.anchor}">
+              <span class="admin-content-map__shot admin-content-map__shot--${item.shot}" aria-hidden="true">
+                <i></i><i></i><i></i><i></i>
+              </span>
+              <b>${item.title}</b>
+              <small>${item.note}</small>
+            </a>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function adminTextGroupHtml(group, content, extraHtml = "") {
+  const sectionId = group.anchor ? ` id="admin-section-${escapeHtml(group.anchor)}"` : "";
+  return `
+    <div class="admin-content-section admin-content-section--page"${sectionId}>
       <h3>${group.title}</h3>
       <p class="admin-section-note">${group.note}</p>
       <div class="admin-content-grid">
@@ -2871,6 +2984,7 @@ function adminModalHtml() {
           <p>Тестовое управление контентом. Изображения и тексты сохраняются в этом браузере; для постоянного хранения нужен backend.</p>
         </div>
         <form class="admin-content-form" id="adminContentForm">
+          ${adminSectionMapHtml()}
           ${adminTextGroupHtml(
             siteTextFieldGroups[0],
             content,
@@ -2879,7 +2993,7 @@ function adminModalHtml() {
               <input name="brandName" type="text" value="${escapeHtml(content.brandName)}" />
             </label>`
           )}
-          <div class="admin-content-section admin-content-section--page">
+          <div class="admin-content-section admin-content-section--page" id="admin-section-logo">
             <h3>Общие настройки сайта: логотип</h3>
             <p class="admin-section-note">Квадратный логотип в шапке сайта. Рекомендуем сразу готовить файл в едином размере.</p>
             <div class="admin-image-grid admin-image-grid--logo">
@@ -2887,7 +3001,7 @@ function adminModalHtml() {
             </div>
           </div>
           ${adminTextGroupHtml(siteTextFieldGroups[1], content)}
-          <div class="admin-content-section admin-content-section--page">
+          <div class="admin-content-section admin-content-section--page" id="admin-section-home-images">
             <h3>Страница: главная — фото первого экрана</h3>
             <p class="admin-section-note">Изображения используются в верхнем слайдшоу главной страницы.</p>
             <div class="admin-image-grid">
@@ -2896,7 +3010,7 @@ function adminModalHtml() {
                 .join("")}
             </div>
           </div>
-          <div class="admin-content-section admin-content-section--page">
+          <div class="admin-content-section admin-content-section--page" id="admin-section-actual">
             <h3>Страница: главная — блок Актуально</h3>
             <div class="admin-content-grid">
               ${adminListTextarea("actualSlidesText", "Список актуального", serializeActualList(content.actualSlides), "Одна строка = один слайд. Формат: название | collection или holiday. После добавления новой строки сохраните контент, откройте админку снова и загрузите фото.")}
@@ -2906,7 +3020,7 @@ function adminModalHtml() {
             </div>
           </div>
           ${adminTextGroupHtml(siteTextFieldGroups[2], content)}
-          <div class="admin-content-section admin-content-section--page">
+          <div class="admin-content-section admin-content-section--page" id="admin-section-catalog-lists">
             <h3>Страница: каталог — категории, подборки и праздники</h3>
             <p class="admin-section-note">Редактируются справочники, которые видит покупатель на главной странице каталога. Иконки указываются названиями Lucide, например: square-stack, gift, heart, palette.</p>
             <div class="admin-content-grid">
@@ -3782,7 +3896,7 @@ function boot() {
         }
         updateOrderStatus(button.dataset.orderStatus, status);
       }
-      if (isAdminOrderPage || isAdminCustomerPage) {
+      if (isAdminOrdersPage || isAdminOrderPage || isAdminCustomerPage) {
         renderManagementPages();
         showToast("Статус заказа обновлен.");
         return;
@@ -4075,7 +4189,7 @@ function boot() {
         }
         updateOrderRecord(event.target.dataset.orderManagerForm, patch);
       }
-      if (isAdminOrderPage || isAdminCustomerPage) {
+      if (isAdminOrdersPage || isAdminOrderPage || isAdminCustomerPage) {
         renderManagementPages();
         showToast("Данные заказа сохранены.");
         return;
