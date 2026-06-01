@@ -504,6 +504,7 @@ const state = {
     qty: 1,
   },
   adminPreview: [],
+  pricePreview: [],
 };
 
 const productGrid = document.querySelector("#productGrid");
@@ -537,6 +538,7 @@ const isAdminOrdersPage = document.body.classList.contains("admin-orders-page");
 const isAdminOrderPage = document.body.classList.contains("admin-order-page");
 const isAdminCustomerPage = document.body.classList.contains("admin-customer-page");
 const isAdminProductsPage = document.body.classList.contains("admin-products-page");
+const isAdminPricesPage = document.body.classList.contains("admin-prices-page");
 
 function normalizeCatalogList(items, fallbackItems, options = {}) {
   const source = Array.isArray(items) && items.length ? items : fallbackItems;
@@ -1201,10 +1203,13 @@ function createVariants(product) {
   return product.types.flatMap((type) =>
     product.sizes.flatMap((size) =>
       product.materials.map((material) => {
-        const price =
+        const sku = [product.baseSku, skuPart(type, 3), skuSizePart(size), skuPart(material, 3)].filter(Boolean).join("_");
+        const calculatedPrice =
           product.basePrice + (typeFactors[type] || 0) + (sizeFactors[size] || 0) + (materialFactors[material] || 0);
+        const customPrice = Number(product.variantPrices?.[sku]);
+        const price = Number.isFinite(customPrice) && customPrice > 0 ? customPrice : calculatedPrice;
         return {
-          sku: [product.baseSku, skuPart(type, 3), skuSizePart(size), skuPart(material, 3)].filter(Boolean).join("_"),
+          sku,
           name: variantNameForType(product.name, type, size, material),
           type,
           size,
@@ -1343,6 +1348,7 @@ function normalizeProduct(product) {
     stock: product.stock || "made",
     popular: product.popular || 50,
     basePrice: Number(product.basePrice || 200),
+    variantPrices: product.variantPrices && typeof product.variantPrices === "object" ? product.variantPrices : {},
   };
   normalized.variants = createVariants(normalized);
   normalized.minPrice = Math.min(...normalized.variants.map((variant) => variant.price));
@@ -1397,6 +1403,7 @@ async function loadPublishedProducts() {
     renderFilters();
     renderProducts();
     renderAdminProductsPage();
+    renderAdminPricesPage();
   } catch {
     // The static catalog file is optional in local prototype mode.
   }
@@ -2877,6 +2884,257 @@ function renderAdminProductsPage() {
   if (window.lucide) window.lucide.createIcons();
 }
 
+function adminPriceRows(sourceProducts = products) {
+  return sourceProducts.flatMap((product) => product.variants.map((variant) => ({ product, variant })));
+}
+
+function adminPriceRowId(product, variant) {
+  return `${product.id}::${variant.sku}`;
+}
+
+function adminPriceOptions(key) {
+  const values = new Set();
+  products.forEach((product) => {
+    if (key === "category") (product.categories || [product.category]).forEach((value) => values.add(value));
+    else if (key === "collection") product.collections.forEach((value) => values.add(value));
+    else if (key === "holiday") product.holidays.forEach((value) => values.add(value));
+    else if (key === "type") product.types.forEach((value) => values.add(value));
+    else if (key === "size") product.sizes.forEach((value) => values.add(value));
+    else if (key === "material") product.materials.forEach((value) => values.add(value));
+  });
+  return [...values].filter(Boolean).sort((a, b) => a.localeCompare(b, "ru"));
+}
+
+function adminPriceMatches(row, params) {
+  const { product, variant } = row;
+  const query = normalizeSearchText(params.get("q") || "");
+  const category = params.get("category") || "";
+  const collection = params.get("collection") || "";
+  const holiday = params.get("holiday") || "";
+  const type = params.get("type") || "";
+  const size = params.get("size") || "";
+  const material = params.get("material") || "";
+  if (category && !productHasCategory(product, category)) return false;
+  if (collection && !productHasCollection(product, collection)) return false;
+  if (holiday && !productHasHoliday(product, holiday)) return false;
+  if (type && variant.type !== type) return false;
+  if (size && variant.size !== size) return false;
+  if (material && variant.material !== material) return false;
+  if (query) {
+    const text = normalizeSearchText([product.baseSku, variant.sku, variant.name, product.name, product.tags.join(" ")].join(" "));
+    if (!text.includes(query) && !skuSearchKey(variant.sku).includes(skuSearchKey(query))) return false;
+  }
+  return true;
+}
+
+function filteredAdminPriceRows(params = new URLSearchParams(window.location.search)) {
+  return adminPriceRows(products)
+    .filter((row) => adminPriceMatches(row, params))
+    .sort((a, b) => a.variant.sku.localeCompare(b.variant.sku, "ru", { numeric: true }));
+}
+
+function selectedAdminPriceRows() {
+  const selectedIds = [...document.querySelectorAll("[data-admin-price-select]:checked")].map((input) => input.dataset.adminPriceSelect);
+  if (!selectedIds.length) return filteredAdminPriceRows();
+  const selected = new Set(selectedIds);
+  return adminPriceRows(products).filter((row) => selected.has(adminPriceRowId(row.product, row.variant)));
+}
+
+function pricePreviewRowsHtml() {
+  if (!state.pricePreview.length) return `<p class="admin-price-preview__empty">Предпросмотр пока пуст. Сначала подготовьте изменение цен.</p>`;
+  return `
+    <div class="admin-price-preview__table">
+      ${state.pricePreview
+        .slice(0, 160)
+        .map(
+          (row) => `
+            <div>
+              <b>${escapeHtml(row.sku)}</b>
+              <span>${escapeHtml(row.name)}</span>
+              <strong>${formatMoney(row.oldPrice)} → ${formatMoney(row.newPrice)}</strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+    ${state.pricePreview.length > 160 ? `<p class="admin-section-note">Показаны первые 160 изменений из ${state.pricePreview.length}.</p>` : ""}
+  `;
+}
+
+function setPricePreview(changes) {
+  state.pricePreview = changes.filter((change) => Number.isFinite(change.newPrice) && change.newPrice > 0 && change.newPrice !== change.oldPrice);
+  renderAdminPricesPage();
+  showToast(state.pricePreview.length ? `Подготовлено изменений цен: ${state.pricePreview.length}.` : "Нет изменений для предпросмотра.");
+}
+
+function roundedPrice(value, roundStep = 1) {
+  const step = Math.max(1, Number(roundStep || 1));
+  return Math.max(1, Math.round(Number(value || 0) / step) * step);
+}
+
+function buildPriceChange(row, newPrice, reason = "") {
+  return {
+    productId: row.product.id,
+    baseSku: row.product.baseSku,
+    sku: row.variant.sku,
+    name: row.variant.name,
+    oldPrice: Number(row.variant.price || 0),
+    newPrice: Math.max(1, Math.round(Number(newPrice || 0))),
+    reason,
+  };
+}
+
+function previewBulkPriceChanges(form) {
+  const data = Object.fromEntries(new FormData(form).entries());
+  const mode = data.adjustMode || "percent";
+  const value = Number(data.adjustValue || 0);
+  const roundStep = Number(data.roundStep || 1);
+  const rows = selectedAdminPriceRows();
+  const changes = rows.map((row) => {
+    const current = Number(row.variant.price || 0);
+    let next = current;
+    if (mode === "percent") next = current * (1 + value / 100);
+    if (mode === "rub") next = current + value;
+    if (mode === "set") next = value;
+    next = roundedPrice(next, roundStep);
+    return buildPriceChange(row, next, mode);
+  });
+  setPricePreview(changes);
+}
+
+function previewManualPriceChanges() {
+  const changes = [...document.querySelectorAll("[data-admin-price-input]")]
+    .map((input) => {
+      const row = adminPriceRows(products).find((item) => adminPriceRowId(item.product, item.variant) === input.dataset.adminPriceInput);
+      if (!row) return null;
+      return buildPriceChange(row, Number(input.value || row.variant.price), "manual");
+    })
+    .filter(Boolean);
+  setPricePreview(changes);
+}
+
+function applyPricePreview() {
+  if (!state.pricePreview.length) {
+    showToast("Нет подготовленных изменений цен.");
+    return;
+  }
+  const byProduct = new Map(products.map((product) => [product.id, product]));
+  state.pricePreview.forEach((change) => {
+    const product = byProduct.get(change.productId);
+    if (!product) return;
+    product.variantPrices = { ...(product.variantPrices || {}), [change.sku]: change.newPrice };
+    Object.assign(product, normalizeProduct(product));
+  });
+  saveProducts();
+  state.pricePreview = [];
+  renderCatalogHome();
+  renderFilters();
+  renderProducts();
+  renderAdminProductsPage();
+  renderAdminPricesPage();
+  showToast("Цены вариантов применены и сохранены.");
+}
+
+function adminPricesPageHtml() {
+  const params = new URLSearchParams(window.location.search);
+  const rows = filteredAdminPriceRows(params);
+  const visibleRows = rows.slice(0, 500);
+  return `
+    <div class="admin-prices-toolbar">
+      <form class="admin-products-filter" action="admin-prices.html" method="get">
+        <label>
+          Поиск
+          <input name="q" type="search" value="${escapeHtml(params.get("q") || "")}" placeholder="Артикул, название, тег" />
+        </label>
+        ${adminSelectHtml("category", "Категория", params.get("category") || "", adminPriceOptions("category"))}
+        ${adminSelectHtml("collection", "Подборка", params.get("collection") || "", adminPriceOptions("collection"))}
+        ${adminSelectHtml("holiday", "Праздник", params.get("holiday") || "", adminPriceOptions("holiday"))}
+        ${adminSelectHtml("type", "Тип", params.get("type") || "", adminPriceOptions("type"))}
+        ${adminSelectHtml("size", "Размер", params.get("size") || "", adminPriceOptions("size"))}
+        ${adminSelectHtml("material", "Материал", params.get("material") || "", adminPriceOptions("material"))}
+        <button class="primary-button" type="submit">Найти</button>
+        <a class="ghost-button" href="admin-prices.html">Сбросить</a>
+      </form>
+      <div class="admin-orders-summary">
+        <span><b>${adminPriceRows(products).length}</b> вариантов всего</span>
+        <span><b>${rows.length}</b> найдено</span>
+        <span><b>${visibleRows.length}</b> показано</span>
+        <span><b>${state.pricePreview.length}</b> в предпросмотре</span>
+      </div>
+      <form class="admin-price-tools" data-admin-price-bulk-form>
+        <label>
+          Массовое изменение
+          <select name="adjustMode">
+            <option value="percent">Процент</option>
+            <option value="rub">Рубли</option>
+            <option value="set">Установить цену</option>
+          </select>
+        </label>
+        <label>
+          Значение
+          <input name="adjustValue" type="number" step="1" value="5" />
+        </label>
+        <label>
+          Округлить до
+          <input name="roundStep" type="number" min="1" step="1" value="1" />
+        </label>
+        <button class="primary-button" type="submit">Предпросмотр</button>
+        <button class="ghost-button" type="button" data-admin-preview-manual-prices>Предпросмотр ручных цен</button>
+        <button class="ghost-button" type="button" data-admin-apply-price-preview>Применить предпросмотр</button>
+      </form>
+      <div class="admin-product-export">
+        <button class="ghost-button" type="button" data-admin-export-price-rows>Экспорт цен</button>
+        <button class="ghost-button" type="button" data-admin-export-price-products>Экспорт товаров с ценами</button>
+        <label class="ghost-button admin-price-import">
+          Импорт CSV/XLSX
+          <input type="file" accept=".csv,.xlsx,.xls" data-admin-price-import />
+        </label>
+        <span>Если строки не выбраны, действие применяется к текущему фильтру.</span>
+      </div>
+      <section class="admin-price-preview" aria-live="polite">
+        <h3>Предпросмотр изменений</h3>
+        ${pricePreviewRowsHtml()}
+      </section>
+    </div>
+    <div class="admin-price-table">
+      ${rows.length > visibleRows.length ? `<p class="admin-section-note">Показаны первые ${visibleRows.length} строк из ${rows.length}. Для ручной правки уточните поиск или фильтры; экспорт и массовое изменение работают по всему текущему фильтру.</p>` : ""}
+      <div class="admin-price-table__head">
+        <span></span><span>Основной артикул</span><span>Артикул варианта</span><span>Название</span><span>Тип</span><span>Размер</span><span>Материал</span><span>Цена</span>
+      </div>
+      ${visibleRows
+        .map(
+          ({ product, variant }) => `
+            <div class="admin-price-row">
+              <label><input type="checkbox" data-admin-price-select="${escapeHtml(adminPriceRowId(product, variant))}" /><span class="sr-only">Выбрать</span></label>
+              <b>${escapeHtml(product.baseSku)}</b>
+              <strong>${escapeHtml(variant.sku)}</strong>
+              <span>${escapeHtml(variant.name)}</span>
+              <span>${escapeHtml(variant.type)}</span>
+              <span>${escapeHtml(variant.size)}</span>
+              <span>${escapeHtml(variant.material)}</span>
+              <input data-admin-price-input="${escapeHtml(adminPriceRowId(product, variant))}" type="number" min="1" step="1" value="${Number(variant.price || 0)}" />
+            </div>
+          `
+        )
+        .join("")}
+      ${rows.length ? "" : "<p>Вариантов по выбранным условиям нет.</p>"}
+    </div>
+  `;
+}
+
+function renderAdminPricesPage() {
+  const node = document.querySelector("#adminPricesPage");
+  if (!node) return;
+  const user = currentManagerUser();
+  if (!canManageProducts(user)) {
+    node.innerHTML = managementAccessHtml();
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+  node.innerHTML = adminPricesPageHtml();
+  if (window.lucide) window.lucide.createIcons();
+}
+
 function userManagementHtml(user) {
   if (user?.role !== "admin") return "";
   const users = getUsers();
@@ -2937,6 +3195,7 @@ function accountModalHtml() {
               <div class="account-actions">
                 ${user.role === "admin" ? '<button class="primary-button" type="button" data-open-admin><i data-lucide="settings"></i> Админка</button>' : ""}
                 ${user.role === "admin" ? '<a class="ghost-button" href="admin-products.html" target="_blank" rel="noopener">Товары</a>' : ""}
+                ${user.role === "admin" ? '<a class="ghost-button" href="admin-prices.html" target="_blank" rel="noopener">Цены</a>' : ""}
                 ${canManageOrders(user) ? '<a class="ghost-button" href="admin-orders.html" target="_blank" rel="noopener">Заказы</a>' : ""}
                 <button class="ghost-button" type="button" data-logout>Выйти</button>
               </div>
@@ -3555,6 +3814,24 @@ function downloadVariantPricesCsv(source, fileName) {
   showToast(`Скачано вариантов: ${rows.length}.`);
 }
 
+function downloadAdminPriceRowsCsv(rows, fileName = "sobag-admin-prices.csv") {
+  const preparedRows = rows.map(({ product, variant }) => [
+    product.baseSku,
+    variant.sku,
+    variant.name,
+    variant.type,
+    variant.size,
+    variant.material,
+    variant.price,
+    product.categories || [product.category].filter(Boolean),
+    product.collections || [],
+    product.holidays || [],
+    product.tags || [],
+  ]);
+  downloadCsv(fileName, [variantPriceExportColumns.slice(0, 11), ...preparedRows]);
+  showToast(`Скачано строк цен: ${preparedRows.length}.`);
+}
+
 function downloadOrdersCsv() {
   const rows = getOrders().map((order) => {
     const customer = order.customer || {};
@@ -3710,6 +3987,50 @@ function readContentFile(input) {
     showToast("Изображение загружено в предпросмотр. Нажмите «Сохранить контент».");
   });
   reader.readAsDataURL(file);
+}
+
+function normalizeImportHeader(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function priceImportValue(row, candidates) {
+  const entries = Object.entries(row);
+  for (const candidate of candidates) {
+    const wanted = normalizeImportHeader(candidate);
+    const found = entries.find(([key]) => normalizeImportHeader(key) === wanted);
+    if (found) return found[1];
+  }
+  return "";
+}
+
+async function importPriceFile(file) {
+  let rows = [];
+  if (/\.csv$/i.test(file.name)) {
+    const text = await file.text();
+    const delimiter = text.includes(";") ? ";" : ",";
+    const lines = text.split(/\r?\n/).filter((line) => line.trim());
+    const headers = (lines.shift() || "").split(delimiter).map((header) => header.replace(/^\uFEFF/, "").trim());
+    rows = lines.map((line) =>
+      Object.fromEntries(line.split(delimiter).map((cell, index) => [headers[index] || `col${index}`, cell.replace(/^"|"$/g, "").replaceAll('""', '"').trim()]))
+    );
+  } else {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer);
+    rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
+  }
+  const rowBySku = new Map();
+  rows.forEach((row) => {
+    const sku = String(priceImportValue(row, ["Артикул варианта", "variant sku", "sku", "Артикул"]) || "").trim();
+    const price = Number(String(priceImportValue(row, ["Цена варианта", "Новая цена", "price", "Цена"]) || "").replace(",", "."));
+    if (sku && Number.isFinite(price) && price > 0) rowBySku.set(sku.toLocaleUpperCase("ru-RU"), Math.round(price));
+  });
+  const changes = adminPriceRows(products)
+    .filter(({ variant }) => rowBySku.has(variant.sku.toLocaleUpperCase("ru-RU")))
+    .map((row) => buildPriceChange(row, rowBySku.get(row.variant.sku.toLocaleUpperCase("ru-RU")), "import"));
+  setPricePreview(changes);
 }
 
 function findCatalogItemByName(items, name) {
@@ -3932,6 +4253,7 @@ function boot() {
   renderSiteContent();
   renderManagementPages();
   renderAdminProductsPage();
+  renderAdminPricesPage();
   initActualSlider();
   loadPublishedProducts();
   initFormEnhancements();
@@ -3942,6 +4264,7 @@ function boot() {
     renderAccountButton();
     renderManagementPages();
     renderAdminProductsPage();
+    renderAdminPricesPage();
   });
 
   document.addEventListener("click", async (event) => {
@@ -4132,6 +4455,19 @@ function boot() {
     if (button.dataset.exportOrders !== undefined) downloadOrdersCsv();
     if (button.dataset.adminExportProducts !== undefined) downloadProductsCsv(selectedAdminProducts(), "sobag-admin-products-selected.csv");
     if (button.dataset.adminExportVariants !== undefined) downloadVariantPricesCsv(selectedAdminProducts(), "sobag-admin-variant-prices-selected.csv");
+    if (button.dataset.adminExportPriceRows !== undefined) downloadAdminPriceRowsCsv(selectedAdminPriceRows(), "sobag-admin-prices-selected.csv");
+    if (button.dataset.adminExportPriceProducts !== undefined) {
+      const productIds = new Set(selectedAdminPriceRows().map(({ product }) => product.id));
+      downloadVariantPricesCsv(products.filter((product) => productIds.has(product.id)), "sobag-admin-product-variant-prices.csv");
+    }
+    if (button.dataset.adminPreviewManualPrices !== undefined) {
+      previewManualPriceChanges();
+      return;
+    }
+    if (button.dataset.adminApplyPricePreview !== undefined) {
+      applyPricePreview();
+      return;
+    }
     if (button.dataset.adminToggleProduct) {
       const product = products.find((item) => item.id === button.dataset.adminToggleProduct);
       if (product) {
@@ -4141,6 +4477,7 @@ function boot() {
         renderFilters();
         renderProducts();
         renderAdminProductsPage();
+        renderAdminPricesPage();
         showToast(product.hidden ? "Товар скрыт из каталога." : "Товар снова виден в каталоге.");
       }
       return;
@@ -4233,6 +4570,11 @@ function boot() {
     }
     if (event.target.id === "excelInput" && event.target.files[0]) importExcel(event.target.files[0]);
     if (event.target.dataset.contentImage) readContentFile(event.target);
+    if (event.target.dataset.adminPriceImport !== undefined && event.target.files[0]) {
+      importPriceFile(event.target.files[0]).finally(() => {
+        event.target.value = "";
+      });
+    }
   });
 
   document.addEventListener("submit", async (event) => {
@@ -4382,7 +4724,13 @@ function boot() {
       renderFilters();
       renderProducts();
       renderAdminProductsPage();
+      renderAdminPricesPage();
       showToast("Товар сохранен. Варианты и цены пересчитаны.");
+      return;
+    }
+    if (event.target.dataset.adminPriceBulkForm !== undefined) {
+      event.preventDefault();
+      previewBulkPriceChanges(event.target);
       return;
     }
     if (event.target.id === "adminGenerator") {

@@ -1,6 +1,6 @@
 # Live AI Context
 
-Last updated: 2026-05-29
+Last updated: 2026-06-01
 
 ## Standing Reminder For Codex
 
@@ -464,3 +464,12 @@ Latest production verification:
   - no product delete action was added; hiding sets `hidden: true`, `saveProducts()` preserves the product, and public catalog/filter/category counts ignore hidden products;
   - CSV exports support selected products or, when nothing is selected, the currently filtered product list; variant price export uses the same selection/filter scope;
   - local checks passed: `npm.cmd run check`, `npm.cmd run ui:smoke`, and a Playwright spot-check that edited `opt_00104` price locally and toggled hidden without deleting the product.
+
+- Admin variant price editor pass on 2026-06-01:
+  - added `admin-prices.html`, an admin-only table for variant-level prices;
+  - product variants now support `variantPrices` overrides keyed by variant SKU, so a variant can keep a custom price independent of base product price;
+  - price editor includes search and filters by category, collection, holiday, type, size, and material;
+  - bulk price tools support percent, ruble delta, fixed price, and rounding step;
+  - manual per-row price edits, CSV/XLSX import, and bulk tools all build a preview first; changes are saved only after clicking apply;
+  - visible table is capped at 500 rows for performance, while exports and bulk actions use the full current filter when nothing is selected;
+  - local checks passed: `npm.cmd run check`, `npm.cmd run ui:smoke`, manual Playwright spot-check for manual preview/apply to `variantPrices`, and CSV import preview.

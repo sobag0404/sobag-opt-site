@@ -2126,6 +2126,123 @@ select[aria-invalid="true"] {
   font-style: normal;
 }
 
+.admin-prices-toolbar {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-price-tools {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.45fr) 140px 140px auto auto auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+
+.admin-price-tools label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-price-tools input,
+.admin-price-tools select,
+.admin-price-row input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 10px;
+  color: var(--on-dark);
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+  font: inherit;
+}
+
+.admin-price-import {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.admin-price-import input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.admin-price-preview {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+
+.admin-price-preview h3 {
+  margin: 0;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.admin-price-preview__empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.admin-price-preview__table,
+.admin-price-table {
+  display: grid;
+  gap: 0;
+}
+
+.admin-price-preview__table div,
+.admin-price-table__head,
+.admin-price-row {
+  display: grid;
+  grid-template-columns: 34px minmax(120px, 0.7fr) minmax(180px, 1fr) minmax(220px, 1.2fr) 110px 100px 120px 110px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-bottom: 0;
+}
+
+.admin-price-preview__table div {
+  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1fr) 180px;
+}
+
+.admin-price-preview__table div:last-child,
+.admin-price-row:last-child {
+  border-bottom: 1px solid var(--hairline);
+}
+
+.admin-price-table__head {
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-price-row b,
+.admin-price-row strong {
+  font-size: 12px;
+}
+
+.admin-price-row span {
+  min-width: 0;
+  color: var(--body);
+  font-size: 13px;
+}
+
 .orders-list article,
 .admin-preview article,
 .excel-import {
@@ -4455,6 +4572,9 @@ body.theme-night .admin-slide-editor,
 body.theme-night .orders-list article,
 body.theme-night .admin-preview article,
 body.theme-night .admin-product-card,
+body.theme-night .admin-price-preview,
+body.theme-night .admin-price-row,
+body.theme-night .admin-price-tools,
 body.theme-night .excel-import,
 body.theme-night .marketplace-card {
   border: 2px solid rgba(255, 138, 31, 0.62);
@@ -5635,7 +5755,11 @@ textarea.is-shaking {
 
   .admin-products-filter,
   .admin-product-fields,
-  .admin-product-variants div {
+  .admin-product-variants div,
+  .admin-price-tools,
+  .admin-price-preview__table div,
+  .admin-price-table__head,
+  .admin-price-row {
     grid-template-columns: 1fr;
   }
 
