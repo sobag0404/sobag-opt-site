@@ -36,7 +36,7 @@ test("catalog navigation and favorite toggles do not reload the same document", 
   await page.evaluate(() => localStorage.setItem("__sobagQaDocumentLoads", "0"));
   await page.getByRole("button", { name: /^каталог$/i }).first().click();
   await page.waitForTimeout(250);
-  await expect(page).toHaveURL(/catalog\.html$/);
+  await expect(page).toHaveURL(/\/catalog(?:\.html)?$/);
   await expect(page.locator("#catalogHome")).toBeVisible();
   await expect.poll(() => page.evaluate(() => Number(localStorage.getItem("__sobagQaDocumentLoads") || "0"))).toBe(0);
 

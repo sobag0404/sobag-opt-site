@@ -397,4 +397,5 @@ Latest production verification:
   - product validation now checks duplicate base SKUs, required taxonomy arrays, duplicate taxonomy values, missing images, prototype/test image references, generated variant SKU uniqueness, and positive generated prices;
   - current `data/products-live.json` validates as 808 base products and 12,962 generated variants;
   - added Playwright smoke tests in `tools/ui-smoke.spec.js` plus `npm run ui:smoke`; tests cover catalog navigation without same-document reload, favorite toggles, filters, product modal, variant SKU changes, cart add, exact SKU search, and fuzzy suggestions;
-  - local verification passed with `npm run check` and `SOBAG_BASE_URL=http://127.0.0.1:4173 npm run ui:smoke`.
+  - local verification passed with `npm run check` and `SOBAG_BASE_URL=http://127.0.0.1:4173 npm run ui:smoke`;
+  - production smoke verification also passed with `SOBAG_BASE_URL=https://sobag-shop.online npm run ui:smoke`; the test accepts both local `/catalog.html` and Vercel clean URL `/catalog`.
