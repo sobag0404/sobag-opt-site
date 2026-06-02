@@ -12,7 +12,12 @@ Last updated: 2026-06-02
   - `npm.cmd run check`
   - `npm.cmd run ui:smoke` with 6/6 tests passing
   - Browser check on `/` and `/admin-products.html`: page titles/headings are valid Russian and no mojibake detected in visible text.
-- Current focus: deploy this encoding fix, then the user will manually check the admin panel.
+- Commit pushed: `89ebdca Fix UTF-8 text encoding guard`.
+- Production verification passed on `https://sobag-shop.online/` and `/admin-products.html`:
+  - HTML serves `20260602-encoding-fix`;
+  - visible browser text has valid Russian headings;
+  - no common mojibake sequences detected.
+- Current focus: the user will manually check the admin panel.
 
 ## Standing Reminder For Codex
 
