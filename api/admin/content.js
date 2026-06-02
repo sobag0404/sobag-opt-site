@@ -6,7 +6,7 @@ const MAX_CONTENT_BYTES = 4 * 1024 * 1024;
 
 module.exports = async function handler(req, res) {
   try {
-    const { user } = await requireUser(req, ["admin"]);
+    const { user } = await requireUser(req, ["admin", "content"]);
     if (req.method === "GET") {
       const content = await getContent();
       return sendJson(res, 200, content || { content: {}, updatedAt: null, source: "empty" });

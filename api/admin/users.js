@@ -2,7 +2,7 @@ const { publicUser, requireUser } = require("../_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { saveStore } = require("../_lib/store");
 
-const allowedRoles = new Set(["buyer", "manager"]);
+const allowedRoles = new Set(["buyer", "manager", "content"]);
 
 module.exports = async function handler(req, res) {
   try {

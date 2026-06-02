@@ -30,7 +30,7 @@ function cleanProduct(product) {
 
 module.exports = async function handler(req, res) {
   try {
-    const { user } = await requireUser(req, ["admin"]);
+    const { user } = await requireUser(req, ["admin", "content"]);
     if (req.method === "GET") {
       const catalog = await getCatalog();
       return sendJson(res, 200, catalog || { products: [], updatedAt: null, source: "empty" });

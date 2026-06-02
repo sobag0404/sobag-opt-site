@@ -595,3 +595,17 @@ Latest production verification:
   - committed and pushed as `fb79361 Improve admin content editor`;
   - production deploy succeeded on Vercel and was aliased to `https://sobag-shop.online`;
   - production verification passed for `/`, `/admin-import`, `/api/health`, and `/api/content`; production smoke passed for 5 public/admin-ui scenarios, with the local-only synthetic guest-order scenario excluded on production.
+
+- Workflow/order/SEO/import roles pass on 2026-06-02:
+  - implemented the requested 1-6 batch: richer manager order cards, checkout fields, server cart/favorites storage, SEO files/metas, importer battle reports, and staff role split;
+  - added `/api/cart` and `/api/favorites`, backed by the existing Redis/KV store under `store.carts` and `store.favorites`; frontend merges local and server cart/favorites after login and syncs changes back softly;
+  - added a readiness guard so initial local cart/favorites render does not overwrite server cart/favorites before the first server load completes;
+  - expanded checkout/request forms with company/IP data, INN validation, city, address, delivery method, packaging option, comment, and layout filename capture;
+  - order API and local fallback now preserve company, INN, city, delivery, packaging, layout filename, address, and comments in user profiles/order history;
+  - manager/admin order cards now include per-order CSV export and a print/PDF view; full order CSV export includes the new customer fields;
+  - added `content` role ("Контент-менеджер"): admin can assign/remove it, content managers can open product/content/price/import tools, while order/user management remains admin+manager/admin-only as before;
+  - added `robots.txt`, `sitemap.xml`, canonical/OpenGraph/Twitter metadata for key public pages;
+  - `tools/product_importer.py` report now includes `action`, `variantCount`, and `duplicateReason`; default duplicate behavior still skips existing products, while new `--update-existing` updates by `baseSku` intentionally;
+  - updated cache-busting query strings to `20260602-workflow`;
+  - local verification passed: JS/API syntax checks, `python -m py_compile tools/product_importer.py`, `npm.cmd run check`, `npm.cmd run autofix`, `npm.cmd run ui:smoke` with 7/7 passing, local Playwright spot-check for checkout/request fields, content-manager product access, `robots.txt`, and `sitemap.xml`;
+  - importer smoke with a temp CSV verified created -> duplicate_skipped -> updated behavior and report output.

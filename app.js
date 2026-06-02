@@ -571,6 +571,7 @@ const isAdminCustomerPage = document.body.classList.contains("admin-customer-pag
 const isAdminProductsPage = document.body.classList.contains("admin-products-page");
 const isAdminPricesPage = document.body.classList.contains("admin-prices-page");
 const isAdminImportPage = document.body.classList.contains("admin-import-page");
+let personalStateReady = !state.currentUser;
 
 function normalizeCatalogList(items, fallbackItems, options = {}) {
   const source = Array.isArray(items) && items.length ? items : fallbackItems;
@@ -718,7 +719,7 @@ async function loadServerSiteContent() {
 
 async function syncSiteContentToBackend(content) {
   const user = getUsers()[state.currentUser];
-  if (!canManageProducts(user)) return false;
+  if (!canManageContent(user)) return false;
   try {
     await apiRequest("/api/admin/content", { method: "PUT", body: { content } });
     showToast("Настройки сайта сохранены на сервере.");
@@ -1069,7 +1070,10 @@ function mirrorServerOrder(order, userEmail = state.currentUser) {
   if (userEmail && users[userEmail]) {
     const customer = order.customer || {};
     users[userEmail].orders = [order, ...(users[userEmail].orders || []).filter((item) => item.id !== order.id)];
+    users[userEmail].company = customer.company || users[userEmail].company || "";
+    users[userEmail].inn = customer.inn || users[userEmail].inn || "";
     users[userEmail].phone = customer.phone || users[userEmail].phone || "";
+    users[userEmail].city = customer.city || users[userEmail].city || "";
     users[userEmail].address = customer.address || users[userEmail].address || "";
     users[userEmail].addresses = [...new Set([customer.address, ...(users[userEmail].addresses || [])].filter(Boolean))].slice(0, 10);
     users[userEmail].lastCustomer = customer;
@@ -1648,6 +1652,7 @@ function saveOrders(orders) {
 function roleLabel(role) {
   if (role === "admin") return "Администратор";
   if (role === "manager") return "Менеджер";
+  if (role === "content") return "Контент-менеджер";
   return "Покупатель";
 }
 
@@ -1698,6 +1703,10 @@ function canManageOrders(user) {
   return user?.role === "admin" || user?.role === "manager";
 }
 
+function canManageContent(user) {
+  return user?.role === "admin" || user?.role === "content";
+}
+
 function saveOrderRecord(order, userKey = state.currentUser) {
   const users = getUsers();
   const orders = getOrders();
@@ -1711,7 +1720,10 @@ function saveOrderRecord(order, userKey = state.currentUser) {
   saveOrders([record, ...orders]);
   if (userKey && users[userKey]) {
     users[userKey].orders = [record, ...(users[userKey].orders || [])];
+    users[userKey].company = customer.company || users[userKey].company || "";
+    users[userKey].inn = customer.inn || users[userKey].inn || "";
     users[userKey].phone = customer.phone || users[userKey].phone || "";
+    users[userKey].city = customer.city || users[userKey].city || "";
     users[userKey].address = customer.address || users[userKey].address || "";
     users[userKey].addresses = [...new Set([customer.address, ...(users[userKey].addresses || [])].filter(Boolean))].slice(0, 10);
     users[userKey].lastCustomer = customer;
@@ -1746,6 +1758,7 @@ function updateOrderStatus(orderId, status) {
 function setUserRole(email, role) {
   const users = getUsers();
   if (!users[email] || users[email].role === "admin") return false;
+  if (!["buyer", "manager", "content"].includes(role)) return false;
   users[email].role = role;
   saveUsers(users);
   return true;
@@ -1766,6 +1779,7 @@ function loadFavorites() {
 
 function saveFavorites() {
   localStorage.setItem(getFavoritesKey(), JSON.stringify([...state.favorites]));
+  if (personalStateReady) syncFavoritesToBackend();
 }
 
 function getCartKey() {
@@ -1828,6 +1842,61 @@ function loadCart() {
 
 function saveCart() {
   localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
+  if (personalStateReady) syncCartToBackend();
+}
+
+let cartSyncTimer = 0;
+let favoritesSyncTimer = 0;
+
+function syncCartToBackend() {
+  if (!state.currentUser) return;
+  window.clearTimeout(cartSyncTimer);
+  const items = [...state.cart.entries()];
+  cartSyncTimer = window.setTimeout(() => {
+    apiRequest("/api/cart", { method: "PUT", body: { items } }).catch((error) => {
+      if (!isBackendUnavailable(error)) console.warn(error);
+    });
+  }, 250);
+}
+
+function syncFavoritesToBackend() {
+  if (!state.currentUser) return;
+  window.clearTimeout(favoritesSyncTimer);
+  const items = [...state.favorites];
+  favoritesSyncTimer = window.setTimeout(() => {
+    apiRequest("/api/favorites", { method: "PUT", body: { items } }).catch((error) => {
+      if (!isBackendUnavailable(error)) console.warn(error);
+    });
+  }, 250);
+}
+
+async function loadServerPersonalState() {
+  if (!state.currentUser) return false;
+  try {
+    const [cartData, favoritesData] = await Promise.all([apiRequest("/api/cart"), apiRequest("/api/favorites")]);
+    const serverCart = cleanCartEntries(cartData.items || []);
+    const localCart = cleanCartEntries([...state.cart.entries()]);
+    const mergedCart = new Map(serverCart);
+    localCart.forEach(([key, line]) => mergedCart.set(key, line));
+    state.cart = mergedCart;
+    localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
+
+    const mergedFavorites = [...new Set([...cleanFavoriteIds(favoritesData.items || []), ...state.favorites])];
+    state.favorites = new Set(mergedFavorites);
+    localStorage.setItem(getFavoritesKey(), JSON.stringify([...state.favorites]));
+
+    personalStateReady = true;
+    syncCartToBackend();
+    syncFavoritesToBackend();
+    renderCart();
+    renderProducts();
+    renderAccountButton();
+    return true;
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 401) console.warn(error);
+    personalStateReady = true;
+    return false;
+  }
 }
 
 function repeatOrder(orderId) {
@@ -2845,6 +2914,8 @@ function orderCardHtml(order, managerMode = false) {
             <div class="order-actions order-actions--links">
               <a class="ghost-button" href="${adminOrderUrl(order.id)}" target="_blank" rel="noopener">Открыть заказ</a>
               ${customerEmail ? `<a class="ghost-button" href="${adminCustomerUrl(customerEmail)}" target="_blank" rel="noopener">Профиль покупателя</a>` : ""}
+              <button class="ghost-button" type="button" data-export-order="${escapeHtml(order.id || "")}">Экспорт CSV</button>
+              <button class="ghost-button" type="button" data-print-order="${escapeHtml(order.id || "")}">Печать / PDF</button>
             </div>
             <form class="order-manager-form" data-order-manager-form="${escapeHtml(order.id || "")}">
               <label>
@@ -2908,9 +2979,14 @@ function orderSearchText(order) {
     order.managerEmail,
     customer.name,
     customer.company,
+    customer.inn,
     customer.phone,
     customer.email,
+    customer.city,
     customer.address,
+    customer.delivery,
+    customer.packaging,
+    customer.layoutFileName,
     customer.comment,
     itemText,
   ]
@@ -2967,7 +3043,7 @@ function adminOrdersPageHtml() {
 }
 
 function canManageProducts(user) {
-  return user?.role === "admin";
+  return canManageContent(user);
 }
 
 function adminProductOptions(key) {
@@ -3162,7 +3238,10 @@ function customerFromOrders(email) {
     email: normalizedEmail,
     name: latestCustomer.name || latestCustomer.company || normalizedEmail,
     role: "buyer",
+    company: latestCustomer.company || "",
+    inn: latestCustomer.inn || "",
     phone: latestCustomer.phone || "",
+    city: latestCustomer.city || "",
     address: latestCustomer.address || "",
     addresses: [...new Set(orders.map((order) => order.customer?.address).filter(Boolean))],
     lastCustomer: latestCustomer,
@@ -3187,9 +3266,14 @@ function orderDetailHtml(order) {
         <div class="admin-detail-list">
           <span>Имя: <b>${escapeHtml(customer.name || "Не указано")}</b></span>
           <span>Компания: <b>${escapeHtml(customer.company || "Не указана")}</b></span>
+          <span>ИНН: <b>${escapeHtml(customer.inn || "Не указан")}</b></span>
           <span>Телефон: <b>${escapeHtml(customer.phone || "Не указан")}</b></span>
           <span>Email: <b>${escapeHtml(customerEmail || "Не указан")}</b></span>
+          <span>Город: <b>${escapeHtml(customer.city || "Не указан")}</b></span>
           <span>Адрес: <b>${escapeHtml(customer.address || "Не указан")}</b></span>
+          <span>Доставка: <b>${escapeHtml(customer.delivery || "Согласовать")}</b></span>
+          <span>Упаковка: <b>${escapeHtml(customer.packaging || "Стандартная")}</b></span>
+          ${customer.layoutFileName ? `<span>Макет: <b>${escapeHtml(customer.layoutFileName)}</b></span>` : ""}
           ${customer.comment ? `<span>Комментарий: <b>${escapeHtml(customer.comment)}</b></span>` : ""}
         </div>
         <div class="order-actions">
@@ -3230,8 +3314,11 @@ function customerDetailHtml(customer) {
         <h2>${escapeHtml(customer.name || customer.email)}</h2>
         <div class="admin-detail-list">
           <span>Email: <b>${escapeHtml(customer.email || "")}</b></span>
+          <span>Компания: <b>${escapeHtml(customer.company || customer.lastCustomer?.company || "Не указана")}</b></span>
+          <span>ИНН: <b>${escapeHtml(customer.inn || customer.lastCustomer?.inn || "Не указан")}</b></span>
           <span>Телефон: <b>${escapeHtml(customer.phone || customer.lastCustomer?.phone || "Не указан")}</b></span>
           <span>Роль: <b>${escapeHtml(roleLabel(customer.role))}</b></span>
+          <span>Город: <b>${escapeHtml(customer.city || customer.lastCustomer?.city || "Не указан")}</b></span>
           <span>Адрес: <b>${escapeHtml(customer.address || customer.lastCustomer?.address || "Не указан")}</b></span>
           <span>Заказов: <b>${orders.length}</b></span>
         </div>
@@ -3587,6 +3674,7 @@ function userManagementHtml(user) {
           .map(([email, item]) => {
             const isAdmin = item.role === "admin";
             const isManager = item.role === "manager";
+            const isContent = item.role === "content";
             return `
               <article>
                 <strong>${item.name || email}</strong>
@@ -3599,6 +3687,9 @@ function userManagementHtml(user) {
                     : `<div class="order-actions">
                         <button class="ghost-button" type="button" data-set-role="${email}" data-role-value="${isManager ? "buyer" : "manager"}">
                           ${isManager ? "Снять менеджера" : "Назначить менеджером"}
+                        </button>
+                        <button class="ghost-button" type="button" data-set-role="${email}" data-role-value="${isContent ? "buyer" : "content"}">
+                          ${isContent ? "Снять контент-менеджера" : "Назначить контент-менеджером"}
                         </button>
                       </div>`
                 }
@@ -3642,10 +3733,10 @@ function accountModalHtml() {
                   : ""
               }
               <div class="account-actions">
-                ${user.role === "admin" ? '<button class="primary-button" type="button" data-open-admin><i data-lucide="settings"></i> Админка</button>' : ""}
-                ${user.role === "admin" ? '<a class="ghost-button" href="admin-products.html" target="_blank" rel="noopener">Товары</a>' : ""}
-                ${user.role === "admin" ? '<a class="ghost-button" href="admin-prices.html" target="_blank" rel="noopener">Цены</a>' : ""}
-                ${user.role === "admin" ? '<a class="ghost-button" href="admin-import.html" target="_blank" rel="noopener">Импорт</a>' : ""}
+                ${canManageContent(user) ? '<button class="primary-button" type="button" data-open-admin><i data-lucide="settings"></i> Админка</button>' : ""}
+                ${canManageContent(user) ? '<a class="ghost-button" href="admin-products.html" target="_blank" rel="noopener">Товары</a>' : ""}
+                ${canManageContent(user) ? '<a class="ghost-button" href="admin-prices.html" target="_blank" rel="noopener">Цены</a>' : ""}
+                ${canManageContent(user) ? '<a class="ghost-button" href="admin-import.html" target="_blank" rel="noopener">Импорт</a>' : ""}
                 ${canManageOrders(user) ? '<a class="ghost-button" href="admin-orders.html" target="_blank" rel="noopener">Заказы</a>' : ""}
                 <button class="ghost-button" type="button" data-logout>Выйти</button>
               </div>
@@ -4073,8 +4164,8 @@ function adminModalHtml() {
 }
 
 function openAdmin() {
-  if (getUsers()[state.currentUser]?.role !== "admin") {
-    showToast("Управление сайтом доступно только администратору.");
+  if (!canManageContent(getUsers()[state.currentUser])) {
+    showToast("Управление контентом доступно администратору и контент-менеджеру.");
     return;
   }
   document.querySelector("#accountModal")?.remove();
@@ -4398,9 +4489,14 @@ function downloadOrdersCsv() {
       order.managerName || order.managerEmail || "",
       customer.name || "",
       customer.company || "",
+      customer.inn || "",
       customer.phone || "",
       customer.email || order.userEmail || "",
+      customer.city || "",
       customer.address || "",
+      customer.delivery || "",
+      customer.packaging || "",
+      customer.layoutFileName || "",
       order.total || 0,
       order.promo || "",
       items.length,
@@ -4410,10 +4506,71 @@ function downloadOrdersCsv() {
     ];
   });
   downloadCsv("sobag-orders.csv", [
-    ["Номер", "Дата", "Статус", "Менеджер", "Имя", "Компания", "Телефон", "Email", "Адрес", "Сумма", "Промокод", "Позиций", "Артикулы", "Комментарий менеджера", "Комментарий клиента"],
+    ["Номер", "Дата", "Статус", "Менеджер", "Имя", "Компания", "ИНН", "Телефон", "Email", "Город", "Адрес", "Доставка", "Упаковка", "Макет", "Сумма", "Промокод", "Позиций", "Артикулы", "Комментарий менеджера", "Комментарий клиента"],
     ...rows,
   ]);
   showToast(`Скачано заказов: ${rows.length}.`);
+}
+
+function orderCsvRows(order) {
+  const customer = order?.customer || {};
+  const items = order?.items || [];
+  return [
+    ["Поле", "Значение"],
+    ["Номер", order?.id || ""],
+    ["Дата", order?.date || order?.createdAt || ""],
+    ["Статус", orderStatusLabel(order?.status)],
+    ["Менеджер", order?.managerName || order?.managerEmail || ""],
+    ["Имя", customer.name || ""],
+    ["Компания", customer.company || ""],
+    ["ИНН", customer.inn || ""],
+    ["Телефон", customer.phone || ""],
+    ["Email", customer.email || order?.userEmail || ""],
+    ["Город", customer.city || ""],
+    ["Адрес", customer.address || ""],
+    ["Доставка", customer.delivery || ""],
+    ["Упаковка", customer.packaging || ""],
+    ["Макет", customer.layoutFileName || ""],
+    ["Сумма", order?.total || 0],
+    ["Промокод", order?.promo || ""],
+    [],
+    ["Артикул", "Наименование", "Тип", "Размер", "Материал", "Количество", "Цена"],
+    ...items.map((line) => {
+      const variant = line.variant || {};
+      return [variant.sku || "", variant.name || line.productName || "", variant.type || "", variant.size || "", variant.material || "", line.qty || 0, variant.price || 0];
+    }),
+  ];
+}
+
+function downloadOrderCsv(orderId) {
+  const order = getOrders().find((item) => item.id === orderId);
+  if (!order) {
+    showToast("Заказ не найден.");
+    return;
+  }
+  downloadCsv(`sobag-order-${order.id || "order"}.csv`, orderCsvRows(order));
+}
+
+function printOrder(orderId) {
+  const order = getOrders().find((item) => item.id === orderId);
+  if (!order) {
+    showToast("Заказ не найден.");
+    return;
+  }
+  const customer = order.customer || {};
+  const lines = (order.items || [])
+    .map((line) => {
+      const variant = line.variant || {};
+      return `<tr><td>${escapeHtml(variant.sku || "")}</td><td>${escapeHtml(variant.name || line.productName || "")}</td><td>${escapeHtml([variant.type, variant.size, variant.material].filter(Boolean).join(", "))}</td><td>${line.qty || 0}</td><td>${formatMoney(variant.price || 0)}</td></tr>`;
+    })
+    .join("");
+  const win = window.open("", "_blank", "noopener,noreferrer,width=960,height=720");
+  if (!win) {
+    showToast("Браузер заблокировал печатное окно.");
+    return;
+  }
+  win.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Заказ ${escapeHtml(order.id || "")}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}h1{font-size:28px}dl{display:grid;grid-template-columns:180px 1fr;gap:8px 16px}dt{color:#666}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f4f4f4}</style></head><body><h1>Заказ ${escapeHtml(order.id || "")}</h1><dl><dt>Статус</dt><dd>${escapeHtml(orderStatusLabel(order.status))}</dd><dt>Дата</dt><dd>${escapeHtml(order.date || order.createdAt || "")}</dd><dt>Покупатель</dt><dd>${escapeHtml(customer.name || customer.company || "")}</dd><dt>Компания</dt><dd>${escapeHtml(customer.company || "")}</dd><dt>ИНН</dt><dd>${escapeHtml(customer.inn || "")}</dd><dt>Телефон</dt><dd>${escapeHtml(customer.phone || "")}</dd><dt>Email</dt><dd>${escapeHtml(customer.email || order.userEmail || "")}</dd><dt>Город</dt><dd>${escapeHtml(customer.city || "")}</dd><dt>Адрес</dt><dd>${escapeHtml(customer.address || "")}</dd><dt>Доставка</dt><dd>${escapeHtml(customer.delivery || "")}</dd><dt>Упаковка</dt><dd>${escapeHtml(customer.packaging || "")}</dd><dt>Макет</dt><dd>${escapeHtml(customer.layoutFileName || "")}</dd><dt>Комментарий</dt><dd>${escapeHtml(customer.comment || "")}</dd><dt>Итого</dt><dd><b>${formatMoney(order.total || 0)}</b></dd></dl><table><thead><tr><th>Артикул</th><th>Наименование</th><th>Параметры</th><th>Кол-во</th><th>Цена</th></tr></thead><tbody>${lines}</tbody></table><script>window.print();</script></body></html>`);
+  win.document.close();
 }
 
 function adminOrderUrl(orderId) {
@@ -4747,12 +4904,23 @@ async function submitOrder(form) {
     setFieldError(form, "email", "Проверьте формат email.");
     return;
   }
+  const inn = String(data.inn || "").replace(/\D/g, "");
+  if (inn && ![10, 12].includes(inn.length)) {
+    setFieldError(form, "inn", "ИНН должен содержать 10 или 12 цифр.");
+    return;
+  }
+  const layoutFile = form.elements.layoutFile?.files?.[0] || null;
   const customer = {
     name: user?.name || data.company || "",
     company: data.company || "",
+    inn,
     phone: data.phone || user?.phone || "",
     email: data.email || user?.email || "",
+    city: data.city || "",
     address: data.address || user?.address || "",
+    delivery: data.delivery || "",
+    packaging: data.packaging || "",
+    layoutFileName: layoutFile ? layoutFile.name : "",
     comment: data.comment || "",
   };
   try {
@@ -4816,10 +4984,11 @@ function boot() {
   loadServerSiteContent();
   loadPublishedProducts();
   initFormEnhancements();
-  loadBackendAccountData().then((changed) => {
+  loadBackendAccountData().then(async (changed) => {
     if (!changed) return;
     loadCart();
     loadFavorites();
+    await loadServerPersonalState();
     renderCart();
     renderProducts();
     renderAccountButton();
@@ -5023,6 +5192,8 @@ function boot() {
     if (button.dataset.exportVariantPrices !== undefined) downloadVariantPricesCsv(products, "sobag-variant-prices-all.csv");
     if (button.dataset.exportFilteredVariantPrices !== undefined) downloadVariantPricesCsv(getFilteredProducts(), "sobag-variant-prices-filtered.csv");
     if (button.dataset.exportOrders !== undefined) downloadOrdersCsv();
+    if (button.dataset.exportOrder) downloadOrderCsv(button.dataset.exportOrder);
+    if (button.dataset.printOrder) printOrder(button.dataset.printOrder);
     if (button.dataset.adminSyncCatalog !== undefined) {
       syncCatalogNow();
       return;
@@ -5224,6 +5395,7 @@ function boot() {
           saveServerUserProfile(result.user);
           await loadBackendAccountData();
           loadCart();
+          await loadServerPersonalState();
           closeModal();
           renderCart();
           renderProducts();
@@ -5256,6 +5428,7 @@ function boot() {
           saveServerUserProfile(result.user);
           await loadBackendAccountData();
           loadCart();
+          await loadServerPersonalState();
           closeModal();
           renderCart();
           renderProducts();
@@ -5280,6 +5453,7 @@ function boot() {
       localStorage.setItem(STORAGE.user, userKey);
       loadCart();
       loadFavorites();
+      await loadServerPersonalState();
       closeModal();
       renderCart();
       renderProducts();

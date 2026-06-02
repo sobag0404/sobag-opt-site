@@ -122,6 +122,18 @@ Recommended first real backend model:
 - ImportBatch
 - ImportRow
 
+## Current Store Additions
+
+As of 2026-06-02, the shared Redis/KV store also keeps lightweight personal state:
+- `store.carts[email] = { items, updatedAt }`
+- `store.favorites[email] = { items, updatedAt }`
+
+Endpoints:
+- `GET/PUT/DELETE /api/cart` for the signed-in user's cart;
+- `GET/PUT/DELETE /api/favorites` for the signed-in user's favorites.
+
+These are still prototype-grade JSON blobs, but they make cart/favorites portable across devices once the user is logged in. Product images/admin uploads still need durable object storage later.
+
 ## Security Notes
 
 Current state is better than the early localStorage-only prototype but still not final production security.

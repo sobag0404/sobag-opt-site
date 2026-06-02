@@ -14,7 +14,7 @@ Fallback Vercel domain:
 `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-`6c7eb4a Prevent same-page navigation flicker`
+`8c26aef Fill test business content`
 
 Read first:
 - `docs/ai-handoff/AI_HANDOFF.md`
@@ -53,9 +53,12 @@ Current implemented features:
 - cart page with quantity editing, discount scale, promo code, minimum sum, checkout modal;
 - prototype accounts plus API-backed auth/session/order attempts;
 - admin and manager order views;
+- per-order CSV export/print view and extended checkout/customer fields;
 - admin content controls for page text/images/logo/site name/dictionaries;
+- content-manager role for product/content/price/import tools;
+- server-backed cart/favorites prototype endpoints (`/api/cart`, `/api/favorites`);
 - CSV/XLSX product template download;
-- local importer that can scan nested category/article/photo folders;
+- local importer that can scan nested category/article/photo folders and optionally update existing products with `--update-existing`;
 - motion layer with reduced flicker after latest fixes.
 
 Backend/storage state:

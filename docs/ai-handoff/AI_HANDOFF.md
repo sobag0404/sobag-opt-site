@@ -4,7 +4,7 @@ Last updated: 2026-05-29
 
 ## Project
 
-Sobag Opt is a B2B wholesale textile/catalog prototype for printed textile products: pillows, pillowcases, blankets, shoe bags, cooler covers, luggage covers, flags, removki/keychains, custom-print requests, carts, discounts, prototype accounts, admin/manager order handling, editable site content, and local bulk product import tooling.
+Sobag Opt is a B2B wholesale textile/catalog prototype for printed textile products: pillows, pillowcases, blankets, shoe bags, cooler covers, luggage covers, flags, removki/keychains, custom-print requests, carts, discounts, prototype accounts, admin/manager/content-manager workspaces, editable site content, server-backed cart/favorites prototype endpoints, and local bulk product import tooling.
 
 Repository:
 - GitHub: `https://github.com/sobag0404/sobag-opt-site`
@@ -123,6 +123,7 @@ Important import rules:
 - Multiple categories are supported in `Категории` with `;`.
 - If `Типы товара` contains `Подушка;Наволочка`, display names should adapt by type.
 - Duplicate imports must be skipped/updated intentionally; do not delete existing products unless explicitly commanded.
+- `tools/product_importer.py import --update-existing` intentionally updates existing products by `baseSku`; without that flag duplicate base SKUs are skipped.
 - For flags, photo order is `1,2,3...`; for most other product categories, the highest numbered photo is main.
 
 Ignored/generated import outputs:
@@ -154,11 +155,11 @@ Large product-photo folders must not be committed to GitHub/Vercel.
 Latest verified checks before this handoff update:
 - `node --check app.js`
 - `node --check cart.js`
+- `node --check api/cart.js`
+- `node --check api/favorites.js`
 - `npm run check`
-- `git diff --check`
-- Production `https://sobag-shop.online/catalog` serves `app.js?v=20260529-nav-no-flash`.
-- Production `https://sobag-shop.online/cart` serves `cart.js?v=20260529-nav-no-flash`.
-- Production `https://sobag-shop.online/api/health` returns storage ready.
+- `npm run autofix`
+- `npm run ui:smoke`
 
 ## Current Focus
 

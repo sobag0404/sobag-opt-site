@@ -349,6 +349,8 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
     table_images = [row_value(row, "image"), *gallery_from_table]
     ordered_images = order_images_for_categories(copied_images if copied_images else table_images, categories)
     main_image = ordered_images[0] if ordered_images else "assets/production-workshop-1.png"
+    if len(ordered_images) < 2:
+        warnings.append("Мало фото: рекомендуем минимум 2-3 изображения на карточку")
 
     product = {
         "id": f"{slug(base_sku)}-{hashlib.sha1(base_sku.encode('utf-8')).hexdigest()[:6]}",
@@ -380,6 +382,9 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
         "photoCount": str(len(copied_images)),
         "mainImage": main_image,
         "status": "created",
+        "action": "created",
+        "variantCount": str(len(product_variants(product))),
+        "duplicateReason": "",
         "warnings": "; ".join(warnings),
     }
     return product, report
@@ -388,7 +393,12 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
 def write_report(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=["baseSku", "name", "photoFolder", "photoCount", "mainImage", "status", "warnings"], delimiter=";")
+        writer = csv.DictWriter(
+            file,
+            fieldnames=["baseSku", "name", "photoFolder", "photoCount", "mainImage", "status", "action", "variantCount", "duplicateReason", "warnings"],
+            delimiter=";",
+            extrasaction="ignore",
+        )
         writer.writeheader()
         writer.writerows(rows)
 
@@ -700,11 +710,13 @@ def command_import(args: argparse.Namespace) -> None:
             existing_products = load_existing_products(base_path)
             existing_source = str(base_path) if existing_products else ""
     existing_skus = {normalized_sku(product.get("baseSku", "")) for product in existing_products}
+    existing_index_by_sku = {normalized_sku(product.get("baseSku", "")): index for index, product in enumerate(existing_products)}
     existing_variant_skus = variant_sku_set(existing_products)
     seen_skus: set[str] = set()
     seen_variant_skus: set[str] = set()
     new_products: list[dict] = []
     report_rows: list[dict[str, str]] = []
+    updated_products = 0
     skipped_duplicates = 0
     skipped_variant_duplicates = 0
     for row in rows:
@@ -713,6 +725,38 @@ def command_import(args: argparse.Namespace) -> None:
         base_sku = normalize_base_sku(row_value(row, "baseSku"))
         sku_key = normalized_sku(base_sku)
         if sku_key in existing_skus or sku_key in seen_skus:
+            if args.update_existing and sku_key in existing_index_by_sku and sku_key not in seen_skus:
+                product, report = make_product(row, photos_root, assets_dir, project_root)
+                existing_index = existing_index_by_sku[sku_key]
+                product["id"] = existing_products[existing_index].get("id") or product["id"]
+                product_variant_skus = {normalized_sku(str(variant["sku"])) for variant in product_variants(product)}
+                own_variant_skus = variant_sku_set([existing_products[existing_index]])
+                colliding_variants = sorted((product_variant_skus & (existing_variant_skus - own_variant_skus)) | (product_variant_skus & seen_variant_skus))
+                if colliding_variants:
+                    skipped_variant_duplicates += 1
+                    report_rows.append(
+                        {
+                            "baseSku": base_sku,
+                            "name": row_value(row, "name"),
+                            "photoFolder": row_value(row, "photoFolder", base_sku),
+                            "photoCount": str(len([product.get("image"), *(product.get("gallery") or [])])),
+                            "mainImage": product.get("image", ""),
+                            "status": "variant_duplicate_skipped",
+                            "action": "skipped",
+                            "variantCount": str(len(product_variants(product))),
+                            "duplicateReason": "variant_sku_collision",
+                            "warnings": f"Дубль пропущен: совпали артикулы вариантов: {', '.join(colliding_variants[:5])}",
+                        }
+                    )
+                    continue
+                existing_products[existing_index] = product
+                seen_skus.add(sku_key)
+                seen_variant_skus.update(product_variant_skus)
+                updated_products += 1
+                report["status"] = "updated"
+                report["action"] = "updated"
+                report_rows.append(report)
+                continue
             skipped_duplicates += 1
             report_rows.append(
                 {
@@ -722,6 +766,9 @@ def command_import(args: argparse.Namespace) -> None:
                     "photoCount": "0",
                     "mainImage": "",
                     "status": "duplicate_skipped",
+                    "action": "skipped",
+                    "variantCount": "0",
+                    "duplicateReason": "base_sku_exists" if sku_key in existing_skus else "base_sku_repeated_in_table",
                     "warnings": "Дубль пропущен: товар с таким основным артикулом уже есть",
                 }
             )
@@ -740,6 +787,9 @@ def command_import(args: argparse.Namespace) -> None:
                     "photoCount": str(len([product.get("image"), *(product.get("gallery") or [])])),
                     "mainImage": product.get("image", ""),
                     "status": "variant_duplicate_skipped",
+                    "action": "skipped",
+                    "variantCount": str(len(product_variants(product))),
+                    "duplicateReason": "variant_sku_collision",
                     "warnings": f"Дубль пропущен: совпали артикулы вариантов: {', '.join(colliding_variants[:5])}",
                 }
             )
@@ -759,6 +809,7 @@ def command_import(args: argparse.Namespace) -> None:
                 "existingSource": existing_source,
                 "existingProductsKept": len(existing_products),
                 "newProducts": len(new_products),
+                "updatedProducts": updated_products,
                 "totalProducts": len(products),
                 "skippedDuplicates": skipped_duplicates,
                 "skippedVariantDuplicates": skipped_variant_duplicates,
@@ -802,6 +853,7 @@ def main() -> int:
     import_parser.add_argument("--report", default="data/import-report.csv", help="CSV report output path")
     import_parser.add_argument("--variant-prices", default="local-import-output/variant-prices.xlsx", help="CSV/XLSX variant price export path")
     import_parser.add_argument("--replace", action="store_true", help="replace output JSON instead of keeping existing products")
+    import_parser.add_argument("--update-existing", action="store_true", help="update existing products by baseSku instead of skipping them")
     import_parser.set_defaults(func=command_import)
 
     args = parser.parse_args()

@@ -1,11 +1,11 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sobag Opt | Корзина</title>
     <meta name="description" content="Корзина оптового заказа Sobag Opt." />
-    <link rel="stylesheet" href="styles.css?v=20260602-test-content" />
+    <link rel="stylesheet" href="styles.css?v=20260602-workflow" />
   </head>
   <body class="cart-page">
     <div data-site-topline></div>
@@ -81,8 +81,24 @@
           </button>
           <input name="name" type="text" placeholder="Имя" autocomplete="name" required />
           <input name="email" type="email" placeholder="Почта" autocomplete="email" required />
+          <input name="company" type="text" placeholder="Компания или ИП" autocomplete="organization" />
+          <input name="inn" type="text" inputmode="numeric" placeholder="ИНН" />
           <input name="phone" type="tel" placeholder="Номер телефона" autocomplete="tel" required />
+          <input name="city" type="text" placeholder="Город" autocomplete="address-level2" />
           <input name="address" type="text" placeholder="Адрес доставки или город" autocomplete="street-address" />
+          <select name="delivery">
+            <option value="">Доставка: согласовать</option>
+            <option value="Самовывоз">Самовывоз</option>
+            <option value="Транспортная компания">Транспортная компания</option>
+            <option value="До маркетплейса">До маркетплейса</option>
+          </select>
+          <select name="packaging">
+            <option value="">Упаковка: стандартная</option>
+            <option value="Под маркетплейс">Под маркетплейс</option>
+            <option value="Индивидуальная">Индивидуальная</option>
+          </select>
+          <input name="layoutFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.zip,.rar" />
+          <textarea name="comment" placeholder="Комментарий: сроки, город, упаковка"></textarea>
           <label class="consent-check">
             <input name="consent" type="checkbox" required />
             <span>
@@ -104,8 +120,8 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="components/site-shell.js?v=20260602-test-content"></script>
+    <script src="components/site-shell.js?v=20260602-workflow"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="cart.js?v=20260602-test-content"></script>
+    <script src="cart.js?v=20260602-workflow"></script>
   </body>
 </html>

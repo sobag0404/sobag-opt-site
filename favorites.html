@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
@@ -12,7 +12,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Crect x='6' y='6' width='52' height='52' fill='%23fff'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial,sans-serif' font-size='34' font-weight='900' fill='%23000'%3ES%3C/text%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="styles.css?v=20260602-test-content" />
+    <link rel="stylesheet" href="styles.css?v=20260602-workflow" />
   </head>
   <body class="catalog-page favorites-page">
     <div data-site-topline></div>
@@ -110,8 +110,23 @@
             <p class="cart-min-hint" id="cartMinHint">Минимальная сумма корзины 30 000 ₽.</p>
             <form class="request-form" id="requestForm">
               <input name="company" type="text" placeholder="Компания или ИП" required />
+              <input name="inn" type="text" inputmode="numeric" placeholder="ИНН" />
               <input name="phone" type="tel" placeholder="Телефон" required />
               <input name="email" type="email" placeholder="Email" />
+              <input name="city" type="text" placeholder="Город" autocomplete="address-level2" />
+              <input name="address" type="text" placeholder="Адрес доставки или город" autocomplete="street-address" />
+              <select name="delivery">
+                <option value="">Доставка: согласовать</option>
+                <option value="Самовывоз">Самовывоз</option>
+                <option value="Транспортная компания">Транспортная компания</option>
+                <option value="До маркетплейса">До маркетплейса</option>
+              </select>
+              <select name="packaging">
+                <option value="">Упаковка: стандартная</option>
+                <option value="Под маркетплейс">Под маркетплейс</option>
+                <option value="Индивидуальная">Индивидуальная</option>
+              </select>
+              <input name="layoutFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.zip,.rar" />
               <textarea name="comment" placeholder="Комментарий: сроки, город, упаковка"></textarea>
               <button class="primary-button" type="submit">
                 <i data-lucide="send"></i>
@@ -127,9 +142,9 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="components/site-shell.js?v=20260602-test-content"></script>
+    <script src="components/site-shell.js?v=20260602-workflow"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="app.js?v=20260602-test-content"></script>
+    <script src="app.js?v=20260602-workflow"></script>
   </body>
 </html>

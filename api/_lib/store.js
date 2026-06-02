@@ -27,6 +27,8 @@ function emptyStore() {
   return {
     users: {},
     orders: [],
+    carts: {},
+    favorites: {},
     audit: [],
     version: 1,
   };
@@ -40,6 +42,8 @@ function normalizeStore(value) {
     ...parsed,
     users: parsed.users || {},
     orders: Array.isArray(parsed.orders) ? parsed.orders : [],
+    carts: parsed.carts && typeof parsed.carts === "object" && !Array.isArray(parsed.carts) ? parsed.carts : {},
+    favorites: parsed.favorites && typeof parsed.favorites === "object" && !Array.isArray(parsed.favorites) ? parsed.favorites : {},
     audit: Array.isArray(parsed.audit) ? parsed.audit : [],
   };
 }

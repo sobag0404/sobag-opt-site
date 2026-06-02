@@ -3,9 +3,10 @@ const CURRENT_USER_KEY = "sobag.currentUser";
 const USERS_KEY = "sobag.users";
 const ORDERS_KEY = "sobag.orders.v1";
 const THEME_KEY = "sobag.theme.v1";
-const CART_KEY = localStorage.getItem(CURRENT_USER_KEY)
-  ? `sobag.cart.${localStorage.getItem(CURRENT_USER_KEY)}`
-  : "sobag.cart.guest";
+function getCartKey() {
+  const user = localStorage.getItem(CURRENT_USER_KEY);
+  return user ? `sobag.cart.${user}` : "sobag.cart.guest";
+}
 const PROTOTYPE_PRODUCT_IDS = new Set([
   "aurora-cats",
   "pixel-quest",
@@ -85,9 +86,10 @@ const defaultCartContent = {
 };
 
 const state = {
-  cart: new Map(cleanCartEntries(JSON.parse(localStorage.getItem(CART_KEY) || "[]"))),
+  cart: new Map(cleanCartEntries(JSON.parse(localStorage.getItem(getCartKey()) || "[]"))),
   promo: "",
 };
+let cartServerReady = !localStorage.getItem(CURRENT_USER_KEY);
 
 const nodes = {
   count: document.querySelector("#cartPageCount"),
@@ -323,7 +325,10 @@ function saveOrderRecord(order) {
   localStorage.setItem(ORDERS_KEY, JSON.stringify([record, ...getOrders()]));
   if (userKey && users[userKey]) {
     users[userKey].orders = [record, ...(users[userKey].orders || [])];
+    users[userKey].company = customer.company || users[userKey].company || "";
+    users[userKey].inn = customer.inn || users[userKey].inn || "";
     users[userKey].phone = customer.phone || users[userKey].phone || "";
+    users[userKey].city = customer.city || users[userKey].city || "";
     users[userKey].address = customer.address || users[userKey].address || "";
     users[userKey].addresses = [...new Set([customer.address, ...(users[userKey].addresses || [])].filter(Boolean))].slice(0, 10);
     users[userKey].lastCustomer = customer;
@@ -449,7 +454,42 @@ function renderCartContent() {
 }
 
 function saveCart() {
-  localStorage.setItem(CART_KEY, JSON.stringify([...state.cart.entries()]));
+  localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
+  if (cartServerReady) syncCartToBackend();
+}
+
+let cartSyncTimer = 0;
+
+function syncCartToBackend() {
+  if (!localStorage.getItem(CURRENT_USER_KEY)) return;
+  window.clearTimeout(cartSyncTimer);
+  const items = [...state.cart.entries()];
+  cartSyncTimer = window.setTimeout(() => {
+    apiRequest("/api/cart", { method: "PUT", body: { items } }).catch((error) => {
+      if (!isBackendUnavailable(error)) console.warn(error);
+    });
+  }, 250);
+}
+
+async function loadServerCart() {
+  if (!localStorage.getItem(CURRENT_USER_KEY)) return false;
+  try {
+    const data = await apiRequest("/api/cart");
+    const serverCart = cleanCartEntries(data.items || []);
+    const localCart = cleanCartEntries([...state.cart.entries()]);
+    const merged = new Map(serverCart);
+    localCart.forEach(([key, line]) => merged.set(key, line));
+    state.cart = merged;
+    localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
+    cartServerReady = true;
+    syncCartToBackend();
+    renderCart();
+    return true;
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 401) console.warn(error);
+    cartServerReady = true;
+    return false;
+  }
 }
 
 function isPrototypeCartLine(line) {
@@ -603,8 +643,14 @@ function fillCheckoutFromProfile() {
   }
   form.elements.name.value = profile.name || "";
   form.elements.email.value = profile.email || "";
+  if (form.elements.company) form.elements.company.value = profile.company || profile.lastCustomer?.company || "";
+  if (form.elements.inn) form.elements.inn.value = profile.inn || profile.lastCustomer?.inn || "";
   form.elements.phone.value = profile.phone || "";
+  if (form.elements.city) form.elements.city.value = profile.city || profile.lastCustomer?.city || "";
   if (form.elements.address) form.elements.address.value = profile.address || profile.lastCustomer?.address || profile.addresses?.[0] || "";
+  if (form.elements.delivery) form.elements.delivery.value = profile.lastCustomer?.delivery || "";
+  if (form.elements.packaging) form.elements.packaging.value = profile.lastCustomer?.packaging || "";
+  if (form.elements.comment) form.elements.comment.value = profile.lastCustomer?.comment || "";
   showToast("Данные профиля подставлены в форму заказа.");
 }
 
@@ -716,14 +762,33 @@ document.querySelector("#checkoutForm").addEventListener("submit", async (event)
     setFieldError(event.target, "phone", "Укажите телефон.");
     return;
   }
+  const inn = String(data.inn || "").replace(/\D/g, "");
+  if (inn && ![10, 12].includes(inn.length)) {
+    setFieldError(event.target, "inn", "ИНН должен содержать 10 или 12 цифр.");
+    return;
+  }
   if (data.consent !== "on") {
     setFieldError(event.target, "consent", "Подтвердите согласие на обработку персональных данных.");
     return;
   }
+  const layoutFile = event.target.elements.layoutFile?.files?.[0] || null;
+  const customer = {
+    name: String(data.name || "").trim(),
+    email: String(data.email || "").trim(),
+    company: String(data.company || "").trim(),
+    inn,
+    phone: String(data.phone || "").trim(),
+    city: String(data.city || "").trim(),
+    address: String(data.address || "").trim(),
+    delivery: String(data.delivery || "").trim(),
+    packaging: String(data.packaging || "").trim(),
+    layoutFileName: layoutFile ? layoutFile.name : "",
+    comment: String(data.comment || "").trim(),
+  };
   const order = {
     id: `SO-${Date.now().toString().slice(-6)}`,
     date: new Date().toLocaleString("ru-RU"),
-    customer: data,
+    customer,
     items: totals.lines,
     total: totals.total,
     promo: state.promo,
@@ -769,4 +834,5 @@ loadServerCartContent();
 initFormEnhancements();
 applyTheme(localStorage.getItem(THEME_KEY) || "default");
 renderCart();
+loadServerCart();
 if (window.lucide) window.lucide.createIcons();

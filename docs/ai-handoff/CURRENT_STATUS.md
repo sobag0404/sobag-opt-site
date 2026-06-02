@@ -50,6 +50,7 @@ Important remaining work:
 - optional AI-assisted descriptions/tags/collections from photos;
 - separate price-editing file per variant;
 - durable storage for admin uploads/product images;
+- server cart/favorites are now backed by Redis/KV prototype endpoints, but full database/object storage is still the next production-grade step;
 - legal pages and final consent/privacy text review.
 
 Important constraints:
