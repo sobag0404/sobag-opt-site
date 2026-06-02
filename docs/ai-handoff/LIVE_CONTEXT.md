@@ -609,3 +609,4 @@ Latest production verification:
   - updated cache-busting query strings to `20260602-workflow`;
   - local verification passed: JS/API syntax checks, `python -m py_compile tools/product_importer.py`, `npm.cmd run check`, `npm.cmd run autofix`, `npm.cmd run ui:smoke` with 7/7 passing, local Playwright spot-check for checkout/request fields, content-manager product access, `robots.txt`, and `sitemap.xml`;
   - importer smoke with a temp CSV verified created -> duplicate_skipped -> updated behavior and report output.
+  - committed locally as `6c98411 Add order workflow and personal state sync`.

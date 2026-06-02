@@ -14,7 +14,7 @@ Fallback Vercel domain:
 `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-`8c26aef Fill test business content`
+`6c98411 Add order workflow and personal state sync`
 
 Read first:
 - `docs/ai-handoff/AI_HANDOFF.md`
