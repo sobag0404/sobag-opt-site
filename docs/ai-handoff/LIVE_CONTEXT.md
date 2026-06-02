@@ -37,6 +37,29 @@ Last updated: 2026-06-02
   - Fill SEO/content pages: About, Contacts, Business Terms, legal docs, maps, requisites.
   - Later, move cart/favorites to server storage if cross-device persistence becomes required.
 
+## 2026-06-02 Content Trust Pages Pass
+
+- Added a dedicated `business.html` page for `Условия для бизнеса`.
+- Header and footer business links now route to `business.html` instead of `index.html#wholesale`; legacy `data-scroll="#wholesale"` still resolves safely to the new page.
+- Added editable admin text fields for the business page:
+  - page title/lead;
+  - minimum order block;
+  - discount block;
+  - production block;
+  - manager communication block;
+  - documents/agreement block.
+- Added the business page to the admin content-section map and preview links.
+- Added `terms.html` as a working user-agreement document page; footer agreement links now open it in a new tab.
+- Existing personal-data consent PDF remains linked from registration and footer and opens in a new tab.
+- Added CSS for business condition cards using existing panel primitives, without introducing extra decorative layers.
+- Updated cache-busting version to `20260602-business-pages` across HTML references.
+- Verification passed:
+  - `npm.cmd run check`;
+  - `npm.cmd run autofix`;
+  - `npm.cmd run ui:smoke` with 7/7 tests passing;
+  - local Playwright visual QA for `/business.html`, `/terms.html`, and `/admin-products.html#content`: no horizontal overflow and no mojibake in visible text.
+- Open note: legal document text is a working placeholder and must be reviewed/replaced before treating it as final legal wording.
+
 ## Standing Reminder For Codex
 
 Before every final response after doing project work, update this file with:

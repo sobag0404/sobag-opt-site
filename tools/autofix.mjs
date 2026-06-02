@@ -58,8 +58,10 @@ function checkPageSectionOwnership() {
     "favorites.html": ["catalog-section"],
     "custom.html": ["custom"],
     "marketplaces.html": ["marketplaces"],
+    "business.html": [],
     "about.html": [],
     "contacts.html": [],
+    "terms.html": [],
     "cart.html": [],
   };
   const scenarioClasses = new Set(["hero", "benefits", "catalog-section", "wholesale", "marketplaces", "custom"]);

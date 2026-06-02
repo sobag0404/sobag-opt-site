@@ -227,6 +227,19 @@ const defaultSiteContent = {
   customStepThree: "Печать и пошив",
   customStepFour: "Упаковка и отгрузка",
   customSubmitButton: "получить расчет",
+  businessPageTitle: "Условия для бизнеса",
+  businessPageLead:
+    "Оптовые условия для магазинов, селлеров и корпоративных клиентов: скидка от суммы заказа, производство в одном месте и сопровождение менеджера.",
+  businessMinimumTitle: "Минимальный заказ",
+  businessMinimumText: "Стартовая сумма корзины для оформления оптовой заявки — 30 000 ₽. До этой суммы корзину можно собрать и сохранить, но оформить заказ нельзя.",
+  businessDiscountTitle: "Скидка от суммы",
+  businessDiscountText: "Скидка пересчитывается автоматически по общей сумме корзины. Чем больше партия, тем ниже цена за единицу товара.",
+  businessProductionTitle: "Производство и комплектация",
+  businessProductionText: "Печать, пошив, упаковка, маркировка и подготовка к отгрузке выполняются в одном процессе, чтобы партия была готова к продаже.",
+  businessManagerTitle: "Связь с менеджером",
+  businessManagerText: "После отправки корзины менеджер уточняет наличие, сроки, упаковку, город отгрузки и помогает довести заказ до запуска.",
+  businessDocumentsTitle: "Документы и согласования",
+  businessDocumentsText: "Реквизиты, счета, макеты, штрихкоды и требования к упаковке можно согласовать до запуска партии. Подробные условия будут уточняться в договоре или счете.",
   aboutPageTitle: "О компании",
   aboutPageLead:
     "Sobag Opt — тестовая витрина для оптовых продаж текстиля с принтами и заказов на производство под ваш макет.",
@@ -346,6 +359,18 @@ const siteTextFields = [
   { key: "customStepThree", label: "Свой принт: шаг 3" },
   { key: "customStepFour", label: "Свой принт: шаг 4" },
   { key: "customSubmitButton", label: "Кнопка: получить расчет" },
+  { key: "businessPageTitle", label: "Условия для бизнеса: заголовок" },
+  { key: "businessPageLead", label: "Условия для бизнеса: вступление", multiline: true, wide: true },
+  { key: "businessMinimumTitle", label: "Условия: минимальный заказ" },
+  { key: "businessMinimumText", label: "Условия: текст минимального заказа", multiline: true, wide: true },
+  { key: "businessDiscountTitle", label: "Условия: скидка" },
+  { key: "businessDiscountText", label: "Условия: текст скидки", multiline: true, wide: true },
+  { key: "businessProductionTitle", label: "Условия: производство" },
+  { key: "businessProductionText", label: "Условия: текст производства", multiline: true, wide: true },
+  { key: "businessManagerTitle", label: "Условия: менеджер" },
+  { key: "businessManagerText", label: "Условия: текст менеджера", multiline: true, wide: true },
+  { key: "businessDocumentsTitle", label: "Условия: документы" },
+  { key: "businessDocumentsText", label: "Условия: текст документов", multiline: true, wide: true },
   { key: "aboutPageTitle", label: "О компании: заголовок" },
   { key: "aboutPageLead", label: "О компании: вступление", multiline: true, wide: true },
   { key: "aboutPageText", label: "О компании: основной текст", multiline: true, wide: true },
@@ -410,6 +435,11 @@ const siteTextFieldPages = [
     keys: ["customTitle", "customText", "customStepOne", "customStepTwo", "customStepThree", "customStepFour", "customSubmitButton"],
   },
   {
+    title: "Страница: условия для бизнеса",
+    note: "Отдельная страница с правилами опта, скидками, производством и работой менеджера.",
+    keys: ["businessPageTitle", "businessPageLead", "businessMinimumTitle", "businessMinimumText", "businessDiscountTitle", "businessDiscountText", "businessProductionTitle", "businessProductionText", "businessManagerTitle", "businessManagerText", "businessDocumentsTitle", "businessDocumentsText"],
+  },
+  {
     title: "Страница: о компании",
     note: "Отдельная страница с описанием компании, производства и оптового направления.",
     keys: ["aboutPageTitle", "aboutPageLead", "aboutPageText", "aboutPageProductionTitle", "aboutPageProductionText"],
@@ -431,7 +461,7 @@ const siteTextFieldPages = [
   },
 ];
 
-const adminPageAnchors = ["global", "home", "catalog", "marketplaces", "custom", "about", "contacts", "cart", "footer"];
+const adminPageAnchors = ["global", "home", "catalog", "marketplaces", "custom", "business", "about", "contacts", "cart", "footer"];
 
 const siteTextFieldGroups = siteTextFieldPages.map((group, index) => ({
   ...group,
@@ -703,8 +733,9 @@ function footerLinkUrl(label = "") {
   if (prepared.includes("контакт")) return "contacts.html";
   if (prepared.includes("маркетплейс")) return "marketplaces.html";
   if (prepared.includes("свой") || prepared.includes("принт")) return "custom.html";
-  if (prepared.includes("услов")) return "index.html#wholesale";
+  if (prepared.includes("услов")) return "business.html";
   if (prepared.includes("политик") || prepared.includes("персональ")) return "assets/legal/personal-data-consent.pdf";
+  if (prepared.includes("соглаш")) return "terms.html";
   return "#";
 }
 
@@ -716,7 +747,7 @@ function renderFooterLinks(selector, value) {
       .filter(Boolean)
       .map((item) => {
         const href = footerLinkUrl(item);
-        const externalAttrs = href.endsWith(".pdf") ? ' target="_blank" rel="noopener"' : "";
+        const externalAttrs = href.endsWith(".pdf") || href === "terms.html" ? ' target="_blank" rel="noopener"' : "";
         return `<a href="${href}"${externalAttrs}>${escapeHtml(item)}</a>`;
       })
       .join("");
@@ -1197,6 +1228,18 @@ function renderSiteContent() {
     step.innerHTML = `${number} ${escapeHtml(values[index])}`;
   });
   setButtonText("#briefForm .primary-button", content.customSubmitButton);
+  setText("[data-business-page-title]", content.businessPageTitle);
+  setText("[data-business-page-lead]", content.businessPageLead);
+  setText("[data-business-minimum-title]", content.businessMinimumTitle);
+  setText("[data-business-minimum-text]", content.businessMinimumText);
+  setText("[data-business-discount-title]", content.businessDiscountTitle);
+  setText("[data-business-discount-text]", content.businessDiscountText);
+  setText("[data-business-production-title]", content.businessProductionTitle);
+  setText("[data-business-production-text]", content.businessProductionText);
+  setText("[data-business-manager-title]", content.businessManagerTitle);
+  setText("[data-business-manager-text]", content.businessManagerText);
+  setText("[data-business-documents-title]", content.businessDocumentsTitle);
+  setText("[data-business-documents-text]", content.businessDocumentsText);
   const footer = document.querySelector(".footer");
   if (footer) {
     const footerEmails = footer.querySelectorAll("[data-footer-email]");
@@ -3725,6 +3768,7 @@ function adminSectionHref(anchor) {
       catalog: "catalog.html",
       marketplaces: "marketplaces.html",
       custom: "custom.html",
+      business: "business.html",
       about: "about.html",
       contacts: "contacts.html",
       cart: "cart.html",
@@ -3749,6 +3793,7 @@ function adminSectionMapHtml() {
     { anchor: "catalog", title: "Каталог", note: "Категории, подборки, праздники, фильтры", shot: "catalog" },
     { anchor: "marketplaces", title: "Маркетплейсы", note: "Отдельная страница витрин", shot: "page" },
     { anchor: "custom", title: "Свой принт", note: "Калькулятор и бриф", shot: "page" },
+    { anchor: "business", title: "Условия для бизнеса", note: "Оптовые условия, скидки и запуск партии", shot: "page" },
     { anchor: "about", title: "О компании", note: "Описание производства", shot: "page" },
     { anchor: "contacts", title: "Контакты", note: "Адрес, карта, график", shot: "contacts" },
     { anchor: "cart", title: "Корзина", note: "Оформление и промокод", shot: "cart" },
@@ -4774,7 +4819,7 @@ function boot() {
           "#custom": "custom.html",
           "#briefForm": "custom.html#briefForm",
           "#marketplaces": "marketplaces.html",
-          "#wholesale": "index.html#wholesale",
+          "#wholesale": "business.html",
         };
         if (routes[button.dataset.scroll]) navigateWithinSite(routes[button.dataset.scroll]);
       }

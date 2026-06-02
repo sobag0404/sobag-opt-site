@@ -137,9 +137,11 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
     "/admin-prices.html",
     "/admin-import.html",
     "/marketplaces.html",
+    "/business.html",
     "/custom.html",
     "/about.html",
     "/contacts.html",
+    "/terms.html",
   ];
 
   for (const route of routes) {
