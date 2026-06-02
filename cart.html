@@ -1,11 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sobag Opt | РљРѕСЂР·РёРЅР°</title>
-    <meta name="description" content="РљРѕСЂР·РёРЅР° РѕРїС‚РѕРІРѕРіРѕ Р·Р°РєР°Р·Р° Sobag Opt." />
-    <link rel="stylesheet" href="styles.css?v=20260602-content-editor" />
+    <title>Sobag Opt | Корзина</title>
+    <meta name="description" content="Корзина оптового заказа Sobag Opt." />
+    <link rel="stylesheet" href="styles.css?v=20260602-encoding-fix" />
   </head>
   <body class="cart-page">
     <div data-site-topline></div>
@@ -18,18 +18,18 @@
           <div class="section-head section-head--inline">
             <div>
               <div class="accent-stripe" aria-hidden="true"></div>
-              <h1>РљРѕСЂР·РёРЅР°</h1>
+              <h1>Корзина</h1>
             </div>
             <a class="ghost-button" href="catalog.html">
               <i data-lucide="arrow-left"></i>
-              Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РєР°С‚Р°Р»РѕРі
+              Вернуться в каталог
             </a>
           </div>
 
           <div class="cart-page__empty" id="cartPageEmpty">
             <i data-lucide="shopping-basket"></i>
-            <strong>РљРѕСЂР·РёРЅР° РїРѕРєР° РїСѓСЃС‚Р°СЏ</strong>
-            <span>Р”РѕР±Р°РІСЊС‚Рµ С‚РѕРІР°СЂС‹ РёР· РєР°С‚Р°Р»РѕРіР°, С‡С‚РѕР±С‹ СѓРІРёРґРµС‚СЊ СЂР°СЃС‡РµС‚ РѕРїС‚РѕРІРѕР№ СЃРєРёРґРєРё.</span>
+            <strong>Корзина пока пустая</strong>
+            <span>Добавьте товары из каталога, чтобы увидеть расчет оптовой скидки.</span>
           </div>
 
           <div class="cart-page__items" id="cartPageItems"></div>
@@ -37,30 +37,30 @@
 
         <aside class="cart-summary">
           <div class="cart-summary__block">
-            <h2>РЎРєРёРґРєР°</h2>
+            <h2>Скидка</h2>
             <div class="cart-discount-scale" id="cartDiscountScale"></div>
-            <p id="cartDiscountHint">Р”РѕР±Р°РІСЊС‚Рµ С‚РѕРІР°СЂС‹, С‡С‚РѕР±С‹ РѕС‚РєСЂС‹С‚СЊ СЃРєРёРґРєСѓ.</p>
+            <p id="cartDiscountHint">Добавьте товары, чтобы открыть скидку.</p>
           </div>
 
           <div class="cart-summary__block">
-            <h2>РџСЂРѕРјРѕРєРѕРґ</h2>
+            <h2>Промокод</h2>
             <form class="promo-form" id="promoForm">
-              <input id="promoInput" type="text" placeholder="Р’РІРµРґРёС‚Рµ РїСЂРѕРјРѕРєРѕРґ" autocomplete="off" />
-              <button type="submit">РџСЂРёРјРµРЅРёС‚СЊ</button>
+              <input id="promoInput" type="text" placeholder="Введите промокод" autocomplete="off" />
+              <button type="submit">Применить</button>
             </form>
-            <p id="promoHint">РўРµСЃС‚РѕРІС‹Рµ РїСЂРѕРјРѕРєРѕРґС‹: SOBAG5 РёР»Рё OPT10.</p>
+            <p id="promoHint">Тестовые промокоды: SOBAG5 или OPT10.</p>
           </div>
 
           <div class="cart-summary__totals">
-            <div><span>РўРѕРІР°СЂС‹</span><strong id="cartSubtotal">0 в‚Ѕ</strong></div>
-            <div><span>РЎРєРёРґРєР° РїРѕ РєРѕСЂР·РёРЅРµ</span><strong id="cartQtyDiscount">0%</strong></div>
-            <div><span>РџСЂРѕРјРѕРєРѕРґ</span><strong id="cartPromoDiscount">0%</strong></div>
-            <div class="totals__final"><span>РС‚РѕРіРѕ</span><strong id="cartGrandTotal">0 в‚Ѕ</strong></div>
+            <div><span>Товары</span><strong id="cartSubtotal">0 ₽</strong></div>
+            <div><span>Скидка по корзине</span><strong id="cartQtyDiscount">0%</strong></div>
+            <div><span>Промокод</span><strong id="cartPromoDiscount">0%</strong></div>
+            <div class="totals__final"><span>Итого</span><strong id="cartGrandTotal">0 ₽</strong></div>
           </div>
-          <p class="cart-min-hint" id="cartPageMinHint">РњРёРЅРёРјР°Р»СЊРЅР°СЏ СЃСѓРјРјР° Р·Р°РєР°Р·Р° 30 000 в‚Ѕ.</p>
+          <p class="cart-min-hint" id="cartPageMinHint">Минимальная сумма заказа 30 000 ₽.</p>
           <button class="primary-button cart-checkout-button" id="checkoutButton" type="button">
             <i data-lucide="send"></i>
-            РћС„РѕСЂРјРёС‚СЊ Р·Р°РєР°Р·
+            Оформить заказ
           </button>
         </aside>
       </section>
@@ -71,30 +71,30 @@
       <section class="modal__panel checkout-panel">
         <button class="modal__close" type="button" data-close-checkout><i data-lucide="x"></i></button>
         <div>
-          <p class="eyebrow">РћС„РѕСЂРјР»РµРЅРёРµ</p>
-          <h2 id="checkoutTitle">РљРѕРЅС‚Р°РєС‚С‹ РїРѕРєСѓРїР°С‚РµР»СЏ</h2>
+          <p class="eyebrow">Оформление</p>
+          <h2 id="checkoutTitle">Контакты покупателя</h2>
         </div>
         <form class="checkout-form" id="checkoutForm" novalidate>
           <button class="ghost-button checkout-profile-button" id="useProfileButton" type="button">
             <i data-lucide="user-check"></i>
-            РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ РёР· РїСЂРѕС„РёР»СЏ
+            Использовать информацию из профиля
           </button>
-          <input name="name" type="text" placeholder="РРјСЏ" autocomplete="name" required />
-          <input name="email" type="email" placeholder="РџРѕС‡С‚Р°" autocomplete="email" required />
-          <input name="phone" type="tel" placeholder="РќРѕРјРµСЂ С‚РµР»РµС„РѕРЅР°" autocomplete="tel" required />
-          <input name="address" type="text" placeholder="РђРґСЂРµСЃ РґРѕСЃС‚Р°РІРєРё РёР»Рё РіРѕСЂРѕРґ" autocomplete="street-address" />
+          <input name="name" type="text" placeholder="Имя" autocomplete="name" required />
+          <input name="email" type="email" placeholder="Почта" autocomplete="email" required />
+          <input name="phone" type="tel" placeholder="Номер телефона" autocomplete="tel" required />
+          <input name="address" type="text" placeholder="Адрес доставки или город" autocomplete="street-address" />
           <label class="consent-check">
             <input name="consent" type="checkbox" required />
             <span>
-              РЎРѕРіР»Р°СЃРµРЅ РЅР°
+              Согласен на
               <a href="assets/legal/personal-data-consent.pdf" target="_blank" rel="noopener">
-                РѕР±СЂР°Р±РѕС‚РєСѓ РїРµСЂСЃРѕРЅР°Р»СЊРЅС‹С… РґР°РЅРЅС‹С…
+                обработку персональных данных
               </a>
             </span>
           </label>
           <button class="primary-button" type="submit">
             <i data-lucide="check"></i>
-            РћС‚РїСЂР°РІРёС‚СЊ Р·Р°РєР°Р·
+            Отправить заказ
           </button>
         </form>
       </section>
@@ -104,8 +104,8 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="components/site-shell.js?v=20260529-ui-refactor"></script>
+    <script src="components/site-shell.js?v=20260602-encoding-fix"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="cart.js?v=20260529-nav-no-flash"></script>
+    <script src="cart.js?v=20260602-encoding-fix"></script>
   </body>
 </html>

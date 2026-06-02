@@ -77,6 +77,44 @@ function checkPageSectionOwnership() {
   }
 }
 
+function checkNoMojibake() {
+  const suspects = [
+    "\u0420\u045f",
+    "\u0420\u040e",
+    "\u0420\u045c",
+    "\u0420\u0402",
+    "\u0420\u040b",
+    "\u0421\u0453",
+    "\u0421\u201a",
+    "\u0421\u040a",
+    "\u0421\u20ac",
+    "\u0421\u040b",
+    "\u0421\u040f",
+    "\u0432\u201a\u0405",
+    "\u0432\u0402",
+    "\u0420\ufffd",
+  ];
+  const files = [
+    ...walk(root, (file) => file.endsWith(".html")),
+    ...["app.js", "cart.js", "components/site-shell.js"].map((file) => join(root, file)),
+  ];
+  const offenders = [];
+
+  for (const file of files) {
+    const text = readFileSync(file, "utf8");
+    const hit = suspects.find((suspect) => text.includes(suspect));
+    if (hit) {
+      const index = text.indexOf(hit);
+      const snippet = text.slice(Math.max(0, index - 30), index + 60).replace(/\s+/g, " ");
+      offenders.push(`${file.replace(root, ".")}: ${snippet}`);
+    }
+  }
+
+  if (offenders.length) {
+    throw new Error(`Detected mojibake / broken UTF-8 text:\n${offenders.slice(0, 20).join("\n")}`);
+  }
+}
+
 function checkImageHints() {
   const files = walk(root, (file) => file.endsWith(".html") || file.endsWith(".js"));
   const offenders = [];
@@ -108,6 +146,7 @@ function main() {
   assertNoPattern("cart.js", /password:\s*["'`]/, "пароли не должны появляться в cart.js");
   checkUiShellOwnership();
   checkPageSectionOwnership();
+  checkNoMojibake();
   checkImageHints();
   console.log("AutoFix: checks passed");
 }

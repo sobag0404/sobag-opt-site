@@ -1,6 +1,18 @@
 # Live AI Context
 
-Last updated: 2026-06-01
+Last updated: 2026-06-02
+
+## Latest Session Notes
+
+- Fixed a site-wide mojibake / broken UTF-8 regression where Russian text rendered as `Р...` sequences on production pages.
+- Restored all static HTML pages to valid UTF-8 while preserving the current admin/catalog JavaScript behavior.
+- Added an `autofix` guard that scans HTML plus key client scripts for common mojibake sequences before deploy.
+- Verification passed locally:
+  - `npm.cmd run autofix`
+  - `npm.cmd run check`
+  - `npm.cmd run ui:smoke` with 6/6 tests passing
+  - Browser check on `/` and `/admin-products.html`: page titles/headings are valid Russian and no mojibake detected in visible text.
+- Current focus: deploy this encoding fix, then the user will manually check the admin panel.
 
 ## Standing Reminder For Codex
 
