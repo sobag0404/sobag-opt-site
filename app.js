@@ -229,35 +229,35 @@ const defaultSiteContent = {
   customSubmitButton: "получить расчет",
   businessPageTitle: "Условия для бизнеса",
   businessPageLead:
-    "Оптовые условия для магазинов, селлеров и корпоративных клиентов: скидка от суммы заказа, производство в одном месте и сопровождение менеджера.",
+    "Рабочие тестовые условия для магазинов, селлеров и корпоративных клиентов: скидка от суммы заказа, производство в одном месте и сопровождение менеджера.",
   businessMinimumTitle: "Минимальный заказ",
-  businessMinimumText: "Стартовая сумма корзины для оформления оптовой заявки — 30 000 ₽. До этой суммы корзину можно собрать и сохранить, но оформить заказ нельзя.",
+  businessMinimumText: "Минимальная сумма для оформления оптовой заявки — 30 000 ₽. До этой суммы товары можно добавлять в корзину, сохранять подборку и готовить заказ к отправке менеджеру.",
   businessDiscountTitle: "Скидка от суммы",
-  businessDiscountText: "Скидка пересчитывается автоматически по общей сумме корзины. Чем больше партия, тем ниже цена за единицу товара.",
+  businessDiscountText: "Скидка пересчитывается автоматически по общей сумме корзины: от 30 000 ₽, 70 000 ₽, 150 000 ₽ и 300 000 ₽. Чем больше партия, тем ниже цена за единицу товара.",
   businessProductionTitle: "Производство и комплектация",
-  businessProductionText: "Печать, пошив, упаковка, маркировка и подготовка к отгрузке выполняются в одном процессе, чтобы партия была готова к продаже.",
+  businessProductionText: "Печать, раскрой, пошив, упаковка, маркировка и подготовка к отгрузке выполняются в одном процессе. Для теста считаем, что стандартная партия запускается за 7 рабочих дней после согласования.",
   businessManagerTitle: "Связь с менеджером",
-  businessManagerText: "После отправки корзины менеджер уточняет наличие, сроки, упаковку, город отгрузки и помогает довести заказ до запуска.",
+  businessManagerText: "После отправки корзины менеджер связывается с покупателем, уточняет наличие, сроки, упаковку, город отгрузки и помогает довести заказ до запуска.",
   businessDocumentsTitle: "Документы и согласования",
-  businessDocumentsText: "Реквизиты, счета, макеты, штрихкоды и требования к упаковке можно согласовать до запуска партии. Подробные условия будут уточняться в договоре или счете.",
-  aboutPageTitle: "О компании",
+  businessDocumentsText: "Реквизиты, счет, макеты, штрихкоды, упаковку и требования маркетплейсов можно согласовать до запуска партии. Финальные условия фиксируются в счете, договоре или переписке с менеджером.",
+  aboutPageTitle: "О компании Sobag Opt",
   aboutPageLead:
-    "Sobag Opt — тестовая витрина для оптовых продаж текстиля с принтами и заказов на производство под ваш макет.",
+    "Sobag Opt — тестовый B2B-каталог для оптовых продаж текстиля с принтами и заказов на производство под макет покупателя.",
   aboutPageText:
-    "Здесь позже появится история компании, описание производства, сильные стороны команды и условия работы с оптовыми покупателями.",
-  aboutPageProductionTitle: "Производство и опт",
+    "Мы работаем с магазинами, селлерами и корпоративными клиентами: помогаем подобрать товар, собрать партию, рассчитать скидку, подготовить упаковку и передать заказ в производство. Эти данные тестовые, позже здесь будут реальные факты о компании.",
+  aboutPageProductionTitle: "Производство текстиля с принтами",
   aboutPageProductionText:
-    "Мы готовим партии для маркетплейсов, магазинов и корпоративных клиентов: печать, пошив, комплектация и подготовка к отгрузке.",
+    "В тестовой модели производство включает печать, раскрой, пошив, контроль качества, упаковку, маркировку и подготовку к отгрузке. Один принт можно выпускать в разных изделиях, размерах и материалах.",
   contactsPageTitle: "Контакты",
-  contactsPageLead: "Здесь будут контакты отдела опта, адрес производства и карта.",
-  contactsAddress: "Москва, Новоданиловская набережная, 4",
-  contactsSchedule: "Пн-Пт, 10:00-18:00",
+  contactsPageLead: "Тестовые контакты отдела опта. Позже здесь будут реальные телефон, почта, адрес производства и карта.",
+  contactsAddress: "Москва, ул. Текстильщиков, 12, стр. 2",
+  contactsSchedule: "Пн-Пт, 10:00-18:00 по Москве",
   contactsMapButton: "показать на карте",
   footerBrand: "SOBAG OPT",
-  footerText: "Тестовый прототип B2B-сайта для оптовых продаж текстиля с принтами.",
+  footerText: "Тестовый B2B-каталог для оптовых заказов текстиля с принтами, производства под макет и поставок партиями.",
   footerSalesLabel: "Отдел опта",
-  footerEmail: "opt@sobag-shop.ru",
-  footerPhone: "+7 900 000-00-00",
+  footerEmail: "opt@sobag-shop.online",
+  footerPhone: "+7 900 123-45-67",
   footerCompanyTitle: "Компания",
   footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Пользовательское соглашение",
   footerClientsTitle: "Клиентам",
@@ -265,7 +265,7 @@ const defaultSiteContent = {
   footerPartnersTitle: "Партнерам",
   footerPartnersLinks: "Условия для бизнеса|Мы на маркетплейсах|Поддержка селлеров|Оптовые партии",
   footerContactsTitle: "Контакты",
-  footerAddress: "Адрес производства будет уточнен",
+  footerAddress: "Тестовый адрес: Москва, ул. Текстильщиков, 12, стр. 2",
   cartPageTitle: "Корзина",
   cartPageBackButton: "вернуться в каталог",
   cartPageEmptyTitle: "Корзина пока пустая",
@@ -625,6 +625,51 @@ function normalizeSiteContent(content = {}) {
     benefitThreeText: ["Штрихкоды, упаковка, комплектация и поставки партиями.", defaultSiteContent.benefitThreeText],
     benefitFourTitle: ["Корзина без оплаты", defaultSiteContent.benefitFourTitle],
     benefitFourText: ["Покупатель собирает корзину, менеджер уточняет наличие и условия.", defaultSiteContent.benefitFourText],
+    businessPageLead: [
+      "Оптовые условия для магазинов, селлеров и корпоративных клиентов: скидка от суммы заказа, производство в одном месте и сопровождение менеджера.",
+      defaultSiteContent.businessPageLead,
+    ],
+    businessMinimumText: [
+      "Стартовая сумма корзины для оформления оптовой заявки — 30 000 ₽. До этой суммы корзину можно собрать и сохранить, но оформить заказ нельзя.",
+      defaultSiteContent.businessMinimumText,
+    ],
+    businessDiscountText: [
+      "Скидка пересчитывается автоматически по общей сумме корзины. Чем больше партия, тем ниже цена за единицу товара.",
+      defaultSiteContent.businessDiscountText,
+    ],
+    businessProductionText: [
+      "Печать, пошив, упаковка, маркировка и подготовка к отгрузке выполняются в одном процессе, чтобы партия была готова к продаже.",
+      defaultSiteContent.businessProductionText,
+    ],
+    businessManagerText: [
+      "После отправки корзины менеджер уточняет наличие, сроки, упаковку, город отгрузки и помогает довести заказ до запуска.",
+      defaultSiteContent.businessManagerText,
+    ],
+    businessDocumentsText: [
+      "Реквизиты, счета, макеты, штрихкоды и требования к упаковке можно согласовать до запуска партии. Подробные условия будут уточняться в договоре или счете.",
+      defaultSiteContent.businessDocumentsText,
+    ],
+    aboutPageTitle: ["О компании", defaultSiteContent.aboutPageTitle],
+    aboutPageLead: [
+      "Sobag Opt — тестовая витрина для оптовых продаж текстиля с принтами и заказов на производство под ваш макет.",
+      defaultSiteContent.aboutPageLead,
+    ],
+    aboutPageText: [
+      "Здесь позже появится история компании, описание производства, сильные стороны команды и условия работы с оптовыми покупателями.",
+      defaultSiteContent.aboutPageText,
+    ],
+    aboutPageProductionTitle: ["Производство и опт", defaultSiteContent.aboutPageProductionTitle],
+    aboutPageProductionText: [
+      "Мы готовим партии для маркетплейсов, магазинов и корпоративных клиентов: печать, пошив, комплектация и подготовка к отгрузке.",
+      defaultSiteContent.aboutPageProductionText,
+    ],
+    contactsPageLead: ["Здесь будут контакты отдела опта, адрес производства и карта.", defaultSiteContent.contactsPageLead],
+    contactsAddress: ["Москва, Новоданиловская набережная, 4", defaultSiteContent.contactsAddress],
+    contactsSchedule: ["Пн-Пт, 10:00-18:00", defaultSiteContent.contactsSchedule],
+    footerText: ["Тестовый прототип B2B-сайта для оптовых продаж текстиля с принтами.", defaultSiteContent.footerText],
+    footerEmail: ["opt@sobag-shop.ru", defaultSiteContent.footerEmail],
+    footerPhone: ["+7 900 000-00-00", defaultSiteContent.footerPhone],
+    footerAddress: ["Адрес производства будет уточнен", defaultSiteContent.footerAddress],
   };
   Object.entries(benefitReplacements).forEach(([key, [oldValue, newValue]]) => {
     if (migrated[key] === oldValue) migrated[key] = newValue;
@@ -725,6 +770,11 @@ function setText(selector, value) {
 
 function setButtonText(selector, value) {
   document.querySelectorAll(selector).forEach((button) => updateButtonText(button, value));
+}
+
+function phoneHref(value = "") {
+  const prepared = String(value).replace(/[^\d+]/g, "");
+  return prepared ? `tel:${prepared}` : "#";
 }
 
 function footerLinkUrl(label = "") {
@@ -1261,6 +1311,7 @@ function renderSiteContent() {
     });
     footerPhones.forEach((footerPhone) => {
       footerPhone.textContent = content.footerPhone;
+      footerPhone.href = phoneHref(content.footerPhone);
     });
   }
   if (

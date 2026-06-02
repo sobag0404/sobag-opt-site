@@ -59,10 +59,10 @@ const defaultCartContent = {
   navContactsButton: "контакты",
   cartButton: "корзина",
   footerBrand: "SOBAG OPT",
-  footerText: "Тестовый прототип B2B-сайта для оптовых продаж текстиля с принтами.",
+  footerText: "Тестовый B2B-каталог для оптовых заказов текстиля с принтами, производства под макет и поставок партиями.",
   footerSalesLabel: "Отдел опта",
-  footerEmail: "opt@sobag-shop.ru",
-  footerPhone: "+7 900 000-00-00",
+  footerEmail: "opt@sobag-shop.online",
+  footerPhone: "+7 900 123-45-67",
   footerCompanyTitle: "Компания",
   footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Пользовательское соглашение",
   footerClientsTitle: "Клиентам",
@@ -70,7 +70,7 @@ const defaultCartContent = {
   footerPartnersTitle: "Партнерам",
   footerPartnersLinks: "Условия для бизнеса|Мы на маркетплейсах|Поддержка селлеров|Оптовые партии",
   footerContactsTitle: "Контакты",
-  footerAddress: "Адрес производства будет уточнен",
+  footerAddress: "Тестовый адрес: Москва, ул. Текстильщиков, 12, стр. 2",
   cartPageTitle: "Корзина",
   cartPageBackButton: "вернуться в каталог",
   cartPageEmptyTitle: "Корзина пока пустая",
@@ -344,8 +344,9 @@ function footerLinkUrl(label = "") {
   if (prepared.includes("контакт")) return "contacts.html";
   if (prepared.includes("маркетплейс")) return "marketplaces.html";
   if (prepared.includes("свой") || prepared.includes("принт")) return "custom.html";
-  if (prepared.includes("услов")) return "index.html#wholesale";
+  if (prepared.includes("услов")) return "business.html";
   if (prepared.includes("политик") || prepared.includes("персональ")) return "assets/legal/personal-data-consent.pdf";
+  if (prepared.includes("соглаш")) return "terms.html";
   return "#";
 }
 
@@ -357,7 +358,7 @@ function renderFooterLinks(selector, value) {
       .filter(Boolean)
       .map((item) => {
         const href = footerLinkUrl(item);
-        const externalAttrs = href.endsWith(".pdf") ? ' target="_blank" rel="noopener"' : "";
+        const externalAttrs = href.endsWith(".pdf") || href === "terms.html" ? ' target="_blank" rel="noopener"' : "";
         return `<a href="${href}"${externalAttrs}>${escapeHtml(item)}</a>`;
       })
       .join("");
@@ -442,6 +443,7 @@ function renderCartContent() {
     });
     phones.forEach((phone) => {
       phone.textContent = content.footerPhone;
+      phone.href = `tel:${String(content.footerPhone).replace(/[^\d+]/g, "")}`;
     });
   }
 }

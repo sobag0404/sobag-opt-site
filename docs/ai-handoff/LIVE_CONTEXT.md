@@ -60,6 +60,23 @@ Last updated: 2026-06-02
   - local Playwright visual QA for `/business.html`, `/terms.html`, and `/admin-products.html#content`: no horizontal overflow and no mojibake in visible text.
 - Open note: legal document text is a working placeholder and must be reviewed/replaced before treating it as final legal wording.
 
+## 2026-06-02 Test Content Fill Pass
+
+- Filled test content for trust pages and contacts:
+  - `О компании Sobag Opt` now has a fuller B2B/production description.
+  - `Контакты` now uses test contacts: `opt@sobag-shop.online`, `+7 900 123-45-67`, and a test Moscow address.
+  - `Условия для бизнеса` now has fuller test text for minimum order, discount tiers, production, manager communication, and documents.
+  - Footer defaults now use the same test email/phone/address.
+  - `cart.js` defaults were updated separately so the cart footer matches the rest of the site.
+- Added content migrations in `normalizeSiteContent()` so older saved placeholder strings are replaced by the new test defaults when they match exactly.
+- Updated `tel:` href generation in `app.js` and `cart.js` so future admin phone edits update the clickable phone link too.
+- Updated cache-busting version to `20260602-test-content`.
+- Verification passed:
+  - `npm.cmd run check`;
+  - `npm.cmd run autofix`;
+  - `npm.cmd run ui:smoke` with 7/7 tests passing;
+  - local browser QA for About, Contacts, Business, and Cart: no old email/address in visible text, no mojibake, and no horizontal overflow.
+
 ## Standing Reminder For Codex
 
 Before every final response after doing project work, update this file with:
