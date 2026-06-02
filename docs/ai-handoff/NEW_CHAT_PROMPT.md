@@ -14,7 +14,7 @@ Fallback Vercel domain:
 `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-`6c98411 Add order workflow and personal state sync`
+`c7f54d2 Fit personal state sync within Vercel Hobby limits`
 
 Read first:
 - `docs/ai-handoff/AI_HANDOFF.md`

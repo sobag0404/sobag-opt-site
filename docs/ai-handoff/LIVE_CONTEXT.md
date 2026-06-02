@@ -611,3 +611,7 @@ Latest production verification:
   - importer smoke with a temp CSV verified created -> duplicate_skipped -> updated behavior and report output.
   - committed locally as `6c98411 Add order workflow and personal state sync`.
   - follow-up fix after Vercel Hobby limit: removed standalone `/api/cart` and `/api/favorites` files and moved personal-state writes into existing `/api/auth/me` to keep total Serverless Functions within the 12-function limit.
+  - final pushed fix commit: `c7f54d2 Fit personal state sync within Vercel Hobby limits`;
+  - manual Vercel production deploy succeeded after the function-count fix and aliased `https://sobag-shop.online`;
+  - production verification passed for `/`, `/catalog`, `/cart`, `/robots.txt`, `/sitemap.xml`, and `/api/health`: public pages serve `20260602-workflow`, SEO files return 200, storage is ready;
+  - production Playwright spot-check passed: no horizontal overflow on home/catalog, catalog home shows 6 categories, opening the first category shows 517 product cards, checkout/request forms expose the new fields, and there were no page console errors in the checked paths.
