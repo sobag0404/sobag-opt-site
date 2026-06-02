@@ -3,32 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sobag Opt | Заказ</title>
-    <meta name="description" content="Карточка заказа Sobag Opt для администратора и менеджера." />
+    <title>Sobag Opt | Импорт товаров</title>
+    <meta name="description" content="Массовый импорт товаров Sobag Opt из Excel и CSV." />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Crect x='6' y='6' width='52' height='52' fill='%23fff'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial,sans-serif' font-size='34' font-weight='900' fill='%23000'%3ES%3C/text%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="styles.css?v=20260602-roadmap" />
   </head>
-  <body class="admin-order-page">
+  <body class="admin-import-page">
     <div data-site-topline></div>
     <div data-site-header="commerce"></div>
 
     <main class="content-page">
       <div class="container page-back">
-        <a class="ghost-button" href="catalog.html"><i data-lucide="arrow-left"></i> В каталог</a>
-        <strong>Заказ</strong>
+        <a class="ghost-button" href="admin-products.html"><i data-lucide="arrow-left"></i> К товарам</a>
+        <strong>Импорт</strong>
       </div>
       <section class="container info-page">
         <div class="section-head">
           <div>
             <div class="accent-stripe" aria-hidden="true"></div>
-            <h1>Карточка заказа</h1>
-            <p>Статус, менеджер, комментарий и состав заказа.</p>
+            <h1>Импорт товаров</h1>
+            <p>Загрузка Excel/CSV с предпросмотром. Старые товары не удаляются, дубли по основному артикулу пропускаются.</p>
           </div>
         </div>
-        <div id="adminOrderPage"></div>
+        <div id="adminImportPage"></div>
       </section>
     </main>
 

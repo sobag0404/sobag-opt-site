@@ -12,7 +12,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Crect x='6' y='6' width='52' height='52' fill='%23fff'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial,sans-serif' font-size='34' font-weight='900' fill='%23000'%3ES%3C/text%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="styles.css?v=20260601-admin-prices" />
+    <link rel="stylesheet" href="styles.css?v=20260602-roadmap" />
   </head>
   <body class="custom-page">
     <div data-site-topline></div>
@@ -56,6 +56,49 @@
               <span><b>3</b> Печать и пошив</span>
               <span><b>4</b> Упаковка и отгрузка</span>
             </div>
+            <div class="custom-calculator" id="customCalculator">
+              <div class="custom-calculator__head">
+                <div>
+                  <span>Предварительный расчет</span>
+                  <strong id="customCalcTotal">0 ₽</strong>
+                </div>
+                <small id="customCalcUnit">Выберите параметры</small>
+              </div>
+              <div class="custom-calculator__grid">
+                <label>
+                  Изделие
+                  <select id="customCalcProduct">
+                    <option value="pillow">Подушка</option>
+                    <option value="cover">Наволочка</option>
+                    <option value="blanket">Плед</option>
+                    <option value="bag">Мешок для обуви</option>
+                    <option value="flag">Флаг</option>
+                    <option value="remuvka">Ремувка</option>
+                  </select>
+                </label>
+                <label>
+                  Материал
+                  <select id="customCalcMaterial">
+                    <option value="velour">Велюр</option>
+                    <option value="gabardine">Габардин</option>
+                    <option value="fleece">Флис</option>
+                  </select>
+                </label>
+                <label>
+                  Тираж, шт.
+                  <input id="customCalcQty" type="number" min="1" value="50" inputmode="numeric" />
+                </label>
+                <label>
+                  Упаковка
+                  <select id="customCalcPack">
+                    <option value="none">Без упаковки</option>
+                    <option value="simple">Пакет</option>
+                    <option value="marketplace">Маркетплейс</option>
+                  </select>
+                </label>
+              </div>
+              <p id="customCalcHint">Расчет ориентировочный. Итоговую цену подтвердит менеджер после проверки макета.</p>
+            </div>
             <form class="brief-form" id="briefForm">
               <select name="product" required>
                 <option value="">Что производим?</option>
@@ -83,6 +126,6 @@
     <script src="components/site-shell.js?v=20260529-ui-refactor"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="app.js?v=20260601-admin-prices"></script>
+    <script src="app.js?v=20260602-roadmap"></script>
   </body>
 </html>

@@ -1,6 +1,6 @@
 # Backend and Security Setup
 
-This project now has a Vercel API layer for accounts, roles, sessions, orders, and the shared product catalog.
+This project now has a Vercel API layer for accounts, roles, sessions, orders, the shared product catalog, and shared editable page content.
 
 ## What Moved Server-Side
 
@@ -12,6 +12,8 @@ This project now has a Vercel API layer for accounts, roles, sessions, orders, a
 - Admins can assign the `manager` role through `/api/admin/users`.
 - Visitors read the product catalog through `/api/catalog`; if server storage has no catalog yet, it falls back to `data/products-live.json`.
 - Admins save product and variant-price changes through `/api/admin/catalog`.
+- Visitors read editable page content through `/api/content`; if server storage has no content yet, the frontend uses bundled defaults.
+- Admins save site text, images, and "Актуально" settings through `/api/admin/content`.
 
 The old `localStorage` flow still exists as a prototype fallback so the site remains usable until production storage is connected or an admin is not signed into a server session.
 

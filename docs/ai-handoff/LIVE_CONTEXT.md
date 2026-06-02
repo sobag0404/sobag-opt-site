@@ -490,3 +490,18 @@ Latest production verification:
   - production verification passed for `/`, `/catalog`, `/admin-prices`, `/admin-products`, `/api/health`, `/api/catalog`, and production `tools/ui-smoke.spec.js`;
   - `/api/catalog` currently reports `source=static` and 808 products until an admin performs the first server-backed catalog save.
   - follow-up commit `e187e50 Add manual catalog server sync` added a manual `Сохранить каталог на сервере` button to product and price admin pages; production deploy and smoke passed after this change.
+
+- Roadmap pass 1-8 on 2026-06-02:
+  - implemented the next requested batch in order: server admin-content persistence, order workspace/status history improvements, role audit, import workspace page, price XLSX export, catalog SEO metadata, and a first custom-print calculator;
+  - added shared content storage under `sobag:content:v1` with public `GET /api/content` and admin-only `GET/PUT /api/admin/content`;
+  - site text/images/"Актуально" content now loads from server content when present and remains local/default as fallback when storage is empty or unavailable;
+  - expanded order statuses to `new`, `processing`, `waiting`, `production`, `ready`, `shipped`, `done`, and `canceled`;
+  - order changes now keep a compact `statusHistory` trail for status/manager/note updates in both frontend fallback storage and `/api/admin/orders`;
+  - verified role split: product/catalog/content APIs are admin-only, order/user reading is admin+manager, and role changes remain admin-only;
+  - added standalone `admin-import.html` and linked it from the admin profile controls; it reuses the existing XLSX/CSV import preview and duplicate-safe save path;
+  - added XLSX export for selected/current admin price rows, alongside existing CSV and variant-price exports;
+  - catalog pages now update `title`, description, Open Graph title/description, and canonical URL based on selected category/collection/holiday/search/favorites state;
+  - `custom.html` now has a client-side preliminary calculator for product type, material, quantity, packaging, unit price, discount, and total; it is intentionally an estimate and not a binding order price;
+  - smoke tests were hardened to use clean Vercel-style routes and live catalog data instead of brittle hard-coded category/query assumptions;
+  - local checks passed: JS syntax checks for changed API/client files, `npm.cmd run check`, and `SOBAG_BASE_URL=http://localhost:4173 npm.cmd run ui:smoke` with 6/6 passing;
+  - note for next operator: after deploy, verify `/api/content`; it may return `source=default` until the admin first saves content settings from the site admin panel.

@@ -2,6 +2,7 @@ const { Redis } = require("@upstash/redis");
 
 const STORE_KEY = process.env.SOBAG_STORE_KEY || "sobag:store:v1";
 const CATALOG_KEY = process.env.SOBAG_CATALOG_KEY || "sobag:catalog:v1";
+const CONTENT_KEY = process.env.SOBAG_CONTENT_KEY || "sobag:content:v1";
 
 function redisConfig() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -86,6 +87,36 @@ async function saveCatalog(products, updatedBy = "") {
   return payload;
 }
 
+function normalizeContent(value) {
+  if (!value) return null;
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  const content = parsed.content && typeof parsed.content === "object" ? parsed.content : parsed;
+  if (!content || typeof content !== "object" || Array.isArray(content)) return null;
+  return {
+    content,
+    updatedAt: parsed.updatedAt || null,
+    updatedBy: parsed.updatedBy || "",
+    version: Number(parsed.version || 1),
+  };
+}
+
+async function getContent() {
+  const redis = getRedis();
+  return normalizeContent(await redis.get(CONTENT_KEY));
+}
+
+async function saveContent(content, updatedBy = "") {
+  const redis = getRedis();
+  const payload = {
+    content,
+    updatedAt: new Date().toISOString(),
+    updatedBy,
+    version: 1,
+  };
+  await redis.set(CONTENT_KEY, payload);
+  return payload;
+}
+
 async function deleteSession(token) {
   if (!token) return;
   await getRedis().del(`sobag:session:${token}`);
@@ -100,4 +131,4 @@ async function saveSession(token, payload, ttlSeconds) {
   await getRedis().set(`sobag:session:${token}`, payload, { ex: ttlSeconds });
 }
 
-module.exports = { deleteSession, getCatalog, getSession, getStore, saveCatalog, saveSession, saveStore };
+module.exports = { deleteSession, getCatalog, getContent, getSession, getStore, saveCatalog, saveContent, saveSession, saveStore };

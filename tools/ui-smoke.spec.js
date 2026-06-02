@@ -26,6 +26,13 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("manager order pages can open guest customer history", async ({ page }) => {
+  const qaSku = await page.evaluate(async () => {
+    let response = await fetch("/api/catalog");
+    if (!response.ok) response = await fetch("/data/products-live.json");
+    const data = await response.json();
+    const products = Array.isArray(data) ? data : data.products;
+    return products?.[0]?.variants?.[0]?.sku || "opt_00104_РЕМ_13x3,5_ЛЕН";
+  });
   const order = {
     id: "SO-QA-GUEST",
     status: "new",
@@ -33,7 +40,7 @@ test("manager order pages can open guest customer history", async ({ page }) => 
     total: 12345,
     userEmail: "",
     customer: { email: "guest@example.com", name: "Guest Buyer", phone: "+79990000000", address: "Moscow" },
-    items: [{ qty: 2, variant: { sku: "opt_test_POD_40x40_VEL", name: "Test pillow", price: 1000 } }],
+    items: [{ qty: 2, variant: { sku: qaSku, name: "Test item", price: 1000 } }],
   };
   await page.evaluate((record) => {
     localStorage.setItem("sobag.orders.v1", JSON.stringify([record]));
@@ -41,29 +48,62 @@ test("manager order pages can open guest customer history", async ({ page }) => 
     localStorage.setItem("sobag.users", JSON.stringify({ "admin@sobag": { email: "admin@sobag", name: "Admin", role: "admin", orders: [] } }));
   }, order);
 
-  await page.goto(`${BASE_URL}/admin-order.html?id=SO-QA-GUEST`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE_URL}/admin-order?id=SO-QA-GUEST`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminOrderPage")).toContainText("SO-QA-GUEST");
   await expect(page.locator("#adminOrderPage")).toContainText("Guest Buyer");
 
-  await page.goto(`${BASE_URL}/admin-customer.html?email=guest@example.com`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE_URL}/admin-customer?email=guest@example.com`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminCustomerPage")).toContainText("Guest Buyer");
   await expect(page.locator("#adminCustomerPage")).toContainText("SO-QA-GUEST");
 
-  await page.goto(`${BASE_URL}/admin-orders.html?q=guest`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE_URL}/admin-orders?q=guest`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminOrdersPage")).toContainText("SO-QA-GUEST");
   await expect(page.locator("#adminOrdersPage")).toContainText("Guest Buyer");
 
-  await page.goto(`${BASE_URL}/admin-products.html?q=opt_`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE_URL}/admin-products?q=opt_`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelectorAll(".admin-product-card").length > 0);
   await expect(page.locator("#adminProductsPage")).toContainText("Экспорт вариантов");
 
-  await page.goto(`${BASE_URL}/admin-prices.html?q=opt_`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE_URL}/admin-prices?q=opt_`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelectorAll(".admin-price-row").length > 0);
   await expect(page.locator(".admin-price-preview h3")).toContainText("Предпросмотр изменений");
 });
 
+test("admin import page and custom print calculator render", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("sobag.currentUser", "admin@sobag");
+    localStorage.setItem("sobag.users", JSON.stringify({ "admin@sobag": { email: "admin@sobag", name: "Admin", role: "admin" } }));
+  });
+
+  await page.goto(`${BASE_URL}/admin-import.html`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#adminImportPage")).toContainText("Импорт");
+
+  await page.goto(`${BASE_URL}/custom.html`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#customCalculator")).toBeVisible();
+  await page.locator("#customCalcQty").fill("300");
+  await page.locator("#customCalcPack").selectOption("marketplace");
+  await expect(page.locator("#customCalcUnit")).toContainText("скидка 18%");
+  await expect(page.locator("#customCalcTotal")).not.toHaveText("0 ₽");
+});
+
 async function waitForLiveProducts(page) {
   await page.waitForFunction(() => document.querySelectorAll(".product-card").length > 10);
+}
+
+async function largestCategory(page) {
+  return page.evaluate(async () => {
+    let response = await fetch("/api/catalog");
+    if (!response.ok) response = await fetch("/data/products-live.json");
+    const data = await response.json();
+    const products = Array.isArray(data) ? data : data.products;
+    const counts = new Map();
+    (products || []).forEach((product) => {
+      const name = product.category || product.type || "";
+      if (!name) return;
+      counts.set(name, (counts.get(name) || 0) + 1);
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  });
 }
 
 async function expectNoHorizontalOverflow(page) {
@@ -78,13 +118,15 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const routes = [
     "/",
-    `/catalog.html?category=${encodeURIComponent("Подушки")}`,
+    `/catalog?category=${encodeURIComponent(await largestCategory(page))}`,
     "/cart.html",
     "/favorites.html",
     "/admin-orders.html",
     "/admin-products.html",
     "/admin-prices.html",
+    "/admin-import.html",
     "/marketplaces.html",
+    "/custom.html",
     "/about.html",
     "/contacts.html",
   ];
@@ -97,7 +139,8 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
 });
 
 test("catalog navigation and favorite toggles do not reload the same document", async ({ page }) => {
-  await page.goto(`${BASE_URL}/catalog.html?category=${encodeURIComponent("Подушки")}`, { waitUntil: "domcontentloaded" });
+  const category = await largestCategory(page);
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
 
   await page.evaluate(() => localStorage.setItem("__sobagQaDocumentLoads", "0"));
@@ -107,7 +150,7 @@ test("catalog navigation and favorite toggles do not reload the same document", 
   await expect(page.locator("#catalogHome")).toBeVisible();
   await expect.poll(() => page.evaluate(() => Number(localStorage.getItem("__sobagQaDocumentLoads") || "0"))).toBe(0);
 
-  await page.goto(`${BASE_URL}/catalog.html?category=${encodeURIComponent("Подушки")}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
   await page.evaluate(() => localStorage.setItem("__sobagQaDocumentLoads", "0"));
   const favorite = page.locator(".favorite-button").first();
@@ -119,10 +162,11 @@ test("catalog navigation and favorite toggles do not reload the same document", 
 });
 
 test("catalog filters, product modal, variants, and cart stay coherent", async ({ page }) => {
-  await page.goto(`${BASE_URL}/catalog.html?category=${encodeURIComponent("Подушки")}`, { waitUntil: "domcontentloaded" });
+  const category = await largestCategory(page);
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
 
-  await expect(page.locator("#catalogTitle")).toContainText("Подушки");
+  await expect(page.locator("#catalogTitle")).toContainText(category);
   await expect(page.locator('[data-filter-group="category"]')).toHaveCount(0);
   await expect(page.locator(".product-card")).toHaveCount(await page.locator(".product-card").count());
 

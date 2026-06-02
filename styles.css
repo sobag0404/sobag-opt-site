@@ -1394,6 +1394,70 @@ select[aria-invalid="true"] {
   border: 1px solid var(--hairline);
 }
 
+.custom-calculator {
+  margin: 28px 0 18px;
+  padding: 18px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+
+.custom-calculator__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.custom-calculator__head span,
+.custom-calculator label,
+.custom-calculator small {
+  color: var(--body-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+
+.custom-calculator__head strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--on-dark);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 900;
+  line-height: 0.95;
+}
+
+.custom-calculator__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.custom-calculator label {
+  display: grid;
+  gap: 8px;
+}
+
+.custom-calculator select,
+.custom-calculator input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  color: var(--on-dark);
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+  outline: 0;
+}
+
+.custom-calculator p {
+  margin: 14px 0 0;
+  color: var(--body);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .filter-group:first-child {
   margin-top: 0;
 }
@@ -1812,6 +1876,14 @@ select[aria-invalid="true"] {
   background: #f2f2f2;
 }
 
+.order-status--production,
+.order-status--ready,
+.order-status--shipped {
+  color: var(--on-dark);
+  background: #f2f2f2;
+  border: 1px solid var(--on-dark);
+}
+
 .order-status--done {
   background: #1f7a45;
 }
@@ -1854,11 +1926,13 @@ select[aria-invalid="true"] {
 }
 
 .order-card__note,
-.order-card__items {
+.order-card__items,
+.order-history {
   margin-top: 10px;
 }
 
 .order-card__items ul,
+.order-history ul,
 .admin-detail-list {
   margin: 10px 0 0;
   padding: 0;
@@ -1866,11 +1940,24 @@ select[aria-invalid="true"] {
 }
 
 .order-card__items li,
+.order-history li,
 .admin-order-lines div {
   display: grid;
   gap: 4px;
   padding: 10px 0;
   border-top: 1px solid var(--hairline);
+}
+
+.order-history summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.order-history small {
+  color: var(--muted);
 }
 
 .admin-detail-grid {
@@ -2628,6 +2715,14 @@ textarea:focus-visible {
   }
 
   .brief-form {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-calculator__head {
+    display: grid;
+  }
+
+  .custom-calculator__grid {
     grid-template-columns: 1fr;
   }
 

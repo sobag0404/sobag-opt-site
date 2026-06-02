@@ -539,6 +539,7 @@ const isAdminOrderPage = document.body.classList.contains("admin-order-page");
 const isAdminCustomerPage = document.body.classList.contains("admin-customer-page");
 const isAdminProductsPage = document.body.classList.contains("admin-products-page");
 const isAdminPricesPage = document.body.classList.contains("admin-prices-page");
+const isAdminImportPage = document.body.classList.contains("admin-import-page");
 
 function normalizeCatalogList(items, fallbackItems, options = {}) {
   const source = Array.isArray(items) && items.length ? items : fallbackItems;
@@ -617,7 +618,42 @@ function getSiteContent() {
 }
 
 function saveSiteContent(content) {
-  localStorage.setItem(STORAGE.content, JSON.stringify(normalizeSiteContent(content)));
+  const normalized = normalizeSiteContent(content);
+  localStorage.setItem(STORAGE.content, JSON.stringify(normalized));
+  syncSiteContentToBackend(normalized);
+  return normalized;
+}
+
+async function loadServerSiteContent() {
+  try {
+    const data = await apiRequest("/api/content");
+    if (!data.content || typeof data.content !== "object") return false;
+    const normalized = normalizeSiteContent(data.content);
+    if (data.source === "server") localStorage.setItem(STORAGE.content, JSON.stringify(normalized));
+    renderSiteContent();
+    renderCatalogHome();
+    updateCustomCalculator();
+    return true;
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
+    return false;
+  }
+}
+
+async function syncSiteContentToBackend(content) {
+  const user = getUsers()[state.currentUser];
+  if (!canManageProducts(user)) return false;
+  try {
+    await apiRequest("/api/admin/content", { method: "PUT", body: { content } });
+    showToast("Настройки сайта сохранены на сервере.");
+    return true;
+  } catch (error) {
+    if (!isBackendUnavailable(error)) {
+      console.warn(error);
+      showToast("Настройки сохранены локально, но серверное сохранение не прошло.");
+    }
+    return false;
+  }
 }
 
 function applyTheme(theme) {
@@ -1152,7 +1188,7 @@ function renderSiteContent() {
     marketplaceCards[index]?.querySelector("small") && (marketplaceCards[index].querySelector("small").textContent = text);
   });
   setText(".custom h2", content.customTitle);
-  setText(".custom__content p:not(.eyebrow)", content.customText);
+  setText(".custom__content > p:not(.eyebrow)", content.customText);
   document.querySelectorAll(".custom .steps span").forEach((step, index) => {
     const values = [content.customStepOne, content.customStepTwo, content.customStepThree, content.customStepFour];
     const number = step.querySelector("b")?.outerHTML || `<b>${index + 1}</b>`;
@@ -1523,6 +1559,9 @@ function orderStatusLabel(status) {
   if (status === "new") return "Новый";
   if (status === "processing") return "В работе";
   if (status === "waiting") return "Ждет клиента";
+  if (status === "production") return "В производстве";
+  if (status === "ready") return "Готов к отгрузке";
+  if (status === "shipped") return "Отгружен";
   if (status === "done") return "Выполнен";
   if (status === "canceled") return "Отменен";
   return "Новый";
@@ -1532,9 +1571,32 @@ const orderStatusOptions = [
   ["new", "Новый"],
   ["processing", "В работе"],
   ["waiting", "Ждет клиента"],
+  ["production", "В производстве"],
+  ["ready", "Готов к отгрузке"],
+  ["shipped", "Отгружен"],
   ["done", "Выполнен"],
   ["canceled", "Отменен"],
 ];
+
+function orderHistoryEntry(order, patch, actor = "") {
+  const changes = [];
+  if (patch.status && patch.status !== order.status) {
+    changes.push(`Статус: ${orderStatusLabel(order.status)} -> ${orderStatusLabel(patch.status)}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "managerEmail") && patch.managerEmail !== (order.managerEmail || "")) {
+    changes.push(`Менеджер: ${patch.managerName || patch.managerEmail || "не назначен"}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "managerNote") && patch.managerNote !== (order.managerNote || "")) {
+    changes.push("Комментарий менеджера обновлен");
+  }
+  if (!changes.length) return null;
+  return {
+    id: `H-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    at: new Date().toISOString(),
+    actor: actor || state.currentUser || "local",
+    summary: changes.join("; "),
+  };
+}
 
 function canManageOrders(user) {
   return user?.role === "admin" || user?.role === "manager";
@@ -1563,8 +1625,16 @@ function saveOrderRecord(order, userKey = state.currentUser) {
 }
 
 function updateOrderRecord(orderId, patch) {
-  const prepared = { ...patch, updatedAt: new Date().toISOString() };
-  const orders = getOrders().map((order) => (order.id === orderId ? { ...order, ...prepared } : order));
+  const orders = getOrders().map((order) => {
+    if (order.id !== orderId) return order;
+    const entry = orderHistoryEntry(order, patch);
+    const prepared = {
+      ...patch,
+      updatedAt: new Date().toISOString(),
+      statusHistory: entry ? [entry, ...(order.statusHistory || [])].slice(0, 100) : order.statusHistory || [],
+    };
+    return { ...order, ...prepared };
+  });
   const users = getUsers();
   Object.values(users).forEach((user) => {
     user.orders = (user.orders || []).map((order) => (order.id === orderId ? { ...order, ...prepared } : order));
@@ -1663,6 +1733,60 @@ function getBasketDiscountHint(amount) {
   const nextTier = basketDiscountTiers.find((tier) => amount < tier.amount);
   if (!nextTier) return "Максимальная скидка по корзине применена";
   return `${formatMoney(Math.max(nextTier.amount - amount, 0))} до скидки ${nextTier.discount}%`;
+}
+
+const customCalcPrices = {
+  pillow: 520,
+  cover: 290,
+  blanket: 820,
+  bag: 210,
+  flag: 360,
+  remuvka: 95,
+};
+
+const customCalcMaterialAdds = {
+  velour: 0,
+  gabardine: -35,
+  fleece: 80,
+};
+
+const customCalcPackAdds = {
+  none: 0,
+  simple: 18,
+  marketplace: 42,
+};
+
+function getCustomCalcDiscount(qty) {
+  if (qty >= 300) return 18;
+  if (qty >= 150) return 12;
+  if (qty >= 70) return 7;
+  if (qty >= 30) return 3;
+  return 0;
+}
+
+function updateCustomCalculator() {
+  const calculator = document.querySelector("#customCalculator");
+  if (!calculator) return;
+  const product = document.querySelector("#customCalcProduct")?.value || "pillow";
+  const material = document.querySelector("#customCalcMaterial")?.value || "velour";
+  const pack = document.querySelector("#customCalcPack")?.value || "none";
+  const qty = Math.max(Number(document.querySelector("#customCalcQty")?.value || 0), 0);
+  const base = customCalcPrices[product] || customCalcPrices.pillow;
+  const unitBeforeDiscount = Math.max(base + (customCalcMaterialAdds[material] || 0) + (customCalcPackAdds[pack] || 0), 1);
+  const discount = getCustomCalcDiscount(qty);
+  const unit = discountedUnitPrice(unitBeforeDiscount, discount);
+  const total = qty * unit;
+  const totalNode = document.querySelector("#customCalcTotal");
+  const unitNode = document.querySelector("#customCalcUnit");
+  const hintNode = document.querySelector("#customCalcHint");
+  if (totalNode) totalNode.textContent = formatMoney(total);
+  if (unitNode) unitNode.textContent = qty ? `${formatMoney(unit)} за шт. · скидка ${discount}%` : "Введите тираж";
+  if (hintNode) {
+    const nextTier = quantityTiers.find((tier) => qty < tier.qty);
+    hintNode.textContent = nextTier
+      ? `${Math.max(nextTier.qty - qty, 0)} шт. до скидки ${nextTier.discount}%. Расчет ориентировочный, финальную цену подтвердит менеджер после проверки макета.`
+      : "Применена максимальная скидка по тиражу. Финальную цену подтвердит менеджер после проверки макета.";
+  }
 }
 
 function lineTotals(line, discount = getQuantityDiscount(line.qty)) {
@@ -1994,12 +2118,14 @@ function renderCatalogShell() {
     catalogTitle.textContent = "Избранное";
     filterToggle?.classList.remove("is-hidden");
     updateFilterToggle();
+    updateCatalogSeo();
     return;
   }
 
   if (isHome) {
     catalogTitle.textContent = getSiteContent().catalogTitleDefault;
     filterToggle?.classList.add("is-hidden");
+    updateCatalogSeo();
     return;
   }
 
@@ -2011,6 +2137,45 @@ function renderCatalogShell() {
   catalogTitle.textContent = titleParts.join(" · ");
   filterToggle?.classList.remove("is-hidden");
   updateFilterToggle();
+  updateCatalogSeo();
+}
+
+function setMetaContent(selector, content) {
+  let node = document.head.querySelector(selector);
+  if (!node) {
+    node = document.createElement(selector.includes("property=") ? "meta" : "meta");
+    const nameMatch = selector.match(/name="([^"]+)"/);
+    const propertyMatch = selector.match(/property="([^"]+)"/);
+    if (nameMatch) node.setAttribute("name", nameMatch[1]);
+    if (propertyMatch) node.setAttribute("property", propertyMatch[1]);
+    document.head.appendChild(node);
+  }
+  node.setAttribute("content", content);
+}
+
+function updateCatalogSeo() {
+  if (!document.body.classList.contains("catalog-page")) return;
+  const content = getSiteContent();
+  const titleParts = [];
+  if (isFavoritesPage) titleParts.push("Избранное");
+  else if (state.selectedCategory) titleParts.push(state.selectedCategory);
+  else if (state.selectedCollection) titleParts.push(state.selectedCollection);
+  else if (state.selectedHoliday) titleParts.push(state.selectedHoliday);
+  else if (state.search.trim()) titleParts.push(`Поиск: ${state.search.trim()}`);
+  else titleParts.push(content.catalogTitleDefault || "Каталог продукции");
+  const title = `${titleParts.join(" · ")} | Sobag Opt`;
+  const description = `Оптовый каталог Sobag Opt: ${titleParts.join(", ")}. Текстиль с принтами, варианты по размеру, материалу и типу изделия.`;
+  document.title = title;
+  setMetaContent('meta[name="description"]', description);
+  setMetaContent('meta[property="og:title"]', title);
+  setMetaContent('meta[property="og:description"]', description);
+  let canonical = document.head.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement("link");
+    canonical.setAttribute("rel", "canonical");
+    document.head.appendChild(canonical);
+  }
+  canonical.setAttribute("href", `${location.origin}${location.pathname}${location.search}`);
 }
 
 function updateFilterToggle() {
@@ -2484,6 +2649,30 @@ function orderItemsPreview(items) {
   `;
 }
 
+function orderHistoryHtml(order) {
+  const history = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+  if (!history.length) return "";
+  return `
+    <details class="order-history">
+      <summary>История заказа: ${history.length}</summary>
+      <ul>
+        ${history
+          .slice(0, 12)
+          .map(
+            (entry) => `
+              <li>
+                <b>${escapeHtml(new Date(entry.at || Date.now()).toLocaleString("ru-RU"))}</b>
+                <span>${escapeHtml(entry.summary || "")}</span>
+                ${entry.actor ? `<small>${escapeHtml(entry.actor)}</small>` : ""}
+              </li>
+            `
+          )
+          .join("")}
+      </ul>
+    </details>
+  `;
+}
+
 function orderCardHtml(order, managerMode = false) {
   const items = order.items || [];
   const customer = order.customer || {};
@@ -2502,6 +2691,7 @@ function orderCardHtml(order, managerMode = false) {
       ${managerName ? `<span>Менеджер: ${escapeHtml(managerName)}</span>` : ""}
       ${order.managerNote ? `<p class="order-card__note">${escapeHtml(order.managerNote)}</p>` : ""}
       ${orderItemsPreview(items)}
+      ${managerMode ? orderHistoryHtml(order) : ""}
       ${
         managerMode
           ? `
@@ -3143,6 +3333,7 @@ function adminPricesPageHtml() {
       <div class="admin-product-export">
         <button class="ghost-button" type="button" data-admin-sync-catalog>Сохранить каталог на сервере</button>
         <button class="ghost-button" type="button" data-admin-export-price-rows>Экспорт цен</button>
+        <button class="ghost-button" type="button" data-admin-export-price-xlsx>Экспорт цен XLSX</button>
         <button class="ghost-button" type="button" data-admin-export-price-products>Экспорт товаров с ценами</button>
         <label class="ghost-button admin-price-import">
           Импорт CSV/XLSX
@@ -3191,6 +3382,46 @@ function renderAdminPricesPage() {
     return;
   }
   node.innerHTML = adminPricesPageHtml();
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function adminImportPageHtml() {
+  return `
+    <div class="admin-products-toolbar">
+      <div class="excel-import">
+        <h3>Импорт товаров из Excel/CSV</h3>
+        <p>Загрузите таблицу, проверьте предпросмотр карточек и только потом нажмите добавление. Дубли по основному артикулу будут пропущены, старые товары без команды не удаляются.</p>
+        <div class="admin-actions">
+          <button class="ghost-button" type="button" data-download-xlsx-template>Скачать XLSX-шаблон</button>
+          <button class="ghost-button" type="button" data-download-template>Скачать CSV-шаблон</button>
+          <button class="primary-button" type="button" data-save-generated>Добавить карточки из предпросмотра</button>
+        </div>
+        <label>
+          Файл товаров
+          <input id="excelInput" type="file" accept=".xlsx,.xls,.csv" />
+        </label>
+        <small>Рекомендуемый разделитель в CSV: ;. Для списков категорий, типов, размеров, материалов, подборок и тегов тоже используйте ;.</small>
+      </div>
+      <div class="admin-orders-summary">
+        <span><b>${products.length}</b> ${productWord(products.length)} в текущем каталоге</span>
+        <span><b>${state.adminPreview.length}</b> в предпросмотре</span>
+      </div>
+    </div>
+    <div class="admin-preview" id="adminPreview"></div>
+  `;
+}
+
+function renderAdminImportPage() {
+  const node = document.querySelector("#adminImportPage");
+  if (!node) return;
+  const user = currentManagerUser();
+  if (!canManageProducts(user)) {
+    node.innerHTML = managementAccessHtml();
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+  node.innerHTML = adminImportPageHtml();
+  renderAdminPreview(state.adminPreview);
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -3255,6 +3486,7 @@ function accountModalHtml() {
                 ${user.role === "admin" ? '<button class="primary-button" type="button" data-open-admin><i data-lucide="settings"></i> Админка</button>' : ""}
                 ${user.role === "admin" ? '<a class="ghost-button" href="admin-products.html" target="_blank" rel="noopener">Товары</a>' : ""}
                 ${user.role === "admin" ? '<a class="ghost-button" href="admin-prices.html" target="_blank" rel="noopener">Цены</a>' : ""}
+                ${user.role === "admin" ? '<a class="ghost-button" href="admin-import.html" target="_blank" rel="noopener">Импорт</a>' : ""}
                 ${canManageOrders(user) ? '<a class="ghost-button" href="admin-orders.html" target="_blank" rel="noopener">Заказы</a>' : ""}
                 <button class="ghost-button" type="button" data-logout>Выйти</button>
               </div>
@@ -3730,6 +3962,7 @@ function saveGeneratedProducts() {
   renderFilters();
   renderProducts();
   renderAdminPreview([]);
+  renderAdminImportPage();
   showToast(skipped ? `Карточки добавлены: ${uniqueProducts.length}. Дубли пропущены: ${skipped}.` : "Карточки добавлены в каталог.");
 }
 
@@ -3891,6 +4124,32 @@ function downloadAdminPriceRowsCsv(rows, fileName = "sobag-admin-prices.csv") {
   showToast(`Скачано строк цен: ${preparedRows.length}.`);
 }
 
+function downloadAdminPriceRowsXlsx(rows, fileName = "sobag-admin-prices.xlsx") {
+  if (!window.XLSX) {
+    downloadAdminPriceRowsCsv(rows, fileName.replace(/\.xlsx$/i, ".csv"));
+    return;
+  }
+  const preparedRows = rows.map(({ product, variant }) => [
+    product.baseSku,
+    variant.sku,
+    variant.name,
+    variant.type,
+    variant.size,
+    variant.material,
+    variant.price,
+    (product.categories || [product.category].filter(Boolean)).join("; "),
+    (product.collections || []).join("; "),
+    (product.holidays || []).join("; "),
+    (product.tags || []).join("; "),
+  ]);
+  const workbook = XLSX.utils.book_new();
+  const sheet = XLSX.utils.aoa_to_sheet([variantPriceExportColumns.slice(0, 11), ...preparedRows]);
+  sheet["!cols"] = [{ wch: 18 }, { wch: 30 }, { wch: 34 }, { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 34 }];
+  XLSX.utils.book_append_sheet(workbook, sheet, "Цены вариантов");
+  XLSX.writeFile(workbook, fileName);
+  showToast(`Скачано строк цен в XLSX: ${preparedRows.length}.`);
+}
+
 function downloadOrdersCsv() {
   const rows = getOrders().map((order) => {
     const customer = order.customer || {};
@@ -4023,6 +4282,7 @@ async function importExcel(file) {
   }, []);
   addMissingCatalogCategories(imported);
   renderAdminPreview(imported);
+  renderAdminImportPage();
   showToast(
     skippedDuplicates
       ? `Из Excel загружено новых карточек: ${imported.length}. Дубли пропущены: ${skippedDuplicates}.`
@@ -4313,7 +4573,10 @@ function boot() {
   renderManagementPages();
   renderAdminProductsPage();
   renderAdminPricesPage();
+  renderAdminImportPage();
+  updateCustomCalculator();
   initActualSlider();
+  loadServerSiteContent();
   loadPublishedProducts();
   initFormEnhancements();
   loadBackendAccountData().then((changed) => {
@@ -4324,6 +4587,7 @@ function boot() {
     renderManagementPages();
     renderAdminProductsPage();
     renderAdminPricesPage();
+    renderAdminImportPage();
   });
 
   document.addEventListener("click", async (event) => {
@@ -4519,6 +4783,7 @@ function boot() {
     if (button.dataset.adminExportProducts !== undefined) downloadProductsCsv(selectedAdminProducts(), "sobag-admin-products-selected.csv");
     if (button.dataset.adminExportVariants !== undefined) downloadVariantPricesCsv(selectedAdminProducts(), "sobag-admin-variant-prices-selected.csv");
     if (button.dataset.adminExportPriceRows !== undefined) downloadAdminPriceRowsCsv(selectedAdminPriceRows(), "sobag-admin-prices-selected.csv");
+    if (button.dataset.adminExportPriceXlsx !== undefined) downloadAdminPriceRowsXlsx(selectedAdminPriceRows(), "sobag-admin-prices-selected.xlsx");
     if (button.dataset.adminExportPriceProducts !== undefined) {
       const productIds = new Set(selectedAdminPriceRows().map(({ product }) => product.id));
       downloadVariantPricesCsv(products.filter((product) => productIds.has(product.id)), "sobag-admin-product-variant-prices.csv");
@@ -4617,6 +4882,7 @@ function boot() {
       nextInput?.setSelectionRange(nextInput.value.length, nextInput.value.length);
     }
     if (event.target.id === "detailQty") refreshProductModal();
+    if (event.target.closest?.("#customCalculator")) updateCustomCalculator();
   });
 
   document.addEventListener("change", (event) => {
@@ -4638,6 +4904,7 @@ function boot() {
         event.target.value = "";
       });
     }
+    if (event.target.closest?.("#customCalculator")) updateCustomCalculator();
   });
 
   document.addEventListener("submit", async (event) => {

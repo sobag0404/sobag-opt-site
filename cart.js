@@ -267,6 +267,19 @@ function getSiteContent() {
   }
 }
 
+async function loadServerCartContent() {
+  try {
+    const data = await apiRequest("/api/content");
+    if (!data.content || typeof data.content !== "object") return false;
+    if (data.source === "server") localStorage.setItem(CART_CONTENT_KEY, JSON.stringify({ ...defaultCartContent, ...data.content }));
+    renderCartContent();
+    return true;
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
+    return false;
+  }
+}
+
 function getCurrentUserProfile() {
   const email = localStorage.getItem(CURRENT_USER_KEY);
   if (!email) return null;
@@ -750,6 +763,7 @@ document.querySelector("#checkoutForm").addEventListener("submit", async (event)
 });
 
 renderCartContent();
+loadServerCartContent();
 initFormEnhancements();
 applyTheme(localStorage.getItem(THEME_KEY) || "default");
 renderCart();

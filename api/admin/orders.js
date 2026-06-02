@@ -2,7 +2,39 @@ const { requireUser } = require("../_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { saveStore } = require("../_lib/store");
 
-const allowedStatuses = new Set(["new", "processing", "waiting", "done", "canceled"]);
+const allowedStatuses = new Set(["new", "processing", "waiting", "production", "ready", "shipped", "done", "canceled"]);
+
+function orderStatusLabel(status) {
+  if (status === "new") return "Новый";
+  if (status === "processing") return "В работе";
+  if (status === "waiting") return "Ждет клиента";
+  if (status === "production") return "В производстве";
+  if (status === "ready") return "Готов к отгрузке";
+  if (status === "shipped") return "Отгружен";
+  if (status === "done") return "Выполнен";
+  if (status === "canceled") return "Отменен";
+  return "Новый";
+}
+
+function historyEntry(order, patch, actor) {
+  const changes = [];
+  if (patch.status && patch.status !== order.status) {
+    changes.push(`Статус: ${orderStatusLabel(order.status)} -> ${orderStatusLabel(patch.status)}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "managerEmail") && patch.managerEmail !== (order.managerEmail || "")) {
+    changes.push(`Менеджер: ${patch.managerName || patch.managerEmail || "не назначен"}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "managerNote") && patch.managerNote !== (order.managerNote || "")) {
+    changes.push("Комментарий менеджера обновлен");
+  }
+  if (!changes.length) return null;
+  return {
+    id: `H-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    at: new Date().toISOString(),
+    actor,
+    summary: changes.join("; "),
+  };
+}
 
 module.exports = async function handler(req, res) {
   try {
@@ -27,11 +59,16 @@ module.exports = async function handler(req, res) {
     let updated = null;
     store.orders = store.orders.map((order) => {
       if (order.id !== data.id) return order;
-      updated = {
-        ...order,
+      const patch = {
         ...(status ? { status } : {}),
         ...(Object.prototype.hasOwnProperty.call(data, "managerEmail") ? { managerEmail, managerName } : {}),
         ...(Object.prototype.hasOwnProperty.call(data, "managerNote") ? { managerNote: String(data.managerNote || "").trim() } : {}),
+      };
+      const entry = historyEntry(order, patch, user.email);
+      updated = {
+        ...order,
+        ...patch,
+        statusHistory: entry ? [entry, ...(order.statusHistory || [])].slice(0, 100) : order.statusHistory || [],
         updatedAt: new Date().toISOString(),
         updatedBy: user.email,
       };
