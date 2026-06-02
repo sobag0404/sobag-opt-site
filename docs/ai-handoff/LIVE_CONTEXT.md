@@ -516,4 +516,7 @@ Latest production verification:
   - updated all HTML cache-bust query strings to `20260602-content-editor` for `app.js` and `styles.css`, so deployed browsers should pick up the new admin editor;
   - hardened `tools/ui-smoke.spec.js` to check the admin content editor render path and increased the smoke timeout to 60 seconds because the real 808-product catalog can make local/production tests slower;
   - fixed mobile horizontal overflow found during verification on `admin-prices.html` and `marketplaces.html` by allowing long headings/page-back titles to wrap;
-  - local checks passed: `node --check app.js`, `node --check tools/ui-smoke.spec.js`, `npm.cmd run check`, and `SOBAG_BASE_URL=http://localhost:4173 npm.cmd run ui:smoke` with 6/6 passing.
+  - local checks passed: `node --check app.js`, `node --check tools/ui-smoke.spec.js`, `npm.cmd run check`, and `SOBAG_BASE_URL=http://localhost:4173 npm.cmd run ui:smoke` with 6/6 passing;
+  - committed and pushed as `fb79361 Improve admin content editor`;
+  - production deploy succeeded on Vercel and was aliased to `https://sobag-shop.online`;
+  - production verification passed for `/`, `/admin-import`, `/api/health`, and `/api/content`; production smoke passed for 5 public/admin-ui scenarios, with the local-only synthetic guest-order scenario excluded on production.
