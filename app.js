@@ -1853,7 +1853,7 @@ function syncCartToBackend() {
   window.clearTimeout(cartSyncTimer);
   const items = [...state.cart.entries()];
   cartSyncTimer = window.setTimeout(() => {
-    apiRequest("/api/cart", { method: "PUT", body: { items } }).catch((error) => {
+    apiRequest("/api/auth/me", { method: "PUT", body: { cartItems: items } }).catch((error) => {
       if (!isBackendUnavailable(error)) console.warn(error);
     });
   }, 250);
@@ -1864,7 +1864,7 @@ function syncFavoritesToBackend() {
   window.clearTimeout(favoritesSyncTimer);
   const items = [...state.favorites];
   favoritesSyncTimer = window.setTimeout(() => {
-    apiRequest("/api/favorites", { method: "PUT", body: { items } }).catch((error) => {
+    apiRequest("/api/auth/me", { method: "PUT", body: { favoriteItems: items } }).catch((error) => {
       if (!isBackendUnavailable(error)) console.warn(error);
     });
   }, 250);
@@ -1873,15 +1873,15 @@ function syncFavoritesToBackend() {
 async function loadServerPersonalState() {
   if (!state.currentUser) return false;
   try {
-    const [cartData, favoritesData] = await Promise.all([apiRequest("/api/cart"), apiRequest("/api/favorites")]);
-    const serverCart = cleanCartEntries(cartData.items || []);
+    const personalData = await apiRequest("/api/auth/me");
+    const serverCart = cleanCartEntries(personalData.cartItems || []);
     const localCart = cleanCartEntries([...state.cart.entries()]);
     const mergedCart = new Map(serverCart);
     localCart.forEach(([key, line]) => mergedCart.set(key, line));
     state.cart = mergedCart;
     localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
 
-    const mergedFavorites = [...new Set([...cleanFavoriteIds(favoritesData.items || []), ...state.favorites])];
+    const mergedFavorites = [...new Set([...cleanFavoriteIds(personalData.favoriteItems || []), ...state.favorites])];
     state.favorites = new Set(mergedFavorites);
     localStorage.setItem(getFavoritesKey(), JSON.stringify([...state.favorites]));
 

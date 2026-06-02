@@ -4,7 +4,7 @@ Last updated: 2026-05-29
 
 ## Project
 
-Sobag Opt is a B2B wholesale textile/catalog prototype for printed textile products: pillows, pillowcases, blankets, shoe bags, cooler covers, luggage covers, flags, removki/keychains, custom-print requests, carts, discounts, prototype accounts, admin/manager/content-manager workspaces, editable site content, server-backed cart/favorites prototype endpoints, and local bulk product import tooling.
+Sobag Opt is a B2B wholesale textile/catalog prototype for printed textile products: pillows, pillowcases, blankets, shoe bags, cooler covers, luggage covers, flags, removki/keychains, custom-print requests, carts, discounts, prototype accounts, admin/manager/content-manager workspaces, editable site content, server-backed cart/favorites prototype state through `/api/auth/me`, and local bulk product import tooling.
 
 Repository:
 - GitHub: `https://github.com/sobag0404/sobag-opt-site`
@@ -155,8 +155,7 @@ Large product-photo folders must not be committed to GitHub/Vercel.
 Latest verified checks before this handoff update:
 - `node --check app.js`
 - `node --check cart.js`
-- `node --check api/cart.js`
-- `node --check api/favorites.js`
+- `node --check api/auth/me.js`
 - `npm run check`
 - `npm run autofix`
 - `npm run ui:smoke`

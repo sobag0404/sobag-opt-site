@@ -598,7 +598,7 @@ Latest production verification:
 
 - Workflow/order/SEO/import roles pass on 2026-06-02:
   - implemented the requested 1-6 batch: richer manager order cards, checkout fields, server cart/favorites storage, SEO files/metas, importer battle reports, and staff role split;
-  - added `/api/cart` and `/api/favorites`, backed by the existing Redis/KV store under `store.carts` and `store.favorites`; frontend merges local and server cart/favorites after login and syncs changes back softly;
+  - extended `/api/auth/me` with `cartItems` and `favoriteItems`, backed by the existing Redis/KV store under `store.carts` and `store.favorites`; this avoids adding extra Vercel Functions on the Hobby plan while still letting frontend merge local and server cart/favorites after login;
   - added a readiness guard so initial local cart/favorites render does not overwrite server cart/favorites before the first server load completes;
   - expanded checkout/request forms with company/IP data, INN validation, city, address, delivery method, packaging option, comment, and layout filename capture;
   - order API and local fallback now preserve company, INN, city, delivery, packaging, layout filename, address, and comments in user profiles/order history;
@@ -610,3 +610,4 @@ Latest production verification:
   - local verification passed: JS/API syntax checks, `python -m py_compile tools/product_importer.py`, `npm.cmd run check`, `npm.cmd run autofix`, `npm.cmd run ui:smoke` with 7/7 passing, local Playwright spot-check for checkout/request fields, content-manager product access, `robots.txt`, and `sitemap.xml`;
   - importer smoke with a temp CSV verified created -> duplicate_skipped -> updated behavior and report output.
   - committed locally as `6c98411 Add order workflow and personal state sync`.
+  - follow-up fix after Vercel Hobby limit: removed standalone `/api/cart` and `/api/favorites` files and moved personal-state writes into existing `/api/auth/me` to keep total Serverless Functions within the 12-function limit.

@@ -128,9 +128,9 @@ As of 2026-06-02, the shared Redis/KV store also keeps lightweight personal stat
 - `store.carts[email] = { items, updatedAt }`
 - `store.favorites[email] = { items, updatedAt }`
 
-Endpoints:
-- `GET/PUT/DELETE /api/cart` for the signed-in user's cart;
-- `GET/PUT/DELETE /api/favorites` for the signed-in user's favorites.
+Endpoint:
+- `GET /api/auth/me` returns `cartItems` and `favoriteItems` for the signed-in user;
+- `PUT /api/auth/me` accepts `cartItems` and/or `favoriteItems` and saves them for the signed-in user.
 
 These are still prototype-grade JSON blobs, but they make cart/favorites portable across devices once the user is logged in. Product images/admin uploads still need durable object storage later.
 

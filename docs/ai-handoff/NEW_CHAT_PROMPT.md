@@ -56,7 +56,7 @@ Current implemented features:
 - per-order CSV export/print view and extended checkout/customer fields;
 - admin content controls for page text/images/logo/site name/dictionaries;
 - content-manager role for product/content/price/import tools;
-- server-backed cart/favorites prototype endpoints (`/api/cart`, `/api/favorites`);
+- server-backed cart/favorites prototype state through `/api/auth/me`;
 - CSV/XLSX product template download;
 - local importer that can scan nested category/article/photo folders and optionally update existing products with `--update-existing`;
 - motion layer with reduced flicker after latest fixes.

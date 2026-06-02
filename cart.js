@@ -465,7 +465,7 @@ function syncCartToBackend() {
   window.clearTimeout(cartSyncTimer);
   const items = [...state.cart.entries()];
   cartSyncTimer = window.setTimeout(() => {
-    apiRequest("/api/cart", { method: "PUT", body: { items } }).catch((error) => {
+    apiRequest("/api/auth/me", { method: "PUT", body: { cartItems: items } }).catch((error) => {
       if (!isBackendUnavailable(error)) console.warn(error);
     });
   }, 250);
@@ -474,8 +474,8 @@ function syncCartToBackend() {
 async function loadServerCart() {
   if (!localStorage.getItem(CURRENT_USER_KEY)) return false;
   try {
-    const data = await apiRequest("/api/cart");
-    const serverCart = cleanCartEntries(data.items || []);
+    const data = await apiRequest("/api/auth/me");
+    const serverCart = cleanCartEntries(data.cartItems || []);
     const localCart = cleanCartEntries([...state.cart.entries()]);
     const merged = new Map(serverCart);
     localCart.forEach(([key, line]) => merged.set(key, line));
