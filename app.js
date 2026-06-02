@@ -617,10 +617,10 @@ function getSiteContent() {
   }
 }
 
-function saveSiteContent(content) {
+function saveSiteContent(content, options = {}) {
   const normalized = normalizeSiteContent(content);
   localStorage.setItem(STORAGE.content, JSON.stringify(normalized));
-  syncSiteContentToBackend(normalized);
+  if (options.sync !== false) syncSiteContentToBackend(normalized);
   return normalized;
 }
 
@@ -3652,6 +3652,31 @@ function adminListTextarea(name, title, value, note) {
   `;
 }
 
+function adminSectionHref(anchor) {
+  return (
+    {
+      global: "index.html",
+      home: "index.html",
+      catalog: "catalog.html",
+      marketplaces: "marketplaces.html",
+      custom: "custom.html",
+      about: "about.html",
+      contacts: "contacts.html",
+      cart: "cart.html",
+      footer: "index.html#footer",
+    }[anchor] || "index.html"
+  );
+}
+
+function adminSectionPreviewHtml(anchor) {
+  return `
+    <a class="admin-section-open" href="${adminSectionHref(anchor)}" target="_blank" rel="noopener">
+      <i data-lucide="external-link"></i>
+      Открыть страницу
+    </a>
+  `;
+}
+
 function adminSectionMapHtml() {
   const items = [
     { anchor: "global", title: "Шапка и общие", note: "Логотип, название, верхние кнопки", shot: "header" },
@@ -3665,7 +3690,12 @@ function adminSectionMapHtml() {
     { anchor: "footer", title: "Подвал", note: "Нижнее меню и контакты", shot: "footer" },
   ];
   return `
-    <div class="admin-content-map" aria-label="Разделы настройки контента">
+    <aside class="admin-content-sidebar">
+      <div class="admin-content-sidebar__intro">
+        <strong>Страницы</strong>
+        <span>Выберите блок, отредактируйте поля справа и сохраните изменения на сервере.</span>
+      </div>
+      <div class="admin-content-map" aria-label="Разделы настройки контента">
       ${items
         .map(
           (item) => `
@@ -3679,7 +3709,8 @@ function adminSectionMapHtml() {
           `
         )
         .join("")}
-    </div>
+      </div>
+    </aside>
   `;
 }
 
@@ -3687,8 +3718,13 @@ function adminTextGroupHtml(group, content, extraHtml = "") {
   const sectionId = group.anchor ? ` id="admin-section-${escapeHtml(group.anchor)}"` : "";
   return `
     <div class="admin-content-section admin-content-section--page"${sectionId}>
-      <h3>${group.title}</h3>
-      <p class="admin-section-note">${group.note}</p>
+      <div class="admin-content-section__head">
+        <div>
+          <h3>${group.title}</h3>
+          <p class="admin-section-note">${group.note}</p>
+        </div>
+        ${adminSectionPreviewHtml(group.anchor)}
+      </div>
       <div class="admin-content-grid">
         ${extraHtml}
         ${group.fields.map((field) => renderTextField(field, content)).join("")}
@@ -3719,10 +3755,22 @@ function adminModalHtml() {
         <div>
           <p class="eyebrow">Content</p>
           <h2 id="adminModalTitle">Контент сайта</h2>
-          <p>Тестовое управление контентом. Изображения и тексты сохраняются в этом браузере; для постоянного хранения нужен backend.</p>
+          <p>Редактор текстов, изображений и блоков сайта. После сохранения изменения записываются локально и отправляются на сервер, чтобы они были доступны на других устройствах.</p>
         </div>
         <form class="admin-content-form" id="adminContentForm">
-          ${adminSectionMapHtml()}
+          <div class="admin-content-toolbar">
+            <div>
+              <strong>Редактор страниц</strong>
+              <span data-content-save-status>Изменения сохраняются локально и на сервере после нажатия кнопки.</span>
+            </div>
+            <div class="admin-content-toolbar__actions">
+              <button class="primary-button" type="submit"><i data-lucide="save"></i> Сохранить на сервере</button>
+              <button class="ghost-button" type="button" data-reset-content>Сбросить контент</button>
+            </div>
+          </div>
+          <div class="admin-content-workspace">
+            ${adminSectionMapHtml()}
+            <div class="admin-content-pages">
           ${adminTextGroupHtml(
             siteTextFieldGroups[0],
             content,
@@ -3770,9 +3818,7 @@ function adminModalHtml() {
             ${adminCatalogImagesHtml("catalogHolidays", content.catalogHolidays, "Фото праздников", "Рекомендуем: 900x520 px, JPG/WebP до 1.5 МБ.")}
           </div>
           ${siteTextFieldGroups.slice(3).map((group) => adminTextGroupHtml(group, content)).join("")}
-          <div class="admin-actions">
-            <button class="primary-button" type="submit">Сохранить контент</button>
-            <button class="ghost-button" type="button" data-reset-content>Сбросить контент</button>
+            </div>
           </div>
         </form>
         <div class="admin-divider"></div>
@@ -5069,9 +5115,17 @@ function boot() {
     }
     if (event.target.id === "adminContentForm") {
       event.preventDefault();
-      saveSiteContent(contentFromAdminForm(event.target));
+      const statusNode = event.target.querySelector("[data-content-save-status]");
+      if (statusNode) statusNode.textContent = "Сохраняю изменения...";
+      const savedContent = saveSiteContent(contentFromAdminForm(event.target), { sync: false });
       renderSiteContent();
-      showToast("Контент сайта сохранен в этом браузере.");
+      const synced = await syncSiteContentToBackend(savedContent);
+      if (statusNode) {
+        statusNode.textContent = synced
+          ? "Сохранено на сервере. Изменения будут видны на других устройствах."
+          : "Сохранено локально. Серверное сохранение не выполнено.";
+      }
+      showToast(synced ? "Контент сайта сохранен на сервере." : "Контент сохранен локально, сервер недоступен.");
     }
     if (event.target.dataset.orderManagerForm) {
       event.preventDefault();

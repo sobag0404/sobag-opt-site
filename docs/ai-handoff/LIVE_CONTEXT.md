@@ -509,3 +509,11 @@ Latest production verification:
   - production verification passed for `/`, `/catalog`, `/custom`, `/admin-import`, `/api/health`, `/api/catalog`, and `/api/content`;
   - production API state after deploy: `/api/health` returned storage ready, `/api/catalog` returned 808 products from server storage, and `/api/content` returned `source=default` because no admin content settings have been saved yet;
   - production smoke passed for 5 storefront/admin-ui scenarios; the local-only guest-order smoke is intentionally excluded on production because live backend/session data can overwrite the synthetic localStorage order fixture.
+
+- Admin content editor UX pass on 2026-06-02:
+  - redesigned the content admin modal into a clearer page editor: sticky save toolbar, left page/block navigation, right-side editable sections, mini schematic previews, and "Открыть страницу" links for page-level groups;
+  - content save now explicitly waits for `/api/admin/content` and updates an inline save status instead of firing server sync only in the background;
+  - updated all HTML cache-bust query strings to `20260602-content-editor` for `app.js` and `styles.css`, so deployed browsers should pick up the new admin editor;
+  - hardened `tools/ui-smoke.spec.js` to check the admin content editor render path and increased the smoke timeout to 60 seconds because the real 808-product catalog can make local/production tests slower;
+  - fixed mobile horizontal overflow found during verification on `admin-prices.html` and `marketplaces.html` by allowing long headings/page-back titles to wrap;
+  - local checks passed: `node --check app.js`, `node --check tools/ui-smoke.spec.js`, `npm.cmd run check`, and `SOBAG_BASE_URL=http://localhost:4173 npm.cmd run ui:smoke` with 6/6 passing.

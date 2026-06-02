@@ -2368,15 +2368,74 @@ select[aria-invalid="true"] {
   margin-top: 22px;
 }
 
+.admin-content-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--canvas) 94%, transparent);
+  border: 1px solid var(--hairline);
+  backdrop-filter: blur(10px);
+}
+
+.admin-content-toolbar strong,
+.admin-content-sidebar__intro strong {
+  display: block;
+  color: var(--on-dark);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.admin-content-toolbar span,
+.admin-content-sidebar__intro span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-content-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-content-workspace {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.admin-content-sidebar {
+  position: sticky;
+  top: 92px;
+  display: grid;
+  gap: 12px;
+  max-height: calc(100vh - 160px);
+  overflow: auto;
+}
+
+.admin-content-sidebar__intro {
+  padding: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+
 .admin-content-map {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
 .admin-content-map__card {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-columns: 82px minmax(0, 1fr);
   gap: 12px;
   align-items: center;
   min-height: 86px;
@@ -2389,6 +2448,11 @@ select[aria-invalid="true"] {
 
 .admin-content-map__card:hover {
   border-color: var(--on-dark);
+}
+
+.admin-content-map__card:focus-visible {
+  outline: 2px solid var(--on-dark);
+  outline-offset: 2px;
 }
 
 .admin-content-map__card b,
@@ -2468,6 +2532,11 @@ select[aria-invalid="true"] {
   scroll-margin-top: 120px;
 }
 
+.admin-content-pages {
+  display: grid;
+  gap: 18px;
+}
+
 .admin-content-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2497,6 +2566,41 @@ select[aria-invalid="true"] {
   padding: 16px;
   background: var(--surface-soft);
   border: 1px solid var(--hairline);
+}
+
+.admin-content-section__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-content-section__head h3 {
+  margin-bottom: 6px;
+}
+
+.admin-section-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  color: var(--on-dark);
+  white-space: nowrap;
+  text-decoration: none;
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-section-open:hover {
+  color: var(--canvas);
+  background: var(--on-dark);
+  border-color: var(--on-dark);
 }
 
 .admin-content-section--nested {
@@ -4389,12 +4493,18 @@ body.theme-night .copy-sku-button:hover {
   color: var(--on-dark);
   font-size: 24px;
   font-weight: 900;
+  overflow-wrap: anywhere;
 }
 
 .marketplace-card small {
   color: var(--body);
   font-size: 14px;
   line-height: 1.45;
+}
+
+.section-head h1,
+.section-head h2 {
+  overflow-wrap: anywhere;
 }
 
 .catalog-button,
@@ -4743,14 +4853,18 @@ body.theme-night .copy-sku-button:hover {
   justify-content: space-between;
   gap: 16px;
   padding: 28px 0 0;
+  min-width: 0;
 }
 
 .page-back strong {
+  min-width: 0;
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .hero__actions .ghost-button {
@@ -5842,6 +5956,29 @@ textarea.is-shaking {
 
   .admin-content-map {
     grid-template-columns: 1fr;
+  }
+
+  .admin-content-toolbar,
+  .admin-content-section__head {
+    display: grid;
+  }
+
+  .admin-content-toolbar__actions {
+    justify-content: stretch;
+  }
+
+  .admin-content-toolbar__actions > * {
+    width: 100%;
+  }
+
+  .admin-content-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-content-sidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 
   .admin-orders-filter {

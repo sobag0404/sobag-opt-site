@@ -1,6 +1,7 @@
 const { test, expect } = require("@playwright/test");
 
 const BASE_URL = process.env.SOBAG_BASE_URL || "http://127.0.0.1:4173";
+test.setTimeout(60000);
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -77,6 +78,13 @@ test("admin import page and custom print calculator render", async ({ page }) =>
 
   await page.goto(`${BASE_URL}/admin-import.html`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminImportPage")).toContainText("Импорт");
+
+  await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+  await page.locator("#accountButton").click();
+  await page.locator("[data-open-admin]").click();
+  await expect(page.locator("#adminContentForm")).toBeVisible();
+  await expect(page.locator(".admin-content-toolbar")).toContainText("Сохранить на сервере");
+  await expect(page.locator(".admin-content-sidebar")).toContainText("Страницы");
 
   await page.goto(`${BASE_URL}/custom.html`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#customCalculator")).toBeVisible();
