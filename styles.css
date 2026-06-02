@@ -1831,6 +1831,10 @@ select[aria-invalid="true"] {
   margin-top: 24px;
 }
 
+.account-section--compact {
+  margin-top: 12px;
+}
+
 .order-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2352,6 +2356,31 @@ select[aria-invalid="true"] {
   display: block;
   color: var(--body);
   line-height: 1.45;
+}
+
+.admin-preview article em {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 26px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-preview__issue {
+  color: #8a1f1f;
+  background: #fff4f4;
+}
+
+.admin-preview__ok {
+  color: #1f7a45;
+  background: #f3fff7;
 }
 
 .admin-form {

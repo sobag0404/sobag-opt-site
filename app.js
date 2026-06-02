@@ -440,6 +440,7 @@ const siteTextFieldGroups = siteTextFieldPages.map((group, index) => ({
 }));
 const productDrafts = [];
 const FAVORITES_KEY = "sobag.favorites";
+const FAVORITES_PREFIX = "sobag.favorites.";
 const PROTOTYPE_PRODUCT_IDS = new Set([
   "aurora-cats",
   "pixel-quest",
@@ -976,6 +977,7 @@ function saveServerUserProfile(profile) {
   saveUsers(users);
   state.currentUser = profile.email;
   localStorage.setItem(STORAGE.user, profile.email);
+  loadFavorites();
 }
 
 function mirrorServerOrder(order, userEmail = state.currentUser) {
@@ -1655,6 +1657,23 @@ function setUserRole(email, role) {
   return true;
 }
 
+function getFavoritesKey() {
+  return state.currentUser ? `${FAVORITES_PREFIX}${state.currentUser}` : FAVORITES_KEY;
+}
+
+function loadFavorites() {
+  const key = getFavoritesKey();
+  const stored = cleanFavoriteIds(JSON.parse(localStorage.getItem(key) || "[]"));
+  const legacy = key !== FAVORITES_KEY ? cleanFavoriteIds(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]")) : [];
+  const merged = legacy.length && !localStorage.getItem(key) ? [...new Set([...stored, ...legacy])] : stored;
+  state.favorites = new Set(merged);
+  localStorage.setItem(key, JSON.stringify([...state.favorites]));
+}
+
+function saveFavorites() {
+  localStorage.setItem(getFavoritesKey(), JSON.stringify([...state.favorites]));
+}
+
 function getCartKey() {
   return state.currentUser ? `sobag.cart.${state.currentUser}` : STORAGE.guestCart;
 }
@@ -1682,9 +1701,13 @@ function cleanPrototypeStorage() {
   const storedProducts = loadStoredProducts();
   localStorage.setItem(STORAGE.products, JSON.stringify(storedProducts));
 
-  const favorites = cleanFavoriteIds(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"));
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-  state.favorites = new Set(favorites);
+  Object.keys(localStorage)
+    .filter((key) => key === FAVORITES_KEY || key.startsWith(FAVORITES_PREFIX))
+    .forEach((key) => {
+      const favorites = cleanFavoriteIds(JSON.parse(localStorage.getItem(key) || "[]"));
+      localStorage.setItem(key, JSON.stringify(favorites));
+    });
+  loadFavorites();
 
   Object.keys(localStorage)
     .filter((key) => key === STORAGE.guestCart || key.startsWith("sobag.cart."))
@@ -1711,6 +1734,31 @@ function loadCart() {
 
 function saveCart() {
   localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
+}
+
+function repeatOrder(orderId) {
+  const order = getOrders().find((item) => item.id === orderId);
+  const items = (order?.items || []).filter((line) => line?.variant?.sku);
+  if (!items.length) {
+    showToast("В заказе нет позиций, которые можно повторить.");
+    return;
+  }
+  items.forEach((line) => {
+    const variant = line.variant || {};
+    const key = `${line.productId || variant.sku}:${variant.sku}`;
+    const existing = state.cart.get(key);
+    state.cart.set(key, {
+      key,
+      productId: line.productId || "",
+      productName: line.productName || variant.name || "",
+      productImage: line.productImage || "",
+      variant,
+      qty: Math.max(1, Number(existing?.qty || 0) + Number(line.qty || 1)),
+    });
+  });
+  saveCart();
+  renderCart();
+  showToast(`Позиции из заказа ${order.id} добавлены в корзину.`);
 }
 
 function formatMoney(value) {
@@ -2693,6 +2741,11 @@ function orderCardHtml(order, managerMode = false) {
       ${orderItemsPreview(items)}
       ${managerMode ? orderHistoryHtml(order) : ""}
       ${
+        !managerMode && items.length
+          ? `<div class="order-actions"><button class="ghost-button" type="button" data-repeat-order="${escapeHtml(order.id || "")}">Повторить заказ</button></div>`
+          : ""
+      }
+      ${
         managerMode
           ? `
             <div class="order-actions order-actions--links">
@@ -3044,6 +3097,10 @@ function orderDetailHtml(order) {
           <span>Email: <b>${escapeHtml(customerEmail || "Не указан")}</b></span>
           <span>Адрес: <b>${escapeHtml(customer.address || "Не указан")}</b></span>
           ${customer.comment ? `<span>Комментарий: <b>${escapeHtml(customer.comment)}</b></span>` : ""}
+        </div>
+        <div class="order-actions">
+          ${customer.phone ? `<a class="ghost-button" href="tel:${escapeHtml(String(customer.phone).replace(/[^+\d]/g, ""))}"><i data-lucide="phone"></i> Позвонить</a>` : ""}
+          ${customerEmail ? `<a class="ghost-button" href="mailto:${escapeHtml(customerEmail)}"><i data-lucide="mail"></i> Написать</a>` : ""}
         </div>
         ${customerEmail ? `<a class="primary-button" href="${adminCustomerUrl(customerEmail)}" target="_blank" rel="noopener"><i data-lucide="external-link"></i> Открыть профиль покупателя</a>` : ""}
       </article>
@@ -3480,8 +3537,16 @@ function accountModalHtml() {
                 <strong>${user.name || user.email}</strong>
                 <span>${user.email}</span>
                 ${user.phone ? `<span>${user.phone}</span>` : ""}
+                ${user.address ? `<span>${user.address}</span>` : ""}
                 <span>${roleLabel(user.role)}</span>
               </div>
+              ${
+                (user.addresses || []).length
+                  ? `<div class="account-section account-section--compact"><h3>Сохраненные адреса</h3><div class="admin-detail-list">${user.addresses
+                      .map((address) => `<span>${escapeHtml(address)}</span>`)
+                      .join("")}</div></div>`
+                  : ""
+              }
               <div class="account-actions">
                 ${user.role === "admin" ? '<button class="primary-button" type="button" data-open-admin><i data-lucide="settings"></i> Админка</button>' : ""}
                 ${user.role === "admin" ? '<a class="ghost-button" href="admin-products.html" target="_blank" rel="noopener">Товары</a>' : ""}
@@ -3963,20 +4028,40 @@ function baseSkuKey(value) {
   return normalizeBaseSku(value).toLocaleUpperCase("ru-RU");
 }
 
+function productVariantSkuKeys(product) {
+  return new Set((product?.variants || []).map((variant) => baseSkuKey(variant.sku)).filter(Boolean));
+}
+
+function collectVariantSkuKeys(sourceProducts) {
+  const skus = new Set();
+  sourceProducts.forEach((product) => {
+    productVariantSkuKeys(product).forEach((sku) => skus.add(sku));
+  });
+  return skus;
+}
+
 function renderAdminPreview(items) {
   const node = document.querySelector("#adminPreview");
   if (!node) return;
   state.adminPreview = items;
+  const existingSkus = new Set(products.map((product) => baseSkuKey(product.baseSku)));
+  const existingVariantSkus = collectVariantSkuKeys(products);
   node.innerHTML = items.length
     ? items
         .map(
-          (product) => `
+          (product) => {
+            const baseDuplicate = existingSkus.has(baseSkuKey(product.baseSku));
+            const variantDuplicate = [...productVariantSkuKeys(product)].some((sku) => existingVariantSkus.has(sku));
+            const issue = baseDuplicate ? "Основной артикул уже есть в каталоге" : variantDuplicate ? "Есть пересечение артикулов вариантов" : "";
+            return `
             <article>
               <strong>${product.name}</strong>
               <span>${product.baseSku} · ${product.variants.length} ${variantWord(product.variants.length)}</span>
               <small>${product.variants.slice(0, 6).map((variant) => variant.sku).join(", ")}${product.variants.length > 6 ? "..." : ""}</small>
+              ${issue ? `<em class="admin-preview__issue">${issue}</em>` : `<em class="admin-preview__ok">Готово к добавлению</em>`}
             </article>
-          `
+          `;
+          }
         )
         .join("")
     : "<p>Сгенерируйте карточку или загрузите Excel, чтобы увидеть будущие артикулы.</p>";
@@ -3988,11 +4073,20 @@ function saveGeneratedProducts() {
     return;
   }
   const existingSkus = new Set(products.map((product) => baseSkuKey(product.baseSku)));
+  const existingVariantSkus = collectVariantSkuKeys(products);
   const seenSkus = new Set();
+  const seenVariantSkus = new Set();
+  let skippedVariantDuplicates = 0;
   const uniqueProducts = state.adminPreview.filter((product) => {
     const sku = baseSkuKey(product.baseSku);
     if (!sku || existingSkus.has(sku) || seenSkus.has(sku)) return false;
+    const variantSkus = [...productVariantSkuKeys(product)];
+    if (variantSkus.some((variantSku) => existingVariantSkus.has(variantSku) || seenVariantSkus.has(variantSku))) {
+      skippedVariantDuplicates += 1;
+      return false;
+    }
     seenSkus.add(sku);
+    variantSkus.forEach((variantSku) => seenVariantSkus.add(variantSku));
     return true;
   });
   const skipped = state.adminPreview.length - uniqueProducts.length;
@@ -4009,7 +4103,8 @@ function saveGeneratedProducts() {
   renderProducts();
   renderAdminPreview([]);
   renderAdminImportPage();
-  showToast(skipped ? `Карточки добавлены: ${uniqueProducts.length}. Дубли пропущены: ${skipped}.` : "Карточки добавлены в каталог.");
+  const duplicateText = skipped ? ` Дубли пропущены: ${skipped}${skippedVariantDuplicates ? `, из них по вариантам: ${skippedVariantDuplicates}` : ""}.` : "";
+  showToast(`Карточки добавлены: ${uniqueProducts.length}.${duplicateText}`);
 }
 
 function setActualSlide(index) {
@@ -4628,7 +4723,9 @@ function boot() {
   loadBackendAccountData().then((changed) => {
     if (!changed) return;
     loadCart();
+    loadFavorites();
     renderCart();
+    renderProducts();
     renderAccountButton();
     renderManagementPages();
     renderAdminProductsPage();
@@ -4732,10 +4829,16 @@ function boot() {
       return;
     }
     if (button.dataset.addVariant) addVariantToCart(button.dataset.addVariant);
+    if (button.dataset.repeatOrder) {
+      repeatOrder(button.dataset.repeatOrder);
+      closeModal();
+      navigateWithinSite("cart.html");
+      return;
+    }
     if (button.dataset.favorite) {
       if (state.favorites.has(button.dataset.favorite)) state.favorites.delete(button.dataset.favorite);
       else state.favorites.add(button.dataset.favorite);
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify([...state.favorites]));
+      saveFavorites();
       if (isFavoritesPage && !state.favorites.has(button.dataset.favorite)) {
         renderProducts();
       } else {
@@ -4762,8 +4865,10 @@ function boot() {
       localStorage.removeItem(STORAGE.user);
       state.currentUser = "";
       loadCart();
+      loadFavorites();
       closeModal();
       renderCart();
+      renderProducts();
       renderAccountButton();
     }
     if (button.dataset.orderStatus) {
@@ -5025,6 +5130,7 @@ function boot() {
           loadCart();
           closeModal();
           renderCart();
+          renderProducts();
           renderAccountButton();
           showToast("Вы зарегистрированы. Аккаунт сохранен на сервере.");
           return;
@@ -5056,6 +5162,7 @@ function boot() {
           loadCart();
           closeModal();
           renderCart();
+          renderProducts();
           renderAccountButton();
           showToast("Вы вошли. Серверная сессия активна.");
           return;
@@ -5076,8 +5183,10 @@ function boot() {
       state.currentUser = userKey;
       localStorage.setItem(STORAGE.user, userKey);
       loadCart();
+      loadFavorites();
       closeModal();
       renderCart();
+      renderProducts();
       renderAccountButton();
       showToast("Вы вошли. Корзина и заказы сохраняются за аккаунтом.");
     }

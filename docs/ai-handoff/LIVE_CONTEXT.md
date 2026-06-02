@@ -19,6 +19,24 @@ Last updated: 2026-06-02
   - no common mojibake sequences detected.
 - Current focus: the user will manually check the admin panel.
 
+## 2026-06-02 Admin / Orders / Import / Account Pass
+
+- Strengthened the next 1-4 roadmap step:
+  - `autofix` now scans server `api/**/*.js` for mojibake, not only HTML and client scripts.
+  - Favorites are now stored per user with `sobag.favorites.{email}` while preserving legacy guest favorites.
+  - Buyer account order cards now include `Повторить заказ`; it adds previous order lines back to the current cart and opens the cart page.
+  - Buyer account shows saved address data collected from server/local order history.
+  - Manager order detail now includes quick contact actions for phone/email when customer data exists.
+  - Admin import preview flags existing base SKU duplicates and variant SKU conflicts before saving.
+  - Admin import save now skips products whose generated variant SKUs collide with existing or same-batch variants; old products remain untouched.
+- Verification passed:
+  - `npm.cmd run check`
+  - `npm.cmd run autofix`
+  - `npm.cmd run ui:smoke` with 7/7 tests passing, including new repeat-order and per-user favorites coverage.
+- Still to remind user after this pass:
+  - Fill SEO/content pages: About, Contacts, Business Terms, legal docs, maps, requisites.
+  - Later, move cart/favorites to server storage if cross-device persistence becomes required.
+
 ## Standing Reminder For Codex
 
 Before every final response after doing project work, update this file with:

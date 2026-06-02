@@ -96,6 +96,7 @@ function checkNoMojibake() {
   ];
   const files = [
     ...walk(root, (file) => file.endsWith(".html")),
+    ...walk(join(root, "api"), (file) => file.endsWith(".js")),
     ...["app.js", "cart.js", "components/site-shell.js"].map((file) => join(root, file)),
   ];
   const offenders = [];

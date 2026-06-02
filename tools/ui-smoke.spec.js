@@ -23,6 +23,9 @@ test.beforeEach(async ({ page }) => {
     localStorage.removeItem("sobag.cart.guest");
     localStorage.removeItem("sobag.favorites");
     localStorage.removeItem("sobag.currentUser");
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith("sobag.favorites.") || key.startsWith("sobag.cart."))
+      .forEach((key) => localStorage.removeItem(key));
   });
 });
 
@@ -167,6 +170,73 @@ test("catalog navigation and favorite toggles do not reload the same document", 
   await favorite.click();
   await expect(favorite).toHaveAttribute("aria-pressed", "false");
   await expect.poll(() => page.evaluate(() => Number(localStorage.getItem("__sobagQaDocumentLoads") || "0"))).toBe(0);
+});
+
+test("account favorites are per-user and orders can be repeated into cart", async ({ page }) => {
+  const category = await largestCategory(page);
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
+  const seed = await page.locator(".product-card").first().evaluate((card) => ({
+    productId: card.querySelector("[data-favorite]")?.getAttribute("data-favorite") || "",
+    sku: card.querySelector(".product-card__sku")?.textContent?.trim() || "QA-SKU",
+    name: card.querySelector(".product-card__name")?.textContent?.trim() || "QA product",
+    image: card.querySelector("img")?.getAttribute("src") || "",
+  }));
+  await page.evaluate((seedData) => {
+    const order = {
+      id: "SO-QA-REPEAT",
+      status: "done",
+      date: "02.06.2026",
+      total: 2000,
+      userEmail: "buyer@example.com",
+      customer: { email: "buyer@example.com", name: "Buyer", phone: "+79990000001", address: "Test address" },
+      items: [
+        {
+          key: `${seedData.productId}:${seedData.sku}`,
+          productId: seedData.productId,
+          productName: seedData.name,
+          productImage: seedData.image,
+          qty: 2,
+          variant: { sku: seedData.sku, name: seedData.name, type: "QA", size: "QA", material: "QA", price: 1000 },
+        },
+      ],
+    };
+    localStorage.setItem(
+      "sobag.users",
+      JSON.stringify({
+        "buyer@example.com": { email: "buyer@example.com", name: "Buyer", role: "buyer", orders: [order], addresses: ["Test address"] },
+        "second@example.com": { email: "second@example.com", name: "Second", role: "buyer", orders: [] },
+      })
+    );
+    localStorage.setItem("sobag.orders.v1", JSON.stringify([order]));
+    localStorage.setItem("sobag.currentUser", "buyer@example.com");
+  }, seed);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
+  const favorite = page.locator(`[data-favorite="${seed.productId}"]`).first();
+  await favorite.click();
+  await expect(favorite).toHaveAttribute("aria-pressed", "true");
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.favorites.buyer@example.com") || "[]").length))
+    .toBeGreaterThan(0);
+
+  await page.evaluate(() => {
+    localStorage.setItem("sobag.currentUser", "second@example.com");
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
+  await expect(page.locator(`[data-favorite="${seed.productId}"]`).first()).toHaveAttribute("aria-pressed", "false");
+
+  await page.evaluate(() => {
+    localStorage.setItem("sobag.currentUser", "buyer@example.com");
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator("#accountButton").click();
+  await expect(page.locator("#accountModal")).toContainText("SO-QA-REPEAT");
+  await page.locator('[data-repeat-order="SO-QA-REPEAT"]').click();
+  await expect(page).toHaveURL(/\/cart(?:\.html)?$/);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.cart.buyer@example.com") || "[]").length)).toBe(1);
 });
 
 test("catalog filters, product modal, variants, and cart stay coherent", async ({ page }) => {
