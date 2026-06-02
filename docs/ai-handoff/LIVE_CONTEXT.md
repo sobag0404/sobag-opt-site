@@ -504,4 +504,8 @@ Latest production verification:
   - `custom.html` now has a client-side preliminary calculator for product type, material, quantity, packaging, unit price, discount, and total; it is intentionally an estimate and not a binding order price;
   - smoke tests were hardened to use clean Vercel-style routes and live catalog data instead of brittle hard-coded category/query assumptions;
   - local checks passed: JS syntax checks for changed API/client files, `npm.cmd run check`, and `SOBAG_BASE_URL=http://localhost:4173 npm.cmd run ui:smoke` with 6/6 passing;
-  - note for next operator: after deploy, verify `/api/content`; it may return `source=default` until the admin first saves content settings from the site admin panel.
+  - committed and pushed as `b661ff8 Add admin content sync and roadmap improvements`;
+  - production deploy succeeded on Vercel and was aliased to `https://sobag-shop.online`;
+  - production verification passed for `/`, `/catalog`, `/custom`, `/admin-import`, `/api/health`, `/api/catalog`, and `/api/content`;
+  - production API state after deploy: `/api/health` returned storage ready, `/api/catalog` returned 808 products from server storage, and `/api/content` returned `source=default` because no admin content settings have been saved yet;
+  - production smoke passed for 5 storefront/admin-ui scenarios; the local-only guest-order smoke is intentionally excluded on production because live backend/session data can overwrite the synthetic localStorage order fixture.
