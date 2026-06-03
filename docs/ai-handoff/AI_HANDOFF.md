@@ -13,7 +13,7 @@ Repository:
 - Vercel fallback/project domain: `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-- `2a36944 Record production verification`
+- `4e44686 Bump asset cache version for B2B UX`
 
 ## Current State
 
@@ -84,6 +84,7 @@ Backend/storage:
   - save draft;
   - download CSV;
   - print commercial proposal.
+- Production verification after the B2B UX pass succeeded on `https://sobag-shop.online` for `/`, `/catalog`, `/cart`, `/api/health`, fresh `app.js`/`cart.js`, and a Playwright spot-check.
 - GitHub access audit was performed:
   - repo is private;
   - only collaborator found: `sobag0404`;

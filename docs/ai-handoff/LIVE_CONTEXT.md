@@ -625,3 +625,6 @@ Latest production verification:
   - catalog SEO now injects Organization, CollectionPage, and BreadcrumbList JSON-LD for category/search states;
   - smoke tests were hardened to cover active filter chips, show-more pagination, variant matrix, related products, and quote buttons;
   - local verification passed: `node --check app.js`, `node --check cart.js`, `npm.cmd run check`, `npm.cmd run ui:smoke`, and an extra Playwright spot-check for `/catalog?category=Подушки`, product modal, and `/cart`.
+  - committed and pushed as `eb61121 Improve B2B catalog and quote flow`;
+  - follow-up cache-bust commit `4e44686 Bump asset cache version for B2B UX` updated HTML asset versions to `20260603-b2b-ux`;
+  - production verification passed on `https://sobag-shop.online`: `/`, `/catalog`, `/cart`, `/api/health`, fresh `app.js`/`cart.js`, and a Playwright spot-check for category catalog, variant matrix, related products, and quote buttons.
