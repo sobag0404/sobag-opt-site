@@ -13,7 +13,7 @@ Repository:
 - Vercel fallback/project domain: `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-- `c1efddd Expand buyer B2B profile`
+- `53979c3 Improve saved quote drafts`
 
 ## Current State
 
@@ -211,6 +211,12 @@ Large product-photo folders must not be committed to GitHub/Vercel.
 - Sending requires profile company and phone so managers receive usable B2B contact data.
 - Cart quote export now uses SheetJS XLSX when available and falls back to CSV.
 - HTML asset version is `20260603-saved-quotes`.
+- Feature commit: `53979c3 Improve saved quote drafts`.
+- Production verification passed on `https://sobag-shop.online`:
+  - `/` served fresh `20260603-saved-quotes`;
+  - `/catalog?category=Подушки` rendered 120 product cards with no horizontal overflow;
+  - `/cart` rendered the `Скачать XLSX` commercial proposal button;
+  - `/api/health` returned `{"ok":true,"storage":"ready"}`.
 - No secrets or production credentials were added.
 
 ## Verification Status

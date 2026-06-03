@@ -4,7 +4,8 @@ Last updated: 2026-06-03
 
 ## Latest Session Notes
 
-- Saved quote drafts / saved carts 2.0 pass is in progress on top of `c1efddd`.
+- Saved quote drafts / saved carts 2.0 pass was completed and pushed.
+- Feature commit: `53979c3 Improve saved quote drafts`.
 - Added buyer account actions for saved commercial proposal drafts:
   - rename;
   - download XLSX with CSV fallback;
@@ -24,7 +25,11 @@ Last updated: 2026-06-03
   - `node --check tools/ui-smoke.spec.js`
   - `npm.cmd run check`
   - `SOBAG_BASE_URL=http://127.0.0.1:4173 npm.cmd run ui:smoke` with 7/7 tests passing.
-- Next required actions before final: commit, push, wait for Vercel, verify `https://sobag-shop.online/`, `/catalog`, `/cart`, and `/api/health`.
+- Production verification passed on `https://sobag-shop.online`:
+  - `/` served fresh `20260603-saved-quotes`;
+  - `/catalog?category=Подушки` rendered 120 product cards with no horizontal overflow;
+  - `/cart` rendered the `Скачать XLSX` commercial proposal button;
+  - `/api/health` returned `{"ok":true,"storage":"ready"}`.
 
 - Fixed a site-wide mojibake / broken UTF-8 regression where Russian text rendered as `Р...` sequences on production pages.
 - Restored all static HTML pages to valid UTF-8 while preserving the current admin/catalog JavaScript behavior.
