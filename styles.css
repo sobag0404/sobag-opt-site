@@ -5987,7 +5987,7 @@ body.theme-night .theme-toggle__track::after {
 
 .saved-cart-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, auto) minmax(260px, 0.9fr);
   gap: 12px;
   align-items: center;
   padding: 14px;
@@ -6021,6 +6021,17 @@ body.theme-night .theme-toggle__track::after {
   display: block;
   margin-top: 2px;
   font-size: 16px;
+}
+
+.saved-cart-card .order-actions {
+  justify-content: flex-end;
+}
+
+.saved-cart-card .ghost-button,
+.saved-cart-card .primary-button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 11px;
 }
 
 @media (max-width: 640px) {

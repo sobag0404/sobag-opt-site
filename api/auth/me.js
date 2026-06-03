@@ -129,7 +129,11 @@ function sanitizeSavedCarts(items) {
         items: entries,
         qty: Math.max(0, Math.round(Number(item.qty || 0))),
         subtotal: Math.max(0, Math.round(Number(item.subtotal || 0))),
+        discount: Math.max(0, Math.round(Number(item.discount || 0))),
         total: Math.max(0, Math.round(Number(item.total || 0))),
+        status: item.status === "sent" ? "sent" : "draft",
+        sentAt: String(item.sentAt || "").slice(0, 40),
+        sentOrderId: String(item.sentOrderId || "").slice(0, 80),
       };
     })
     .filter(Boolean)

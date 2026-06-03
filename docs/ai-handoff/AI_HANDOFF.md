@@ -13,7 +13,7 @@ Repository:
 - Vercel fallback/project domain: `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-- `4e44686 Bump asset cache version for B2B UX`
+- `c1efddd Expand buyer B2B profile`
 
 ## Current State
 
@@ -82,7 +82,7 @@ Backend/storage:
 - Cart page now behaves more like a commercial proposal:
   - discount is calculated from basket amount;
   - save draft;
-  - download CSV;
+  - download XLSX with CSV fallback;
   - print commercial proposal.
 - Production verification after the B2B UX pass succeeded on `https://sobag-shop.online` for `/`, `/catalog`, `/cart`, `/api/health`, fresh `app.js`/`cart.js`, and a Playwright spot-check.
 - GitHub access audit was performed:
@@ -93,6 +93,13 @@ Backend/storage:
   - no webhooks;
   - no forks;
   - no tracked high-risk secret patterns found.
+- Saved cart drafts / commercial proposal drafts 2.0 were added on 2026-06-03:
+  - account saved drafts can be renamed;
+  - saved drafts can be exported as XLSX, or CSV if SheetJS is unavailable;
+  - saved drafts can be printed/saved as PDF through browser print;
+  - saved drafts can be sent to the manager by creating a normal order through existing `/api/orders`;
+  - sent drafts keep `status`, `sentAt`, and `sentOrderId`;
+  - old saved cart objects remain compatible through normalization defaults.
 
 ## Current UX / Business Rules
 
@@ -186,6 +193,26 @@ Large product-photo folders must not be committed to GitHub/Vercel.
 - HTML asset version is `20260603-b2b-profile`.
 - No secrets or production credentials were added.
 
+## Latest Saved Quote Drafts 2.0 Update
+
+- Date: 2026-06-03.
+- Base commit before this update: `c1efddd`.
+- Added saved commercial proposal draft management in the buyer account:
+  - rename;
+  - download XLSX with CSV fallback;
+  - print / save as PDF via browser print;
+  - send to manager;
+  - restore to cart;
+  - delete.
+- Extended saved cart objects with compatible fields: `discount`, `status`, `sentAt`, and `sentOrderId`.
+- `status` is normalized to `draft` or `sent`; older saved carts still open without manual migration.
+- `send to manager` uses the existing `/api/orders` endpoint and does not add a new Vercel Function.
+- The order comment includes that it was created from a saved commercial proposal draft.
+- Sending requires profile company and phone so managers receive usable B2B contact data.
+- Cart quote export now uses SheetJS XLSX when available and falls back to CSV.
+- HTML asset version is `20260603-saved-quotes`.
+- No secrets or production credentials were added.
+
 ## Verification Status
 
 Latest verified checks before this handoff update:
@@ -193,8 +220,9 @@ Latest verified checks before this handoff update:
 - `node --check cart.js`
 - `node --check api/auth/me.js`
 - `node --check api/orders.js`
+- `node --check tools/ui-smoke.spec.js`
 - `npm run check`
-- `SOBAG_BASE_URL=http://127.0.0.1:4173 npm run ui:smoke` with 7/7 passing, including saved cart draft/profile checks.
+- `SOBAG_BASE_URL=http://127.0.0.1:4173 npm run ui:smoke` with 7/7 passing, including saved quote rename/export/send/restore checks.
 - extra Playwright spot-check for `/catalog?category=Подушки`, product modal variant matrix/related products, and `/cart`.
 
 ## Current Focus
@@ -202,7 +230,7 @@ Latest verified checks before this handoff update:
 Current focus is stabilizing the prototype before continuing larger catalog/import/backend work:
 - keep navigation smooth, without reload-like flicker;
 - keep handoff docs current before moving between devices;
-- continue buyer account features: companies/requisites, addresses, saved files/layouts, and order comments;
+- continue buyer account/commercial proposal polish: saved drafts, repeat orders, company profiles, addresses, saved files/layouts, and order comments;
 - continue polishing catalog/cart/admin UX;
 - continue real product import workflow later.
 

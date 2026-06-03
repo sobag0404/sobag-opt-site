@@ -504,6 +504,10 @@ function normalizeSavedCart(item) {
     updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
     date: item.date || new Date().toLocaleString("ru-RU"),
     items,
+    discount: totals.discount,
+    status: item.status === "sent" ? "sent" : "draft",
+    sentAt: item.sentAt || "",
+    sentOrderId: item.sentOrderId || "",
     ...totals,
   };
 }
@@ -662,6 +666,16 @@ function downloadCsv(fileName, rows) {
   URL.revokeObjectURL(link.href);
 }
 
+function downloadRowsXlsx(rows, fileName, sheetName = "КП") {
+  if (!window.XLSX) return false;
+  const workbook = XLSX.utils.book_new();
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
+  sheet["!cols"] = [{ wch: 28 }, { wch: 34 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(workbook, sheet, sheetName.slice(0, 31));
+  XLSX.writeFile(workbook, fileName);
+  return true;
+}
+
 function cartQuoteRows() {
   const totals = getTotals();
   return [
@@ -695,7 +709,13 @@ function downloadCartQuote() {
     showToast("Корзина пока пустая.");
     return;
   }
-  downloadCsv(`sobag-quote-${Date.now()}.csv`, cartQuoteRows());
+  const rows = cartQuoteRows();
+  if (downloadRowsXlsx(rows, `sobag-quote-${Date.now()}.xlsx`, "КП")) {
+    showToast("КП скачано в XLSX.");
+    return;
+  }
+  downloadCsv(`sobag-quote-${Date.now()}.csv`, rows);
+  showToast("XLSX недоступен, скачан CSV.");
 }
 
 function printCartQuote() {

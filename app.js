@@ -1919,6 +1919,10 @@ function normalizeSavedCart(item) {
     updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
     date: item.date || new Date().toLocaleString("ru-RU"),
     items,
+    discount: totals.discount,
+    status: item.status === "sent" ? "sent" : "draft",
+    sentAt: item.sentAt || "",
+    sentOrderId: item.sentOrderId || "",
     ...totals,
   };
 }
@@ -1992,6 +1996,198 @@ function deleteSavedCart(cartId) {
   saveSavedCarts(getSavedCarts().filter((item) => item.id !== cartId));
   rerenderAccountModal();
   showToast("Черновик удален.");
+}
+
+function updateSavedCart(cartId, patch) {
+  const next = getSavedCarts().map((item) =>
+    item.id === cartId
+      ? {
+          ...item,
+          ...patch,
+          updatedAt: new Date().toISOString(),
+          date: new Date().toLocaleString("ru-RU"),
+        }
+      : item
+  );
+  const saved = saveSavedCarts(next);
+  return saved.find((item) => item.id === cartId) || null;
+}
+
+function renameSavedCart(cartId) {
+  const draft = getSavedCarts().find((item) => item.id === cartId);
+  if (!draft) {
+    showToast("Черновик корзины не найден.");
+    return;
+  }
+  const title = window.prompt("Название сохраненного КП", draft.title) || "";
+  const prepared = title.trim();
+  if (!prepared || prepared === draft.title) return;
+  updateSavedCart(cartId, { title: prepared, status: draft.status || "draft" });
+  rerenderAccountModal();
+  showToast("Название КП обновлено.");
+}
+
+function savedCartFileName(cart, extension) {
+  const slug =
+    String(cart.title || cart.id || "quote")
+      .toLocaleLowerCase("ru-RU")
+      .replace(/[^a-zа-яё0-9]+/giu, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "quote";
+  return `sobag-${slug}-${cart.id}.${extension}`;
+}
+
+function savedCartQuoteRows(cart) {
+  const totals = totalsFromCartEntries(cart.items);
+  return [
+    ["Коммерческое предложение Sobag Opt"],
+    ["Название", cart.title],
+    ["Дата", new Date(cart.updatedAt || cart.createdAt || Date.now()).toLocaleString("ru-RU")],
+    ["Статус", cart.status === "sent" ? "Отправлено менеджеру" : "Черновик"],
+    ["Номер заказа", cart.sentOrderId || ""],
+    ["Сумма товаров", totals.subtotal],
+    ["Скидка по корзине", `${totals.discount}%`],
+    ["Итого", totals.total],
+    [],
+    ["Артикул", "Наименование", "Тип", "Размер", "Материал", "Количество", "Цена до скидки", "Цена со скидкой", "Сумма"],
+    ...cleanCartEntries(cart.items).map(([, line]) => {
+      const unit = discountedUnitPrice(line.variant?.price || 0, totals.discount);
+      return [
+        line.variant?.sku || "",
+        line.productName || line.variant?.name || "",
+        line.variant?.type || "",
+        line.variant?.size || "",
+        line.variant?.material || "",
+        line.qty || 0,
+        line.variant?.price || 0,
+        unit,
+        unit * (line.qty || 0),
+      ];
+    }),
+  ];
+}
+
+function downloadRowsXlsx(rows, fileName, sheetName = "КП") {
+  if (!window.XLSX) return false;
+  const workbook = XLSX.utils.book_new();
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
+  sheet["!cols"] = [{ wch: 28 }, { wch: 34 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(workbook, sheet, sheetName.slice(0, 31));
+  XLSX.writeFile(workbook, fileName);
+  return true;
+}
+
+function downloadSavedCartQuote(cartId) {
+  const draft = getSavedCarts().find((item) => item.id === cartId);
+  if (!draft) {
+    showToast("Черновик корзины не найден.");
+    return;
+  }
+  const rows = savedCartQuoteRows(draft);
+  if (downloadRowsXlsx(rows, savedCartFileName(draft, "xlsx"), "КП")) {
+    showToast("КП скачано в XLSX.");
+    return;
+  }
+  downloadCsv(savedCartFileName(draft, "csv"), rows);
+  showToast("XLSX недоступен на этой странице, скачан CSV.");
+}
+
+function printSavedCartQuote(cartId) {
+  const draft = getSavedCarts().find((item) => item.id === cartId);
+  if (!draft) {
+    showToast("Черновик корзины не найден.");
+    return;
+  }
+  const totals = totalsFromCartEntries(draft.items);
+  const rows = cleanCartEntries(draft.items)
+    .map(([, line]) => {
+      const unit = discountedUnitPrice(line.variant?.price || 0, totals.discount);
+      return `<tr><td>${escapeHtml(line.variant?.sku || "")}</td><td>${escapeHtml(line.productName || line.variant?.name || "")}</td><td>${escapeHtml([line.variant?.type, line.variant?.size, line.variant?.material].filter(Boolean).join(", "))}</td><td>${line.qty || 0}</td><td>${formatMoney(unit)}</td><td>${formatMoney(unit * (line.qty || 0))}</td></tr>`;
+    })
+    .join("");
+  const win = window.open("", "_blank", "noopener,noreferrer");
+  if (!win) {
+    showToast("Браузер заблокировал окно печати.");
+    return;
+  }
+  win.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${escapeHtml(draft.title)} · Sobag Opt</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}h1{font-size:28px}p{margin:6px 0}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f4f4f4}.total{font-size:22px;font-weight:800;margin-top:18px}</style></head><body><h1>${escapeHtml(draft.title)}</h1><p>Коммерческое предложение Sobag Opt</p><p>Статус: ${draft.status === "sent" ? "отправлено менеджеру" : "черновик"}</p><p>Скидка по корзине: ${totals.discount}%</p><table><thead><tr><th>Артикул</th><th>Наименование</th><th>Параметры</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead><tbody>${rows}</tbody></table><p class="total">Итого: ${formatMoney(totals.total)}</p><script>window.print();</script></body></html>`);
+  win.document.close();
+}
+
+function customerFromSavedCartProfile(user, draft) {
+  const note = `Заказ создан из сохраненного КП "${draft.title}".`;
+  const comment = [note, user.orderComment || user.lastCustomer?.comment || ""].filter(Boolean).join("\n");
+  return {
+    name: user.name || user.company || "",
+    email: user.email || state.currentUser || "",
+    company: user.company || user.lastCustomer?.company || "",
+    inn: user.inn || user.lastCustomer?.inn || "",
+    kpp: user.kpp || user.lastCustomer?.kpp || "",
+    phone: user.phone || user.lastCustomer?.phone || "",
+    city: user.city || user.lastCustomer?.city || "",
+    address: user.address || user.lastCustomer?.address || user.addresses?.[0] || "",
+    legalAddress: user.legalAddress || user.lastCustomer?.legalAddress || "",
+    delivery: user.delivery || user.lastCustomer?.delivery || "",
+    packaging: user.packaging || user.lastCustomer?.packaging || "",
+    layoutFileName: user.layoutFiles?.[0] || user.lastCustomer?.layoutFileName || "",
+    comment,
+  };
+}
+
+async function sendSavedCartToManager(cartId) {
+  const draft = getSavedCarts().find((item) => item.id === cartId);
+  const user = getUsers()[state.currentUser];
+  if (!draft || !user) {
+    showToast("Черновик КП не найден.");
+    return;
+  }
+  const customer = customerFromSavedCartProfile(user, draft);
+  if (!String(customer.company || "").trim() || !String(customer.phone || "").trim()) {
+    showToast("Заполните компанию и телефон в профиле перед отправкой КП менеджеру.");
+    return;
+  }
+  if (!window.confirm(`Отправить менеджеру КП "${draft.title}" на сумму ${formatMoney(draft.total)}?`)) return;
+  const items = cleanCartEntries(draft.items).map(([, line]) => line);
+  const totals = totalsFromCartEntries(draft.items);
+  let order = null;
+  try {
+    const result = await apiRequest("/api/orders", {
+      method: "POST",
+      body: {
+        customer,
+        items,
+        total: totals.total,
+        source: "saved_cart",
+      },
+    });
+    order = result.order;
+    if (order) mirrorServerOrder(order, state.currentUser);
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 404) {
+      showToast(error.message || "Не удалось отправить КП менеджеру.");
+      return;
+    }
+  }
+  if (!order) {
+    order = saveOrderRecord(
+      {
+        id: `SO-${Date.now().toString().slice(-6)}`,
+        date: new Date().toLocaleString("ru-RU"),
+        customer,
+        items,
+        total: totals.total,
+        source: "saved_cart",
+      },
+      state.currentUser
+    );
+  }
+  updateSavedCart(cartId, {
+    status: "sent",
+    sentAt: new Date().toISOString(),
+    sentOrderId: order.id || "",
+  });
+  rerenderAccountModal();
+  showToast(`КП отправлено менеджеру. Заказ ${order.id || ""}`);
 }
 
 function uniqueTextList(values, limit = 10, itemLimit = 240) {
@@ -4368,12 +4564,17 @@ function savedCartsHtml() {
                       <div>
                         <strong>${escapeHtml(cart.title)}</strong>
                         <span>${escapeHtml(cart.date || new Date(cart.updatedAt).toLocaleString("ru-RU"))}</span>
+                        <span>${cart.status === "sent" ? "Отправлено менеджеру" : "Черновик"}${cart.sentOrderId ? ` · заказ ${escapeHtml(cart.sentOrderId)}` : ""}</span>
                       </div>
                       <div class="saved-cart-card__meta">
                         <span>${cart.qty} ${productWord(cart.qty)}</span>
                         <b>${formatMoney(cart.total)}</b>
                       </div>
                       <div class="order-actions">
+                        <button class="ghost-button" type="button" data-rename-saved-cart="${escapeHtml(cart.id)}">Переименовать</button>
+                        <button class="ghost-button" type="button" data-download-saved-cart="${escapeHtml(cart.id)}">Скачать XLSX</button>
+                        <button class="ghost-button" type="button" data-print-saved-cart="${escapeHtml(cart.id)}">Печать / PDF</button>
+                        <button class="ghost-button" type="button" data-send-saved-cart="${escapeHtml(cart.id)}">${cart.status === "sent" ? "Отправить повторно" : "Отправить менеджеру"}</button>
                         <button class="primary-button" type="button" data-restore-saved-cart="${escapeHtml(cart.id)}">Восстановить</button>
                         <button class="ghost-button" type="button" data-delete-saved-cart="${escapeHtml(cart.id)}">Удалить</button>
                       </div>
@@ -5830,6 +6031,22 @@ function boot() {
     }
     if (button.dataset.restoreSavedCart) {
       restoreSavedCart(button.dataset.restoreSavedCart);
+      return;
+    }
+    if (button.dataset.renameSavedCart) {
+      renameSavedCart(button.dataset.renameSavedCart);
+      return;
+    }
+    if (button.dataset.downloadSavedCart) {
+      downloadSavedCartQuote(button.dataset.downloadSavedCart);
+      return;
+    }
+    if (button.dataset.printSavedCart) {
+      printSavedCartQuote(button.dataset.printSavedCart);
+      return;
+    }
+    if (button.dataset.sendSavedCart) {
+      await sendSavedCartToManager(button.dataset.sendSavedCart);
       return;
     }
     if (button.dataset.deleteSavedCart) {

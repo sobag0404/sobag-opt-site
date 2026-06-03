@@ -252,6 +252,7 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
   await waitForLiveProducts(page);
   await page.locator("#accountButton").click();
   await expect(page.locator("#accountModal")).toContainText("QA saved cart");
+  await page.locator('[data-profile-form] input[name="phone"]').fill("+79990000002");
   await page.locator('[data-profile-form] input[name="company"]').fill("QA Company");
   await page.locator('[data-profile-form] input[name="inn"]').fill("1234567890");
   await page.locator('[data-profile-form] input[name="kpp"]').fill("123456789");
@@ -275,6 +276,28 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
   await expect
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.users") || "{}")["buyer@example.com"]?.orderComment))
     .toBe("QA default order comment");
+
+  page.once("dialog", (dialog) => dialog.accept("QA renamed cart"));
+  await page.locator("[data-rename-saved-cart]").first().click();
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.savedCarts.buyer@example.com") || "[]")[0]?.title))
+    .toBe("QA renamed cart");
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("[data-download-saved-cart]").first().click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/sobag-.*\.(xlsx|csv)$/);
+  await expect(page.locator("[data-print-saved-cart]").first()).toBeVisible();
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("[data-send-saved-cart]").first().click();
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.savedCarts.buyer@example.com") || "[]")[0]?.status))
+    .toBe("sent");
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.orders.v1") || "[]").some((order) => order.source === "saved_cart")))
+    .toBe(true);
+
   await page.locator("[data-restore-saved-cart]").first().click();
   await expect(page).toHaveURL(/\/cart(?:\.html)?$/);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.cart.buyer@example.com") || "[]").length)).toBe(1);
