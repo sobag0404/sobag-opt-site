@@ -164,13 +164,26 @@ Large product-photo folders must not be committed to GitHub/Vercel.
 - A browser page cannot automatically read arbitrary folders from the user's PC; photo matching needs an explicit local importer or user-selected folder flow.
 - For 10k+ products, keep moving toward real backend/database/object storage instead of Git-tracked static catalog data.
 
+## Latest Account Drafts Update
+
+- Date: 2026-06-03.
+- Base commit before this update: `67e3f5e`.
+- Added buyer profile fields in the account modal: name, phone, company, INN, city, and address.
+- Added saved cart drafts: save a named draft from `/cart`, view saved drafts in the account modal, and restore/delete drafts from the account modal.
+- Extended the existing `/api/auth/me` endpoint to persist profile data and saved carts without creating extra Serverless Functions.
+- Store schema now includes `savedCarts`.
+- HTML asset version is `20260603-account-drafts`.
+- No secrets or production credentials were added.
+
 ## Verification Status
 
 Latest verified checks before this handoff update:
 - `node --check app.js`
 - `node --check cart.js`
+- `node --check api/auth/me.js`
+- `node --check api/_lib/store.js`
 - `npm run check`
-- `npm run ui:smoke`
+- `SOBAG_BASE_URL=http://127.0.0.1:4173 npm run ui:smoke` with 7/7 passing, including saved cart draft/profile checks.
 - extra Playwright spot-check for `/catalog?category=Подушки`, product modal variant matrix/related products, and `/cart`.
 
 ## Current Focus
@@ -178,6 +191,7 @@ Latest verified checks before this handoff update:
 Current focus is stabilizing the prototype before continuing larger catalog/import/backend work:
 - keep navigation smooth, without reload-like flicker;
 - keep handoff docs current before moving between devices;
+- continue buyer account features: companies/requisites, addresses, saved files/layouts, and order comments;
 - continue polishing catalog/cart/admin UX;
 - continue real product import workflow later.
 

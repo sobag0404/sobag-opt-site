@@ -628,3 +628,13 @@ Latest production verification:
   - committed and pushed as `eb61121 Improve B2B catalog and quote flow`;
   - follow-up cache-bust commit `4e44686 Bump asset cache version for B2B UX` updated HTML asset versions to `20260603-b2b-ux`;
   - production verification passed on `https://sobag-shop.online`: `/`, `/catalog`, `/cart`, `/api/health`, fresh `app.js`/`cart.js`, and a Playwright spot-check for category catalog, variant matrix, related products, and quote buttons.
+
+- Account drafts pass on 2026-06-03:
+  - latest base commit before the pass was `67e3f5e`;
+  - added buyer profile editing inside the account modal: name, phone, company, INN, city, and address;
+  - added saved cart drafts: cart page can save a named draft, account modal lists saved drafts, and a draft can be restored back into the cart;
+  - extended existing `/api/auth/me` with profile and saved-cart persistence instead of adding new Vercel Functions, keeping the Hobby function limit safe;
+  - store schema now includes `savedCarts`, alongside carts/favorites/orders;
+  - updated HTML asset cache version to `20260603-account-drafts`;
+  - local verification passed: `node --check app.js`, `node --check cart.js`, `node --check api/auth/me.js`, `node --check api/_lib/store.js`, `npm.cmd run check`, and `SOBAG_BASE_URL=http://127.0.0.1:4173 npm.cmd run ui:smoke` with 7/7 passing;
+  - next roadmap direction: continue buyer account features with companies/requisites, addresses, saved files/layouts, order comments, and repeat-order polish.

@@ -499,6 +499,8 @@ const STORAGE = {
   content: "sobag.siteContent.v1",
   theme: "sobag.theme.v1",
   guestCart: "sobag.cart.guest",
+  guestSavedCarts: "sobag.savedCarts.guest",
+  savedCartsPrefix: "sobag.savedCarts.",
   orders: "sobag.orders.v1",
   recentProducts: "sobag.recentProducts.v1",
 };
@@ -1067,6 +1069,7 @@ function saveServerUserProfile(profile) {
     ...profile,
     password: "__server__",
     orders: profile.orders || users[profile.email]?.orders || [],
+    savedCarts: profile.savedCarts || users[profile.email]?.savedCarts || [],
   };
   saveUsers(users);
   state.currentUser = profile.email;
@@ -1097,6 +1100,11 @@ async function loadBackendAccountData() {
   try {
     const session = await apiRequest("/api/auth/me");
     if (!session.user) return false;
+    if (Array.isArray(session.savedCarts)) {
+      const mergedSavedCarts = mergeSavedCarts(session.savedCarts, getSavedCarts(session.user.email));
+      localStorage.setItem(getSavedCartsKey(session.user.email), JSON.stringify(mergedSavedCarts));
+      session.user.savedCarts = mergedSavedCarts;
+    }
     saveServerUserProfile(session.user);
     if (["admin", "manager"].includes(session.user.role)) {
       const ordersData = await apiRequest("/api/admin/orders");
@@ -1798,6 +1806,10 @@ function getCartKey() {
   return state.currentUser ? `sobag.cart.${state.currentUser}` : STORAGE.guestCart;
 }
 
+function getSavedCartsKey(userKey = state.currentUser) {
+  return userKey ? `${STORAGE.savedCartsPrefix}${userKey}` : STORAGE.guestSavedCarts;
+}
+
 function isPrototypeCartLine(line) {
   const productId = String(line?.productId || "");
   const sku = String(line?.variant?.sku || line?.variantSku || "");
@@ -1859,6 +1871,148 @@ function saveCart() {
 
 let cartSyncTimer = 0;
 let favoritesSyncTimer = 0;
+let savedCartsSyncTimer = 0;
+
+function totalsFromCartEntries(entries) {
+  const lines = cleanCartEntries(entries).map(([, line]) => line);
+  const qty = lines.reduce((sum, line) => sum + Number(line.qty || 0), 0);
+  const subtotal = lines.reduce((sum, line) => sum + Number(line.qty || 0) * Number(line.variant?.price || 0), 0);
+  const discount = getBasketDiscount(subtotal);
+  const total = Math.round(subtotal * (1 - discount / 100));
+  return { qty, subtotal, discount, total };
+}
+
+function normalizeSavedCart(item) {
+  const items = cleanCartEntries(item?.items || []);
+  if (!items.length) return null;
+  const totals = totalsFromCartEntries(items);
+  return {
+    id: String(item.id || `SC-${Date.now().toString(36)}`),
+    title: String(item.title || "Сохраненная корзина").trim() || "Сохраненная корзина",
+    createdAt: item.createdAt || item.updatedAt || new Date().toISOString(),
+    updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
+    date: item.date || new Date().toLocaleString("ru-RU"),
+    items,
+    ...totals,
+  };
+}
+
+function getSavedCarts(userKey = state.currentUser) {
+  const raw = JSON.parse(localStorage.getItem(getSavedCartsKey(userKey)) || "[]");
+  return (Array.isArray(raw) ? raw : []).map(normalizeSavedCart).filter(Boolean).slice(0, 50);
+}
+
+function saveSavedCarts(carts, options = {}) {
+  const userKey = state.currentUser;
+  const normalized = (Array.isArray(carts) ? carts : []).map(normalizeSavedCart).filter(Boolean).slice(0, 50);
+  localStorage.setItem(getSavedCartsKey(userKey), JSON.stringify(normalized));
+  if (userKey) {
+    const users = getUsers();
+    if (users[userKey]) {
+      users[userKey].savedCarts = normalized;
+      saveUsers(users);
+    }
+  }
+  if (options.sync !== false && personalStateReady) syncSavedCartsToBackend();
+  return normalized;
+}
+
+function mergeSavedCarts(serverCarts = [], localCarts = []) {
+  const merged = new Map();
+  [...serverCarts, ...localCarts].forEach((item) => {
+    const normalized = normalizeSavedCart(item);
+    if (!normalized) return;
+    const existing = merged.get(normalized.id);
+    if (!existing || new Date(normalized.updatedAt).getTime() >= new Date(existing.updatedAt).getTime()) merged.set(normalized.id, normalized);
+  });
+  return [...merged.values()].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 50);
+}
+
+function saveCurrentCartDraft(title = "") {
+  const items = [...state.cart.entries()];
+  if (!items.length) {
+    showToast("Корзина пока пустая.");
+    return null;
+  }
+  const now = new Date();
+  const draft = normalizeSavedCart({
+    id: `SC-${now.getTime().toString(36)}`,
+    title: title || `Корзина от ${now.toLocaleDateString("ru-RU")}`,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    date: now.toLocaleString("ru-RU"),
+    items,
+  });
+  const saved = saveSavedCarts([draft, ...getSavedCarts()]);
+  showToast("Черновик корзины сохранен.");
+  return saved[0];
+}
+
+function restoreSavedCart(cartId) {
+  const draft = getSavedCarts().find((item) => item.id === cartId);
+  if (!draft) {
+    showToast("Черновик корзины не найден.");
+    return;
+  }
+  state.cart = new Map(cleanCartEntries(draft.items));
+  saveCart();
+  renderCart();
+  closeModal();
+  navigateWithinSite("cart.html");
+  showToast("Черновик восстановлен в корзину.");
+}
+
+function deleteSavedCart(cartId) {
+  saveSavedCarts(getSavedCarts().filter((item) => item.id !== cartId));
+  rerenderAccountModal();
+  showToast("Черновик удален.");
+}
+
+async function saveProfileForm(form) {
+  const data = Object.fromEntries(new FormData(form).entries());
+  const profile = {
+    name: String(data.name || "").trim(),
+    phone: String(data.phone || "").trim(),
+    company: String(data.company || "").trim(),
+    inn: String(data.inn || "").replace(/\D/g, ""),
+    city: String(data.city || "").trim(),
+    address: String(data.address || "").trim(),
+  };
+  if (profile.inn && ![10, 12].includes(profile.inn.length)) {
+    setFieldError(form, "inn", "ИНН должен содержать 10 или 12 цифр.");
+    return;
+  }
+  const users = getUsers();
+  const user = users[state.currentUser];
+  if (!user) return;
+  users[state.currentUser] = {
+    ...user,
+    ...profile,
+    addresses: [...new Set([profile.address, ...(user.addresses || [])].filter(Boolean))].slice(0, 10),
+    updatedAt: new Date().toISOString(),
+  };
+  saveUsers(users);
+  try {
+    const result = await apiRequest("/api/auth/me", { method: "PUT", body: { profile } });
+    if (result.user) saveServerUserProfile({ ...result.user, savedCarts: getSavedCarts() });
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 404) {
+      showToast(error.message || "Не удалось сохранить профиль на сервере.");
+      return;
+    }
+  }
+  showToast("Профиль сохранен.");
+  rerenderAccountModal();
+}
+
+function rerenderAccountModal() {
+  const modal = document.querySelector("#accountModal");
+  if (!modal) return;
+  modal.remove();
+  document.body.insertAdjacentHTML("beforeend", accountModalHtml());
+  activateModal(document.querySelector("#accountModal"));
+  if (window.lucide) window.lucide.createIcons();
+}
 
 function syncCartToBackend() {
   if (!state.currentUser) return;
@@ -1882,6 +2036,17 @@ function syncFavoritesToBackend() {
   }, 250);
 }
 
+function syncSavedCartsToBackend() {
+  if (!state.currentUser) return;
+  window.clearTimeout(savedCartsSyncTimer);
+  const savedCarts = getSavedCarts();
+  savedCartsSyncTimer = window.setTimeout(() => {
+    apiRequest("/api/auth/me", { method: "PUT", body: { savedCarts } }).catch((error) => {
+      if (!isBackendUnavailable(error)) console.warn(error);
+    });
+  }, 250);
+}
+
 async function loadServerPersonalState() {
   if (!state.currentUser) return false;
   try {
@@ -1897,9 +2062,13 @@ async function loadServerPersonalState() {
     state.favorites = new Set(mergedFavorites);
     localStorage.setItem(getFavoritesKey(), JSON.stringify([...state.favorites]));
 
+    const mergedSavedCarts = mergeSavedCarts(personalData.savedCarts || [], getSavedCarts());
+    saveSavedCarts(mergedSavedCarts, { sync: false });
+
     personalStateReady = true;
     syncCartToBackend();
     syncFavoritesToBackend();
+    syncSavedCartsToBackend();
     renderCart();
     renderProducts();
     renderAccountButton();
@@ -3972,6 +4141,89 @@ function userManagementHtml(user) {
   `;
 }
 
+function buyerProfileHtml(user) {
+  const latest = user.lastCustomer || {};
+  return `
+    <form class="account-section account-profile-form" data-profile-form>
+      <div class="account-section__head">
+        <div>
+          <h3>Профиль и реквизиты</h3>
+          <span>Эти данные можно подставлять при оформлении заказа</span>
+        </div>
+        <button class="ghost-button" type="submit">Сохранить профиль</button>
+      </div>
+      <div class="account-profile-grid">
+        <label>
+          Имя или контакт
+          <input name="name" type="text" value="${escapeHtml(user.name || "")}" autocomplete="name" />
+        </label>
+        <label>
+          Телефон
+          <input name="phone" type="tel" value="${escapeHtml(user.phone || latest.phone || "")}" autocomplete="tel" />
+        </label>
+        <label>
+          Компания или ИП
+          <input name="company" type="text" value="${escapeHtml(user.company || latest.company || "")}" autocomplete="organization" />
+        </label>
+        <label>
+          ИНН
+          <input name="inn" type="text" inputmode="numeric" value="${escapeHtml(user.inn || latest.inn || "")}" />
+        </label>
+        <label>
+          Город
+          <input name="city" type="text" value="${escapeHtml(user.city || latest.city || "")}" autocomplete="address-level2" />
+        </label>
+        <label class="account-profile-grid__wide">
+          Адрес доставки
+          <input name="address" type="text" value="${escapeHtml(user.address || latest.address || user.addresses?.[0] || "")}" autocomplete="street-address" />
+        </label>
+      </div>
+    </form>
+  `;
+}
+
+function savedCartsHtml() {
+  const savedCarts = getSavedCarts();
+  const totals = getCartTotals();
+  return `
+    <div class="account-section">
+      <div class="account-section__head">
+        <div>
+          <h3>Сохраненные корзины</h3>
+          <span>Черновики КП и повторных закупок</span>
+        </div>
+        ${totals.qty ? '<button class="ghost-button" type="button" data-save-current-cart>Сохранить текущую</button>' : ""}
+      </div>
+      <div class="saved-carts-list">
+        ${
+          savedCarts.length
+            ? savedCarts
+                .map(
+                  (cart) => `
+                    <article class="saved-cart-card">
+                      <div>
+                        <strong>${escapeHtml(cart.title)}</strong>
+                        <span>${escapeHtml(cart.date || new Date(cart.updatedAt).toLocaleString("ru-RU"))}</span>
+                      </div>
+                      <div class="saved-cart-card__meta">
+                        <span>${cart.qty} ${productWord(cart.qty)}</span>
+                        <b>${formatMoney(cart.total)}</b>
+                      </div>
+                      <div class="order-actions">
+                        <button class="primary-button" type="button" data-restore-saved-cart="${escapeHtml(cart.id)}">Восстановить</button>
+                        <button class="ghost-button" type="button" data-delete-saved-cart="${escapeHtml(cart.id)}">Удалить</button>
+                      </div>
+                    </article>
+                  `
+                )
+                .join("")
+            : "<p>Сохраненных корзин пока нет. Соберите корзину и сохраните ее как черновик.</p>"
+        }
+      </div>
+    </div>
+  `;
+}
+
 function accountModalHtml() {
   const users = getUsers();
   const user = users[state.currentUser];
@@ -4010,6 +4262,8 @@ function accountModalHtml() {
                 ${canManageOrders(user) ? '<a class="ghost-button" href="admin-orders.html" target="_blank" rel="noopener">Заказы</a>' : ""}
                 <button class="ghost-button" type="button" data-logout>Выйти</button>
               </div>
+              ${buyerProfileHtml(user)}
+              ${savedCartsHtml()}
               <h3>История заказов</h3>
               <div class="orders-list">
                 ${
@@ -5393,6 +5647,20 @@ function boot() {
       navigateWithinSite("cart.html");
       return;
     }
+    if (button.dataset.saveCurrentCart !== undefined) {
+      const title = window.prompt("Название черновика корзины", `Корзина от ${new Date().toLocaleDateString("ru-RU")}`) || "";
+      saveCurrentCartDraft(title.trim());
+      rerenderAccountModal();
+      return;
+    }
+    if (button.dataset.restoreSavedCart) {
+      restoreSavedCart(button.dataset.restoreSavedCart);
+      return;
+    }
+    if (button.dataset.deleteSavedCart) {
+      deleteSavedCart(button.dataset.deleteSavedCart);
+      return;
+    }
     if (button.dataset.favorite) {
       if (state.favorites.has(button.dataset.favorite)) state.favorites.delete(button.dataset.favorite);
       else state.favorites.add(button.dataset.favorite);
@@ -5643,6 +5911,12 @@ function boot() {
       const data = Object.fromEntries(new FormData(event.target).entries());
       updateYandexMap(data.mapAddress);
       showToast("Карта обновлена по введенному адресу.");
+    }
+    if (event.target.dataset.profileForm !== undefined) {
+      event.preventDefault();
+      clearFormErrors(event.target);
+      await saveProfileForm(event.target);
+      return;
     }
     if (event.target.id === "authForm") {
       event.preventDefault();

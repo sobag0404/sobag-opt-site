@@ -239,6 +239,28 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
   await page.locator('[data-repeat-order="SO-QA-REPEAT"]').click();
   await expect(page).toHaveURL(/\/cart(?:\.html)?$/);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.cart.buyer@example.com") || "[]").length)).toBe(1);
+
+  await expect(page.locator("#saveCartDraftButton")).toBeVisible();
+  page.once("dialog", (dialog) => dialog.accept("QA saved cart"));
+  await page.locator("#saveCartDraftButton").click();
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.savedCarts.buyer@example.com") || "[]").length))
+    .toBe(1);
+
+  await page.evaluate(() => localStorage.setItem("sobag.cart.buyer@example.com", "[]"));
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
+  await page.locator("#accountButton").click();
+  await expect(page.locator("#accountModal")).toContainText("QA saved cart");
+  await page.locator('[data-profile-form] input[name="company"]').fill("QA Company");
+  await page.locator('[data-profile-form] input[name="inn"]').fill("1234567890");
+  await page.locator("[data-profile-form]").getByRole("button", { name: /Сохранить профиль/i }).click();
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.users") || "{}")["buyer@example.com"]?.company))
+    .toBe("QA Company");
+  await page.locator("[data-restore-saved-cart]").first().click();
+  await expect(page).toHaveURL(/\/cart(?:\.html)?$/);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.cart.buyer@example.com") || "[]").length)).toBe(1);
 });
 
 test("catalog filters, product modal, variants, and cart stay coherent", async ({ page }) => {

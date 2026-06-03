@@ -3,9 +3,15 @@ const CURRENT_USER_KEY = "sobag.currentUser";
 const USERS_KEY = "sobag.users";
 const ORDERS_KEY = "sobag.orders.v1";
 const THEME_KEY = "sobag.theme.v1";
+const SAVED_CARTS_GUEST_KEY = "sobag.savedCarts.guest";
+const SAVED_CARTS_PREFIX = "sobag.savedCarts.";
 function getCartKey() {
   const user = localStorage.getItem(CURRENT_USER_KEY);
   return user ? `sobag.cart.${user}` : "sobag.cart.guest";
+}
+function getSavedCartsKey() {
+  const user = localStorage.getItem(CURRENT_USER_KEY);
+  return user ? `${SAVED_CARTS_PREFIX}${user}` : SAVED_CARTS_GUEST_KEY;
 }
 const PROTOTYPE_PRODUCT_IDS = new Set([
   "aurora-cats",
@@ -459,6 +465,82 @@ function saveCart() {
 }
 
 let cartSyncTimer = 0;
+let savedCartsSyncTimer = 0;
+
+function totalsFromCartEntries(entries) {
+  const lines = cleanCartEntries(entries).map(([, line]) => line);
+  const qty = lines.reduce((sum, line) => sum + Number(line.qty || 0), 0);
+  const subtotal = lines.reduce((sum, line) => sum + Number(line.qty || 0) * Number(line.variant?.price || 0), 0);
+  const discount = getBasketDiscount(subtotal);
+  const total = Math.round(subtotal * (1 - discount / 100));
+  return { qty, subtotal, discount, total };
+}
+
+function normalizeSavedCart(item) {
+  const items = cleanCartEntries(item?.items || []);
+  if (!items.length) return null;
+  const totals = totalsFromCartEntries(items);
+  return {
+    id: String(item.id || `SC-${Date.now().toString(36)}`),
+    title: String(item.title || "Сохраненная корзина").trim() || "Сохраненная корзина",
+    createdAt: item.createdAt || item.updatedAt || new Date().toISOString(),
+    updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
+    date: item.date || new Date().toLocaleString("ru-RU"),
+    items,
+    ...totals,
+  };
+}
+
+function getSavedCarts() {
+  const raw = JSON.parse(localStorage.getItem(getSavedCartsKey()) || "[]");
+  return (Array.isArray(raw) ? raw : []).map(normalizeSavedCart).filter(Boolean).slice(0, 50);
+}
+
+function mergeSavedCarts(serverCarts = [], localCarts = []) {
+  const merged = new Map();
+  [...serverCarts, ...localCarts].forEach((item) => {
+    const normalized = normalizeSavedCart(item);
+    if (!normalized) return;
+    const existing = merged.get(normalized.id);
+    if (!existing || new Date(normalized.updatedAt).getTime() >= new Date(existing.updatedAt).getTime()) merged.set(normalized.id, normalized);
+  });
+  return [...merged.values()].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 50);
+}
+
+function saveSavedCarts(carts, options = {}) {
+  const normalized = (Array.isArray(carts) ? carts : []).map(normalizeSavedCart).filter(Boolean).slice(0, 50);
+  localStorage.setItem(getSavedCartsKey(), JSON.stringify(normalized));
+  const userKey = localStorage.getItem(CURRENT_USER_KEY);
+  if (userKey) {
+    const users = getUsers();
+    if (users[userKey]) {
+      users[userKey].savedCarts = normalized;
+      saveUsers(users);
+    }
+  }
+  if (options.sync !== false && cartServerReady) syncSavedCartsToBackend();
+  return normalized;
+}
+
+function saveCurrentCartDraft(title = "") {
+  const items = [...state.cart.entries()];
+  if (!items.length) {
+    showToast("Корзина пока пустая.");
+    return null;
+  }
+  const now = new Date();
+  const draft = normalizeSavedCart({
+    id: `SC-${now.getTime().toString(36)}`,
+    title: title || `Корзина от ${now.toLocaleDateString("ru-RU")}`,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    date: now.toLocaleString("ru-RU"),
+    items,
+  });
+  const saved = saveSavedCarts([draft, ...getSavedCarts()]);
+  showToast("Черновик корзины сохранен.");
+  return saved[0];
+}
 
 function syncCartToBackend() {
   if (!localStorage.getItem(CURRENT_USER_KEY)) return;
@@ -466,6 +548,17 @@ function syncCartToBackend() {
   const items = [...state.cart.entries()];
   cartSyncTimer = window.setTimeout(() => {
     apiRequest("/api/auth/me", { method: "PUT", body: { cartItems: items } }).catch((error) => {
+      if (!isBackendUnavailable(error)) console.warn(error);
+    });
+  }, 250);
+}
+
+function syncSavedCartsToBackend() {
+  if (!localStorage.getItem(CURRENT_USER_KEY)) return;
+  window.clearTimeout(savedCartsSyncTimer);
+  const savedCarts = getSavedCarts();
+  savedCartsSyncTimer = window.setTimeout(() => {
+    apiRequest("/api/auth/me", { method: "PUT", body: { savedCarts } }).catch((error) => {
       if (!isBackendUnavailable(error)) console.warn(error);
     });
   }, 250);
@@ -481,8 +574,11 @@ async function loadServerCart() {
     localCart.forEach(([key, line]) => merged.set(key, line));
     state.cart = merged;
     localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
+    const mergedSavedCarts = mergeSavedCarts(data.savedCarts || [], getSavedCarts());
+    saveSavedCarts(mergedSavedCarts, { sync: false });
     cartServerReady = true;
     syncCartToBackend();
+    syncSavedCartsToBackend();
     renderCart();
     return true;
   } catch (error) {
@@ -753,8 +849,8 @@ document.addEventListener("click", (event) => {
   }
   if (button.id === "checkoutButton") openCheckout();
   if (button.id === "saveCartDraftButton") {
-    saveCart();
-    showToast("Черновик корзины сохранен.");
+    const title = window.prompt("Название черновика корзины", `Корзина от ${new Date().toLocaleDateString("ru-RU")}`) || "";
+    saveCurrentCartDraft(title.trim());
   }
   if (button.id === "downloadCartQuoteButton") downloadCartQuote();
   if (button.id === "printCartQuoteButton") printCartQuote();
