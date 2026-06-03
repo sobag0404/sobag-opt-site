@@ -4,6 +4,16 @@ Last updated: 2026-06-03
 
 ## Latest Session Notes
 
+- Roadmap continuation in progress on 2026-06-03:
+  - Added `docs/roadmap-checklist.md` as the explicit remaining-plan checklist.
+  - Added `search.html` as a dedicated search results page backed by existing catalog rendering.
+  - Header search now opens `/search?q=...`; query state is refresh-safe.
+  - Search page shows result count, "maybe you searched" suggestions, and quick filters by category, collection, holiday, and tag.
+  - Exact SKU-like queries with digits now avoid fuzzy matching every `opt_*` product.
+  - Product-modal SKU copy toast now has z-index above modal panels.
+  - AutoFix mojibake guard was strengthened across HTML, JS/MJS, CSS, MD, and JSON files.
+  - User requested product reviews next: registered users leave star + text reviews; admin manages/moderates all reviews.
+
 - Saved quote drafts / saved carts 2.0 pass was completed and pushed.
 - Feature commit: `53979c3 Improve saved quote drafts`.
 - Added buyer account actions for saved commercial proposal drafts:

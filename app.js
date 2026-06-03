@@ -547,6 +547,7 @@ const productGrid = document.querySelector("#productGrid");
 const productCount = document.querySelector("#productCount");
 const filterGroups = document.querySelector("#filterGroups");
 const activeFilterChips = document.querySelector("#activeFilterChips");
+const searchResultsPanel = document.querySelector("#searchResultsPanel");
 const catalogLoadMore = document.querySelector("#catalogLoadMore");
 const recentProductsSection = document.querySelector("#recentProductsSection");
 const recentProductsNode = document.querySelector("#recentProducts");
@@ -574,6 +575,7 @@ const discountHint = document.querySelector("#discountHint");
 const toast = document.querySelector("#toast");
 const themeToggle = document.querySelector("[data-theme-toggle]");
 const isFavoritesPage = document.body.classList.contains("favorites-page");
+const isSearchPage = document.body.classList.contains("search-page");
 const isAdminOrdersPage = document.body.classList.contains("admin-orders-page");
 const isAdminOrderPage = document.body.classList.contains("admin-order-page");
 const isAdminCustomerPage = document.body.classList.contains("admin-customer-page");
@@ -887,7 +889,7 @@ function navigateWithinSite(url) {
     return;
   }
 
-  if (sameRoute && targetRoute === "catalog" && catalogListing) {
+  if (sameRoute && (targetRoute === "catalog" || targetRoute === "search") && catalogListing) {
     if (targetUrl.search) {
       applyCatalogUrl(targetUrl);
       return;
@@ -2658,6 +2660,7 @@ function searchScore(product, rawQuery = state.search) {
   if (normalizeSearchText(product.name) === query) return 9000;
   if (querySku && skuKeys.some((sku) => sku.startsWith(querySku))) return 7000;
   if (querySku && skuKeys.some((sku) => sku.includes(querySku))) return 5000;
+  if (querySku && /\d/.test(querySku)) return 0;
 
   const name = normalizeSearchText(product.name);
   if (name.startsWith(query)) return 4000;
@@ -2682,6 +2685,75 @@ function getSearchSuggestions() {
     .sort((a, b) => b.score - a.score || b.product.popular - a.product.popular)
     .slice(0, 5)
     .map(({ product }) => product);
+}
+
+function countSearchValues(list, getter, limit = 6) {
+  const counts = new Map();
+  list.forEach((product) => {
+    getter(product).forEach((value) => {
+      const prepared = String(value || "").trim();
+      if (!prepared) return;
+      counts.set(prepared, (counts.get(prepared) || 0) + 1);
+    });
+  });
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ru"))
+    .slice(0, limit)
+    .map(([value, count]) => ({ value, count }));
+}
+
+function setSearchQuery(query) {
+  state.search = String(query || "").trim();
+  if (searchInput) searchInput.value = state.search;
+  resetVisibleProducts();
+  syncCatalogRoute();
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
+  document.querySelector("#catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderSearchResultsPanel(list) {
+  if (!searchResultsPanel) return;
+  const query = state.search.trim();
+  const suggestions = getSearchSuggestions();
+  const source = list.length ? list : suggestions.length ? suggestions : products.filter((product) => !product.hidden).slice(0, 80);
+  const categories = countSearchValues(source, (product) => product.categories || [product.category], 5);
+  const collections = countSearchValues(source, (product) => product.collections || [], 5);
+  const holidays = countSearchValues(source, (product) => product.holidays || [], 4);
+  const tags = countSearchValues(source, (product) => product.tags || [], 6);
+  const hasQuickFilters = categories.length || collections.length || holidays.length || tags.length;
+
+  searchResultsPanel.innerHTML = `
+    <div class="search-results-panel__main">
+      <span>Результаты поиска</span>
+      <h3>${query ? escapeHtml(query) : "Введите запрос в поисковой строке"}</h3>
+      <p>${query ? `${list.length} ${productWord(list.length)} найдено. Сначала идут точные совпадения по артикулу, затем по названию и тематике.` : "Ищите по артикулу, названию, подборке, празднику или тегу."}</p>
+    </div>
+    ${
+      suggestions.length
+        ? `<div class="search-results-panel__suggestions">
+            <span>Возможно, вы искали</span>
+            <div>${suggestions
+              .map((product) => `<button type="button" data-open-product="${escapeHtml(product.id)}"><b>${escapeHtml(product.baseSku)}</b><span>${escapeHtml(product.name)}</span></button>`)
+              .join("")}</div>
+          </div>`
+        : ""
+    }
+    ${
+      hasQuickFilters
+        ? `<div class="search-results-panel__quick">
+            <span>Быстрые фильтры</span>
+            <div>
+              ${categories.map((item) => `<button type="button" data-open-category="${escapeHtml(item.value)}">${escapeHtml(item.value)} <b>${item.count}</b></button>`).join("")}
+              ${collections.map((item) => `<button type="button" data-open-collection="${escapeHtml(item.value)}">${escapeHtml(item.value)} <b>${item.count}</b></button>`).join("")}
+              ${holidays.map((item) => `<button type="button" data-open-holiday="${escapeHtml(item.value)}">${escapeHtml(item.value)} <b>${item.count}</b></button>`).join("")}
+              ${tags.map((item) => `<button type="button" data-search-query="${escapeHtml(item.value)}">${escapeHtml(item.value)} <b>${item.count}</b></button>`).join("")}
+            </div>
+          </div>`
+        : ""
+    }
+  `;
 }
 
 function renderSearchSuggestions() {
@@ -2717,6 +2789,16 @@ function renderSearchSuggestions() {
 }
 
 function getFilteredProducts() {
+  if (
+    isSearchPage &&
+    !state.search.trim() &&
+    !state.selectedCategory &&
+    !state.selectedCollection &&
+    !state.selectedHoliday &&
+    !Object.values(state.filters).some((bucket) => bucket.size)
+  ) {
+    return [];
+  }
   return products
     .map((product) => ({ product, score: searchScore(product) }))
     .filter(
@@ -2908,7 +2990,7 @@ function renderCatalogHome() {
 
 function renderCatalogShell() {
   if (!catalogHome || !catalogListing || !catalogTools || !catalogTitle) return;
-  const isHome = !isFavoritesPage && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
+  const isHome = !isSearchPage && !isFavoritesPage && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
   catalogHome.classList.toggle("is-hidden", !isHome);
   catalogListing.classList.toggle("is-hidden", isHome);
   catalogTools.classList.toggle("is-hidden", isHome || isFavoritesPage);
@@ -2917,6 +2999,14 @@ function renderCatalogShell() {
 
   if (isFavoritesPage) {
     catalogTitle.textContent = "Избранное";
+    filterToggle?.classList.remove("is-hidden");
+    updateFilterToggle();
+    updateCatalogSeo();
+    return;
+  }
+
+  if (isSearchPage) {
+    catalogTitle.textContent = state.search.trim() ? `Результаты поиска: ${state.search.trim()}` : "Поиск по каталогу";
     filterToggle?.classList.remove("is-hidden");
     updateFilterToggle();
     updateCatalogSeo();
@@ -3150,9 +3240,11 @@ function renderProducts() {
   const list = getFilteredProducts();
   const visibleList = list.slice(0, state.visibleLimit);
   renderSearchSuggestions();
+  renderSearchResultsPanel(list);
   renderActiveFilterChips();
   productCount.textContent = `${list.length} ${productWord(list.length)}`;
   if (!list.length) {
+    const searchPrompt = isSearchPage && !state.search.trim();
     productGrid.innerHTML = `
       <div class="empty-products">
         <i data-lucide="${isFavoritesPage ? "heart" : "search-x"}"></i>
@@ -3161,6 +3253,12 @@ function renderProducts() {
         ${isFavoritesPage ? `<button class="ghost-button" type="button" data-nav="catalog.html">в каталог</button>` : ""}
       </div>
     `;
+    if (searchPrompt) {
+      const emptyTitle = productGrid.querySelector(".empty-products strong");
+      const emptyText = productGrid.querySelector(".empty-products span");
+      if (emptyTitle) emptyTitle.textContent = "Введите поисковый запрос";
+      if (emptyText) emptyText.textContent = "Поиск работает по точному артикулу, названию, подборкам, праздникам и тегам.";
+    }
     if (catalogLoadMore) catalogLoadMore.innerHTML = "";
     renderRecentProducts();
     if (window.lucide) window.lucide.createIcons();
@@ -5973,6 +6071,10 @@ function boot() {
       clearCatalogFilter(button.dataset.clearFilter, button.dataset.clearValue || "");
       return;
     }
+    if (button.dataset.searchQuery) {
+      setSearchQuery(button.dataset.searchQuery);
+      return;
+    }
     if (button.dataset.showMoreProducts !== undefined) {
       state.visibleLimit += 120;
       renderProducts();
@@ -6213,7 +6315,7 @@ function boot() {
     if (event.target?.id === "searchInput" && event.key === "Enter") {
       event.preventDefault();
       const query = event.target.value.trim();
-      if (query) navigateWithinSite(`catalog.html?q=${encodeURIComponent(query)}`);
+      if (query) navigateWithinSite(`search?q=${encodeURIComponent(query)}`);
       return;
     }
     const modal = activeModal();
@@ -6244,6 +6346,7 @@ function boot() {
     if (event.target.id === "searchInput") {
       state.search = event.target.value;
       resetVisibleProducts();
+      renderSearchSuggestions();
       if (!catalogListing && state.search.trim().length >= 2) return;
       syncCatalogRoute();
       renderCatalogShell();

@@ -97,8 +97,8 @@ test("admin import page and custom print calculator render", async ({ page }) =>
   await expect(page.locator("#customCalcTotal")).not.toHaveText("0 ₽");
 });
 
-async function waitForLiveProducts(page) {
-  await page.waitForFunction(() => document.querySelectorAll(".product-card").length > 10);
+async function waitForLiveProducts(page, minCount = 10) {
+  await page.waitForFunction((min) => document.querySelectorAll(".product-card").length > min, minCount);
 }
 
 async function largestCategory(page) {
@@ -130,6 +130,7 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
   const routes = [
     "/",
     `/catalog?category=${encodeURIComponent(await largestCategory(page))}`,
+    "/search?q=opt_22434",
     "/cart.html",
     "/favorites.html",
     "/admin-orders.html",
@@ -147,6 +148,7 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
   for (const route of routes) {
     await page.goto(`${BASE_URL}${route}`, { waitUntil: "domcontentloaded" });
     if (route.includes("catalog")) await waitForLiveProducts(page);
+    if (route.includes("search")) await waitForLiveProducts(page, 0);
     await expectNoHorizontalOverflow(page);
   }
 });
@@ -154,7 +156,7 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
 test("catalog navigation and favorite toggles do not reload the same document", async ({ page }) => {
   const category = await largestCategory(page);
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
-  await waitForLiveProducts(page);
+  await waitForLiveProducts(page, 0);
 
   await page.evaluate(() => localStorage.setItem("__sobagQaDocumentLoads", "0"));
   await page.getByRole("button", { name: /^каталог$/i }).first().click();
@@ -164,7 +166,7 @@ test("catalog navigation and favorite toggles do not reload the same document", 
   await expect.poll(() => page.evaluate(() => Number(localStorage.getItem("__sobagQaDocumentLoads") || "0"))).toBe(0);
 
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
-  await waitForLiveProducts(page);
+  await waitForLiveProducts(page, 0);
   await page.evaluate(() => localStorage.setItem("__sobagQaDocumentLoads", "0"));
   const favorite = page.locator(".favorite-button").first();
   await favorite.click();
@@ -353,9 +355,14 @@ test("search prioritizes exact sku and keeps suggestions for fuzzy queries", asy
 
   const sku = await page.locator(".product-card__sku").first().innerText();
   await page.locator("#searchInput").fill(sku.trim());
+  await page.locator("#searchInput").press("Enter");
+  await expect(page).toHaveURL(/\/search(?:\.html)?\?q=/);
+  await waitForLiveProducts(page, 0);
   await expect(page.locator(".product-card").first().locator(".product-card__sku")).toHaveText(sku.trim());
+  await expect(page.locator("#searchResultsPanel")).toBeVisible();
   await expect(page.locator(".search-suggestions")).toBeHidden();
 
   await page.locator("#searchInput").fill("подуш патер");
   await expect(page.locator(".search-suggestions")).toBeVisible();
+  await expect(page.locator(".search-results-panel__quick button").first()).toBeVisible();
 });

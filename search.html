@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sobag Opt | Поиск по каталогу</title>
+    <meta name="description" content="Поиск по оптовому каталогу Sobag Opt: артикулы, названия, подборки, праздники и теги." />
+    <link rel="canonical" href="https://sobag-shop.online/search.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Sobag Opt" />
+    <meta property="og:title" content="Sobag Opt | Поиск по каталогу" />
+    <meta property="og:description" content="Найдите товары Sobag Opt по точному артикулу, названию, тематике, подборке или празднику." />
+    <meta property="og:url" content="https://sobag-shop.online/search.html" />
+    <meta property="og:image" content="https://sobag-shop.online/assets/production-hero-1.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Crect x='6' y='6' width='52' height='52' fill='%23fff'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial,sans-serif' font-size='34' font-weight='900' fill='%23000'%3ES%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260603-search-results" />
+  </head>
+  <body class="catalog-page search-page">
+    <div data-site-topline></div>
+
+    <div data-site-header="commerce"></div>
+
+    <main>
+      <div class="container page-back"><a class="ghost-button" href="catalog.html"><i data-lucide="arrow-left"></i> В каталог</a><strong>Поиск</strong></div>
+      <section class="catalog-section" id="catalog">
+        <div class="container section-head">
+          <div>
+            <div class="accent-stripe" aria-hidden="true"></div>
+            <h1 id="catalogTitle">Поиск по каталогу</h1>
+          </div>
+          <div class="view-tools" id="catalogTools" role="group" aria-label="Навигация поиска">
+            <button class="chip" type="button" data-nav="catalog.html">
+              <i data-lucide="layout-grid"></i>
+              Каталог
+            </button>
+          </div>
+        </div>
+
+        <div class="container catalog-home is-hidden" id="catalogHome" hidden>
+          <div id="categoryTiles"></div>
+          <div id="actualTiles"></div>
+          <div id="collectionTiles"></div>
+          <div id="holidayTiles"></div>
+        </div>
+
+        <div class="container catalog-layout search-layout" id="catalogListing">
+          <button class="filter-toggle is-hidden" id="filterToggle" type="button" data-toggle-filters>
+            <i data-lucide="sliders-horizontal"></i>
+            Открыть фильтры
+          </button>
+          <aside class="filters" aria-label="Фильтры поиска">
+            <div id="filterGroups"></div>
+          </aside>
+
+          <div class="catalog-main">
+            <section class="search-results-panel" id="searchResultsPanel" aria-live="polite"></section>
+            <div class="catalog-toolbar">
+              <span id="productCount">0 товаров</span>
+              <select id="sortSelect" aria-label="Сортировка">
+                <option value="popular">Сначала популярные</option>
+                <option value="priceAsc">Цена: ниже</option>
+                <option value="priceDesc">Цена: выше</option>
+                <option value="minQty">Минимальная партия</option>
+              </select>
+            </div>
+            <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
+            <div id="productGrid" class="product-grid"></div>
+            <div class="catalog-load-more" id="catalogLoadMore"></div>
+            <section class="catalog-recent is-hidden" id="recentProductsSection" aria-label="Недавно смотрели">
+              <div class="catalog-recent__head">
+                <h3>Недавно смотрели</h3>
+                <span>Быстрый возврат к открытым позициям</span>
+              </div>
+              <div class="mini-product-row" id="recentProducts"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div data-site-footer></div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="components/site-shell.js?v=20260603-search-results"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="app.js?v=20260603-search-results"></script>
+  </body>
+</html>

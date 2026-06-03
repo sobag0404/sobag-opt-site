@@ -219,6 +219,18 @@ Large product-photo folders must not be committed to GitHub/Vercel.
   - `/api/health` returned `{"ok":true,"storage":"ready"}`.
 - No secrets or production credentials were added.
 
+## Latest Roadmap / Search Update
+
+- Date: 2026-06-03.
+- Added `docs/roadmap-checklist.md` with the remaining implementation checklist.
+- Added `search.html` as a dedicated search results route.
+- Header search now opens `/search?q=...`, preserving query state on refresh.
+- Search results show count, "maybe you searched" suggestions, and quick filters by category, collection, holiday, and tag.
+- Exact SKU-like queries with digits now rely on SKU matching, so `opt_22434` returns the matching product instead of all `opt_*` products.
+- Product-modal SKU copy toast is above the modal layer.
+- AutoFix mojibake guard now scans HTML, JS/MJS, CSS, MD, and JSON for common broken UTF-8 patterns.
+- Product reviews were added to the roadmap as the next major feature: registered-user star/text reviews plus admin moderation.
+
 ## Verification Status
 
 Latest verified checks before this handoff update:

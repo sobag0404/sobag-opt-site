@@ -55,6 +55,7 @@ function checkPageSectionOwnership() {
   const expected = {
     "index.html": ["hero", "benefits", "wholesale"],
     "catalog.html": ["catalog-section"],
+    "search.html": ["catalog-section"],
     "favorites.html": ["catalog-section"],
     "custom.html": ["custom"],
     "marketplaces.html": ["marketplaces"],
@@ -96,16 +97,16 @@ function checkNoMojibake() {
     "\u0432\u0402",
     "\u0420\ufffd",
   ];
+  const mojibakeRegex =
+    /[\u0420\u0421][\u0400-\u040f\u0450-\u045f\u00a0-\u00bf\u201a\u201e\u2020\u2021\u20ac]|\u0432[\u0400-\u040f\u0450-\u045f\u00a0-\u00bf\u201a\u201e\u2020\u2021\u20ac]|\ufffd|Ã[\u0080-\u00bf]/;
   const files = [
-    ...walk(root, (file) => file.endsWith(".html")),
-    ...walk(join(root, "api"), (file) => file.endsWith(".js")),
-    ...["app.js", "cart.js", "components/site-shell.js"].map((file) => join(root, file)),
+    ...walk(root, (file) => /\.(html|js|mjs|css|md|json)$/i.test(file)),
   ];
   const offenders = [];
 
   for (const file of files) {
     const text = readFileSync(file, "utf8");
-    const hit = suspects.find((suspect) => text.includes(suspect));
+    const hit = suspects.find((suspect) => text.includes(suspect)) || text.match(mojibakeRegex)?.[0];
     if (hit) {
       const index = text.indexOf(hit);
       const snippet = text.slice(Math.max(0, index - 30), index + 60).replace(/\s+/g, " ");
