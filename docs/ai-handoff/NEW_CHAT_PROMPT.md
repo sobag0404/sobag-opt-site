@@ -14,11 +14,15 @@ Fallback Vercel domain:
 `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-`c7f54d2 Fit personal state sync within Vercel Hobby limits`
+`f232ec0 Update handoff after search production check`
 
 Read first:
-- `docs/ai-handoff/AI_HANDOFF.md`
+- `docs/ai-handoff/ACTIVE_CONTEXT.md`
+- `docs/roadmap-checklist.md`
 - `docs/ai-handoff/CURRENT_STATUS.md`
+
+Read only if historical detail is missing:
+- `docs/ai-handoff/AI_HANDOFF.md`
 - `docs/ai-handoff/LIVE_CONTEXT.md`
 - `docs/ai-handoff/NEW_DEVICE_SETUP.md`
 - `docs/ai-handoff/SERVER_HANDOFF_STORAGE.md`
@@ -77,7 +81,8 @@ Before pushing changes:
 6. Push to `main`.
 7. Deploy/verify Vercel when site behavior changes.
 8. Check production URL affected by the change.
-9. Update `docs/ai-handoff/LIVE_CONTEXT.md` before final responses after project work.
+9. Update `docs/ai-handoff/ACTIVE_CONTEXT.md` before final responses after project work.
+10. Update the longer handoff files only before device transfer or major milestones.
 
 If continuing product import work, start from:
 - `tools/product_importer.py`

@@ -13,7 +13,7 @@ Repository:
 - Vercel fallback/project domain: `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-- `53979c3 Improve saved quote drafts`
+- `f232ec0 Update handoff after search production check`
 
 ## Current State
 
@@ -33,6 +33,8 @@ Backend/storage:
 - Health check: `https://sobag-shop.online/api/health` should return `{"ok":true,"storage":"ready"}`.
 
 ## Important Files
+
+Use `docs/ai-handoff/ACTIVE_CONTEXT.md` as the short current working context to reduce token usage. Use the long handoff and live context only when a missing historical detail is needed.
 
 - `index.html`: home page.
 - `catalog.html`: catalog page with category home and product listing.
