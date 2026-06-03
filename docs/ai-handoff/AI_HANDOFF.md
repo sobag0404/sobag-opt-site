@@ -230,6 +230,8 @@ Large product-photo folders must not be committed to GitHub/Vercel.
 - Product-modal SKU copy toast is above the modal layer.
 - AutoFix mojibake guard now scans HTML, JS/MJS, CSS, MD, and JSON for common broken UTF-8 patterns.
 - Product reviews were added to the roadmap as the next major feature: registered-user star/text reviews plus admin moderation.
+- Commit `9d0d4f9 Add search results page and roadmap checklist` was pushed to `origin/main`.
+- Production verification passed on `https://sobag-shop.online`: fresh marker `20260603-search-results`, `/`, `/catalog`, `/cart`, `/search?q=opt_22434`, `/api/health`, exact SKU search, and product-modal copy toast above the modal layer.
 
 ## Verification Status
 

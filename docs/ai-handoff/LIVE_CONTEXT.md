@@ -13,6 +13,8 @@ Last updated: 2026-06-03
   - Product-modal SKU copy toast now has z-index above modal panels.
   - AutoFix mojibake guard was strengthened across HTML, JS/MJS, CSS, MD, and JSON files.
   - User requested product reviews next: registered users leave star + text reviews; admin manages/moderates all reviews.
+  - Commit `9d0d4f9 Add search results page and roadmap checklist` was pushed to `origin/main`.
+  - Production verification passed on `https://sobag-shop.online`: fresh marker `20260603-search-results`, `/`, `/catalog`, `/cart`, `/search?q=opt_22434`, `/api/health`, exact SKU search, and product-modal copy toast above the modal layer.
 
 - Saved quote drafts / saved carts 2.0 pass was completed and pushed.
 - Feature commit: `53979c3 Improve saved quote drafts`.

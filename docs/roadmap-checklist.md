@@ -29,7 +29,7 @@ Last updated: 2026-06-03
    - [x] Search URL is preserved and refresh-safe.
    - [x] Result count, "maybe you searched", and quick filters.
    - [x] Exact SKU queries with digits return SKU matches instead of all `opt_*` products.
-   - [ ] Production verification after deploy.
+   - [x] Production verification after deploy.
 
 2. [planned] Product reviews:
    - [ ] Registered buyers can leave star rating and text.
