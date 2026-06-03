@@ -1087,10 +1087,23 @@ function mirrorServerOrder(order, userEmail = state.currentUser) {
     users[userEmail].orders = [order, ...(users[userEmail].orders || []).filter((item) => item.id !== order.id)];
     users[userEmail].company = customer.company || users[userEmail].company || "";
     users[userEmail].inn = customer.inn || users[userEmail].inn || "";
+    users[userEmail].kpp = customer.kpp || users[userEmail].kpp || "";
+    users[userEmail].legalAddress = customer.legalAddress || users[userEmail].legalAddress || "";
     users[userEmail].phone = customer.phone || users[userEmail].phone || "";
     users[userEmail].city = customer.city || users[userEmail].city || "";
     users[userEmail].address = customer.address || users[userEmail].address || "";
     users[userEmail].addresses = [...new Set([customer.address, ...(users[userEmail].addresses || [])].filter(Boolean))].slice(0, 10);
+    users[userEmail].delivery = customer.delivery || users[userEmail].delivery || "";
+    users[userEmail].packaging = customer.packaging || users[userEmail].packaging || "";
+    users[userEmail].layoutFiles = uniqueTextList([customer.layoutFileName, ...(users[userEmail].layoutFiles || [])], 20, 240);
+    users[userEmail].orderComment = customer.comment || users[userEmail].orderComment || "";
+    users[userEmail].orderComments = uniqueTextList([customer.comment, ...(users[userEmail].orderComments || [])], 10, 500);
+    users[userEmail].companies = parseCompanyProfiles(companiesToText(users[userEmail]), {
+      name: users[userEmail].company,
+      inn: users[userEmail].inn,
+      kpp: users[userEmail].kpp,
+      legalAddress: users[userEmail].legalAddress,
+    });
     users[userEmail].lastCustomer = customer;
     saveUsers(users);
   }
@@ -1742,10 +1755,23 @@ function saveOrderRecord(order, userKey = state.currentUser) {
     users[userKey].orders = [record, ...(users[userKey].orders || [])];
     users[userKey].company = customer.company || users[userKey].company || "";
     users[userKey].inn = customer.inn || users[userKey].inn || "";
+    users[userKey].kpp = customer.kpp || users[userKey].kpp || "";
+    users[userKey].legalAddress = customer.legalAddress || users[userKey].legalAddress || "";
     users[userKey].phone = customer.phone || users[userKey].phone || "";
     users[userKey].city = customer.city || users[userKey].city || "";
     users[userKey].address = customer.address || users[userKey].address || "";
     users[userKey].addresses = [...new Set([customer.address, ...(users[userKey].addresses || [])].filter(Boolean))].slice(0, 10);
+    users[userKey].delivery = customer.delivery || users[userKey].delivery || "";
+    users[userKey].packaging = customer.packaging || users[userKey].packaging || "";
+    users[userKey].layoutFiles = uniqueTextList([customer.layoutFileName, ...(users[userKey].layoutFiles || [])], 20, 240);
+    users[userKey].orderComment = customer.comment || users[userKey].orderComment || "";
+    users[userKey].orderComments = uniqueTextList([customer.comment, ...(users[userKey].orderComments || [])], 10, 500);
+    users[userKey].companies = parseCompanyProfiles(companiesToText(users[userKey]), {
+      name: users[userKey].company,
+      inn: users[userKey].inn,
+      kpp: users[userKey].kpp,
+      legalAddress: users[userKey].legalAddress,
+    });
     users[userKey].lastCustomer = customer;
     saveUsers(users);
   }
@@ -1968,18 +1994,102 @@ function deleteSavedCart(cartId) {
   showToast("Черновик удален.");
 }
 
+function uniqueTextList(values, limit = 10, itemLimit = 240) {
+  return [
+    ...new Set(
+      (Array.isArray(values) ? values : [])
+        .map((item) => String(item || "").trim().slice(0, itemLimit))
+        .filter(Boolean)
+    ),
+  ].slice(0, limit);
+}
+
+function textAreaLines(value, limit = 10, itemLimit = 240) {
+  return uniqueTextList(String(value || "").split(/\r?\n/), limit, itemLimit);
+}
+
+function parseCompanyProfiles(value, primary = {}) {
+  const rows = textAreaLines(value, 10, 600)
+    .map((line) => {
+      const [name = "", inn = "", kpp = "", legalAddress = ""] = line.split(";").map((part) => part.trim());
+      return {
+        name: name.slice(0, 180),
+        inn: inn.replace(/\D/g, "").slice(0, 12),
+        kpp: kpp.replace(/\D/g, "").slice(0, 9),
+        legalAddress: legalAddress.slice(0, 240),
+      };
+    })
+    .filter((company) => company.name || company.inn);
+  const prepared = [primary, ...rows]
+    .map((company) => ({
+      name: String(company?.name || company?.company || "").trim().slice(0, 180),
+      inn: String(company?.inn || "").replace(/\D/g, "").slice(0, 12),
+      kpp: String(company?.kpp || "").replace(/\D/g, "").slice(0, 9),
+      legalAddress: String(company?.legalAddress || "").trim().slice(0, 240),
+    }))
+    .filter((company) => company.name || company.inn);
+  const seen = new Set();
+  return prepared
+    .filter((company) => {
+      const key = company.inn || company.name.toLocaleLowerCase("ru-RU");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 10);
+}
+
+function companiesToText(user = {}) {
+  const primaryKey = user.inn || String(user.company || "").toLocaleLowerCase("ru-RU");
+  return (user.companies || [])
+    .filter((company) => {
+      const key = company.inn || String(company.name || "").toLocaleLowerCase("ru-RU");
+      return key && key !== primaryKey;
+    })
+    .map((company) => [company.name, company.inn, company.kpp, company.legalAddress].filter(Boolean).join("; "))
+    .join("\n");
+}
+
+function linesToText(values = []) {
+  return uniqueTextList(values, 20, 500).join("\n");
+}
+
 async function saveProfileForm(form) {
   const data = Object.fromEntries(new FormData(form).entries());
+  const currentUserData = getUsers()[state.currentUser] || {};
+  const primaryAddress = String(data.address || "").trim();
+  const addresses = uniqueTextList([primaryAddress, ...textAreaLines(data.addresses, 10, 240), ...(currentUserData.addresses || [])], 10, 240);
+  const layoutFiles = uniqueTextList([...textAreaLines(data.layoutFiles, 20, 240), ...(currentUserData.layoutFiles || [])], 20, 240);
+  const orderComment = String(data.orderComment || "").trim();
+  const orderComments = uniqueTextList([orderComment, ...textAreaLines(data.orderComments, 10, 500), ...(currentUserData.orderComments || [])], 10, 500);
   const profile = {
     name: String(data.name || "").trim(),
     phone: String(data.phone || "").trim(),
     company: String(data.company || "").trim(),
     inn: String(data.inn || "").replace(/\D/g, ""),
+    kpp: String(data.kpp || "").replace(/\D/g, ""),
+    legalAddress: String(data.legalAddress || "").trim(),
     city: String(data.city || "").trim(),
-    address: String(data.address || "").trim(),
+    address: primaryAddress,
+    delivery: String(data.delivery || "").trim(),
+    packaging: String(data.packaging || "").trim(),
+    orderComment,
+    addresses,
+    layoutFiles,
+    orderComments,
   };
+  profile.companies = parseCompanyProfiles(data.companies, {
+    name: profile.company,
+    inn: profile.inn,
+    kpp: profile.kpp,
+    legalAddress: profile.legalAddress,
+  });
   if (profile.inn && ![10, 12].includes(profile.inn.length)) {
     setFieldError(form, "inn", "ИНН должен содержать 10 или 12 цифр.");
+    return;
+  }
+  if (profile.kpp && profile.kpp.length !== 9) {
+    setFieldError(form, "kpp", "КПП должен содержать 9 цифр.");
     return;
   }
   const users = getUsers();
@@ -1988,7 +2098,6 @@ async function saveProfileForm(form) {
   users[state.currentUser] = {
     ...user,
     ...profile,
-    addresses: [...new Set([profile.address, ...(user.addresses || [])].filter(Boolean))].slice(0, 10),
     updatedAt: new Date().toISOString(),
   };
   saveUsers(users);
@@ -3679,10 +3788,14 @@ function customerFromOrders(email) {
     role: "buyer",
     company: latestCustomer.company || "",
     inn: latestCustomer.inn || "",
+    kpp: latestCustomer.kpp || "",
+    legalAddress: latestCustomer.legalAddress || "",
     phone: latestCustomer.phone || "",
     city: latestCustomer.city || "",
     address: latestCustomer.address || "",
     addresses: [...new Set(orders.map((order) => order.customer?.address).filter(Boolean))],
+    layoutFiles: [...new Set(orders.map((order) => order.customer?.layoutFileName).filter(Boolean))],
+    orderComments: [...new Set(orders.map((order) => order.customer?.comment).filter(Boolean))],
     lastCustomer: latestCustomer,
     orders,
   };
@@ -3706,10 +3819,12 @@ function orderDetailHtml(order) {
           <span>Имя: <b>${escapeHtml(customer.name || "Не указано")}</b></span>
           <span>Компания: <b>${escapeHtml(customer.company || "Не указана")}</b></span>
           <span>ИНН: <b>${escapeHtml(customer.inn || "Не указан")}</b></span>
+          <span>КПП: <b>${escapeHtml(customer.kpp || "Не указан")}</b></span>
           <span>Телефон: <b>${escapeHtml(customer.phone || "Не указан")}</b></span>
           <span>Email: <b>${escapeHtml(customerEmail || "Не указан")}</b></span>
           <span>Город: <b>${escapeHtml(customer.city || "Не указан")}</b></span>
           <span>Адрес: <b>${escapeHtml(customer.address || "Не указан")}</b></span>
+          <span>Юр. адрес: <b>${escapeHtml(customer.legalAddress || "Не указан")}</b></span>
           <span>Доставка: <b>${escapeHtml(customer.delivery || "Согласовать")}</b></span>
           <span>Упаковка: <b>${escapeHtml(customer.packaging || "Стандартная")}</b></span>
           ${customer.layoutFileName ? `<span>Макет: <b>${escapeHtml(customer.layoutFileName)}</b></span>` : ""}
@@ -3755,13 +3870,17 @@ function customerDetailHtml(customer) {
           <span>Email: <b>${escapeHtml(customer.email || "")}</b></span>
           <span>Компания: <b>${escapeHtml(customer.company || customer.lastCustomer?.company || "Не указана")}</b></span>
           <span>ИНН: <b>${escapeHtml(customer.inn || customer.lastCustomer?.inn || "Не указан")}</b></span>
+          <span>КПП: <b>${escapeHtml(customer.kpp || customer.lastCustomer?.kpp || "Не указан")}</b></span>
           <span>Телефон: <b>${escapeHtml(customer.phone || customer.lastCustomer?.phone || "Не указан")}</b></span>
           <span>Роль: <b>${escapeHtml(roleLabel(customer.role))}</b></span>
           <span>Город: <b>${escapeHtml(customer.city || customer.lastCustomer?.city || "Не указан")}</b></span>
           <span>Адрес: <b>${escapeHtml(customer.address || customer.lastCustomer?.address || "Не указан")}</b></span>
+          <span>Юр. адрес: <b>${escapeHtml(customer.legalAddress || customer.lastCustomer?.legalAddress || "Не указан")}</b></span>
           <span>Заказов: <b>${orders.length}</b></span>
         </div>
         ${(customer.addresses || []).length ? `<h3>Адреса</h3><ul class="admin-detail-list">${customer.addresses.map((address) => `<li>${escapeHtml(address)}</li>`).join("")}</ul>` : ""}
+        ${(customer.layoutFiles || []).length ? `<h3>Макеты</h3><ul class="admin-detail-list">${customer.layoutFiles.map((file) => `<li>${escapeHtml(file)}</li>`).join("")}</ul>` : ""}
+        ${(customer.orderComments || []).length ? `<h3>Комментарии</h3><ul class="admin-detail-list">${customer.orderComments.map((comment) => `<li>${escapeHtml(comment)}</li>`).join("")}</ul>` : ""}
       </article>
       <article class="info-page__panel admin-detail-grid__wide">
         <h2>История заказов</h2>
@@ -4170,12 +4289,57 @@ function buyerProfileHtml(user) {
           <input name="inn" type="text" inputmode="numeric" value="${escapeHtml(user.inn || latest.inn || "")}" />
         </label>
         <label>
+          КПП
+          <input name="kpp" type="text" inputmode="numeric" value="${escapeHtml(user.kpp || latest.kpp || "")}" />
+        </label>
+        <label>
           Город
           <input name="city" type="text" value="${escapeHtml(user.city || latest.city || "")}" autocomplete="address-level2" />
         </label>
         <label class="account-profile-grid__wide">
           Адрес доставки
           <input name="address" type="text" value="${escapeHtml(user.address || latest.address || user.addresses?.[0] || "")}" autocomplete="street-address" />
+        </label>
+        <label class="account-profile-grid__wide">
+          Юридический адрес
+          <input name="legalAddress" type="text" value="${escapeHtml(user.legalAddress || latest.legalAddress || "")}" />
+        </label>
+        <label>
+          Доставка по умолчанию
+          <select name="delivery">
+            <option value=""${!(user.delivery || latest.delivery) ? " selected" : ""}>Согласовать</option>
+            <option value="Самовывоз"${(user.delivery || latest.delivery) === "Самовывоз" ? " selected" : ""}>Самовывоз</option>
+            <option value="Транспортная компания"${(user.delivery || latest.delivery) === "Транспортная компания" ? " selected" : ""}>Транспортная компания</option>
+            <option value="До маркетплейса"${(user.delivery || latest.delivery) === "До маркетплейса" ? " selected" : ""}>До маркетплейса</option>
+          </select>
+        </label>
+        <label>
+          Упаковка по умолчанию
+          <select name="packaging">
+            <option value=""${!(user.packaging || latest.packaging) ? " selected" : ""}>Стандартная</option>
+            <option value="Под маркетплейс"${(user.packaging || latest.packaging) === "Под маркетплейс" ? " selected" : ""}>Под маркетплейс</option>
+            <option value="Индивидуальная"${(user.packaging || latest.packaging) === "Индивидуальная" ? " selected" : ""}>Индивидуальная</option>
+          </select>
+        </label>
+        <label class="account-profile-grid__wide">
+          Дополнительные реквизиты
+          <textarea name="companies" rows="3" placeholder="Компания; ИНН; КПП; юридический адрес">${escapeHtml(companiesToText(user))}</textarea>
+        </label>
+        <label class="account-profile-grid__wide">
+          Адреса доставки
+          <textarea name="addresses" rows="3" placeholder="Каждый адрес с новой строки">${escapeHtml(linesToText(user.addresses || []))}</textarea>
+        </label>
+        <label class="account-profile-grid__wide">
+          Файлы макетов
+          <textarea name="layoutFiles" rows="3" placeholder="Названия файлов или ссылки на макеты">${escapeHtml(linesToText(user.layoutFiles || []))}</textarea>
+        </label>
+        <label class="account-profile-grid__wide">
+          Комментарий для заказов
+          <textarea name="orderComment" rows="3">${escapeHtml(user.orderComment || latest.comment || "")}</textarea>
+        </label>
+        <label class="account-profile-grid__wide">
+          Сохраненные комментарии
+          <textarea name="orderComments" rows="3" placeholder="Каждый комментарий с новой строки">${escapeHtml(linesToText(user.orderComments || []))}</textarea>
         </label>
       </div>
     </form>
@@ -5014,10 +5178,12 @@ function downloadOrdersCsv() {
       customer.name || "",
       customer.company || "",
       customer.inn || "",
+      customer.kpp || "",
       customer.phone || "",
       customer.email || order.userEmail || "",
       customer.city || "",
       customer.address || "",
+      customer.legalAddress || "",
       customer.delivery || "",
       customer.packaging || "",
       customer.layoutFileName || "",
@@ -5030,7 +5196,7 @@ function downloadOrdersCsv() {
     ];
   });
   downloadCsv("sobag-orders.csv", [
-    ["Номер", "Дата", "Статус", "Менеджер", "Имя", "Компания", "ИНН", "Телефон", "Email", "Город", "Адрес", "Доставка", "Упаковка", "Макет", "Сумма", "Промокод", "Позиций", "Артикулы", "Комментарий менеджера", "Комментарий клиента"],
+    ["Номер", "Дата", "Статус", "Менеджер", "Имя", "Компания", "ИНН", "КПП", "Телефон", "Email", "Город", "Адрес", "Юр. адрес", "Доставка", "Упаковка", "Макет", "Сумма", "Промокод", "Позиций", "Артикулы", "Комментарий менеджера", "Комментарий клиента"],
     ...rows,
   ]);
   showToast(`Скачано заказов: ${rows.length}.`);
@@ -5048,10 +5214,12 @@ function orderCsvRows(order) {
     ["Имя", customer.name || ""],
     ["Компания", customer.company || ""],
     ["ИНН", customer.inn || ""],
+    ["КПП", customer.kpp || ""],
     ["Телефон", customer.phone || ""],
     ["Email", customer.email || order?.userEmail || ""],
     ["Город", customer.city || ""],
     ["Адрес", customer.address || ""],
+    ["Юр. адрес", customer.legalAddress || ""],
     ["Доставка", customer.delivery || ""],
     ["Упаковка", customer.packaging || ""],
     ["Макет", customer.layoutFileName || ""],
@@ -5093,7 +5261,7 @@ function printOrder(orderId) {
     showToast("Браузер заблокировал печатное окно.");
     return;
   }
-  win.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Заказ ${escapeHtml(order.id || "")}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}h1{font-size:28px}dl{display:grid;grid-template-columns:180px 1fr;gap:8px 16px}dt{color:#666}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f4f4f4}</style></head><body><h1>Заказ ${escapeHtml(order.id || "")}</h1><dl><dt>Статус</dt><dd>${escapeHtml(orderStatusLabel(order.status))}</dd><dt>Дата</dt><dd>${escapeHtml(order.date || order.createdAt || "")}</dd><dt>Покупатель</dt><dd>${escapeHtml(customer.name || customer.company || "")}</dd><dt>Компания</dt><dd>${escapeHtml(customer.company || "")}</dd><dt>ИНН</dt><dd>${escapeHtml(customer.inn || "")}</dd><dt>Телефон</dt><dd>${escapeHtml(customer.phone || "")}</dd><dt>Email</dt><dd>${escapeHtml(customer.email || order.userEmail || "")}</dd><dt>Город</dt><dd>${escapeHtml(customer.city || "")}</dd><dt>Адрес</dt><dd>${escapeHtml(customer.address || "")}</dd><dt>Доставка</dt><dd>${escapeHtml(customer.delivery || "")}</dd><dt>Упаковка</dt><dd>${escapeHtml(customer.packaging || "")}</dd><dt>Макет</dt><dd>${escapeHtml(customer.layoutFileName || "")}</dd><dt>Комментарий</dt><dd>${escapeHtml(customer.comment || "")}</dd><dt>Итого</dt><dd><b>${formatMoney(order.total || 0)}</b></dd></dl><table><thead><tr><th>Артикул</th><th>Наименование</th><th>Параметры</th><th>Кол-во</th><th>Цена</th></tr></thead><tbody>${lines}</tbody></table><script>window.print();</script></body></html>`);
+  win.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Заказ ${escapeHtml(order.id || "")}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}h1{font-size:28px}dl{display:grid;grid-template-columns:180px 1fr;gap:8px 16px}dt{color:#666}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f4f4f4}</style></head><body><h1>Заказ ${escapeHtml(order.id || "")}</h1><dl><dt>Статус</dt><dd>${escapeHtml(orderStatusLabel(order.status))}</dd><dt>Дата</dt><dd>${escapeHtml(order.date || order.createdAt || "")}</dd><dt>Покупатель</dt><dd>${escapeHtml(customer.name || customer.company || "")}</dd><dt>Компания</dt><dd>${escapeHtml(customer.company || "")}</dd><dt>ИНН</dt><dd>${escapeHtml(customer.inn || "")}</dd><dt>КПП</dt><dd>${escapeHtml(customer.kpp || "")}</dd><dt>Телефон</dt><dd>${escapeHtml(customer.phone || "")}</dd><dt>Email</dt><dd>${escapeHtml(customer.email || order.userEmail || "")}</dd><dt>Город</dt><dd>${escapeHtml(customer.city || "")}</dd><dt>Адрес</dt><dd>${escapeHtml(customer.address || "")}</dd><dt>Юр. адрес</dt><dd>${escapeHtml(customer.legalAddress || "")}</dd><dt>Доставка</dt><dd>${escapeHtml(customer.delivery || "")}</dd><dt>Упаковка</dt><dd>${escapeHtml(customer.packaging || "")}</dd><dt>Макет</dt><dd>${escapeHtml(customer.layoutFileName || "")}</dd><dt>Комментарий</dt><dd>${escapeHtml(customer.comment || "")}</dd><dt>Итого</dt><dd><b>${formatMoney(order.total || 0)}</b></dd></dl><table><thead><tr><th>Артикул</th><th>Наименование</th><th>Параметры</th><th>Кол-во</th><th>Цена</th></tr></thead><tbody>${lines}</tbody></table><script>window.print();</script></body></html>`);
   win.document.close();
 }
 
@@ -5433,19 +5601,26 @@ async function submitOrder(form) {
     setFieldError(form, "inn", "ИНН должен содержать 10 или 12 цифр.");
     return;
   }
+  const kpp = String(data.kpp || "").replace(/\D/g, "");
+  if (kpp && kpp.length !== 9) {
+    setFieldError(form, "kpp", "КПП должен содержать 9 цифр.");
+    return;
+  }
   const layoutFile = form.elements.layoutFile?.files?.[0] || null;
   const customer = {
     name: user?.name || data.company || "",
     company: data.company || "",
     inn,
+    kpp,
     phone: data.phone || user?.phone || "",
     email: data.email || user?.email || "",
     city: data.city || "",
     address: data.address || user?.address || "",
-    delivery: data.delivery || "",
-    packaging: data.packaging || "",
-    layoutFileName: layoutFile ? layoutFile.name : "",
-    comment: data.comment || "",
+    legalAddress: data.legalAddress || user?.legalAddress || "",
+    delivery: data.delivery || user?.delivery || "",
+    packaging: data.packaging || user?.packaging || "",
+    layoutFileName: layoutFile ? layoutFile.name : String(data.layoutReference || user?.layoutFiles?.[0] || "").trim(),
+    comment: data.comment || user?.orderComment || "",
   };
   try {
     const result = await apiRequest("/api/orders", {

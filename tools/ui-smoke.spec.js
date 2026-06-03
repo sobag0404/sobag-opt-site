@@ -254,10 +254,27 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
   await expect(page.locator("#accountModal")).toContainText("QA saved cart");
   await page.locator('[data-profile-form] input[name="company"]').fill("QA Company");
   await page.locator('[data-profile-form] input[name="inn"]').fill("1234567890");
+  await page.locator('[data-profile-form] input[name="kpp"]').fill("123456789");
+  await page.locator('[data-profile-form] input[name="legalAddress"]').fill("QA legal address");
+  await page.locator('[data-profile-form] textarea[name="addresses"]').fill("QA address one\nQA address two");
+  await page.locator('[data-profile-form] textarea[name="layoutFiles"]').fill("qa-layout.pdf\nhttps://example.com/qa-layout");
+  await page.locator('[data-profile-form] textarea[name="orderComment"]').fill("QA default order comment");
   await page.locator("[data-profile-form]").getByRole("button", { name: /Сохранить профиль/i }).click();
   await expect
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.users") || "{}")["buyer@example.com"]?.company))
     .toBe("QA Company");
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.users") || "{}")["buyer@example.com"]?.kpp))
+    .toBe("123456789");
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.users") || "{}")["buyer@example.com"]?.addresses || []))
+    .toContain("QA address two");
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.users") || "{}")["buyer@example.com"]?.layoutFiles || []))
+    .toContain("qa-layout.pdf");
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.users") || "{}")["buyer@example.com"]?.orderComment))
+    .toBe("QA default order comment");
   await page.locator("[data-restore-saved-cart]").first().click();
   await expect(page).toHaveURL(/\/cart(?:\.html)?$/);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.cart.buyer@example.com") || "[]").length)).toBe(1);

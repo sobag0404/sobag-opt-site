@@ -139,6 +139,16 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+function uniqueTextList(values, limit = 10, itemLimit = 240) {
+  return [
+    ...new Set(
+      (Array.isArray(values) ? values : [])
+        .map((item) => String(item || "").trim().slice(0, itemLimit))
+        .filter(Boolean)
+    ),
+  ].slice(0, limit);
+}
+
 function imageAttrs(width, height, loading = "lazy") {
   return `width="${width}" height="${height}" loading="${loading}" decoding="async"`;
 }
@@ -333,10 +343,17 @@ function saveOrderRecord(order) {
     users[userKey].orders = [record, ...(users[userKey].orders || [])];
     users[userKey].company = customer.company || users[userKey].company || "";
     users[userKey].inn = customer.inn || users[userKey].inn || "";
+    users[userKey].kpp = customer.kpp || users[userKey].kpp || "";
+    users[userKey].legalAddress = customer.legalAddress || users[userKey].legalAddress || "";
     users[userKey].phone = customer.phone || users[userKey].phone || "";
     users[userKey].city = customer.city || users[userKey].city || "";
     users[userKey].address = customer.address || users[userKey].address || "";
     users[userKey].addresses = [...new Set([customer.address, ...(users[userKey].addresses || [])].filter(Boolean))].slice(0, 10);
+    users[userKey].delivery = customer.delivery || users[userKey].delivery || "";
+    users[userKey].packaging = customer.packaging || users[userKey].packaging || "";
+    users[userKey].layoutFiles = uniqueTextList([customer.layoutFileName, ...(users[userKey].layoutFiles || [])], 20, 240);
+    users[userKey].orderComment = customer.comment || users[userKey].orderComment || "";
+    users[userKey].orderComments = uniqueTextList([customer.comment, ...(users[userKey].orderComments || [])], 10, 500);
     users[userKey].lastCustomer = customer;
     saveUsers(users);
   }
@@ -809,12 +826,15 @@ function fillCheckoutFromProfile() {
   form.elements.email.value = profile.email || "";
   if (form.elements.company) form.elements.company.value = profile.company || profile.lastCustomer?.company || "";
   if (form.elements.inn) form.elements.inn.value = profile.inn || profile.lastCustomer?.inn || "";
+  if (form.elements.kpp) form.elements.kpp.value = profile.kpp || profile.lastCustomer?.kpp || "";
   form.elements.phone.value = profile.phone || "";
   if (form.elements.city) form.elements.city.value = profile.city || profile.lastCustomer?.city || "";
   if (form.elements.address) form.elements.address.value = profile.address || profile.lastCustomer?.address || profile.addresses?.[0] || "";
-  if (form.elements.delivery) form.elements.delivery.value = profile.lastCustomer?.delivery || "";
-  if (form.elements.packaging) form.elements.packaging.value = profile.lastCustomer?.packaging || "";
-  if (form.elements.comment) form.elements.comment.value = profile.lastCustomer?.comment || "";
+  if (form.elements.legalAddress) form.elements.legalAddress.value = profile.legalAddress || profile.lastCustomer?.legalAddress || "";
+  if (form.elements.delivery) form.elements.delivery.value = profile.delivery || profile.lastCustomer?.delivery || "";
+  if (form.elements.packaging) form.elements.packaging.value = profile.packaging || profile.lastCustomer?.packaging || "";
+  if (form.elements.layoutReference) form.elements.layoutReference.value = profile.lastCustomer?.layoutFileName || profile.layoutFiles?.[0] || "";
+  if (form.elements.comment) form.elements.comment.value = profile.orderComment || profile.lastCustomer?.comment || profile.orderComments?.[0] || "";
   showToast("Данные профиля подставлены в форму заказа.");
 }
 
@@ -937,23 +957,31 @@ document.querySelector("#checkoutForm").addEventListener("submit", async (event)
     setFieldError(event.target, "inn", "ИНН должен содержать 10 или 12 цифр.");
     return;
   }
+  const kpp = String(data.kpp || "").replace(/\D/g, "");
+  if (kpp && kpp.length !== 9) {
+    setFieldError(event.target, "kpp", "КПП должен содержать 9 цифр.");
+    return;
+  }
   if (data.consent !== "on") {
     setFieldError(event.target, "consent", "Подтвердите согласие на обработку персональных данных.");
     return;
   }
   const layoutFile = event.target.elements.layoutFile?.files?.[0] || null;
+  const profile = getCurrentUserProfile() || {};
   const customer = {
     name: String(data.name || "").trim(),
     email: String(data.email || "").trim(),
-    company: String(data.company || "").trim(),
+    company: String(data.company || profile.company || "").trim(),
     inn,
-    phone: String(data.phone || "").trim(),
-    city: String(data.city || "").trim(),
-    address: String(data.address || "").trim(),
-    delivery: String(data.delivery || "").trim(),
-    packaging: String(data.packaging || "").trim(),
-    layoutFileName: layoutFile ? layoutFile.name : "",
-    comment: String(data.comment || "").trim(),
+    kpp: kpp || profile.kpp || "",
+    phone: String(data.phone || profile.phone || "").trim(),
+    city: String(data.city || profile.city || "").trim(),
+    address: String(data.address || profile.address || profile.addresses?.[0] || "").trim(),
+    legalAddress: String(data.legalAddress || profile.legalAddress || "").trim(),
+    delivery: String(data.delivery || profile.delivery || "").trim(),
+    packaging: String(data.packaging || profile.packaging || "").trim(),
+    layoutFileName: layoutFile ? layoutFile.name : String(data.layoutReference || profile.layoutFiles?.[0] || "").trim(),
+    comment: String(data.comment || profile.orderComment || "").trim(),
   };
   const order = {
     id: `SO-${Date.now().toString().slice(-6)}`,

@@ -5959,13 +5959,26 @@ body.theme-night .theme-toggle__track::after {
   font-weight: 800;
 }
 
-.account-profile-grid input {
+.account-profile-grid input,
+.account-profile-grid select,
+.account-profile-grid textarea {
   min-height: 40px;
   padding: 0 12px;
   color: var(--on-dark);
   background: var(--canvas);
   border: 1px solid var(--hairline-strong);
   border-radius: var(--control-radius);
+}
+
+.account-profile-grid textarea {
+  min-height: 84px;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.account-profile-grid select {
+  appearance: none;
 }
 
 .account-profile-grid__wide {

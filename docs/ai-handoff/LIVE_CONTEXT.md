@@ -638,3 +638,12 @@ Latest production verification:
   - updated HTML asset cache version to `20260603-account-drafts`;
   - local verification passed: `node --check app.js`, `node --check cart.js`, `node --check api/auth/me.js`, `node --check api/_lib/store.js`, `npm.cmd run check`, and `SOBAG_BASE_URL=http://127.0.0.1:4173 npm.cmd run ui:smoke` with 7/7 passing;
   - next roadmap direction: continue buyer account features with companies/requisites, addresses, saved files/layouts, order comments, and repeat-order polish.
+
+- B2B profile pass on 2026-06-03:
+  - continued the roadmap with buyer account depth: multiple company/requisite records, KPP, legal address, multiple delivery addresses, layout file references, default delivery/packaging, and reusable order comments;
+  - kept the implementation inside existing `/api/auth/me` and `/api/orders`, so no new Vercel Functions were added;
+  - cart checkout and catalog request form now submit KPP, legal address, and layout reference/file name;
+  - "use profile" on the cart page now fills company, INN/KPP, city/address, legal address, delivery, packaging, layout reference, and default comment;
+  - manager/admin order detail, customer detail, order CSV, per-order CSV, and print/PDF view now include the expanded requisites;
+  - updated HTML asset cache version to `20260603-b2b-profile`;
+  - local verification passed: `node --check app.js`, `node --check cart.js`, `node --check api/auth/me.js`, `node --check api/orders.js`, `npm.cmd run check`, and `SOBAG_BASE_URL=http://127.0.0.1:4173 npm.cmd run ui:smoke` with 7/7 passing.

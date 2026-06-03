@@ -5,6 +5,7 @@ const { saveStore } = require("../_lib/store");
 const MAX_CART_LINES = 500;
 const MAX_FAVORITES = 5000;
 const MAX_SAVED_CARTS = 50;
+const MAX_PROFILE_LIST_ITEMS = 20;
 
 function sanitizeCartLine(entry) {
   const key = Array.isArray(entry) ? entry[0] : entry?.key;
@@ -41,6 +42,41 @@ function sanitizeFavorites(items) {
   return [...new Set((Array.isArray(items) ? items : []).map((item) => String(item || "").trim()).filter(Boolean))].slice(0, MAX_FAVORITES);
 }
 
+function sanitizeTextList(items, limit = MAX_PROFILE_LIST_ITEMS, itemLimit = 240) {
+  return [
+    ...new Set(
+      (Array.isArray(items) ? items : [])
+        .map((item) => String(item || "").trim().slice(0, itemLimit))
+        .filter(Boolean)
+    ),
+  ].slice(0, limit);
+}
+
+function sanitizeCompanies(items, primary = {}) {
+  const prepared = [
+    primary,
+    ...(Array.isArray(items) ? items : []),
+  ]
+    .map((item) => {
+      const name = String(item?.name || item?.company || "").trim().slice(0, 180);
+      const inn = String(item?.inn || "").replace(/\D/g, "").slice(0, 12);
+      const kpp = String(item?.kpp || "").replace(/\D/g, "").slice(0, 9);
+      const legalAddress = String(item?.legalAddress || item?.address || "").trim().slice(0, 240);
+      if (!name && !inn) return null;
+      return { name, inn, kpp, legalAddress };
+    })
+    .filter(Boolean);
+  const seen = new Set();
+  return prepared
+    .filter((company) => {
+      const key = company.inn || company.name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 10);
+}
+
 function sanitizeProfile(profile = {}, existing = {}) {
   const text = (value, limit = 160) => String(value || "").trim().slice(0, limit);
   const address = text(profile.address, 240);
@@ -56,9 +92,22 @@ function sanitizeProfile(profile = {}, existing = {}) {
     phone: text(profile.phone || existing.phone, 80),
     company: text(profile.company || existing.company, 180),
     inn: text(String(profile.inn || existing.inn || "").replace(/\D/g, ""), 12),
+    kpp: text(String(profile.kpp || existing.kpp || "").replace(/\D/g, ""), 9),
+    legalAddress: text(profile.legalAddress || existing.legalAddress, 240),
     city: text(profile.city || existing.city, 120),
     address,
+    delivery: text(profile.delivery || existing.delivery, 120),
+    packaging: text(profile.packaging || existing.packaging, 120),
+    orderComment: text(profile.orderComment || existing.orderComment, 500),
     addresses: [...new Set(addresses)].slice(0, 10),
+    layoutFiles: sanitizeTextList([...(Array.isArray(profile.layoutFiles) ? profile.layoutFiles : []), ...(Array.isArray(existing.layoutFiles) ? existing.layoutFiles : [])], 20, 240),
+    orderComments: sanitizeTextList([profile.orderComment, ...(Array.isArray(profile.orderComments) ? profile.orderComments : []), ...(Array.isArray(existing.orderComments) ? existing.orderComments : [])], 10, 500),
+    companies: sanitizeCompanies(profile.companies, {
+      name: profile.company || existing.company,
+      inn: profile.inn || existing.inn,
+      kpp: profile.kpp || existing.kpp,
+      legalAddress: profile.legalAddress || existing.legalAddress,
+    }),
   };
 }
 

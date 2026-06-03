@@ -46,10 +46,12 @@ module.exports = async function handler(req, res) {
         name: String(customer.name || user?.name || ""),
         company: String(customer.company || ""),
         inn: String(customer.inn || ""),
+        kpp: String(customer.kpp || ""),
         phone: String(customer.phone || user?.phone || ""),
         email: String(customer.email || user?.email || ""),
         city: String(customer.city || ""),
         address: String(customer.address || user?.address || ""),
+        legalAddress: String(customer.legalAddress || ""),
         delivery: String(customer.delivery || ""),
         packaging: String(customer.packaging || ""),
         layoutFileName: String(customer.layoutFileName || ""),
@@ -65,16 +67,40 @@ module.exports = async function handler(req, res) {
     if (user?.email && store.users[user.email]) {
       const existing = store.users[user.email];
       const address = String(record.customer.address || "").trim();
+      const primaryCompany = {
+        name: record.customer.company || existing.company || "",
+        inn: record.customer.inn || existing.inn || "",
+        kpp: record.customer.kpp || existing.kpp || "",
+        legalAddress: record.customer.legalAddress || existing.legalAddress || "",
+      };
+      const seenCompanies = new Set();
+      const companies = [primaryCompany, ...(existing.companies || [])]
+        .filter((company) => company?.name || company?.inn)
+        .filter((company) => {
+          const key = company.inn || String(company.name || "").toLowerCase();
+          if (seenCompanies.has(key)) return false;
+          seenCompanies.add(key);
+          return true;
+        })
+        .slice(0, 10);
       store.users[user.email] = {
         ...existing,
         name: existing.name || record.customer.name,
         company: record.customer.company || existing.company || "",
         inn: record.customer.inn || existing.inn || "",
+        kpp: record.customer.kpp || existing.kpp || "",
+        legalAddress: record.customer.legalAddress || existing.legalAddress || "",
         phone: record.customer.phone || existing.phone || "",
         email: existing.email,
         city: record.customer.city || existing.city || "",
         address: address || existing.address || "",
         addresses: uniqueNonEmpty([address, ...(existing.addresses || [])]).slice(0, 10),
+        delivery: record.customer.delivery || existing.delivery || "",
+        packaging: record.customer.packaging || existing.packaging || "",
+        layoutFiles: uniqueNonEmpty([record.customer.layoutFileName, ...(existing.layoutFiles || [])]).slice(0, 20),
+        orderComment: record.customer.comment || existing.orderComment || "",
+        orderComments: uniqueNonEmpty([record.customer.comment, ...(existing.orderComments || [])]).slice(0, 10),
+        companies,
         lastCustomer: record.customer,
         updatedAt: new Date().toISOString(),
       };

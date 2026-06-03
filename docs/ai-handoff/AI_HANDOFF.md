@@ -175,13 +175,24 @@ Large product-photo folders must not be committed to GitHub/Vercel.
 - HTML asset version is `20260603-account-drafts`.
 - No secrets or production credentials were added.
 
+## Latest B2B Profile Update
+
+- Date: 2026-06-03.
+- Continued the roadmap after saved carts: buyer profile now supports KPP, legal address, multiple company/requisite records, multiple delivery addresses, layout file references, default delivery/packaging, and reusable order comments.
+- Cart checkout and catalog request form submit the new customer fields.
+- Cart "use profile" fills the expanded B2B fields.
+- `/api/auth/me` and `/api/orders` persist the expanded profile/order data without adding new Vercel Functions.
+- Manager/admin order detail, customer detail, CSV exports, and print/PDF view include the expanded requisites.
+- HTML asset version is `20260603-b2b-profile`.
+- No secrets or production credentials were added.
+
 ## Verification Status
 
 Latest verified checks before this handoff update:
 - `node --check app.js`
 - `node --check cart.js`
 - `node --check api/auth/me.js`
-- `node --check api/_lib/store.js`
+- `node --check api/orders.js`
 - `npm run check`
 - `SOBAG_BASE_URL=http://127.0.0.1:4173 npm run ui:smoke` with 7/7 passing, including saved cart draft/profile checks.
 - extra Playwright spot-check for `/catalog?category=Подушки`, product modal variant matrix/related products, and `/cart`.
