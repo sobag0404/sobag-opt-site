@@ -5722,6 +5722,219 @@ body.theme-night .theme-toggle__track::after {
   text-align: right;
 }
 
+.active-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.active-filter-chips.is-hidden {
+  display: none;
+}
+
+.active-filter-chips button,
+.catalog-load-more .ghost-button {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--control-radius);
+}
+
+.active-filter-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--on-dark);
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline-strong);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.active-filter-chips svg {
+  width: 14px;
+  height: 14px;
+}
+
+.catalog-load-more {
+  display: grid;
+  place-items: center;
+  margin-top: 22px;
+}
+
+.catalog-recent,
+.related-products {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--hairline);
+}
+
+.catalog-recent.is-hidden {
+  display: none;
+}
+
+.catalog-recent__head,
+.related-products__head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.catalog-recent__head h3,
+.related-products__head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.catalog-recent__head span,
+.related-products__head span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.mini-product-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mini-product-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  color: var(--on-dark);
+  text-align: left;
+  background: var(--canvas);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--control-radius);
+}
+
+.mini-product-card img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--surface-soft);
+}
+
+.mini-product-card span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mini-product-card strong {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.mini-product-card b {
+  font-size: 13px;
+}
+
+.variant-matrix {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+}
+
+.variant-matrix__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.variant-matrix__head strong,
+.variant-matrix__head span {
+  display: block;
+}
+
+.variant-matrix__head strong {
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.variant-matrix__head span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.variant-matrix__table {
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--hairline-strong);
+  background: var(--canvas);
+}
+
+.variant-matrix__row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1.5fr) repeat(3, minmax(74px, 0.8fr)) minmax(76px, 0.7fr) 64px 42px;
+  min-width: 720px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.variant-matrix__row:last-child {
+  border-bottom: 0;
+}
+
+.variant-matrix__row > * {
+  min-width: 0;
+  padding: 8px;
+  border-right: 1px solid var(--hairline);
+  font-size: 12px;
+}
+
+.variant-matrix__row > *:last-child {
+  border-right: 0;
+}
+
+.variant-matrix__row--head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.variant-matrix input {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 6px;
+  text-align: center;
+  border: 0;
+  background: var(--surface-soft);
+}
+
+.variant-matrix__row button {
+  display: grid;
+  place-items: center;
+  min-height: 32px;
+  color: var(--canvas);
+  background: var(--on-dark);
+  border: 0;
+  font-weight: 900;
+}
+
+.cart-quote-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.cart-quote-actions .ghost-button {
+  justify-content: center;
+  width: 100%;
+}
+
 @media (max-width: 640px) {
   .topline__inner,
   .topline__nav {
@@ -5751,6 +5964,21 @@ body.theme-night .theme-toggle__track::after {
 
   .theme-toggle {
     width: 100%;
+  }
+
+  .mini-product-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalog-recent__head,
+  .related-products__head,
+  .variant-matrix__head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .variant-matrix__table {
+    max-height: 240px;
   }
 
   .footer__brand-row,

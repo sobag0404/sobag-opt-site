@@ -500,6 +500,7 @@ const STORAGE = {
   theme: "sobag.theme.v1",
   guestCart: "sobag.cart.guest",
   orders: "sobag.orders.v1",
+  recentProducts: "sobag.recentProducts.v1",
 };
 
 let products = loadProducts();
@@ -524,8 +525,10 @@ const state = {
   selectedHoliday: "",
   search: "",
   sort: "popular",
+  visibleLimit: 120,
   cart: new Map(),
   favorites: new Set(cleanFavoriteIds(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"))),
+  recentProducts: cleanFavoriteIds(JSON.parse(localStorage.getItem(STORAGE.recentProducts) || "[]")),
   currentUser: localStorage.getItem(STORAGE.user) || "",
   activeProductId: null,
   activeVariant: {
@@ -541,6 +544,10 @@ const state = {
 const productGrid = document.querySelector("#productGrid");
 const productCount = document.querySelector("#productCount");
 const filterGroups = document.querySelector("#filterGroups");
+const activeFilterChips = document.querySelector("#activeFilterChips");
+const catalogLoadMore = document.querySelector("#catalogLoadMore");
+const recentProductsSection = document.querySelector("#recentProductsSection");
+const recentProductsNode = document.querySelector("#recentProducts");
 const categoryTiles = document.querySelector("#categoryTiles");
 const actualTiles = document.querySelector("#actualTiles");
 const collectionTiles = document.querySelector("#collectionTiles");
@@ -839,6 +846,7 @@ function applyCatalogUrl(targetUrl) {
   state.search = params.get("q") || "";
   if (searchInput) searchInput.value = state.search;
   Object.values(state.filters).forEach((bucket) => bucket.clear());
+  resetVisibleProducts();
   syncCatalogRoute();
   renderCatalogShell();
   renderFilters();
@@ -855,6 +863,10 @@ function hasActiveCatalogState() {
       state.search.trim() ||
       Object.values(state.filters).some((bucket) => bucket.size)
   );
+}
+
+function resetVisibleProducts() {
+  state.visibleLimit = 120;
 }
 
 function navigateWithinSite(url) {
@@ -1936,6 +1948,10 @@ function getQuantityDiscount(qty) {
   return quantityTiers.reduce((current, tier) => (qty >= tier.qty ? tier.discount : current), 0);
 }
 
+function getBasketDiscount(amount) {
+  return basketDiscountTiers.reduce((current, tier) => (amount >= tier.amount ? tier.discount : current), 0);
+}
+
 function discountedUnitPrice(price, discount) {
   return Math.round(price * (1 - discount / 100));
 }
@@ -2000,7 +2016,7 @@ function updateCustomCalculator() {
   }
 }
 
-function lineTotals(line, discount = getQuantityDiscount(line.qty)) {
+function lineTotals(line, discount = getBasketDiscount(getCartTotals().subtotal)) {
   const subtotal = line.variant.price * line.qty;
   const total = discountedUnitPrice(line.variant.price, discount) * line.qty;
   return { subtotal, discount, total };
@@ -2010,7 +2026,7 @@ function getCartTotals() {
   const lines = [...state.cart.values()];
   const qty = lines.reduce((sum, line) => sum + line.qty, 0);
   const subtotal = lines.reduce((sum, line) => sum + line.variant.price * line.qty, 0);
-  const discount = getQuantityDiscount(qty);
+  const discount = getBasketDiscount(subtotal);
   const total = Math.round(subtotal * (1 - discount / 100));
   return { subtotal, total, qty, discount };
 }
@@ -2246,6 +2262,106 @@ function getFilteredProducts() {
     .map(({ product }) => product);
 }
 
+function activeFilterItems() {
+  const items = [];
+  if (state.selectedCategory) items.push({ label: state.selectedCategory, key: "selectedCategory" });
+  if (state.selectedCollection) items.push({ label: state.selectedCollection, key: "selectedCollection" });
+  if (state.selectedHoliday) items.push({ label: state.selectedHoliday, key: "selectedHoliday" });
+  if (state.search.trim()) items.push({ label: `Поиск: ${state.search.trim()}`, key: "search" });
+  Object.entries(state.filters).forEach(([key, values]) => {
+    values.forEach((value) => items.push({ label: value, key, value }));
+  });
+  return items;
+}
+
+function renderActiveFilterChips() {
+  if (!activeFilterChips) return;
+  const items = activeFilterItems();
+  activeFilterChips.classList.toggle("is-hidden", !items.length);
+  activeFilterChips.innerHTML = items
+    .map(
+      (item) => `
+        <button type="button" data-clear-filter="${escapeHtml(item.key)}" data-clear-value="${escapeHtml(item.value || "")}">
+          <span>${escapeHtml(item.label)}</span>
+          <i data-lucide="x"></i>
+        </button>
+      `
+    )
+    .join("");
+}
+
+function miniProductCard(product) {
+  return `
+    <button class="mini-product-card" type="button" data-open-product="${escapeHtml(product.id)}">
+      <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" ${imageAttrs(160, 160)} />
+      <span>${escapeHtml(product.baseSku)}</span>
+      <strong>${escapeHtml(product.name)}</strong>
+      <b>от ${formatMoney(product.minPrice)}</b>
+    </button>
+  `;
+}
+
+function saveRecentProduct(productId) {
+  if (!productId) return;
+  state.recentProducts = [productId, ...state.recentProducts.filter((id) => id !== productId)].slice(0, 12);
+  localStorage.setItem(STORAGE.recentProducts, JSON.stringify(state.recentProducts));
+}
+
+function relatedProducts(product, limit = 4) {
+  if (!product) return [];
+  const categories = new Set(product.categories || [product.category].filter(Boolean));
+  const collections = new Set(product.collections || []);
+  const holidays = new Set(product.holidays || []);
+  return products
+    .filter((item) => item.id !== product.id && !item.hidden)
+    .map((item) => {
+      let score = 0;
+      (item.categories || [item.category]).forEach((value) => {
+        if (categories.has(value)) score += 4;
+      });
+      (item.collections || []).forEach((value) => {
+        if (collections.has(value)) score += 6;
+      });
+      (item.holidays || []).forEach((value) => {
+        if (holidays.has(value)) score += 5;
+      });
+      return { item, score };
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score || b.item.popular - a.item.popular)
+    .slice(0, limit)
+    .map(({ item }) => item);
+}
+
+function renderRecentProducts() {
+  if (!recentProductsSection || !recentProductsNode) return;
+  const currentList = new Set(getFilteredProducts().map((product) => product.id));
+  const recent = state.recentProducts
+    .map((id) => products.find((product) => product.id === id && !product.hidden))
+    .filter((product) => product && !currentList.has(product.id))
+    .slice(0, 6);
+  recentProductsSection.classList.toggle("is-hidden", recent.length === 0);
+  recentProductsNode.innerHTML = recent.map(miniProductCard).join("");
+}
+
+function clearCatalogFilter(key, value = "") {
+  if (key === "selectedCategory") state.selectedCategory = "";
+  else if (key === "selectedCollection") state.selectedCollection = "";
+  else if (key === "selectedHoliday") state.selectedHoliday = "";
+  else if (key === "search") {
+    state.search = "";
+    if (searchInput) searchInput.value = "";
+  } else if (state.filters[key]) {
+    if (value) state.filters[key].delete(value);
+    else state.filters[key].clear();
+  }
+  resetVisibleProducts();
+  syncCatalogRoute();
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
+}
+
 function renderCatalogHome() {
   if (!categoryTiles || !actualTiles || !collectionTiles || !holidayTiles) return;
   const content = getSiteContent();
@@ -2364,6 +2480,17 @@ function setMetaContent(selector, content) {
   node.setAttribute("content", content);
 }
 
+function setJsonLd(id, data) {
+  let node = document.head.querySelector(`script#${id}`);
+  if (!node) {
+    node = document.createElement("script");
+    node.id = id;
+    node.type = "application/ld+json";
+    document.head.appendChild(node);
+  }
+  node.textContent = JSON.stringify(data);
+}
+
 function updateCatalogSeo() {
   if (!document.body.classList.contains("catalog-page")) return;
   const content = getSiteContent();
@@ -2387,6 +2514,29 @@ function updateCatalogSeo() {
     document.head.appendChild(canonical);
   }
   canonical.setAttribute("href", `${location.origin}${location.pathname}${location.search}`);
+  setJsonLd("sobag-organization-jsonld", {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Sobag Opt",
+    url: location.origin,
+    email: getSiteContent().footerEmail || "opt@sobag-shop.online",
+    telephone: getSiteContent().footerPhone || "",
+  });
+  setJsonLd("sobag-catalog-jsonld", {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: titleParts.join(" · "),
+    description,
+    url: `${location.origin}${location.pathname}${location.search}`,
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Sobag Opt", item: location.origin },
+        { "@type": "ListItem", position: 2, name: "Каталог", item: `${location.origin}/catalog` },
+        ...(titleParts.length ? [{ "@type": "ListItem", position: 3, name: titleParts.join(" · "), item: `${location.origin}${location.pathname}${location.search}` }] : []),
+      ],
+    },
+  });
 }
 
 function updateFilterToggle() {
@@ -2406,6 +2556,7 @@ function openCatalogCategory(category) {
   state.selectedCollection = "";
   state.selectedHoliday = "";
   state.filters.category.clear();
+  resetVisibleProducts();
   syncCatalogRoute();
   renderCatalogShell();
   renderFilters();
@@ -2422,6 +2573,7 @@ function openCatalogCollection(collection) {
   state.selectedCollection = collection;
   state.selectedHoliday = "";
   state.filters.collection.clear();
+  resetVisibleProducts();
   syncCatalogRoute();
   renderCatalogShell();
   renderFilters();
@@ -2438,6 +2590,7 @@ function openCatalogHoliday(holiday) {
   state.selectedCollection = "";
   state.selectedHoliday = holiday;
   state.filters.holiday.clear();
+  resetVisibleProducts();
   syncCatalogRoute();
   renderCatalogShell();
   renderFilters();
@@ -2472,6 +2625,7 @@ function backToCatalogHome() {
   state.search = "";
   if (searchInput) searchInput.value = "";
   Object.values(state.filters).forEach((bucket) => bucket.clear());
+  resetVisibleProducts();
   syncCatalogRoute();
   renderCatalogShell();
   renderFilters();
@@ -2520,7 +2674,9 @@ function renderFilters() {
 function renderProducts() {
   if (!productGrid || !productCount) return;
   const list = getFilteredProducts();
+  const visibleList = list.slice(0, state.visibleLimit);
   renderSearchSuggestions();
+  renderActiveFilterChips();
   productCount.textContent = `${list.length} ${productWord(list.length)}`;
   if (!list.length) {
     productGrid.innerHTML = `
@@ -2531,10 +2687,12 @@ function renderProducts() {
         ${isFavoritesPage ? `<button class="ghost-button" type="button" data-nav="catalog.html">в каталог</button>` : ""}
       </div>
     `;
+    if (catalogLoadMore) catalogLoadMore.innerHTML = "";
+    renderRecentProducts();
     if (window.lucide) window.lucide.createIcons();
     return;
   }
-  productGrid.innerHTML = list
+  productGrid.innerHTML = visibleList
     .map((product) => {
       const favorite = state.favorites.has(product.id) ? " is-active" : "";
       const favoritePressed = state.favorites.has(product.id) ? "true" : "false";
@@ -2566,6 +2724,15 @@ function renderProducts() {
       `;
     })
     .join("");
+
+  if (catalogLoadMore) {
+    catalogLoadMore.innerHTML =
+      list.length > visibleList.length
+        ? `<button class="ghost-button" type="button" data-show-more-products>Показать ещё ${Math.min(120, list.length - visibleList.length)} из ${list.length - visibleList.length}</button>`
+        : "";
+  }
+
+  renderRecentProducts();
 
   if (window.lucide) window.lucide.createIcons();
 }
@@ -2658,10 +2825,71 @@ function findVariant(product, selection = state.activeVariant) {
   );
 }
 
+function variantMatrixHtml(product) {
+  const totals = getCartTotals();
+  return `
+    <div class="variant-matrix">
+      <div class="variant-matrix__head">
+        <div>
+          <strong>Оптовые варианты</strong>
+          <span>Каждая строка = отдельный артикул для прайса и заказа</span>
+        </div>
+        <button class="ghost-button" type="button" data-download-product-price="${escapeHtml(product.id)}">
+          <i data-lucide="download"></i>
+          Прайс
+        </button>
+      </div>
+      <div class="variant-matrix__table" role="table" aria-label="Варианты товара">
+        <div role="row" class="variant-matrix__row variant-matrix__row--head">
+          <span>Артикул</span>
+          <span>Тип</span>
+          <span>Размер</span>
+          <span>Материал</span>
+          <span>Цена</span>
+          <span>Кол-во</span>
+          <span></span>
+        </div>
+        ${product.variants
+          .map((variant) => {
+            const unit = discountedUnitPrice(variant.price, getBasketDiscount(totals.subtotal));
+            return `
+              <div role="row" class="variant-matrix__row">
+                <span title="${escapeHtml(variant.sku)}">${escapeHtml(variant.sku)}</span>
+                <span>${escapeHtml(variant.type)}</span>
+                <span>${escapeHtml(variant.size)}</span>
+                <span>${escapeHtml(variant.material)}</span>
+                <strong>${formatMoney(unit)}</strong>
+                <input type="number" min="0" step="1" value="0" data-matrix-qty="${escapeHtml(variant.sku)}" aria-label="Количество ${escapeHtml(variant.sku)}" />
+                <button type="button" data-add-matrix-variant="${escapeHtml(product.id)}" data-variant-sku="${escapeHtml(variant.sku)}">+</button>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function relatedProductsHtml(product) {
+  const list = relatedProducts(product, 4);
+  if (!list.length) return "";
+  return `
+    <section class="related-products" aria-label="Похожие товары">
+      <div class="related-products__head">
+        <h3>Похожие принты</h3>
+        <span>Ещё товары из близких категорий и подборок</span>
+      </div>
+      <div class="mini-product-row">
+        ${list.map(miniProductCard).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function productModalHtml(product) {
   const variant = findVariant(product);
-  const previewQty = getCartTotals().qty + state.activeVariant.qty;
-  const discount = getQuantityDiscount(previewQty);
+  const previewSubtotal = getCartTotals().subtotal + variant.price * state.activeVariant.qty;
+  const discount = getBasketDiscount(previewSubtotal);
   const unitPrice = discountedUnitPrice(variant.price, discount);
   const total = unitPrice * state.activeVariant.qty;
   const basketDiscountHint = getBasketDiscountHint(getCartTotals().subtotal + variant.price * state.activeVariant.qty);
@@ -2703,6 +2931,7 @@ function productModalHtml(product) {
                   .map((tag) => `<button type="button" class="detail-tag" data-open-holiday="${tag}">${tag}</button>`)
                   .join("")}
               </div>
+              ${relatedProductsHtml(product)}
             </div>
           </div>
           <aside class="product-detail__options">
@@ -2718,6 +2947,7 @@ function productModalHtml(product) {
             ${variantControls("type", "Тип товара", product.types)}
             ${variantControls("size", "Размер", product.sizes)}
             ${variantControls("material", "Материал", product.materials)}
+            ${variantMatrixHtml(product)}
             <div class="detail-qty">
               <label>
                 Количество, шт.
@@ -2770,7 +3000,9 @@ function variantControls(key, title, options) {
 
 function openProduct(productId) {
   const product = products.find((item) => item.id === productId);
+  if (!product) return;
   state.activeProductId = productId;
+  saveRecentProduct(productId);
   state.activeVariant = {
     type: product.types[0],
     size: product.sizes.includes("40x40") ? "40x40" : product.sizes[0],
@@ -2791,7 +3023,7 @@ function refreshProductModal() {
   state.activeVariant.qty = qty;
   const detailQtyInput = document.querySelector("#detailQty");
   if (detailQtyInput) detailQtyInput.value = qty;
-  const discount = getQuantityDiscount(getCartTotals().qty + qty);
+  const discount = getBasketDiscount(getCartTotals().subtotal + variant.price * qty);
   const unitPrice = discountedUnitPrice(variant.price, discount);
   const basketDiscountHint = getBasketDiscountHint(getCartTotals().subtotal + variant.price * qty);
   document.querySelector("#selectedSku").textContent = variant.sku;
@@ -2807,6 +3039,44 @@ function refreshProductModal() {
   modal.querySelectorAll(".variant-option").forEach((button) => {
     button.classList.toggle("is-active", state.activeVariant[button.dataset.variantKey] === button.dataset.variantValue);
   });
+}
+
+function addVariantLineToCart(product, variant, qty) {
+  if (!product || !variant || !qty) {
+    showToast("Укажите количество товара перед добавлением в корзину.");
+    return false;
+  }
+  const key = `${product.id}:${variant.sku}`;
+  const existing = state.cart.get(key);
+  state.cart.set(key, {
+    key,
+    productId: product.id,
+    productName: variant.name,
+    productImage: product.image,
+    variant,
+    qty: existing ? existing.qty + qty : qty,
+  });
+  renderCart();
+  return true;
+}
+
+function addMatrixVariantToCart(productId, variantSku) {
+  const product = products.find((item) => item.id === productId);
+  const variant = product?.variants.find((item) => item.sku === variantSku);
+  const input = document.querySelector(`[data-matrix-qty="${CSS.escape(variantSku)}"]`);
+  const qty = Math.max(0, Number(input?.value || 0));
+  if (!addVariantLineToCart(product, variant, qty)) return;
+  if (input) input.value = 0;
+  showToast("Вариант добавлен в корзину.");
+}
+
+function downloadProductPriceCsv(productId) {
+  const product = products.find((item) => item.id === productId);
+  if (!product) return;
+  downloadCsv(`sobag-product-${product.baseSku || product.id}-prices.csv`, [
+    ["Основной артикул", "Артикул варианта", "Наименование", "Тип", "Размер", "Материал", "Цена"],
+    ...product.variants.map((variant) => [product.baseSku, variant.sku, variant.name, variant.type, variant.size, variant.material, variant.price]),
+  ]);
 }
 
 function addVariantToCart(productId) {
@@ -5069,13 +5339,28 @@ function boot() {
       backToCatalogHome();
       return;
     }
+    if (button.dataset.clearFilter) {
+      clearCatalogFilter(button.dataset.clearFilter, button.dataset.clearValue || "");
+      return;
+    }
+    if (button.dataset.showMoreProducts !== undefined) {
+      state.visibleLimit += 120;
+      renderProducts();
+      return;
+    }
     if (button.dataset.copySku) {
       copyText(button.dataset.copySku);
       return;
     }
     if (button.id === "accountButton" || button.dataset.openAccount !== undefined) openAccount();
     if (button.dataset.closeModal !== undefined) closeModal();
-    if (button.dataset.openProduct) openProduct(button.dataset.openProduct);
+    if (button.dataset.openProduct) {
+      const currentModal = activeModal();
+      if (currentModal) currentModal.remove();
+      document.body.classList.remove("modal-open");
+      openProduct(button.dataset.openProduct);
+      return;
+    }
     if (button.dataset.detailImage) {
       const image = document.querySelector("#detailMainImage");
       if (image) image.src = button.dataset.detailImage;
@@ -5094,6 +5379,14 @@ function boot() {
       return;
     }
     if (button.dataset.addVariant) addVariantToCart(button.dataset.addVariant);
+    if (button.dataset.addMatrixVariant) {
+      addMatrixVariantToCart(button.dataset.addMatrixVariant, button.dataset.variantSku || "");
+      return;
+    }
+    if (button.dataset.downloadProductPrice) {
+      downloadProductPriceCsv(button.dataset.downloadProductPrice);
+      return;
+    }
     if (button.dataset.repeatOrder) {
       repeatOrder(button.dataset.repeatOrder);
       closeModal();
@@ -5257,6 +5550,12 @@ function boot() {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (event.target?.id === "searchInput" && event.key === "Enter") {
+      event.preventDefault();
+      const query = event.target.value.trim();
+      if (query) navigateWithinSite(`catalog.html?q=${encodeURIComponent(query)}`);
+      return;
+    }
     const modal = activeModal();
     if (modal) {
       if (event.key === "Escape") {
@@ -5284,6 +5583,8 @@ function boot() {
   document.addEventListener("input", (event) => {
     if (event.target.id === "searchInput") {
       state.search = event.target.value;
+      resetVisibleProducts();
+      if (!catalogListing && state.search.trim().length >= 2) return;
       syncCatalogRoute();
       renderCatalogShell();
       renderProducts();
@@ -5308,11 +5609,13 @@ function boot() {
       const bucket = state.filters[event.target.dataset.filter];
       if (event.target.checked) bucket.add(event.target.value);
       else bucket.delete(event.target.value);
+      resetVisibleProducts();
       renderFilters();
       renderProducts();
     }
     if (event.target.id === "sortSelect") {
       state.sort = event.target.value;
+      resetVisibleProducts();
       renderProducts();
     }
     if (event.target.id === "excelInput" && event.target.files[0]) importExcel(event.target.files[0]);

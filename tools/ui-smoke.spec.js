@@ -248,6 +248,8 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
 
   await expect(page.locator("#catalogTitle")).toContainText(category);
   await expect(page.locator('[data-filter-group="category"]')).toHaveCount(0);
+  await expect(page.locator('#activeFilterChips [data-clear-filter="selectedCategory"]')).toHaveCount(1);
+  await expect(page.locator("[data-show-more-products]")).toBeVisible();
   await expect(page.locator(".product-card")).toHaveCount(await page.locator(".product-card").count());
 
   const firstCard = page.locator(".product-card").first();
@@ -257,6 +259,10 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
 
   await expect(page.locator("#productModal")).toBeVisible();
   await expect(page.locator("#detailQty")).toHaveValue("0");
+  await expect(page.locator(".variant-matrix__row")).toHaveCount(await page.locator(".variant-matrix__row").count());
+  await expect(page.locator(".variant-matrix__row").first()).toBeVisible();
+  await expect(page.locator(".related-products .mini-product-card")).toHaveCount(await page.locator(".related-products .mini-product-card").count());
+  await expect(page.locator(".related-products .mini-product-card").first()).toBeVisible();
   const firstSku = await page.locator("#selectedSku").innerText();
   await expect(firstSku.toLocaleLowerCase("ru-RU")).toContain(baseSku.trim().toLocaleLowerCase("ru-RU"));
 
@@ -271,6 +277,12 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await page.locator("[data-add-variant]").click();
   await expect(page.locator("#productModal")).toHaveCount(0);
   await expect(page.locator("#cartCount")).not.toHaveText("0");
+
+  await page.goto(`${BASE_URL}/cart`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#saveCartDraftButton")).toBeVisible();
+  await expect(page.locator("#downloadCartQuoteButton")).toBeVisible();
+  await expect(page.locator("#printCartQuoteButton")).toBeVisible();
+  await expect(page.locator(".cart-scale-step")).toHaveCount(4);
 });
 
 test("search prioritizes exact sku and keeps suggestions for fuzzy queries", async ({ page }) => {

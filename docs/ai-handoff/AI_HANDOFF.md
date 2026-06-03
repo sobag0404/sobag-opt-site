@@ -1,6 +1,6 @@
 # Sobag Opt Site AI Handoff
 
-Last updated: 2026-05-29
+Last updated: 2026-06-03
 
 ## Project
 
@@ -13,7 +13,7 @@ Repository:
 - Vercel fallback/project domain: `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-- `6c7eb4a Prevent same-page navigation flicker`
+- `2a36944 Record production verification`
 
 ## Current State
 
@@ -71,6 +71,19 @@ Backend/storage:
   - cart page has the same same-route/placeholder guard.
 - Catalog product cards no longer replay entrance animation on every product render.
 - Catalog home tiles animate only on first render.
+- Catalog B2B UX pass was added on 2026-06-03:
+  - active filter chips above the product grid;
+  - first 120 products rendered with "show more" pagination to reduce catalog DOM weight;
+  - recently viewed products;
+  - related products inside the product modal;
+  - variant matrix for type/size/material/SKU/price/quick quantity;
+  - product price CSV download from the modal;
+  - Organization, CollectionPage, and BreadcrumbList JSON-LD on catalog states.
+- Cart page now behaves more like a commercial proposal:
+  - discount is calculated from basket amount;
+  - save draft;
+  - download CSV;
+  - print commercial proposal.
 - GitHub access audit was performed:
   - repo is private;
   - only collaborator found: `sobag0404`;
@@ -155,10 +168,9 @@ Large product-photo folders must not be committed to GitHub/Vercel.
 Latest verified checks before this handoff update:
 - `node --check app.js`
 - `node --check cart.js`
-- `node --check api/auth/me.js`
 - `npm run check`
-- `npm run autofix`
 - `npm run ui:smoke`
+- extra Playwright spot-check for `/catalog?category=Подушки`, product modal variant matrix/related products, and `/cart`.
 
 ## Current Focus
 

@@ -92,7 +92,16 @@
                 <option value="minQty">Минимальная партия</option>
               </select>
             </div>
+            <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
             <div id="productGrid" class="product-grid"></div>
+            <div class="catalog-load-more" id="catalogLoadMore"></div>
+            <section class="catalog-recent is-hidden" id="recentProductsSection" aria-label="Недавно смотрели">
+              <div class="catalog-recent__head">
+                <h3>Недавно смотрели</h3>
+                <span>Быстрый возврат к открытым позициям</span>
+              </div>
+              <div class="mini-product-row" id="recentProducts"></div>
+            </section>
           </div>
 
           <aside class="request-panel" id="request" aria-label="Корзина">

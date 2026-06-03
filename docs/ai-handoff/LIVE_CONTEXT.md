@@ -615,3 +615,13 @@ Latest production verification:
   - manual Vercel production deploy succeeded after the function-count fix and aliased `https://sobag-shop.online`;
   - production verification passed for `/`, `/catalog`, `/cart`, `/robots.txt`, `/sitemap.xml`, and `/api/health`: public pages serve `20260602-workflow`, SEO files return 200, storage is ready;
   - production Playwright spot-check passed: no horizontal overflow on home/catalog, catalog home shows 6 categories, opening the first category shows 517 product cards, checkout/request forms expose the new fields, and there were no page console errors in the checked paths.
+
+- B2B UX benchmark pass on 2026-06-03:
+  - implemented the first production-safe slice of the large e-commerce improvement plan without adding new Vercel Functions, to stay under the Hobby plan limit;
+  - catalog now renders active filter chips, a capped first page of 120 products, a "show more" control, recently viewed products, and related products in the product modal;
+  - product modal now includes a B2B variant matrix: each SKU row shows type, size, material, basket-discounted price, quick quantity, add button, and a product price CSV download;
+  - cart discounts now use the total basket amount instead of total quantity, matching the current "discount by order amount" business rule;
+  - cart page now has quote-style actions: save draft, download CSV, and print commercial proposal;
+  - catalog SEO now injects Organization, CollectionPage, and BreadcrumbList JSON-LD for category/search states;
+  - smoke tests were hardened to cover active filter chips, show-more pagination, variant matrix, related products, and quote buttons;
+  - local verification passed: `node --check app.js`, `node --check cart.js`, `npm.cmd run check`, `npm.cmd run ui:smoke`, and an extra Playwright spot-check for `/catalog?category=Подушки`, product modal, and `/cart`.

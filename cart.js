@@ -507,6 +507,10 @@ function getQuantityDiscount(qty) {
   return quantityTiers.reduce((current, tier) => (qty >= tier.qty ? tier.discount : current), 0);
 }
 
+function getBasketDiscount(amount) {
+  return basketDiscountTiers.reduce((current, tier) => (amount >= tier.amount ? tier.discount : current), 0);
+}
+
 function discountedUnitPrice(price, discount) {
   return Math.round(price * (1 - discount / 100));
 }
@@ -521,7 +525,7 @@ function getTotals() {
   const lines = [...state.cart.values()];
   const qty = lines.reduce((sum, line) => sum + line.qty, 0);
   const subtotal = lines.reduce((sum, line) => sum + line.qty * line.variant.price, 0);
-  const qtyDiscount = getQuantityDiscount(qty);
+  const qtyDiscount = getBasketDiscount(subtotal);
   const afterQtyDiscount = Math.round(subtotal * (1 - qtyDiscount / 100));
   const promoDiscount = promoCodes[state.promo] || 0;
   const total = Math.round(afterQtyDiscount * (1 - promoDiscount / 100));
@@ -535,12 +539,76 @@ function showToast(message) {
   showToast.timer = window.setTimeout(() => nodes.toast.classList.remove("is-visible"), 3000);
 }
 
-function renderScale(qty) {
-  nodes.scale.innerHTML = quantityTiers
+function downloadCsv(fileName, rows) {
+  const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(";")).join("\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function cartQuoteRows() {
+  const totals = getTotals();
+  return [
+    ["Коммерческое предложение Sobag Opt"],
+    ["Дата", new Date().toLocaleString("ru-RU")],
+    ["Сумма товаров", totals.subtotal],
+    ["Скидка по корзине", `${totals.qtyDiscount}%`],
+    ["Промокод", state.promo || ""],
+    ["Итого", totals.total],
+    [],
+    ["Артикул", "Наименование", "Тип", "Размер", "Материал", "Количество", "Цена до скидки", "Цена со скидкой", "Сумма"],
+    ...totals.lines.map((line) => {
+      const unit = discountedUnitPrice(line.variant.price, totals.qtyDiscount);
+      return [
+        line.variant.sku,
+        line.productName,
+        line.variant.type,
+        line.variant.size,
+        line.variant.material,
+        line.qty,
+        line.variant.price,
+        unit,
+        unit * line.qty,
+      ];
+    }),
+  ];
+}
+
+function downloadCartQuote() {
+  if (!state.cart.size) {
+    showToast("Корзина пока пустая.");
+    return;
+  }
+  downloadCsv(`sobag-quote-${Date.now()}.csv`, cartQuoteRows());
+}
+
+function printCartQuote() {
+  const totals = getTotals();
+  if (!totals.lines.length) {
+    showToast("Корзина пока пустая.");
+    return;
+  }
+  const rows = totals.lines
+    .map((line) => {
+      const unit = discountedUnitPrice(line.variant.price, totals.qtyDiscount);
+      return `<tr><td>${escapeHtml(line.variant.sku)}</td><td>${escapeHtml(line.productName)}</td><td>${escapeHtml([line.variant.type, line.variant.size, line.variant.material].join(", "))}</td><td>${line.qty}</td><td>${formatMoney(unit)}</td><td>${formatMoney(unit * line.qty)}</td></tr>`;
+    })
+    .join("");
+  const win = window.open("", "_blank", "noopener,noreferrer");
+  if (!win) return;
+  win.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Sobag Opt КП</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}h1{font-size:28px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f4f4f4}.total{font-size:22px;font-weight:800;margin-top:18px}</style></head><body><h1>Коммерческое предложение Sobag Opt</h1><p>Дата: ${new Date().toLocaleString("ru-RU")}</p><p>Скидка по корзине: ${totals.qtyDiscount}%</p><table><thead><tr><th>Артикул</th><th>Наименование</th><th>Параметры</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead><tbody>${rows}</tbody></table><p class="total">Итого: ${formatMoney(totals.total)}</p><script>window.print();</script></body></html>`);
+  win.document.close();
+}
+
+function renderScale(amount) {
+  nodes.scale.innerHTML = basketDiscountTiers
     .map(
       (tier) => `
-        <div class="cart-scale-step${qty >= tier.qty ? " is-active" : ""}">
-          <span>${tier.qty} шт.</span>
+        <div class="cart-scale-step${amount >= tier.amount ? " is-active" : ""}">
+          <span>${formatMoney(tier.amount)}</span>
           <strong>${tier.discount}%</strong>
         </div>
       `
@@ -602,7 +670,7 @@ function renderCart() {
       ? "Минимальная сумма набрана, можно оформлять заказ."
       : `До минимальной суммы осталось ${formatMoney(Math.max(MIN_CART_TOTAL - totals.total, 0))}.`;
 
-  renderScale(totals.qty);
+  renderScale(totals.subtotal);
   saveCart();
   if (window.lucide) window.lucide.createIcons();
 }
@@ -684,6 +752,12 @@ document.addEventListener("click", (event) => {
     showToast("Позиция удалена из корзины.");
   }
   if (button.id === "checkoutButton") openCheckout();
+  if (button.id === "saveCartDraftButton") {
+    saveCart();
+    showToast("Черновик корзины сохранен.");
+  }
+  if (button.id === "downloadCartQuoteButton") downloadCartQuote();
+  if (button.id === "printCartQuoteButton") printCartQuote();
   if (button.id === "useProfileButton") fillCheckoutFromProfile();
   if (button.dataset.closeCheckout !== undefined) closeCheckout();
   if (button.dataset.themeToggle !== undefined) toggleTheme();
