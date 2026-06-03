@@ -16,6 +16,11 @@ Fallback Vercel domain:
 Latest functional commit before this handoff update:
 `f232ec0 Update handoff after search production check`
 
+Token-saving startup:
+- Read `docs/ai-handoff/ACTIVE_CONTEXT.md` first.
+- Then run `git status --short --branch`.
+- Open long handoff files only when a concrete missing detail is needed.
+
 Read first:
 - `docs/ai-handoff/ACTIVE_CONTEXT.md`
 - `docs/roadmap-checklist.md`
