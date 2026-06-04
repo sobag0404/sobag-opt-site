@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this handoff update:
-- `7788c84 Protect internal saved quote notes`
+- `337f9bd Add product publication statuses`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -26,9 +26,18 @@ Production URLs:
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 is underway;
-- next implementation stage: import batches, preview/rollback/report UI, and durable photo storage planning.
+- next implementation stage: object storage adapter for product photos and durable image metadata.
 
 Completed most recently:
+- Import Batches 2.0 first slice:
+  - new `/api/admin/import-batches` endpoint for admin/content roles;
+  - import batches are stored separately from catalog data under the import-batches storage key;
+  - preview mode reports created/skipped/updated/errors without saving catalog changes;
+  - duplicate `baseSku`, repeated batch SKU, required-field errors, variant SKU collisions, and fallback image warnings are reported per row;
+  - applying a preview batch saves a catalog snapshot and never deletes existing products;
+  - rollback is limited to the latest applied batch created by this new mechanism;
+  - `admin-import.html` now shows batch cards, row preview, apply/reject, rollback for the latest applied batch, refresh, and CSV report download;
+  - CSV upload has an in-browser parser fallback, so smoke tests do not depend on the external XLSX CDN for `.csv` files;
 - Import/PIM 2.0 first slice:
   - product publication statuses `draft/published/hidden/archive`;
   - admin product filter, badges, per-card status selector, and quick hide/publish action;
@@ -61,6 +70,7 @@ Completed most recently:
 
 Verification from this handoff pass:
 - `node --check app.js`
+- `node --check api/admin/import-batches.js`
 - `node --check api/catalog.js`
 - `node --check api/admin/catalog.js`
 - `node --check tools/validate-products.mjs`
@@ -97,8 +107,8 @@ Backend/storage state:
 - Do not expose env values in chat/docs/repo.
 
 Important remaining work:
-- Import/PIM 2.0: batches, preview report, duplicate/error report, rollback.
-- Durable image storage: Vercel Blob, S3-compatible storage, or Cloudflare R2; no large raw photos in Git.
+- Import/PIM 2.0: expose explicit update-existing mode in the admin batch UI, deepen normalized product/import payloads, and keep public `/api/catalog` published-only.
+- Durable image storage: Vercel Blob first through a storage adapter, later S3-compatible storage or Cloudflare R2; no large raw photos in Git.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: server search, pagination, smaller API responses, WebP/AVIF responsive images.
 - QA/Ops: production smoke automation, access audit cadence, lightweight log review.

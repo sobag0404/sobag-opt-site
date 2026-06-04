@@ -39,7 +39,8 @@ Last updated: 2026-06-04
    - [x] Better customer list and segmentation.
 
 3. [planned] Import/PIM 2.0:
-   - [ ] Import batches with preview report and rollback.
+   - [x] Import batches with preview report and rollback.
+     - First slice: KV-backed `/api/admin/import-batches`, admin preview/apply/reject/CSV report UI, and latest applied batch rollback snapshot.
    - [x] Product statuses: draft, published, hidden, archive.
    - [ ] Real object storage for product images instead of Git/static previews.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.

@@ -1,4 +1,5 @@
 const { test, expect } = require("@playwright/test");
+const path = require("node:path");
 
 const BASE_URL = process.env.SOBAG_BASE_URL || "http://127.0.0.1:4173";
 test.setTimeout(60000);
@@ -128,6 +129,11 @@ test("admin import page and custom print calculator render", async ({ page }) =>
 
   await page.goto(`${BASE_URL}/admin-import.html`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminImportPage")).toContainText("Импорт");
+  await expect(page.locator("#adminImportPage")).toContainText("Партии импорта");
+  await page.locator("#excelInput").setInputFiles(path.join(process.cwd(), "templates", "sobag-products-template.csv"));
+  await expect(page.locator(".import-batch-card").first()).toContainText("Предпросмотр");
+  await expect(page.locator("[data-apply-import-batch]").first()).toContainText("Применить");
+  await expect(page.locator("[data-export-import-batch]").first()).toContainText("Скачать отчет CSV");
 
   await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
   await page.locator("#accountButton").click();

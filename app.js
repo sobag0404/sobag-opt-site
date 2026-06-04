@@ -537,6 +537,7 @@ const STORAGE = {
   users: "sobag.users",
   products: "sobag.products.v8",
   content: "sobag.siteContent.v1",
+  importBatches: "sobag.importBatches.v1",
   theme: "sobag.theme.v1",
   guestCart: "sobag.cart.guest",
   guestSavedCarts: "sobag.savedCarts.guest",
@@ -582,6 +583,8 @@ const state = {
   productReviews: [],
   adminReviews: [],
   adminPreview: [],
+  importBatches: loadStoredImportBatches(),
+  activeImportBatchId: "",
   pricePreview: [],
 };
 
@@ -5134,6 +5137,284 @@ function renderAdminPricesPage() {
   if (window.lucide) window.lucide.createIcons();
 }
 
+function loadStoredImportBatches() {
+  try {
+    const batches = JSON.parse(localStorage.getItem(STORAGE.importBatches) || "[]");
+    return Array.isArray(batches) ? batches : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredImportBatches() {
+  localStorage.setItem(STORAGE.importBatches, JSON.stringify(state.importBatches.slice(0, 30)));
+}
+
+function importBatchCounts(rows) {
+  return rows.reduce(
+    (counts, row) => {
+      if (row.action === "created") counts.created += 1;
+      else if (row.action === "updated") counts.updated += 1;
+      else if (row.action === "error") counts.errors += 1;
+      else counts.skipped += 1;
+      return counts;
+    },
+    { created: 0, skipped: 0, updated: 0, errors: 0 }
+  );
+}
+
+function importBatchRows(items, options = {}) {
+  const existingSkus = new Set(products.map((product) => baseSkuKey(product.baseSku)));
+  const existingVariantSkus = collectVariantSkuKeys(products);
+  const seenSkus = new Set();
+  const seenVariantSkus = new Set();
+  return items.map((product, index) => {
+    const sku = baseSkuKey(product.baseSku);
+    if (!sku || !product.name) return { row: index + 1, baseSku: product.baseSku || "", name: product.name || "", action: "error", status: "error", reason: !sku ? "missing_base_sku" : "missing_name" };
+    if (seenSkus.has(sku)) return { row: index + 1, baseSku: product.baseSku, name: product.name, action: "skipped", status: "duplicate_skipped", reason: "base_sku_repeated_in_batch" };
+    const exists = existingSkus.has(sku);
+    if (exists && !options.updateExisting) {
+      seenSkus.add(sku);
+      return { row: index + 1, baseSku: product.baseSku, name: product.name, action: "skipped", status: "duplicate_skipped", reason: "base_sku_exists" };
+    }
+    const variantSkus = [...productVariantSkuKeys(product)];
+    const collisions = variantSkus.filter((variantSku) => (existingVariantSkus.has(variantSku) && !exists) || seenVariantSkus.has(variantSku));
+    if (collisions.length) {
+      seenSkus.add(sku);
+      return { row: index + 1, baseSku: product.baseSku, name: product.name, action: "skipped", status: "variant_duplicate_skipped", reason: "variant_sku_collision", warnings: collisions.slice(0, 5).join(", ") };
+    }
+    seenSkus.add(sku);
+    variantSkus.forEach((variantSku) => seenVariantSkus.add(variantSku));
+    return {
+      row: index + 1,
+      baseSku: product.baseSku,
+      name: product.name,
+      action: exists ? "updated" : "created",
+      status: exists ? "updated" : "created",
+      reason: "",
+      variantCount: variantSkus.length,
+      warnings: product.image === "assets/production-workshop-1.png" ? "fallback_image" : "",
+    };
+  });
+}
+
+function importBatchFromProducts(items, source = "admin-import", options = {}) {
+  const rows = importBatchRows(items, options);
+  return {
+    id: `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    source,
+    status: "preview",
+    updateExisting: Boolean(options.updateExisting),
+    createdAt: new Date().toISOString(),
+    createdBy: state.currentUser || "local-admin",
+    counts: importBatchCounts(rows),
+    rows,
+    products: items.map((product, index) => ({ action: rows[index]?.action, product })).filter((entry) => entry.action === "created" || entry.action === "updated"),
+  };
+}
+
+function importBatchStatusLabel(status) {
+  return (
+    {
+      preview: "Предпросмотр",
+      applied: "Применена",
+      rejected: "Отклонена",
+      rolled_back: "Откат выполнен",
+    }[status] || "Партия"
+  );
+}
+
+function importBatchReasonLabel(reason) {
+  return (
+    {
+      base_sku_exists: "артикул уже есть",
+      base_sku_repeated_in_batch: "повтор в партии",
+      variant_sku_collision: "дубль варианта",
+      missing_base_sku: "нет артикула",
+      missing_name: "нет названия",
+      fallback_image: "fallback фото",
+    }[reason] || reason || ""
+  );
+}
+
+async function loadImportBatches() {
+  if (!isAdminImportPage || !canManageProducts(getUsers()[state.currentUser])) return false;
+  try {
+    const data = await apiRequest("/api/admin/import-batches");
+    if (!Array.isArray(data.batches)) return false;
+    state.importBatches = data.batches;
+    saveStoredImportBatches();
+    renderAdminImportPage();
+    return true;
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 401 && error.status !== 403 && error.status !== 404) console.warn(error);
+    return false;
+  }
+}
+
+async function createImportBatch(items, source = "admin-import") {
+  const fallbackBatch = importBatchFromProducts(items, source);
+  state.adminPreview = items;
+  try {
+    const data = await apiRequest("/api/admin/import-batches", { method: "POST", body: { action: "preview", source, products: cleanProductsForBatch(items) } });
+    if (data.batch) {
+      state.importBatches = [data.batch, ...state.importBatches.filter((batch) => batch.id !== data.batch.id)].slice(0, 30);
+      state.activeImportBatchId = data.batch.id;
+      saveStoredImportBatches();
+      renderAdminImportPage();
+      return data.batch;
+    }
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 401 && error.status !== 403 && error.status !== 404) console.warn(error);
+  }
+  state.importBatches = [fallbackBatch, ...state.importBatches.filter((batch) => batch.id !== fallbackBatch.id)].slice(0, 30);
+  state.activeImportBatchId = fallbackBatch.id;
+  saveStoredImportBatches();
+  renderAdminImportPage();
+  return fallbackBatch;
+}
+
+function cleanProductsForBatch(items) {
+  return items.map(({ variants, minPrice, maxPrice, ...product }) => product);
+}
+
+function importBatchById(id) {
+  return state.importBatches.find((batch) => batch.id === id);
+}
+
+async function applyImportBatch(batchId) {
+  const batch = importBatchById(batchId);
+  if (!batch || batch.status !== "preview") {
+    showToast("Партия недоступна для применения.");
+    return;
+  }
+  try {
+    const data = await apiRequest("/api/admin/import-batches", { method: "POST", body: { action: "apply", id: batchId } });
+    if (data.batch) {
+      state.importBatches = state.importBatches.map((item) => (item.id === batchId ? data.batch : item));
+      saveStoredImportBatches();
+      await loadAdminCatalogProducts();
+      renderAdminImportPage();
+      showToast("Партия применена на сервере.");
+      return;
+    }
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 401 && error.status !== 403 && error.status !== 404) {
+      showToast(error.message || "Не удалось применить партию.");
+      return;
+    }
+  }
+  batch.snapshot = { products: cleanProductsForStorage(), createdAt: new Date().toISOString() };
+  state.adminPreview = (batch.products || []).map((entry) => normalizeProduct(entry.product));
+  saveGeneratedProducts({ batchId });
+}
+
+async function rejectImportBatch(batchId) {
+  const batch = importBatchById(batchId);
+  if (!batch || batch.status !== "preview") return;
+  try {
+    const data = await apiRequest("/api/admin/import-batches", { method: "POST", body: { action: "reject", id: batchId } });
+    if (data.batch) {
+      state.importBatches = state.importBatches.map((item) => (item.id === batchId ? data.batch : item));
+    }
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 401 && error.status !== 403 && error.status !== 404) console.warn(error);
+    batch.status = "rejected";
+    batch.rejectedAt = new Date().toISOString();
+  }
+  saveStoredImportBatches();
+  renderAdminImportPage();
+  showToast("Партия отклонена.");
+}
+
+async function rollbackImportBatch(batchId) {
+  const batch = importBatchById(batchId);
+  if (!batch || batch.status !== "applied") return;
+  try {
+    const data = await apiRequest("/api/admin/import-batches", { method: "POST", body: { action: "rollback", id: batchId } });
+    if (data.batch) {
+      state.importBatches = state.importBatches.map((item) => (item.id === batchId ? data.batch : item));
+      saveStoredImportBatches();
+      await loadAdminCatalogProducts();
+      renderAdminImportPage();
+      showToast("Партия откачена на сервере.");
+      return;
+    }
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 401 && error.status !== 403 && error.status !== 404) {
+      showToast(error.message || "Не удалось откатить партию.");
+      return;
+    }
+  }
+  if (!batch.snapshot?.products?.length) {
+    showToast("Локальный snapshot для отката не найден.");
+    return;
+  }
+  products = batch.snapshot.products.map(normalizeProduct);
+  batch.status = "rolled_back";
+  batch.rolledBackAt = new Date().toISOString();
+  saveProducts();
+  saveStoredImportBatches();
+  renderCatalogHome();
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
+  renderAdminImportPage();
+  showToast("Локальная партия откачена.");
+}
+
+function importBatchRowsHtml(batch) {
+  const rows = (batch?.rows || []).slice(0, 80);
+  if (!rows.length) return "<p>В партии пока нет строк отчета.</p>";
+  return `
+    <div class="import-batch-table">
+      <div class="import-batch-table__head"><span>#</span><span>Артикул</span><span>Товар</span><span>Действие</span><span>Причина</span></div>
+      ${rows
+        .map(
+          (row) => `
+            <div>
+              <span>${Number(row.row || 0)}</span>
+              <b>${escapeHtml(row.baseSku || "")}</b>
+              <span>${escapeHtml(row.name || "")}</span>
+              <strong>${escapeHtml(row.status || row.action || "")}</strong>
+              <em>${escapeHtml(importBatchReasonLabel(row.reason) || row.warnings || "")}</em>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+    ${(batch.rows || []).length > rows.length ? `<p class="admin-section-note">Показаны первые ${rows.length} строк из ${(batch.rows || []).length}.</p>` : ""}
+  `;
+}
+
+function importBatchCardHtml(batch, index) {
+  const counts = batch.counts || {};
+  const canRollback = batch.status === "applied" && index === state.importBatches.findIndex((item) => item.status === "applied");
+  return `
+    <article class="import-batch-card">
+      <div class="import-batch-card__head">
+        <div>
+          <strong>${escapeHtml(batch.source || "Импорт")}</strong>
+          <span>${escapeHtml(importBatchStatusLabel(batch.status))} · ${escapeHtml(batch.createdAt || "")}</span>
+        </div>
+        <b>${escapeHtml(batch.id || "")}</b>
+      </div>
+      <div class="admin-orders-summary">
+        <span><b>${counts.created || 0}</b> создано</span>
+        <span><b>${counts.updated || 0}</b> обновлено</span>
+        <span><b>${counts.skipped || 0}</b> пропущено</span>
+        <span><b>${counts.errors || 0}</b> ошибок</span>
+      </div>
+      ${importBatchRowsHtml(batch)}
+      <div class="order-actions">
+        ${batch.status === "preview" ? `<button class="primary-button" type="button" data-apply-import-batch="${escapeHtml(batch.id)}">Применить</button><button class="ghost-button" type="button" data-reject-import-batch="${escapeHtml(batch.id)}">Отклонить</button>` : ""}
+        ${canRollback ? `<button class="ghost-button" type="button" data-rollback-import-batch="${escapeHtml(batch.id)}">Откатить последнюю партию</button>` : ""}
+        <button class="ghost-button" type="button" data-export-import-batch="${escapeHtml(batch.id)}">Скачать отчет CSV</button>
+      </div>
+    </article>
+  `;
+}
+
 function adminImportPageHtml() {
   return `
     <div class="admin-products-toolbar">
@@ -5143,7 +5424,7 @@ function adminImportPageHtml() {
         <div class="admin-actions">
           <button class="ghost-button" type="button" data-download-xlsx-template>Скачать XLSX-шаблон</button>
           <button class="ghost-button" type="button" data-download-template>Скачать CSV-шаблон</button>
-          <button class="primary-button" type="button" data-save-generated>Добавить карточки из предпросмотра</button>
+          <button class="primary-button" type="button" data-save-generated>Применить текущий предпросмотр локально</button>
         </div>
         <label>
           Файл товаров
@@ -5154,8 +5435,21 @@ function adminImportPageHtml() {
       <div class="admin-orders-summary">
         <span><b>${products.length}</b> ${productWord(products.length)} в текущем каталоге</span>
         <span><b>${state.adminPreview.length}</b> в предпросмотре</span>
+        <span><b>${state.importBatches.length}</b> партий</span>
       </div>
     </div>
+    <section class="import-batch-workspace">
+      <div class="section-head section-head--compact">
+        <div>
+          <h3>Партии импорта</h3>
+          <p>Preview не меняет каталог. Применение создает или обновляет только строки отчета со статусами created/updated; дубли и ошибки остаются в отчете.</p>
+        </div>
+        <button class="ghost-button" type="button" data-refresh-import-batches>Обновить партии</button>
+      </div>
+      <div class="import-batch-list">
+        ${state.importBatches.length ? state.importBatches.map(importBatchCardHtml).join("") : "<p>Пока нет партий импорта. Загрузите Excel/CSV, чтобы создать предпросмотр.</p>"}
+      </div>
+    </section>
     <div class="admin-preview" id="adminPreview"></div>
   `;
 }
@@ -6029,6 +6323,48 @@ function splitList(value) {
     .filter(Boolean);
 }
 
+function parseDelimitedText(text) {
+  const delimiter = text.includes(";") ? ";" : ",";
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === delimiter && !quoted) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(cell.trim());
+      if (row.some((value) => value)) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell.trim());
+  if (row.some((value) => value)) rows.push(row);
+  const headers = (rows.shift() || []).map((header) => header.replace(/^\uFEFF/, "").trim());
+  return rows.map((values) => Object.fromEntries(headers.map((header, index) => [header, values[index] || ""])));
+}
+
+async function readProductRowsFromFile(file) {
+  if (/\.csv$/i.test(file.name) || !window.XLSX) {
+    return parseDelimitedText(await file.text());
+  }
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer);
+  return XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
+}
+
 function productFromForm(form) {
   const data = Object.fromEntries(new FormData(form).entries());
   return normalizeProduct({
@@ -6100,11 +6436,13 @@ function renderAdminPreview(items) {
     : "<p>Сгенерируйте карточку или загрузите Excel, чтобы увидеть будущие артикулы.</p>";
 }
 
-function saveGeneratedProducts() {
+function saveGeneratedProducts(options = {}) {
   if (!state.adminPreview.length) {
     showToast("Сначала сгенерируйте карточки.");
     return;
   }
+  const batch = options.batchId ? importBatchById(options.batchId) : null;
+  if (batch && !batch.snapshot) batch.snapshot = { products: cleanProductsForStorage(), createdAt: new Date().toISOString() };
   const existingSkus = new Set(products.map((product) => baseSkuKey(product.baseSku)));
   const existingVariantSkus = collectVariantSkuKeys(products);
   const seenSkus = new Set();
@@ -6128,8 +6466,16 @@ function saveGeneratedProducts() {
     return;
   }
   products = [...uniqueProducts, ...products];
+  if (batch) {
+    batch.status = "applied";
+    batch.appliedAt = new Date().toISOString();
+    batch.counts = batch.counts || {};
+    batch.counts.created = uniqueProducts.length;
+    batch.counts.skipped = skipped;
+  }
   addMissingCatalogCategories(uniqueProducts);
   saveProducts();
+  saveStoredImportBatches();
   renderCatalogHome();
   renderCatalogShell();
   renderFilters();
@@ -6498,9 +6844,7 @@ function addMissingCatalogItems(currentItems, names, makeItem) {
 }
 
 async function importExcel(file) {
-  const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer);
-  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
+  const rows = await readProductRowsFromFile(file);
   const existingSkus = new Set(products.map((product) => baseSkuKey(product.baseSku)));
   const seenSkus = new Set();
   let skippedDuplicates = 0;
@@ -6542,8 +6886,7 @@ async function importExcel(file) {
     return items;
   }, []);
   addMissingCatalogCategories(imported);
-  renderAdminPreview(imported);
-  renderAdminImportPage();
+  await createImportBatch(imported, file.name || "admin-import");
   showToast(
     skippedDuplicates
       ? `Из Excel загружено новых карточек: ${imported.length}. Дубли пропущены: ${skippedDuplicates}.`
@@ -6858,6 +7201,7 @@ function boot() {
   initActualSlider();
   loadServerSiteContent();
   loadPublishedProducts();
+  loadImportBatches();
   initFormEnhancements();
   loadBackendAccountData().then(async (changed) => {
     if (!changed) return;
@@ -6872,6 +7216,7 @@ function boot() {
     renderAdminProductsPage();
     renderAdminPricesPage();
     renderAdminImportPage();
+    loadImportBatches();
   });
 
   document.addEventListener("click", async (event) => {
@@ -7136,6 +7481,45 @@ function boot() {
       return;
     }
     if (button.dataset.saveGenerated !== undefined) saveGeneratedProducts();
+    if (button.dataset.refreshImportBatches !== undefined) {
+      await loadImportBatches();
+      return;
+    }
+    if (button.dataset.applyImportBatch) {
+      await applyImportBatch(button.dataset.applyImportBatch);
+      return;
+    }
+    if (button.dataset.rejectImportBatch) {
+      await rejectImportBatch(button.dataset.rejectImportBatch);
+      return;
+    }
+    if (button.dataset.rollbackImportBatch) {
+      if (window.confirm("Откатить последнюю примененную партию и вернуть snapshot каталога?")) {
+        await rollbackImportBatch(button.dataset.rollbackImportBatch);
+      }
+      return;
+    }
+    if (button.dataset.exportImportBatch) {
+      const batch = importBatchById(button.dataset.exportImportBatch);
+      if (batch) {
+        downloadCsv(`sobag-import-batch-${batch.id}.csv`, [
+          ["Партия", "Статус партии", "Строка", "Основной артикул", "Название", "Статус строки", "Действие", "Причина", "Вариантов", "Предупреждения"],
+          ...(batch.rows || []).map((row) => [
+            batch.id,
+            importBatchStatusLabel(batch.status),
+            row.row || "",
+            row.baseSku || "",
+            row.name || "",
+            row.status || "",
+            row.action || "",
+            importBatchReasonLabel(row.reason),
+            row.variantCount || "",
+            row.warnings || "",
+          ]),
+        ]);
+      }
+      return;
+    }
     if (button.dataset.downloadTemplate !== undefined) downloadTemplate();
     if (button.dataset.downloadXlsxTemplate !== undefined) downloadXlsxTemplate();
     if (button.dataset.exportProducts !== undefined) downloadProductsCsv(products, "sobag-products-all.csv");

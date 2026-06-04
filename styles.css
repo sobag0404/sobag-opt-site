@@ -2397,6 +2397,69 @@ select[aria-invalid="true"] {
   gap: 12px;
 }
 
+.import-batch-workspace,
+.import-batch-list {
+  display: grid;
+  gap: 12px;
+}
+
+.import-batch-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+
+.import-batch-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.import-batch-card__head div {
+  display: grid;
+  gap: 4px;
+}
+
+.import-batch-card__head span,
+.import-batch-card__head b,
+.import-batch-table em {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.import-batch-table {
+  display: grid;
+  overflow-x: auto;
+  border: 1px solid var(--hairline);
+}
+
+.import-batch-table__head,
+.import-batch-table > div {
+  display: grid;
+  grid-template-columns: 48px minmax(110px, 0.8fr) minmax(160px, 1.4fr) minmax(100px, 0.8fr) minmax(120px, 1fr);
+  gap: 8px;
+  min-width: 640px;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.import-batch-table > div:last-child {
+  border-bottom: 0;
+}
+
+.import-batch-table__head {
+  color: var(--muted);
+  background: var(--surface-card);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .admin-product-card {
   display: grid;
   grid-template-columns: 92px 120px minmax(0, 1fr);

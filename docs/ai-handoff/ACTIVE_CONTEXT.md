@@ -29,6 +29,7 @@ Last updated: 2026-06-04
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Текущий проход 2026-06-04: готов первый срез Import Batches 2.0. Добавлен `/api/admin/import-batches` для ролей `admin/content`, отдельное хранение партий, preview без изменения каталога, отчет created/skipped/updated/errors, проверки дублей `baseSku` и variant SKU, apply со snapshot каталога, rollback только последней примененной партии, а в `admin-import.html` появились карточки партий, кнопки применить/отклонить/откатить/скачать CSV. CSV в браузере теперь читается встроенным parser fallback без зависимости от внешнего XLSX CDN.
 - Текущий проход 2026-06-04: готов первый срез Import/PIM 2.0 - статусы публикации товаров `draft/published/hidden/archive` во фронтенде, админке, API, локальном импортере и шаблонах. Публичный `/api/catalog` отдает только `published`, новые импорты по умолчанию становятся `draft`, полные проверки `npm.cmd run check` и `npm.cmd run ui:smoke` прошли.
 - Последние важные изменения: добавлена CRM-лента по заказам: внутренние комментарии менеджеров, комментарии видимые покупателю, сообщения покупателя по заказу, фильтрация внутренних записей из покупательских API, клиентская панель в админском списке заказов с сегментами; сохраненные КП 2.1 и отзывы товаров уже реализованы ранее.
 - Локальная RAM-правка: осиротевшие `vercel dev --listen 4173` и `@vercel/node/dist/dev-server.mjs` процессы были точечно остановлены; добавлен легкий `tools/static-server.mjs` и npm scripts `dev:static`/`dev:vercel`.
@@ -37,9 +38,9 @@ Last updated: 2026-06-04
 - Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
-- Следующая задача после статусов: партии импорта, предпросмотр дублей/ошибок, UI отчета создано/пропущено/обновлено, модель rollback и схема хранения фото в Blob/S3/R2.
-- Следующая задача: подготовить Import/PIM 2.0 и хранение фото.
-- Требования: партии импорта, предпросмотр дублей/ошибок, отчет создано/пропущено/обновлено, статусы товаров `draft/published/hidden/archive`, схема хранения фото в Blob/S3/R2 без больших файлов в Git.
+- Следующая задача после первого среза партий импорта: фото-хранилище через object storage adapter.
+- Требования к фото: единый interface `upload/getPublicUrl/delete-or-markUnused/listByProduct`, первый provider Vercel Blob, provider/env key без секретов в repo, будущий `s3-compatible` для VPS/MinIO, image metadata `storageKey/provider/width/height/mime/uploadedAt`, без новых bulk-фото в Git.
+- Следующий PIM шаг после storage adapter: explicit update-existing mode в UI партий, нормализованный payload product/variant/images/tags/categories/collections/holidays/import batch metadata, публичный `/api/catalog` только для `published`.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
 ## Useful Files

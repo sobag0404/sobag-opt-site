@@ -3,6 +3,7 @@ const { Redis } = require("@upstash/redis");
 const STORE_KEY = process.env.SOBAG_STORE_KEY || "sobag:store:v1";
 const CATALOG_KEY = process.env.SOBAG_CATALOG_KEY || "sobag:catalog:v1";
 const CONTENT_KEY = process.env.SOBAG_CONTENT_KEY || "sobag:content:v1";
+const IMPORT_BATCHES_KEY = process.env.SOBAG_IMPORT_BATCHES_KEY || "sobag:import-batches:v1";
 
 function redisConfig() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -78,9 +79,21 @@ function normalizeCatalog(value) {
   };
 }
 
+function normalizeImportBatches(value) {
+  if (!value) return [];
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  const batches = Array.isArray(parsed) ? parsed : parsed.batches;
+  return Array.isArray(batches) ? batches.filter((batch) => batch && typeof batch === "object") : [];
+}
+
 async function getCatalog() {
   const redis = getRedis();
   return normalizeCatalog(await redis.get(CATALOG_KEY));
+}
+
+async function getImportBatches() {
+  const redis = getRedis();
+  return normalizeImportBatches(await redis.get(IMPORT_BATCHES_KEY));
 }
 
 async function saveCatalog(products, updatedBy = "") {
@@ -93,6 +106,13 @@ async function saveCatalog(products, updatedBy = "") {
   };
   await redis.set(CATALOG_KEY, payload);
   return payload;
+}
+
+async function saveImportBatches(batches) {
+  const redis = getRedis();
+  const prepared = normalizeImportBatches(batches).slice(0, 50);
+  await redis.set(IMPORT_BATCHES_KEY, { batches: prepared, updatedAt: new Date().toISOString(), version: 1 });
+  return prepared;
 }
 
 function normalizeContent(value) {
@@ -139,4 +159,4 @@ async function saveSession(token, payload, ttlSeconds) {
   await getRedis().set(`sobag:session:${token}`, payload, { ex: ttlSeconds });
 }
 
-module.exports = { deleteSession, getCatalog, getContent, getSession, getStore, saveCatalog, saveContent, saveSession, saveStore };
+module.exports = { deleteSession, getCatalog, getContent, getImportBatches, getSession, getStore, saveCatalog, saveContent, saveImportBatches, saveSession, saveStore };
