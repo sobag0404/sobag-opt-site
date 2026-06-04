@@ -78,4 +78,5 @@ Last updated: 2026-06-04
      - [x] Read-only production smoke script for `/`, `/catalog`, `/cart`, and `/api/health`, with offline self-test in AutoFix.
      - [x] Wire the live smoke into the post-deploy routine after push/deploy: GitHub Actions runs it after successful `autofix-check` on `main`, with manual fallback/preview dispatch support.
    - [ ] Error monitoring/log review workflow.
-   - [ ] Periodic security/access audit.
+   - [x] Periodic security/access audit.
+     - [x] Static API access matrix in `tools/access-audit.mjs`, npm script `audit:access`, and AutoFix/weekly GitHub Actions coverage.

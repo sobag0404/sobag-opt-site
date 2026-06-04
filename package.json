@@ -13,7 +13,8 @@
     "check": "node tools/autofix.mjs --check",
     "autofix": "node tools/autofix.mjs --write",
     "ui:smoke": "playwright test tools/ui-smoke.spec.js",
-    "audit:catalog": "python tools/audit_catalog.py"
+    "audit:catalog": "python tools/audit_catalog.py",
+    "audit:access": "node tools/access-audit.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0",

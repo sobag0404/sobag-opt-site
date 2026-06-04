@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this working update:
-- `d7931ed Add production smoke workflow`
+- `dd39ebf Automate production smoke after checks`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -27,9 +27,17 @@ Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar and diagnostics/export slices;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages;
-- QA/Ops now has automated read-only production smoke after successful `autofix-check` pushes to `main`, plus manual fallback/preview dispatch; next QA/Ops step is log/error review or access audit.
+- QA/Ops now has automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, and periodic static API access audit through AutoFix/weekly GitHub Actions; next QA/Ops step is lightweight log/error review.
 
 Completed most recently:
+- Periodic API access audit slice:
+  - added `tools/access-audit.mjs` with an explicit access matrix for every API route outside `api/_lib`;
+  - audit checks route coverage, file-to-route consistency, method guards, `methodNotAllowed`, admin `requireUser` role sets, no buyer access on admin routes, session-owned write 401 guards, buyer order comment ownership, and password-field sanitization;
+  - added npm script `audit:access`;
+  - AutoFix now runs `tools/access-audit.mjs`, so push/PR/weekly `autofix-check` gives periodic access audit coverage;
+  - `/api/health` is now GET-only and returns `methodNotAllowed` for unsupported methods;
+  - added `docs/access-audit.md`;
+  - roadmap now marks periodic security/access audit done;
 - Production smoke post-deploy workflow slice:
   - added `.github/workflows/production-smoke.yml`;
   - workflow runs after successful `autofix-check` workflow runs caused by push to `main`;
@@ -172,6 +180,14 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current periodic access audit pass:
+  - `node --check tools/access-audit.mjs`
+  - `node --check api/health.js`
+  - `node tools/access-audit.mjs`: passed 17 routes, 7 role-protected routes.
+  - `git diff --check`
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; includes access audit.
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`.
 - Current production smoke workflow pass:
   - `node --check tools/production-smoke.mjs`
   - `node tools/production-smoke.mjs --self-test --retries 1 --retry-delay 10`: passed 4/4 fixture routes.
@@ -313,7 +329,7 @@ Important remaining work:
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
-- QA/Ops: add access audit cadence and lightweight log/error review.
+- QA/Ops: add lightweight log/error review.
 
 Important constraints:
 - no secrets in repo/docs/ZIP/chat;
