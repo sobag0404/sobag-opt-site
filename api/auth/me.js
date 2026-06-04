@@ -6,6 +6,7 @@ const MAX_CART_LINES = 500;
 const MAX_FAVORITES = 5000;
 const MAX_SAVED_CARTS = 50;
 const MAX_PROFILE_LIST_ITEMS = 20;
+const MAX_REVIEWS = 5000;
 
 function sanitizeCartLine(entry) {
   const key = Array.isArray(entry) ? entry[0] : entry?.key;
@@ -140,6 +141,29 @@ function sanitizeSavedCarts(items) {
     .slice(0, MAX_SAVED_CARTS);
 }
 
+function sanitizeReview(input, user) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const productId = String(input.productId || "").trim().slice(0, 120);
+  const baseSku = String(input.baseSku || "").trim().slice(0, 120);
+  const productName = String(input.productName || "").trim().slice(0, 200);
+  const rating = Math.max(1, Math.min(5, Math.round(Number(input.rating || 0))));
+  const text = String(input.text || "").trim().slice(0, 1000);
+  if (!productId || !baseSku || !rating || text.length < 5) return null;
+  return {
+    id: `REV-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    productId,
+    baseSku,
+    productName,
+    rating,
+    text,
+    status: "pending",
+    userEmail: user.email,
+    authorName: String(user.name || user.company || user.email || "Покупатель").trim().slice(0, 120),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 module.exports = async function handler(req, res) {
   try {
     const { user, store } = await currentUser(req);
@@ -172,6 +196,11 @@ module.exports = async function handler(req, res) {
           updatedAt: new Date().toISOString(),
         };
       }
+      if (Object.prototype.hasOwnProperty.call(data, "review")) {
+        const review = sanitizeReview(data.review, store.users[user.email] || user);
+        if (!review) return sendJson(res, 400, { error: "invalid_review", message: "Поставьте оценку и напишите отзыв от 5 символов." });
+        store.reviews = [review, ...(store.reviews || [])].slice(0, MAX_REVIEWS);
+      }
       await saveStore(store);
     } else if (req.method !== "GET") {
       return methodNotAllowed(res);
@@ -179,8 +208,9 @@ module.exports = async function handler(req, res) {
 
     const freshUser = store.users[user.email] || user;
     const orders = store.orders.filter((order) => order.userEmail === freshUser.email);
+    const reviews = (store.reviews || []).filter((review) => review.userEmail === freshUser.email);
     sendJson(res, 200, {
-      user: { ...publicUser(freshUser), orders },
+      user: { ...publicUser(freshUser), orders, reviews },
       cartItems: store.carts[freshUser.email]?.items || [],
       favoriteItems: store.favorites[freshUser.email]?.items || [],
       savedCarts: store.savedCarts[freshUser.email]?.items || [],

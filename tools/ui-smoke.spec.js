@@ -18,6 +18,14 @@ test.beforeEach(async ({ page }) => {
       throw new Error(`Failed resource ${status}: ${url}`);
     }
   });
+  await page.route("**/*", (route) => {
+    const type = route.request().resourceType();
+    if (type === "image" || type === "font") {
+      route.abort();
+      return;
+    }
+    route.continue();
+  });
   await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => {
     localStorage.removeItem("sobag.cart.guest");
@@ -327,6 +335,19 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator(".variant-matrix__row").first()).toBeVisible();
   await expect(page.locator(".related-products .mini-product-card")).toHaveCount(await page.locator(".related-products .mini-product-card").count());
   await expect(page.locator(".related-products .mini-product-card").first()).toBeVisible();
+  const imageGeometry = await page.evaluate(() => {
+    const squareDiff = (selector) => {
+      const rect = document.querySelector(selector)?.getBoundingClientRect();
+      if (!rect) return 999;
+      return Math.abs(rect.width - rect.height);
+    };
+    return {
+      main: squareDiff("#detailMainImage"),
+      thumb: squareDiff(".product-gallery__thumb img"),
+    };
+  });
+  expect(imageGeometry.main).toBeLessThanOrEqual(1);
+  expect(imageGeometry.thumb).toBeLessThanOrEqual(1);
   const firstSku = await page.locator("#selectedSku").innerText();
   await expect(firstSku.toLocaleLowerCase("ru-RU")).toContain(baseSku.trim().toLocaleLowerCase("ru-RU"));
 
@@ -365,4 +386,85 @@ test("search prioritizes exact sku and keeps suggestions for fuzzy queries", asy
   await page.locator("#searchInput").fill("подуш патер");
   await expect(page.locator(".search-suggestions")).toBeVisible();
   await expect(page.locator(".search-results-panel__quick button").first()).toBeVisible();
+});
+
+test("product reviews require login and can be moderated by admin", async ({ page }) => {
+  test.setTimeout(90000);
+  const category = await largestCategory(page);
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
+  const reviewedProductId = (await page.locator("[data-open-product]").first().getAttribute("data-open-product")) || "";
+  const reviewedBaseSku = await page.locator(".product-card__sku").first().innerText();
+  await page.locator("[data-open-product]").first().click();
+  await expect(page.locator(".product-reviews")).toBeVisible();
+  await expect(page.locator(".review-login-note")).toContainText("зарегистрированные покупатели");
+  await page.locator(".modal__close").click();
+  await expect(page.locator("#productModal")).toHaveCount(0);
+
+  let authUser = { email: "buyer@example.com", name: "Buyer", role: "buyer" };
+  const review = {
+    id: "REV-QA-1",
+    productId: reviewedProductId,
+    baseSku: reviewedBaseSku.trim(),
+    productName: "QA product",
+    rating: 3,
+    text: "QA review text",
+    status: "pending",
+    userEmail: "buyer@example.com",
+    authorName: "Buyer",
+    createdAt: new Date().toISOString(),
+  };
+
+  await page.route("**/api/auth/me", async (route) => {
+    if (route.request().method() === "PUT") {
+      const body = JSON.parse(route.request().postData() || "{}");
+      if (body.review) {
+        expect(body.review.rating).toBe(3);
+        expect(body.review.text).toContain("QA review");
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ user: { ...authUser, reviews: [review], orders: [] }, cartItems: [], favoriteItems: [], savedCarts: [] }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ user: { ...authUser, orders: [], reviews: [] }, cartItems: [], favoriteItems: [], savedCarts: [] }),
+    });
+  });
+  await page.route("**/api/admin/content**", async (route) => {
+    if (!route.request().url().includes("reviews=1")) return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ reviews: [review] }),
+    });
+  });
+
+  await page.evaluate(() => {
+    localStorage.setItem("sobag.currentUser", "buyer@example.com");
+    localStorage.setItem("sobag.users", JSON.stringify({ "buyer@example.com": { email: "buyer@example.com", name: "Buyer", role: "buyer" } }));
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
+  await page.locator("[data-open-product]").first().click();
+  await expect(page.locator(".review-form")).toBeVisible();
+  await page.locator('[data-review-star="3"]').click();
+  await page.locator('.review-form textarea[name="text"]').fill("QA review text");
+  await page.locator(".review-form").getByRole("button", { name: /Отправить отзыв/i }).click();
+  await expect(page.locator("#toast")).toContainText("Отзыв отправлен");
+
+  authUser = { email: "admin@sobag", name: "Admin", role: "admin" };
+  await page.evaluate(() => {
+    localStorage.setItem("sobag.currentUser", "admin@sobag");
+    localStorage.setItem("sobag.users", JSON.stringify({ "admin@sobag": { email: "admin@sobag", name: "Admin", role: "admin" } }));
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator("#accountButton").click();
+  await page.locator("[data-open-admin]").click();
+  await expect(page.locator("#adminReviewsPanel")).toContainText("QA review text");
+  await expect(page.locator('[data-review-status="REV-QA-1"][data-review-status-value="approved"]')).toBeVisible();
+  await expect(page.locator('[data-delete-review="REV-QA-1"]')).toBeVisible();
 });

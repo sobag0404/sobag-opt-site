@@ -539,6 +539,8 @@ const state = {
     material: "Габардин",
     qty: 1,
   },
+  productReviews: [],
+  adminReviews: [],
   adminPreview: [],
   pricePreview: [],
 };
@@ -935,6 +937,10 @@ function productWord(count) {
 
 function variantWord(count) {
   return pluralRu(count, "вариант", "варианта", "вариантов");
+}
+
+function reviewWord(count) {
+  return pluralRu(count, "отзыв", "отзыва", "отзывов");
 }
 
 function brandNameHtml(name) {
@@ -1579,6 +1585,7 @@ async function loadServerProducts() {
   try {
     const data = await apiRequest("/api/catalog");
     if (!Array.isArray(data.products) || !data.products.length) return false;
+    state.productReviews = normalizeReviews(data.reviews);
     const saved = loadStoredProducts();
     const loaded = applyLoadedProducts(data.products, { mergeWithStored: data.source !== "server" && Boolean(saved?.length) });
     if (loaded && data.source === "server") localStorage.setItem(STORAGE.products, JSON.stringify(cleanProductsForStorage()));
@@ -1596,6 +1603,7 @@ async function loadPublishedProducts() {
     if (!response.ok) return;
     const liveProducts = await response.json();
     const saved = loadStoredProducts();
+    state.productReviews = [];
     applyLoadedProducts(liveProducts, { mergeWithStored: Boolean(saved?.length) });
   } catch {
     // The static catalog file is optional in local prototype mode.
@@ -1604,6 +1612,51 @@ async function loadPublishedProducts() {
 
 function cleanProductsForStorage() {
   return products.map(({ variants, minPrice, maxPrice, ...product }) => product);
+}
+
+function normalizeReview(item) {
+  const rating = Math.max(1, Math.min(5, Math.round(Number(item?.rating || 0))));
+  return {
+    id: String(item?.id || ""),
+    productId: String(item?.productId || ""),
+    baseSku: String(item?.baseSku || ""),
+    productName: String(item?.productName || ""),
+    rating,
+    text: String(item?.text || "").trim(),
+    status: item?.status === "hidden" || item?.status === "approved" ? item.status : "pending",
+    userEmail: String(item?.userEmail || ""),
+    authorName: String(item?.authorName || item?.userEmail || "Покупатель"),
+    createdAt: String(item?.createdAt || ""),
+    updatedAt: String(item?.updatedAt || item?.createdAt || ""),
+    moderatedBy: String(item?.moderatedBy || ""),
+  };
+}
+
+function normalizeReviews(items) {
+  return (Array.isArray(items) ? items : []).map(normalizeReview).filter((item) => item.id && item.productId && item.rating);
+}
+
+function reviewsForProduct(product, statuses = ["approved"]) {
+  const allowed = new Set(statuses);
+  return state.productReviews.filter(
+    (review) =>
+      allowed.has(review.status) &&
+      (review.productId === product.id || baseSkuKey(review.baseSku) === baseSkuKey(product.baseSku))
+  );
+}
+
+function reviewStats(product) {
+  const reviews = reviewsForProduct(product);
+  if (!reviews.length) return { count: 0, average: 0 };
+  const average = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+  return { count: reviews.length, average };
+}
+
+function starsHtml(value, label = "") {
+  const rounded = Math.round(Number(value || 0));
+  return `<span class="review-stars" aria-label="${escapeHtml(label || `${rounded} из 5`)}">${[1, 2, 3, 4, 5]
+    .map((star) => `<span class="${star <= rounded ? "is-filled" : ""}">★</span>`)
+    .join("")}</span>`;
 }
 
 let productServerSaveTimer = null;
@@ -2190,6 +2243,57 @@ async function sendSavedCartToManager(cartId) {
   });
   rerenderAccountModal();
   showToast(`КП отправлено менеджеру. Заказ ${order.id || ""}`);
+}
+
+async function submitProductReview(form) {
+  const product = products.find((item) => item.id === form.dataset.reviewForm);
+  const user = getUsers()[state.currentUser];
+  if (!product || !user) {
+    showToast("Войдите или зарегистрируйтесь, чтобы оставить отзыв.");
+    openAccount();
+    return;
+  }
+  const data = Object.fromEntries(new FormData(form).entries());
+  const rating = Math.max(1, Math.min(5, Math.round(Number(data.rating || 0))));
+  const text = String(data.text || "").trim();
+  if (!rating || text.length < 5) {
+    showToast("Поставьте оценку и напишите отзыв от 5 символов.");
+    return;
+  }
+  try {
+    const result = await apiRequest("/api/auth/me", {
+      method: "PUT",
+      body: {
+        review: {
+          productId: product.id,
+          baseSku: product.baseSku,
+          productName: product.name,
+          rating,
+          text,
+        },
+      },
+    });
+    if (result.user) saveServerUserProfile(result.user);
+    form.reset();
+    setReviewFormRating(form, 5);
+    showToast("Отзыв отправлен на модерацию.");
+  } catch (error) {
+    if (error.status === 401) {
+      showToast("Войдите в аккаунт, чтобы оставить отзыв.");
+      openAccount();
+      return;
+    }
+    showToast(error.message || "Не удалось отправить отзыв.");
+  }
+}
+
+function setReviewFormRating(form, rating) {
+  const prepared = Math.max(1, Math.min(5, Math.round(Number(rating || 0))));
+  const input = form?.querySelector('input[name="rating"]');
+  if (input) input.value = prepared;
+  form?.querySelectorAll("[data-review-star]").forEach((button) => {
+    button.classList.toggle("is-active", Number(button.dataset.reviewStar || 0) <= prepared);
+  });
 }
 
 function uniqueTextList(values, limit = 10, itemLimit = 240) {
@@ -3458,6 +3562,70 @@ function relatedProductsHtml(product) {
   `;
 }
 
+function reviewFormHtml(product) {
+  const user = getUsers()[state.currentUser];
+  if (!user) {
+    return `
+      <div class="review-login-note">
+        <span>Отзывы могут оставлять только зарегистрированные покупатели.</span>
+        <button class="ghost-button" type="button" data-open-account>Войти</button>
+      </div>
+    `;
+  }
+  return `
+    <form class="review-form" data-review-form="${escapeHtml(product.id)}">
+      <input type="hidden" name="rating" value="5" />
+      <div class="review-form__head">
+        <span>Ваша оценка</span>
+        <div class="review-rating-input" aria-label="Оценка товара">
+          ${[1, 2, 3, 4, 5]
+            .map((value) => `<button class="is-active" type="button" data-review-star="${value}" aria-label="${value} из 5">★</button>`)
+            .join("")}
+        </div>
+      </div>
+      <textarea name="text" rows="3" maxlength="1000" placeholder="Напишите, что понравилось в товаре, качестве печати или упаковке"></textarea>
+      <button class="primary-button" type="submit">Отправить отзыв</button>
+      <small>Отзыв появится в карточке после модерации.</small>
+    </form>
+  `;
+}
+
+function productReviewsHtml(product) {
+  const reviews = reviewsForProduct(product);
+  const stats = reviewStats(product);
+  return `
+    <section class="product-reviews" aria-label="Отзывы о товаре">
+      <div class="product-reviews__head">
+        <div>
+          <h3>Отзывы</h3>
+          <span>${stats.count ? `${stats.average.toFixed(1)} из 5 · ${stats.count} ${reviewWord(stats.count)}` : "Пока нет одобренных отзывов"}</span>
+        </div>
+        ${stats.count ? starsHtml(stats.average, `Средняя оценка ${stats.average.toFixed(1)} из 5`) : ""}
+      </div>
+      ${
+        reviews.length
+          ? `<div class="review-list">${reviews
+              .slice(0, 6)
+              .map(
+                (review) => `
+                  <article class="review-card">
+                    <div class="review-card__head">
+                      <strong>${escapeHtml(review.authorName)}</strong>
+                      ${starsHtml(review.rating, `Оценка ${review.rating} из 5`)}
+                    </div>
+                    <p>${escapeHtml(review.text)}</p>
+                    <span>${escapeHtml(review.createdAt ? new Date(review.createdAt).toLocaleDateString("ru-RU") : "")}</span>
+                  </article>
+                `
+              )
+              .join("")}</div>`
+          : '<p class="review-empty">Станьте первым покупателем, кто оставит отзыв после регистрации.</p>'
+      }
+      ${reviewFormHtml(product)}
+    </section>
+  `;
+}
+
 function productModalHtml(product) {
   const variant = findVariant(product);
   const previewSubtotal = getCartTotals().subtotal + variant.price * state.activeVariant.qty;
@@ -3504,6 +3672,7 @@ function productModalHtml(product) {
                   .join("")}
               </div>
               ${relatedProductsHtml(product)}
+              ${productReviewsHtml(product)}
             </div>
           </div>
           <aside class="product-detail__options">
@@ -4984,6 +5153,99 @@ function adminCatalogImagesHtml(kind, items, title, note) {
   `;
 }
 
+function reviewStatusLabel(status) {
+  if (status === "approved") return "Одобрен";
+  if (status === "hidden") return "Скрыт";
+  return "На модерации";
+}
+
+function adminReviewCardHtml(review) {
+  const product = products.find((item) => item.id === review.productId || baseSkuKey(item.baseSku) === baseSkuKey(review.baseSku));
+  return `
+    <article class="admin-review-card">
+      <div class="admin-review-card__head">
+        <div>
+          <strong>${escapeHtml(review.baseSku || product?.baseSku || "Товар")}</strong>
+          <span>${escapeHtml(review.productName || product?.name || "")}</span>
+        </div>
+        <b class="review-status review-status--${escapeHtml(review.status)}">${escapeHtml(reviewStatusLabel(review.status))}</b>
+      </div>
+      <div class="admin-review-card__meta">
+        ${starsHtml(review.rating, `Оценка ${review.rating} из 5`)}
+        <span>${escapeHtml(review.authorName || review.userEmail || "Покупатель")}</span>
+        <span>${escapeHtml(review.createdAt ? new Date(review.createdAt).toLocaleString("ru-RU") : "")}</span>
+      </div>
+      <p>${escapeHtml(review.text)}</p>
+      <div class="order-actions">
+        <button class="ghost-button" type="button" data-review-status="${escapeHtml(review.id)}" data-review-status-value="approved">Одобрить</button>
+        <button class="ghost-button" type="button" data-review-status="${escapeHtml(review.id)}" data-review-status-value="hidden">Скрыть</button>
+        <button class="ghost-button" type="button" data-delete-review="${escapeHtml(review.id)}">Удалить</button>
+      </div>
+    </article>
+  `;
+}
+
+function adminReviewsPanelHtml() {
+  const reviews = state.adminReviews;
+  const pending = reviews.filter((review) => review.status === "pending").length;
+  return `
+    <section class="admin-content-section admin-content-section--page" id="admin-section-reviews">
+      <div class="admin-content-section__head">
+        <div>
+          <h3>Отзывы товаров</h3>
+          <p class="admin-section-note">${reviews.length ? `${reviews.length} ${reviewWord(reviews.length)} · ${pending} на модерации` : "Отзывов пока нет."}</p>
+        </div>
+        <button class="ghost-button" type="button" data-refresh-reviews><i data-lucide="refresh-cw"></i> Обновить</button>
+      </div>
+      <div class="admin-reviews-list">
+        ${reviews.length ? reviews.map(adminReviewCardHtml).join("") : "<p>Когда покупатели оставят отзывы, они появятся здесь.</p>"}
+      </div>
+    </section>
+  `;
+}
+
+function renderAdminReviewsPanel() {
+  const node = document.querySelector("#adminReviewsPanel");
+  if (!node) return;
+  node.innerHTML = adminReviewsPanelHtml();
+  if (window.lucide) window.lucide.createIcons();
+}
+
+async function loadAdminReviews() {
+  const user = getUsers()[state.currentUser];
+  if (!canManageContent(user)) return false;
+  try {
+    const result = await apiRequest("/api/admin/content?reviews=1");
+    state.adminReviews = normalizeReviews(result.reviews);
+    renderAdminReviewsPanel();
+    return true;
+  } catch (error) {
+    if (!isBackendUnavailable(error)) showToast(error.message || "Не удалось загрузить отзывы.");
+    return false;
+  }
+}
+
+async function moderateReview(reviewId, patch) {
+  try {
+    const result = await apiRequest("/api/admin/content", {
+      method: "PATCH",
+      body: { reviewId, ...patch },
+    });
+    if (result.deleted) {
+      state.adminReviews = state.adminReviews.filter((review) => review.id !== reviewId);
+      state.productReviews = state.productReviews.filter((review) => review.id !== reviewId);
+    } else if (result.review) {
+      const normalized = normalizeReview(result.review);
+      state.adminReviews = state.adminReviews.map((review) => (review.id === normalized.id ? normalized : review));
+      state.productReviews = normalizeReviews([...state.productReviews.filter((review) => review.id !== normalized.id), normalized]);
+    }
+    renderAdminReviewsPanel();
+    showToast(result.deleted ? "Отзыв удален." : "Статус отзыва обновлен.");
+  } catch (error) {
+    showToast(error.message || "Не удалось изменить отзыв.");
+  }
+}
+
 function adminModalHtml() {
   const content = getSiteContent();
   return `
@@ -5006,6 +5268,9 @@ function adminModalHtml() {
               <button class="primary-button" type="submit"><i data-lucide="save"></i> Сохранить на сервере</button>
               <button class="ghost-button" type="button" data-reset-content>Сбросить контент</button>
             </div>
+          </div>
+          <div id="adminReviewsPanel">
+            ${adminReviewsPanelHtml()}
           </div>
           <div class="admin-content-workspace">
             ${adminSectionMapHtml()}
@@ -5160,6 +5425,7 @@ function openAdmin() {
   activateModal(document.querySelector("#adminModal"));
   renderAdminPreview([]);
   if (window.lucide) window.lucide.createIcons();
+  loadAdminReviews();
 }
 
 function splitList(value) {
@@ -6005,6 +6271,10 @@ function boot() {
     const button = event.target.closest("button");
     if (!button) return;
 
+    if (button.dataset.reviewStar) {
+      setReviewFormRating(button.closest("[data-review-form]"), button.dataset.reviewStar);
+      return;
+    }
     if (button.dataset.actualPrev !== undefined) {
       nextActualSlide(-1);
       startActualSlider();
@@ -6239,6 +6509,20 @@ function boot() {
       return;
     }
     if (button.dataset.openAdmin !== undefined) openAdmin();
+    if (button.dataset.refreshReviews !== undefined) {
+      await loadAdminReviews();
+      return;
+    }
+    if (button.dataset.reviewStatus) {
+      await moderateReview(button.dataset.reviewStatus, { status: button.dataset.reviewStatusValue || "pending" });
+      return;
+    }
+    if (button.dataset.deleteReview) {
+      if (window.confirm("Удалить отзыв без восстановления?")) {
+        await moderateReview(button.dataset.deleteReview, { delete: true });
+      }
+      return;
+    }
     if (button.dataset.saveGenerated !== undefined) saveGeneratedProducts();
     if (button.dataset.downloadTemplate !== undefined) downloadTemplate();
     if (button.dataset.downloadXlsxTemplate !== undefined) downloadXlsxTemplate();
@@ -6411,6 +6695,11 @@ function boot() {
       event.preventDefault();
       clearFormErrors(event.target);
       await saveProfileForm(event.target);
+      return;
+    }
+    if (event.target.dataset.reviewForm) {
+      event.preventDefault();
+      await submitProductReview(event.target);
       return;
     }
     if (event.target.id === "authForm") {

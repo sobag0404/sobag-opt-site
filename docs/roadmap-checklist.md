@@ -1,6 +1,6 @@
 # Sobag Opt Roadmap Checklist
 
-Last updated: 2026-06-03
+Last updated: 2026-06-04
 
 ## Already Mostly Done
 
@@ -20,54 +20,41 @@ Last updated: 2026-06-03
 - [x] Product import workflow and local importer.
 - [x] Basic SEO pages, sitemap, robots, Organization/CollectionPage/BreadcrumbList JSON-LD.
 - [x] Smoke tests and autofix checks.
+- [x] Separate search results page: `/search?q=...`, result count, suggestions, quick filters, exact SKU priority, production check.
+- [x] Product reviews: authorized buyer form, rating/text, approved reviews in product modal, admin moderation and persistence through existing storage/API.
 
 ## Remaining Checklist
 
-1. [in progress] Separate search results page:
-   - [x] Dedicated `search.html` route.
-   - [x] Header search opens `/search?q=...`.
-   - [x] Search URL is preserved and refresh-safe.
-   - [x] Result count, "maybe you searched", and quick filters.
-   - [x] Exact SKU queries with digits return SKU matches instead of all `opt_*` products.
-   - [x] Production verification after deploy.
-
-2. [planned] Product reviews:
-   - [ ] Registered buyers can leave star rating and text.
-   - [ ] Reviews appear in product modal.
-   - [ ] Admin sees all reviews.
-   - [ ] Admin can approve, hide, edit status, or delete reviews.
-   - [ ] Review data persists through existing storage without adding extra Hobby-plan Functions.
-
-3. [planned] Saved carts / commercial proposals polish:
+1. [planned] Saved carts / commercial proposals polish:
    - [ ] Saved proposals list as a separate account tab/page.
    - [ ] Saved proposal comments and manager reply history.
    - [ ] Repeat saved proposal into cart with conflict warnings for changed prices.
 
-4. [planned] Order/customer CRM polish:
+2. [planned] Order/customer CRM polish:
    - [ ] Internal manager comments timeline.
    - [ ] Customer-visible comments/status messages.
    - [ ] Export order detail to XLSX/PDF from admin.
    - [ ] Better customer list and segmentation.
 
-5. [planned] Import/PIM 2.0:
+3. [planned] Import/PIM 2.0:
    - [ ] Import batches with preview report and rollback.
    - [ ] Product statuses: draft, published, hidden, archive.
    - [ ] Real object storage for product images instead of Git/static previews.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
 
-6. [planned] SEO/content:
+4. [planned] SEO/content:
    - [ ] Fill final legal/company/contact copy.
    - [ ] Add Product/FAQ schema where appropriate.
    - [ ] SEO landing copy for important categories, collections, and holidays.
    - [ ] Yandex map final address setup.
 
-7. [planned] Performance:
+5. [planned] Performance:
    - [ ] Server-side search/pagination for 10k+ products.
    - [ ] Image storage with responsive WebP/AVIF variants.
    - [ ] Catalog virtualization or smaller server pages.
    - [ ] Core Web Vitals audit after real catalog growth.
 
-8. [planned] QA/security/ops:
+6. [planned] QA/security/ops:
    - [x] Stronger mojibake guard in AutoFix.
    - [ ] Automated production smoke after deploy.
    - [ ] Error monitoring/log review workflow.
