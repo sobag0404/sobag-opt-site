@@ -64,6 +64,8 @@ Last updated: 2026-06-04
    - [ ] Server-side search/pagination for 10k+ products.
      - [x] First compatible backend slice: `/api/catalog-query` for published card results with query/filter/sort/page/cursor and `/api/catalog-detail` for full published product payloads.
      - [ ] Migrate frontend catalog list/product modal to the new smaller API payloads.
+       - [x] Product modal now hydrates public product detail from `/api/catalog-detail` with static/local fallback.
+       - [ ] Catalog/search list rendering still needs migration to `/api/catalog-query`.
    - [ ] Image storage with responsive WebP/AVIF variants.
    - [ ] Catalog virtualization or smaller server pages.
    - [ ] Core Web Vitals audit after real catalog growth.

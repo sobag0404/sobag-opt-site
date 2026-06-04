@@ -479,6 +479,39 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator(".cart-scale-step")).toHaveCount(4);
 });
 
+test("product modal hydrates detail from server detail endpoint", async ({ page }) => {
+  const sourceProducts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data", "products-live.json"), "utf8"));
+  const source = sourceProducts[0];
+  const detailMarker = "QA detail endpoint marker";
+  let detailRequested = false;
+
+  await page.route("**/api/catalog-detail?**", async (route) => {
+    detailRequested = true;
+    const url = new URL(route.request().url());
+    expect(url.searchParams.get("id")).toBeTruthy();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        product: {
+          ...source,
+          status: "published",
+          hidden: false,
+          description: "QA detail endpoint description",
+          detailDescription: detailMarker,
+        },
+        source: "qa-detail",
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/search?q=${encodeURIComponent(source.baseSku)}`, { waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page, 0);
+  await page.locator(".product-card").first().locator("[data-open-product]").first().click();
+  await expect.poll(() => detailRequested).toBe(true);
+  await expect(page.locator("#productModal")).toContainText(detailMarker);
+});
+
 test("search prioritizes exact sku and keeps suggestions for fuzzy queries", async ({ page }) => {
   await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);

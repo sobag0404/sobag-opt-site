@@ -96,4 +96,6 @@ Response shape:
 
 Both endpoints read the server catalog from storage when available and fall back to `data/products-live.json` when storage env is absent. They do not write to KV/Redis and do not expose PIM sidecar internals.
 
-The frontend has not been migrated yet. The next performance slice can switch catalog list rendering to `/api/catalog-query` and product modal loading to `/api/catalog-detail`.
+The product modal now tries `/api/catalog-detail` before rendering, then falls back to the already loaded local product when the API is unavailable or returns 404. This keeps static local development working while letting production hydrate full detail from the smaller endpoint.
+
+The catalog/search list still uses the existing full catalog data path. The next performance slice can switch list rendering and facets to `/api/catalog-query`.

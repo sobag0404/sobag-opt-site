@@ -1751,6 +1751,36 @@ async function loadServerProducts() {
   }
 }
 
+function replaceLoadedProduct(product) {
+  const normalized = normalizeProduct(product);
+  const key = productKey(normalized);
+  let replaced = false;
+  products = products.map((item) => {
+    if (item.id === normalized.id || productKey(item) === key) {
+      replaced = true;
+      return normalized;
+    }
+    return item;
+  });
+  if (!replaced) products.push(normalized);
+  addMissingCatalogCategories(products);
+  return normalized;
+}
+
+async function loadProductDetailForModal(product) {
+  if (!product || shouldLoadAdminCatalog()) return product;
+  try {
+    const params = new URLSearchParams();
+    if (product.id) params.set("id", product.id);
+    else if (product.baseSku) params.set("baseSku", product.baseSku);
+    const data = await apiRequest(`/api/catalog-detail?${params.toString()}`);
+    return data.product ? replaceLoadedProduct(data.product) : product;
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
+    return product;
+  }
+}
+
 function shouldLoadAdminCatalog() {
   return isAdminProductsPage || isAdminPricesPage || isAdminImportPage;
 }
@@ -4183,11 +4213,12 @@ function variantControls(key, title, options) {
   `;
 }
 
-function openProduct(productId) {
-  const product = products.find((item) => item.id === productId);
+async function openProduct(productId) {
+  const baseProduct = products.find((item) => item.id === productId);
+  const product = await loadProductDetailForModal(baseProduct);
   if (!product) return;
-  state.activeProductId = productId;
-  saveRecentProduct(productId);
+  state.activeProductId = product.id;
+  saveRecentProduct(product.id);
   state.activeVariant = {
     type: product.types[0],
     size: product.sizes.includes("40x40") ? "40x40" : product.sizes[0],

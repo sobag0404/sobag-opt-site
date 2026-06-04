@@ -29,6 +29,7 @@ Last updated: 2026-06-04
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-04: frontend product modal now hydrates public product details from `/api/catalog-detail` before rendering, with static/local fallback and admin-page skip. Added Playwright smoke coverage for intercepted detail endpoint. Catalog/search list still uses the old full catalog path.
 - Current pass 2026-06-04: first server-side catalog query/detail performance slice is implemented. Added `api/_lib/catalog-query.js`, public `/api/catalog-query` for published card results with q/filter/sort/page/cursor/facets, public `/api/catalog-detail` for full published product details, `tools/catalog-query-smoke.mjs` in AutoFix, and `docs/catalog-server-api.md`. Old `/api/catalog` remains compatible.
 - Current pass 2026-06-04: admin PIM diagnostics/export slice is implemented. Added read-only `/api/admin/pim` for `admin/content` roles, JSON views `summary/full/products/variants/images/taxonomies/import-batches`, CSV exports for table views, `api/_lib/pim-report.js`, and `tools/pim-report-smoke.mjs` in AutoFix. Updated `docs/pim-normalized-payload.md` and roadmap.
 - Current pass 2026-06-04: first normalized PIM sidecar slice is implemented. Added `api/_lib/pim.js`, `saveCatalog` now stores `pim` next to the current `products` array, import batch apply/rollback rebuilds sidecar metadata, public `/api/catalog` strips `pim`, admin catalog can inspect it, and `tools/pim-smoke.mjs` is included in AutoFix. New doc: `docs/pim-normalized-payload.md`.
@@ -46,7 +47,7 @@ Last updated: 2026-06-04
 - Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
-- Current next task: next performance slice after backend catalog query/detail: migrate frontend list/modal toward `/api/catalog-query` and `/api/catalog-detail`, add virtualization/smaller server pages, or move to SEO/content if performance is paused.
+- Current next task: next performance slice after modal detail hydration: migrate catalog/search list and facets toward `/api/catalog-query`, add virtualization/smaller server pages, or move to SEO/content if performance is paused.
 - Следующая задача: либо bulk CLI/importer upload path для больших фото-партий в Blob/S3 без JSON body limits, либо явный `updateExisting` режим в UI import batches.
 - Следующий PIM шаг: нормализованный payload product/variant/images/tags/categories/collections/holidays/import batch metadata, публичный `/api/catalog` только для `published`, responsive WebP/AVIF strategy после bulk storage.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
