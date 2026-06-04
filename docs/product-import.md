@@ -95,6 +95,12 @@ python tools/product_importer.py scan-photos --photos "C:\Path\YandexDisk\Фот
 
 Если Vercel API недоступен локально, страница использует localStorage fallback для preview/report, но production-сценарий должен идти через `/api/admin/import-batches`.
 
+## Фото и object storage
+
+Новые bulk-фото больше не должны попадать в Git. Для следующих партий используем object storage слой из `api/_lib/object-storage.js` и документацию `docs/object-storage.md`.
+
+Первый provider: Vercel Blob. В репозитории хранится только код и metadata, а секрет `BLOB_READ_WRITE_TOKEN` должен жить только в окружении Vercel/локальной машине. В товаре можно хранить старые поля `image`/`gallery` для совместимости и новое поле `images` с metadata: `url`, `storageKey`, `provider`, `width`, `height`, `mime`, `uploadedAt`.
+
 ## Локальный импорт
 
 ```powershell

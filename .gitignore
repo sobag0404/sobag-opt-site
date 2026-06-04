@@ -1,6 +1,11 @@
 .vercel
 local-import-output/
+local-photo-import/
+raw-product-photos/
+bulk-product-photos/
 assets/imported-products/
+assets/raw-product-photos/
+assets/bulk-product-photos/
 data/products.import.json
 data/import-report.csv
 node_modules

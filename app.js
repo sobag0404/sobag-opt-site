@@ -1548,14 +1548,62 @@ function productHasCategory(product, category) {
   return (product.categories || [product.category]).includes(category);
 }
 
+function normalizeProductImageMetadata(item) {
+  if (!item) return null;
+  if (typeof item === "string") {
+    const url = item.trim();
+    return url ? { url, storageKey: "", provider: "", width: null, height: null, mime: "", uploadedAt: "", status: "active" } : null;
+  }
+  if (typeof item !== "object") return null;
+  const url = String(item.url || item.publicUrl || item.downloadUrl || "").trim();
+  const storageKey = String(item.storageKey || item.pathname || item.key || "").trim();
+  if (!url && !storageKey) return null;
+  return {
+    url,
+    storageKey,
+    provider: String(item.provider || "").trim(),
+    width: Number(item.width || 0) || null,
+    height: Number(item.height || 0) || null,
+    mime: String(item.mime || item.contentType || "").trim(),
+    uploadedAt: String(item.uploadedAt || "").trim(),
+    fileName: String(item.fileName || "").trim(),
+    size: Number(item.size || 0) || null,
+    etag: String(item.etag || "").trim(),
+    status: String(item.status || "active").trim(),
+  };
+}
+
+function normalizeProductImages(images) {
+  if (!Array.isArray(images)) return [];
+  const seen = new Set();
+  return images
+    .map(normalizeProductImageMetadata)
+    .filter(Boolean)
+    .filter((image) => {
+      const key = image.storageKey || image.url;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function productImageMetadataUrl(image) {
+  return String(image?.url || image?.publicUrl || "").trim();
+}
+
 function normalizeProduct(product) {
   const categories = normalizeListField(product, "categories", splitList(product.category || ""));
   const normalizedCategories = categories.length ? categories : [product.category || "Подушки"];
   const status = normalizeProductStatus(product);
+  const imageMetadata = normalizeProductImages(product.images);
+  const metadataUrls = imageMetadata.map(productImageMetadataUrl).filter(Boolean);
+  const primaryImage = String(product.image || metadataUrls[0] || "assets/production-workshop-1.png").trim();
   const normalized = {
     ...product,
     status,
     hidden: status !== "published",
+    image: primaryImage,
+    images: imageMetadata,
     categories: normalizedCategories,
     category: normalizedCategories[0],
     types: product.types?.length ? product.types : TYPE_OPTIONS,
@@ -1564,7 +1612,7 @@ function normalizeProduct(product) {
     collections: normalizeListField(product, "collections", product.theme ? [product.theme] : []),
     holidays: normalizeListField(product, "holidays"),
     tags: normalizeTags(product),
-    gallery: [...new Set([product.image, ...(product.gallery || [])])].filter(Boolean),
+    gallery: [...new Set([primaryImage, ...(product.gallery || []), ...metadataUrls])].filter(Boolean),
     detailDescription:
       product.detailDescription ||
       "Карточка показывает товар с несколькими фотографиями, быстрыми тегами и настройкой варианта под оптовую заявку.",

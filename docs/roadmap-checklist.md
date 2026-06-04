@@ -43,6 +43,8 @@ Last updated: 2026-06-04
      - First slice: KV-backed `/api/admin/import-batches`, admin preview/apply/reject/CSV report UI, and latest applied batch rollback snapshot.
    - [x] Product statuses: draft, published, hidden, archive.
    - [ ] Real object storage for product images instead of Git/static previews.
+     - [x] First slice: object storage adapter, Vercel Blob provider, admin image API, product image metadata shape, and stronger ignored local photo folders.
+     - [ ] Wire bulk photo import/admin UI to Blob/S3 and stop relying on new Git/static preview images for new product batches.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
 
 4. [planned] SEO/content:

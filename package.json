@@ -1,6 +1,9 @@
 {
   "name": "sobag-opt-site",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev:static": "node tools/static-server.mjs --port 4173",
     "dev:vercel": "npx -y vercel dev --listen 4173",
@@ -10,7 +13,8 @@
     "audit:catalog": "python tools/audit_catalog.py"
   },
   "dependencies": {
-    "@upstash/redis": "^1.38.0"
+    "@upstash/redis": "^1.38.0",
+    "@vercel/blob": "^2.4.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0"

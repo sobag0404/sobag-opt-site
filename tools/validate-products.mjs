@@ -68,6 +68,10 @@ function hasCaseInsensitiveDuplicates(items) {
   return false;
 }
 
+function isRemoteImage(value) {
+  return /^https?:\/\//i.test(normalizeText(value)) || /^data:image\//i.test(normalizeText(value));
+}
+
 function variantSkusFor(product) {
   return (product.types || []).flatMap((type) =>
     (product.sizes || []).flatMap((size) =>
@@ -123,11 +127,27 @@ function assertProducts() {
       if (hasCaseInsensitiveDuplicates(product[key])) errors.push(`${label}: ${key} has duplicate values`);
     });
 
+    if (product.images !== undefined) {
+      if (!Array.isArray(product.images)) {
+        errors.push(`${label}: images must be an array`);
+      } else {
+        product.images.forEach((image, imageIndex) => {
+          if (!image || typeof image !== "object") errors.push(`${label}: images[${imageIndex}] must be an object`);
+          if (image && typeof image === "object") {
+            if (!normalizeText(image.url) && !normalizeText(image.storageKey)) errors.push(`${label}: images[${imageIndex}] needs url or storageKey`);
+            if (image.provider && !["vercel-blob", "s3-compatible"].includes(normalizeText(image.provider))) errors.push(`${label}: images[${imageIndex}] has unsupported provider`);
+            if (image.width !== undefined && image.width !== null && Number(image.width) <= 0) errors.push(`${label}: images[${imageIndex}] width must be positive`);
+            if (image.height !== undefined && image.height !== null && Number(image.height) <= 0) errors.push(`${label}: images[${imageIndex}] height must be positive`);
+          }
+        });
+      }
+    }
+
     const images = [product.image, ...(product.gallery || [])].filter(Boolean);
     if (!product.image) errors.push(`${label}: missing main image`);
     images.forEach((image) => {
       if (prototypePatterns.some((pattern) => String(image).includes(pattern))) errors.push(`${label}: prototype image still referenced: ${image}`);
-      if (!existsSync(join(root, image))) errors.push(`${label}: image file not found: ${image}`);
+      if (!isRemoteImage(image) && !existsSync(join(root, image))) errors.push(`${label}: image file not found: ${image}`);
     });
 
     const generatedVariants = variantSkusFor(product);

@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this handoff update:
-- `337f9bd Add product publication statuses`
+- `c116f94 Add import batch preview workflow`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -26,9 +26,17 @@ Production URLs:
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 is underway;
-- next implementation stage: object storage adapter for product photos and durable image metadata.
+- next implementation stage: wire bulk/admin photo workflows to the object storage adapter and then deepen normalized PIM payloads.
 
 Completed most recently:
+- Object storage first slice for product photos:
+  - added `@vercel/blob`;
+  - added `api/_lib/object-storage.js` with provider switch, Vercel Blob implementation, S3-compatible placeholder, upload/list/delete-or-markUnused/getPublicUrl interface;
+  - added `/api/admin/product-images` for admin/content image upload, list, delete, and mark-unused actions;
+  - `/api/health` now returns safe object storage readiness metadata without exposing env values;
+  - product normalization now preserves `images` metadata (`url`, `storageKey`, `provider`, `width`, `height`, `mime`, `uploadedAt`) while keeping legacy `image`/`gallery` rendering compatible;
+  - product validation allows remote image URLs and validates image metadata shape;
+  - docs and `.gitignore` now reinforce that raw/bulk photo folders must stay out of Git;
 - Import Batches 2.0 first slice:
   - new `/api/admin/import-batches` endpoint for admin/content roles;
   - import batches are stored separately from catalog data under the import-batches storage key;
@@ -70,6 +78,9 @@ Completed most recently:
 
 Verification from this handoff pass:
 - `node --check app.js`
+- `node --check api/_lib/object-storage.js`
+- `node --check api/admin/product-images.js`
+- `node --check api/health.js`
 - `node --check api/admin/import-batches.js`
 - `node --check api/catalog.js`
 - `node --check api/admin/catalog.js`
@@ -92,7 +103,7 @@ Previous handoff verification:
 - `npm.cmd run ui:smoke -- --grep "mobile pages"`
 
 Recommended first verification on a new device:
-1. Install Node.js, Git, Python, GitHub CLI, and optionally Vercel CLI.
+1. Install Node.js 20+, Git, Python, GitHub CLI, and optionally Vercel CLI.
 2. Clone/pull the repo.
 3. Run `npm install`.
 4. Use `npm run dev:static` for ordinary UI work.
@@ -108,7 +119,7 @@ Backend/storage state:
 
 Important remaining work:
 - Import/PIM 2.0: expose explicit update-existing mode in the admin batch UI, deepen normalized product/import payloads, and keep public `/api/catalog` published-only.
-- Durable image storage: Vercel Blob first through a storage adapter, later S3-compatible storage or Cloudflare R2; no large raw photos in Git.
+- Durable image storage: connect admin/bulk photo upload flows to the new adapter, add failure/retry/report handling, and later implement the S3-compatible provider for VPS/MinIO/R2.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: server search, pagination, smaller API responses, WebP/AVIF responsive images.
 - QA/Ops: production smoke automation, access audit cadence, lightweight log review.

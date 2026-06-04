@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const staticProducts = require("../../data/products-live.json");
 const { requireUser } = require("../_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
+const { normalizeImageMetadata } = require("../_lib/object-storage");
 const { getCatalog, getImportBatches, saveCatalog, saveImportBatches } = require("../_lib/store");
 
 const MAX_BATCH_PRODUCTS = 2000;
@@ -36,6 +37,20 @@ function cleanProductStatus(product) {
   return product?.hidden ? "hidden" : "draft";
 }
 
+function cleanProductImages(images) {
+  if (!Array.isArray(images)) return [];
+  const seen = new Set();
+  return images
+    .map((image) => (typeof image === "string" ? normalizeImageMetadata({ url: image }) : normalizeImageMetadata(image)))
+    .filter(Boolean)
+    .filter((image) => {
+      const key = image.storageKey || image.url;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 function cleanProduct(product) {
   if (!product || typeof product !== "object") return { product: null, error: "invalid_product" };
   const baseSku = text(product.baseSku);
@@ -63,6 +78,7 @@ function cleanProduct(product) {
       basePrice: Math.max(1, Number(product.basePrice || 1)),
       image: text(product.image) || "assets/production-workshop-1.png",
       gallery: cleanList(product.gallery),
+      images: cleanProductImages(product.images),
       photoFolder: text(product.photoFolder) || baseSku,
       stock: text(product.stock) || "made",
       badge: text(product.badge),

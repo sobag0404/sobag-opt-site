@@ -1,5 +1,6 @@
 const { requireUser } = require("../_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
+const { normalizeImageMetadata } = require("../_lib/object-storage");
 const { getCatalog, saveCatalog } = require("../_lib/store");
 
 const MAX_PRODUCTS = 25000;
@@ -20,6 +21,20 @@ function cleanProductStatus(product) {
   };
   if (aliases[status]) return aliases[status];
   return product?.hidden ? "hidden" : "published";
+}
+
+function cleanProductImages(images) {
+  if (!Array.isArray(images)) return [];
+  const seen = new Set();
+  return images
+    .map((image) => (typeof image === "string" ? normalizeImageMetadata({ url: image }) : normalizeImageMetadata(image)))
+    .filter(Boolean)
+    .filter((image) => {
+      const key = image.storageKey || image.url;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 function cleanProduct(product) {
@@ -44,7 +59,7 @@ function cleanProduct(product) {
     types: Array.isArray(clean.types) ? clean.types : [],
     sizes: Array.isArray(clean.sizes) ? clean.sizes : [],
     materials: Array.isArray(clean.materials) ? clean.materials : [],
-    images: Array.isArray(clean.images) ? clean.images : [],
+    images: cleanProductImages(clean.images),
     variantPrices: clean.variantPrices && typeof clean.variantPrices === "object" ? clean.variantPrices : {},
   };
 }
