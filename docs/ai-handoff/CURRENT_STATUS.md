@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this working update:
-- `e5f0419 Render catalog list from server query API`
+- `1c66e0a Use server facet options for catalog filters`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -26,9 +26,14 @@ Production URLs:
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar and diagnostics/export slices;
-- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, and server-backed visible filter options; next performance step is avoiding full catalog bootstrap on server-query listing pages or catalog virtualization.
+- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages; next performance step is catalog virtualization/smaller pages or Core Web Vitals audit after real catalog growth.
 
 Completed most recently:
+- Frontend catalog/search no-full-bootstrap slice:
+  - active public catalog/search listing pages first try `/api/catalog-query` during bootstrap;
+  - when `/api/catalog-query` succeeds, the page skips the full `/api/catalog` bootstrap request;
+  - when `/api/catalog-query` is unavailable, the old full `/api/catalog` and static `data/products-live.json` fallback still runs;
+  - Playwright smoke blocks `/api/catalog` in the intercepted server-query scenario and asserts it is not requested;
 - Frontend catalog/search server facet-options slice:
   - `/api/catalog-query` now returns `facetOptions` for UI filter controls;
   - each facet option bucket is calculated with the current query and the other active filters, but without that bucket's own filter;
@@ -147,6 +152,14 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current frontend catalog/search no-full-bootstrap pass:
+  - `node --check app.js`
+  - `node --check tools/ui-smoke.spec.js`
+  - focused smoke: `ui-smoke --grep "catalog list renders server query"`; passed with `/api/catalog` blocked/asserted unused.
+  - `git diff --check`
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; passed product validation, PIM smoke, PIM report smoke, catalog query smoke, and bulk photo dry-run fixture.
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`; 10/10 passed.
 - Current frontend catalog/search server facet-options pass:
   - `node --check api/_lib/catalog-query.js`
   - `node --check app.js`
@@ -265,7 +278,7 @@ Important remaining work:
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
-- Performance for 10k+ products: avoid full `/api/catalog` bootstrap on public server-query listing pages, catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
+- Performance for 10k+ products: catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
 - QA/Ops: production smoke automation, access audit cadence, lightweight log review.
 
 Important constraints:

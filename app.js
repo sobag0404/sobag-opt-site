@@ -2021,6 +2021,14 @@ async function loadAdminCatalogProducts() {
 
 async function loadPublishedProducts() {
   if (await loadAdminCatalogProducts()) return;
+  if (shouldUseServerCatalogList()) {
+    const loadedQuery = await refreshServerCatalogList();
+    if (loadedQuery) {
+      renderFilters();
+      renderProducts();
+      return;
+    }
+  }
   if (await loadServerProducts()) return;
   try {
     const response = await fetch("data/products-live.json", { cache: "default" });

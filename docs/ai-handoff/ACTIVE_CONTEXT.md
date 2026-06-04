@@ -29,6 +29,7 @@ Last updated: 2026-06-04
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-04: active public catalog/search server-query listing pages now skip full `/api/catalog` bootstrap when `/api/catalog-query` succeeds, while keeping full/static fallback when the query endpoint is unavailable. Playwright smoke asserts `/api/catalog` is not requested in the intercepted server-query scenario.
 - Current pass 2026-06-04: catalog/search visible filter controls now use server `facetOptions` from `/api/catalog-query` when available, with local fallback. Backend facet options are calculated per bucket without that bucket's own filter, so alternative values stay visible while other filters apply. Added backend smoke and Playwright coverage for server facet options.
 - Current pass 2026-06-04: public catalog/search list now progressively renders compact cards from `/api/catalog-query`, uses server total counts and cursor "load more", and falls back to the old local list path when the endpoint is unavailable. Added Playwright smoke coverage for intercepted query endpoint and cursor pagination.
 - Current pass 2026-06-04: frontend product modal now hydrates public product details from `/api/catalog-detail` before rendering, with static/local fallback and admin-page skip. Added Playwright smoke coverage for intercepted detail endpoint.
@@ -49,7 +50,7 @@ Last updated: 2026-06-04
 - Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
-- Current next task: continue performance after server list/facet rendering: avoid full `/api/catalog` bootstrap on public server-query listing pages, add catalog virtualization/smaller server pages, or move to QA/Ops production smoke if performance is paused.
+- Current next task: continue performance after server list/facet/bootstrap rendering: add catalog virtualization/smaller server pages, Core Web Vitals audit after real catalog growth, or move to QA/Ops production smoke if performance is paused.
 - Следующая задача: либо bulk CLI/importer upload path для больших фото-партий в Blob/S3 без JSON body limits, либо явный `updateExisting` режим в UI import batches.
 - Следующий PIM шаг: нормализованный payload product/variant/images/tags/categories/collections/holidays/import batch metadata, публичный `/api/catalog` только для `published`, responsive WebP/AVIF strategy после bulk storage.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
@@ -62,6 +63,7 @@ Last updated: 2026-06-04
 
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `npm.cmd` is not in PATH; WindowsApps Codex `node.exe` returns Access denied in PowerShell. Use bundled Node `C:\Users\Lodbr\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe` with PATH prefixed to that folder, and bundled Python from the same runtime.
+- Current no-full-catalog-bootstrap pass verified: `node --check app.js`, `node --check tools/ui-smoke.spec.js`, focused `ui-smoke --grep "catalog list renders server query"` with `/api/catalog` blocked/asserted unused, `git diff --check`, bundled Python `py_compile`, bundled Node `tools/autofix.mjs --check`, and full bundled Playwright `tools/ui-smoke.spec.js` 10/10.
 - Current server facet-options pass verified: `node --check api/_lib/catalog-query.js`, `node --check app.js`, `node --check tools/catalog-query-smoke.mjs`, `node --check tools/ui-smoke.spec.js`, `node tools/catalog-query-smoke.mjs`, `git diff --check`, bundled Python `py_compile`, bundled Node `tools/autofix.mjs --check`, and full bundled Playwright `tools/ui-smoke.spec.js` 10/10.
 - Current catalog/search query-list pass verified: `node --check app.js`, `node --check tools/ui-smoke.spec.js`, focused `ui-smoke --grep "catalog list renders server query"`, `git diff --check`, bundled Python `py_compile`, bundled Node `tools/autofix.mjs --check`, and full bundled Playwright `tools/ui-smoke.spec.js` 10/10.
 - Какие команды запускать перед финальным ответом: `npm.cmd run check`; для JS-изменений `node --check <file>`; для UI-изменений `npm.cmd run ui:smoke` или focused smoke.

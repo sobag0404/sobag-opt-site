@@ -536,6 +536,16 @@ test("catalog list renders server query cards and cursor pages", async ({ page }
     maxPrice: 202,
   };
   const requestedUrls = [];
+  let fullCatalogRequested = false;
+
+  await page.route("**/api/catalog", async (route) => {
+    fullCatalogRequested = true;
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({ error: "unexpected_full_catalog_bootstrap" }),
+    });
+  });
 
   await page.route("**/api/catalog-query?**", async (route) => {
     const url = new URL(route.request().url());
@@ -593,6 +603,7 @@ test("catalog list renders server query cards and cursor pages", async ({ page }
   await expect(page.locator(".product-card__sku")).toHaveText(["QA-SERVER-001", "QA-SERVER-002"]);
   expect(requestedUrls[0].searchParams.get("category")).toBe("QA Server");
   expect(requestedUrls.some((url) => url.searchParams.get("cursor") === "MQ")).toBe(true);
+  expect(fullCatalogRequested).toBe(false);
 });
 
 test("search prioritizes exact sku and keeps suggestions for fuzzy queries", async ({ page }) => {

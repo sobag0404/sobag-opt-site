@@ -101,6 +101,6 @@ Both endpoints read the server catalog from storage when available and fall back
 
 The product modal tries `/api/catalog-detail` before rendering, then falls back to the already loaded local product when the API is unavailable or returns 404. This keeps static local development working while letting production hydrate full detail from the smaller endpoint.
 
-The public catalog/search list now progressively uses `/api/catalog-query` for compact card payloads, total counts, cursor-based "load more" pagination, and visible filter options from `facetOptions`. If the endpoint is unavailable, the old local/full-catalog rendering path remains the fallback. Favorites and admin catalog screens still use the local/admin catalog flow.
+The public catalog/search list now progressively uses `/api/catalog-query` for compact card payloads, total counts, cursor-based "load more" pagination, and visible filter options from `facetOptions`. On active server-query listing pages, successful `/api/catalog-query` bootstrap skips the full `/api/catalog` request. If the endpoint is unavailable, the old local/full-catalog rendering path remains the fallback. Favorites, catalog home, empty search, and admin catalog screens still use the local/admin/full catalog flow.
 
-The next performance slice can reduce public boot/full-catalog hydration on server-query listing pages, then add virtualization or smaller server-rendered pages for very large catalogs.
+The next performance slice can add virtualization or smaller server-rendered pages for very large catalogs.
