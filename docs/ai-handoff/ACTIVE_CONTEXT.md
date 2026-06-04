@@ -29,6 +29,7 @@ Last updated: 2026-06-04
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-04: added read-only production smoke automation slice. New `tools/production-smoke.mjs` checks `/`, `/catalog`, `/cart`, and `/api/health` with GET-only requests; supports `--base-url`, repeated `--path`, `--timeout`, `--json`, and offline `--self-test`; npm scripts `smoke:prod` and `smoke:prod:self-test` were added; AutoFix runs only the self-test so local checks do not touch production; docs now include `docs/deploy-checklist.md`.
 - Current pass 2026-06-04: active public catalog/search server-query listing pages now skip full `/api/catalog` bootstrap when `/api/catalog-query` succeeds, while keeping full/static fallback when the query endpoint is unavailable. Playwright smoke asserts `/api/catalog` is not requested in the intercepted server-query scenario.
 - Current pass 2026-06-04: catalog/search visible filter controls now use server `facetOptions` from `/api/catalog-query` when available, with local fallback. Backend facet options are calculated per bucket without that bucket's own filter, so alternative values stay visible while other filters apply. Added backend smoke and Playwright coverage for server facet options.
 - Current pass 2026-06-04: public catalog/search list now progressively renders compact cards from `/api/catalog-query`, uses server total counts and cursor "load more", and falls back to the old local list path when the endpoint is unavailable. Added Playwright smoke coverage for intercepted query endpoint and cursor pagination.
@@ -50,19 +51,20 @@ Last updated: 2026-06-04
 - Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
-- Current next task: continue performance after server list/facet/bootstrap rendering: add catalog virtualization/smaller server pages, Core Web Vitals audit after real catalog growth, or move to QA/Ops production smoke if performance is paused.
+- Current next task: continue QA/Ops after the production smoke script (wire it into the post-deploy routine, add log/error review workflow, or start access audit), or return to performance items that need real catalog growth.
 - Следующая задача: либо bulk CLI/importer upload path для больших фото-партий в Blob/S3 без JSON body limits, либо явный `updateExisting` режим в UI import batches.
 - Следующий PIM шаг: нормализованный payload product/variant/images/tags/categories/collections/holidays/import batch metadata, публичный `/api/catalog` только для `published`, responsive WebP/AVIF strategy после bulk storage.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
 ## Useful Files
 - Главные файлы проекта: `app.js`, `cart.js`, `styles.css`, `components/site-shell.js`, `data/products-live.json`.
-- Документация: `docs/roadmap-checklist.md`, `docs/ai-handoff/CURRENT_STATUS.md`, `docs/product-import.md`, `docs/object-storage.md`, `docs/backend-security.md`.
+- Документация: `docs/roadmap-checklist.md`, `docs/ai-handoff/CURRENT_STATUS.md`, `docs/product-import.md`, `docs/object-storage.md`, `docs/backend-security.md`, `docs/deploy-checklist.md`.
 - Проверки: `package.json`, `tools/autofix.mjs`, `tools/ui-smoke.spec.js`, `tools/audit_catalog.py`.
 - API/Backend: `api/_lib/store.js`, `api/_lib/auth.js`, `api/_lib/http.js`, `api/_lib/object-storage.js`, `api/catalog.js`, `api/auth/me.js`, `api/orders.js`, `api/admin/orders.js`, `api/admin/users.js`, `api/admin/catalog.js`, `api/admin/content.js`, `api/admin/product-images.js`.
 
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `npm.cmd` is not in PATH; WindowsApps Codex `node.exe` returns Access denied in PowerShell. Use bundled Node `C:\Users\Lodbr\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe` with PATH prefixed to that folder, and bundled Python from the same runtime.
+- Current production-smoke pass verification: `node --check tools/production-smoke.mjs`; `node tools/production-smoke.mjs --self-test`; `git diff --check`; bundled Python `py_compile`; bundled Node `tools/autofix.mjs --check` (includes production smoke self-test only, no live production); full bundled Playwright `tools/ui-smoke.spec.js`.
 - Current no-full-catalog-bootstrap pass verified: `node --check app.js`, `node --check tools/ui-smoke.spec.js`, focused `ui-smoke --grep "catalog list renders server query"` with `/api/catalog` blocked/asserted unused, `git diff --check`, bundled Python `py_compile`, bundled Node `tools/autofix.mjs --check`, and full bundled Playwright `tools/ui-smoke.spec.js` 10/10.
 - Current server facet-options pass verified: `node --check api/_lib/catalog-query.js`, `node --check app.js`, `node --check tools/catalog-query-smoke.mjs`, `node --check tools/ui-smoke.spec.js`, `node tools/catalog-query-smoke.mjs`, `git diff --check`, bundled Python `py_compile`, bundled Node `tools/autofix.mjs --check`, and full bundled Playwright `tools/ui-smoke.spec.js` 10/10.
 - Current catalog/search query-list pass verified: `node --check app.js`, `node --check tools/ui-smoke.spec.js`, focused `ui-smoke --grep "catalog list renders server query"`, `git diff --check`, bundled Python `py_compile`, bundled Node `tools/autofix.mjs --check`, and full bundled Playwright `tools/ui-smoke.spec.js` 10/10.

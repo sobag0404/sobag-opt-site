@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this working update:
-- `1c66e0a Use server facet options for catalog filters`
+- `0dbfdfc Skip full catalog bootstrap on server listings`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -26,9 +26,21 @@ Production URLs:
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar and diagnostics/export slices;
-- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages; next performance step is catalog virtualization/smaller pages or Core Web Vitals audit after real catalog growth.
+- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages;
+- QA/Ops now has a read-only production smoke script with offline self-test; next QA/Ops step is wiring live smoke into the post-deploy routine, then log/error review or access audit.
 
 Completed most recently:
+- Production smoke automation slice:
+  - added `tools/production-smoke.mjs`;
+  - default live target is `https://sobag-shop.online`;
+  - default GET-only paths are `/`, `/catalog`, `/cart`, and `/api/health`;
+  - script supports `--base-url`, repeated `--path`, `--timeout`, `--json`, and `--self-test`;
+  - HTML checks require 2xx, `text/html`, document marker, and Sobag brand marker;
+  - health checks require 2xx JSON with `ok=true` and ready storage when the storage field is present;
+  - added npm scripts `smoke:prod` and `smoke:prod:self-test`;
+  - AutoFix runs only `--self-test`, so normal checks stay offline and do not touch production;
+  - added `docs/deploy-checklist.md` and linked the smoke in backend/security docs;
+  - roadmap now marks the scripted smoke subtask done while leaving post-deploy routine wiring open;
 - Frontend catalog/search no-full-bootstrap slice:
   - active public catalog/search listing pages first try `/api/catalog-query` during bootstrap;
   - when `/api/catalog-query` succeeds, the page skips the full `/api/catalog` bootstrap request;
@@ -152,6 +164,13 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current production smoke automation pass:
+  - `node --check tools/production-smoke.mjs`
+  - `node tools/production-smoke.mjs --self-test`: passed 4/4 fixture routes.
+  - `git diff --check`
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; includes production smoke self-test only and does not call production.
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`.
 - Current frontend catalog/search no-full-bootstrap pass:
   - `node --check app.js`
   - `node --check tools/ui-smoke.spec.js`
@@ -279,7 +298,7 @@ Important remaining work:
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
-- QA/Ops: production smoke automation, access audit cadence, lightweight log review.
+- QA/Ops: wire production smoke into the post-deploy routine, then add access audit cadence and lightweight log/error review.
 
 Important constraints:
 - no secrets in repo/docs/ZIP/chat;

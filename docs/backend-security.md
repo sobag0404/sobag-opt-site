@@ -54,6 +54,17 @@ Expected:
 
 If storage is not configured, the API returns `503` and the frontend uses the prototype fallback.
 
+## Production Smoke
+
+After deploy, run the read-only smoke check:
+
+```bash
+npm run smoke:prod
+```
+
+It sends only public `GET` requests to `/`, `/catalog`, `/cart`, and `/api/health`.
+Use `npm run smoke:prod:self-test` for the offline fixture check that is also covered by AutoFix.
+
 ## AutoFix
 
 Local checks:
