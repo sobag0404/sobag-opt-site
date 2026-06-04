@@ -26,6 +26,7 @@ const materialFactors = {
 const prototypePatterns = ["assets/hero-products-", "SB-PIL-", "SB-CSH-", "SB-PLD-"];
 const requiredArrays = ["categories", "types", "sizes", "materials"];
 const optionalUniqueArrays = ["collections", "holidays", "tags", "gallery"];
+const productStatuses = new Set(["draft", "published", "hidden", "archive"]);
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -33,6 +34,12 @@ function normalizeText(value) {
 
 function normalizeBaseSku(value) {
   return normalizeText(value).toLocaleUpperCase("ru-RU");
+}
+
+function normalizeProductStatus(product) {
+  const status = normalizeText(product.status).toLocaleLowerCase("ru-RU");
+  if (productStatuses.has(status)) return status;
+  return product.hidden ? "hidden" : "published";
 }
 
 function skuPart(value, limit = Infinity) {
@@ -96,6 +103,12 @@ function assertProducts() {
 
     if (!normalizeText(product.id)) errors.push(`${label}: missing id`);
     if (!normalizeText(product.name)) errors.push(`${label}: missing name`);
+    if (product.status !== undefined && !productStatuses.has(normalizeText(product.status).toLocaleLowerCase("ru-RU"))) {
+      errors.push(`${label}: invalid product status: ${product.status}`);
+    }
+    if (product.hidden !== undefined && Boolean(product.hidden) !== (normalizeProductStatus(product) !== "published")) {
+      errors.push(`${label}: hidden must match product status`);
+    }
     if (!Number.isFinite(Number(product.basePrice)) || Number(product.basePrice) <= 0) {
       errors.push(`${label}: basePrice must be a positive number`);
     }

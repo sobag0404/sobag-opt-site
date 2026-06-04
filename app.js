@@ -147,6 +147,46 @@ const taxonomyAliases = {
   "9 мая": "9 мая",
 };
 
+const PRODUCT_STATUSES = ["draft", "published", "hidden", "archive"];
+const PRODUCT_STATUS_LABELS = {
+  draft: "Черновик",
+  published: "Опубликован",
+  hidden: "Скрыт",
+  archive: "Архив",
+};
+
+function productStatusFromValue(value) {
+  const prepared = String(value || "").trim().toLocaleLowerCase("ru-RU");
+  const aliases = {
+    draft: "draft",
+    "черновик": "draft",
+    published: "published",
+    "опубликован": "published",
+    "опубликовано": "published",
+    "публикация": "published",
+    hidden: "hidden",
+    "скрыт": "hidden",
+    "скрыто": "hidden",
+    archive: "archive",
+    archived: "archive",
+    "архив": "archive",
+    "архивный": "archive",
+  };
+  return aliases[prepared] || "";
+}
+
+function normalizeProductStatus(product) {
+  return productStatusFromValue(product?.status) || (product?.hidden ? "hidden" : "published");
+}
+
+function productStatusLabel(status) {
+  return PRODUCT_STATUS_LABELS[productStatusFromValue(status) || status] || PRODUCT_STATUS_LABELS.published;
+}
+
+function isProductPublished(product) {
+  return normalizeProductStatus(product) === "published";
+}
+
 const defaultSiteContent = {
   brandName: "Sobag Opt",
   brandLogo: "",
@@ -1508,8 +1548,11 @@ function productHasCategory(product, category) {
 function normalizeProduct(product) {
   const categories = normalizeListField(product, "categories", splitList(product.category || ""));
   const normalizedCategories = categories.length ? categories : [product.category || "Подушки"];
+  const status = normalizeProductStatus(product);
   const normalized = {
     ...product,
+    status,
+    hidden: status !== "published",
     categories: normalizedCategories,
     category: normalizedCategories[0],
     types: product.types?.length ? product.types : TYPE_OPTIONS,
@@ -1596,7 +1639,26 @@ async function loadServerProducts() {
   }
 }
 
+function shouldLoadAdminCatalog() {
+  return isAdminProductsPage || isAdminPricesPage || isAdminImportPage;
+}
+
+async function loadAdminCatalogProducts() {
+  if (!shouldLoadAdminCatalog() || !canManageProducts(getUsers()[state.currentUser])) return false;
+  try {
+    const data = await apiRequest("/api/admin/catalog");
+    if (!Array.isArray(data.products) || !data.products.length) return false;
+    const loaded = applyLoadedProducts(data.products);
+    if (loaded) localStorage.setItem(STORAGE.products, JSON.stringify(cleanProductsForStorage()));
+    return loaded;
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 401 && error.status !== 403 && error.status !== 404) console.warn(error);
+    return false;
+  }
+}
+
 async function loadPublishedProducts() {
+  if (await loadAdminCatalogProducts()) return;
   if (await loadServerProducts()) return;
   try {
     const response = await fetch("data/products-live.json", { cache: "default" });
@@ -4466,7 +4528,7 @@ function canManageProducts(user) {
 
 function adminProductOptions(key) {
   const values = new Set();
-  products.filter((product) => !product.hidden).forEach((product) => {
+  products.filter(isProductPublished).forEach((product) => {
     if (key === "category") (product.categories || [product.category]).forEach((value) => values.add(value));
     else if (key === "collection") product.collections.forEach((value) => values.add(value));
     else if (key === "holiday") product.holidays.forEach((value) => values.add(value));
@@ -4478,14 +4540,17 @@ function adminProductOptions(key) {
 
 function adminProductMatches(product, params) {
   const query = normalizeSearchText(params.get("q") || "");
-  const hidden = params.get("hidden") || "visible";
+  const statusFilter = params.get("status") || params.get("hidden") || "published";
+  const status = normalizeProductStatus(product);
   const category = params.get("category") || "";
   const collection = params.get("collection") || "";
   const holiday = params.get("holiday") || "";
   const size = params.get("size") || "";
   const material = params.get("material") || "";
-  if (hidden === "visible" && product.hidden) return false;
-  if (hidden === "hidden" && !product.hidden) return false;
+  if ((statusFilter === "visible" || statusFilter === "published") && status !== "published") return false;
+  if (statusFilter === "hidden" && status !== "hidden") return false;
+  if (statusFilter === "draft" && status !== "draft") return false;
+  if (statusFilter === "archive" && status !== "archive") return false;
   if (category && !productHasCategory(product, category)) return false;
   if (collection && !productHasCollection(product, collection)) return false;
   if (holiday && !productHasHoliday(product, holiday)) return false;
@@ -4513,8 +4578,15 @@ function adminSelectHtml(name, label, value, options, allLabel = "Все") {
   `;
 }
 
+function adminProductStatusOptionsHtml(status) {
+  return PRODUCT_STATUSES.map(
+    (value) => `<option value="${value}"${status === value ? " selected" : ""}>${escapeHtml(PRODUCT_STATUS_LABELS[value])}</option>`
+  ).join("");
+}
+
 function adminProductCardHtml(product) {
-  const hiddenLabel = product.hidden ? `<span class="admin-product-badge admin-product-badge--hidden">Скрыт</span>` : "";
+  const status = normalizeProductStatus(product);
+  const statusLabel = `<span class="admin-product-badge admin-product-badge--${escapeHtml(status)}">${escapeHtml(productStatusLabel(status))}</span>`;
   return `
     <article class="admin-product-card">
       <label class="admin-product-card__select">
@@ -4528,7 +4600,7 @@ function adminProductCardHtml(product) {
         <div class="admin-product-card__head">
           <div>
             <strong>${escapeHtml(product.baseSku)}</strong>
-            ${hiddenLabel}
+            ${statusLabel}
             <button class="copy-sku-button" type="button" data-copy-sku="${escapeHtml(product.baseSku)}" title="Скопировать артикул">
               <i data-lucide="copy"></i>
             </button>
@@ -4543,6 +4615,12 @@ function adminProductCardHtml(product) {
           <label>
             Базовая цена
             <input name="basePrice" type="number" min="0" step="1" value="${Number(product.basePrice || 0)}" />
+          </label>
+          <label>
+            Статус публикации
+            <select name="status">
+              ${adminProductStatusOptionsHtml(status)}
+            </select>
           </label>
           <label class="admin-product-fields__wide">
             Краткое описание
@@ -4570,7 +4648,7 @@ function adminProductCardHtml(product) {
         <div class="order-actions">
           <button class="primary-button" type="submit">Сохранить</button>
           <button class="ghost-button" type="button" data-open-product="${escapeHtml(product.id)}">Просмотр карточки</button>
-          <button class="ghost-button" type="button" data-admin-toggle-product="${escapeHtml(product.id)}">${product.hidden ? "Показать товар" : "Скрыть товар"}</button>
+          <button class="ghost-button" type="button" data-admin-toggle-product="${escapeHtml(product.id)}">${isProductPublished(product) ? "Скрыть товар" : "Опубликовать"}</button>
         </div>
       </form>
     </article>
@@ -4587,7 +4665,7 @@ function selectedAdminProducts() {
 function adminProductsPageHtml() {
   const params = new URLSearchParams(window.location.search);
   const list = filteredAdminProducts(params);
-  const hiddenCount = products.filter((product) => product.hidden).length;
+  const statusCounts = Object.fromEntries(PRODUCT_STATUSES.map((status) => [status, products.filter((product) => normalizeProductStatus(product) === status).length]));
   return `
     <div class="admin-products-toolbar">
       <form class="admin-products-filter" action="admin-products.html" method="get">
@@ -4601,11 +4679,13 @@ function adminProductsPageHtml() {
         ${adminSelectHtml("size", "Размер", params.get("size") || "", adminProductOptions("size"))}
         ${adminSelectHtml("material", "Материал", params.get("material") || "", adminProductOptions("material"))}
         <label>
-          Видимость
-          <select name="hidden">
-            <option value="visible"${(params.get("hidden") || "visible") === "visible" ? " selected" : ""}>Только видимые</option>
-            <option value="all"${params.get("hidden") === "all" ? " selected" : ""}>Все товары</option>
-            <option value="hidden"${params.get("hidden") === "hidden" ? " selected" : ""}>Только скрытые</option>
+          Статус
+          <select name="status">
+            <option value="published"${(params.get("status") || params.get("hidden") || "published") === "published" || params.get("hidden") === "visible" ? " selected" : ""}>Опубликованные</option>
+            <option value="all"${params.get("status") === "all" || params.get("hidden") === "all" ? " selected" : ""}>Все товары</option>
+            ${PRODUCT_STATUSES.filter((status) => status !== "published")
+              .map((status) => `<option value="${status}"${(params.get("status") || params.get("hidden")) === status ? " selected" : ""}>${escapeHtml(PRODUCT_STATUS_LABELS[status])}</option>`)
+              .join("")}
           </select>
         </label>
         <button class="primary-button" type="submit">Найти</button>
@@ -4614,7 +4694,10 @@ function adminProductsPageHtml() {
       <div class="admin-orders-summary">
         <span><b>${products.length}</b> ${productWord(products.length)} всего</span>
         <span><b>${list.length}</b> найдено</span>
-        <span><b>${hiddenCount}</b> скрыто</span>
+        <span><b>${statusCounts.published || 0}</b> опубликовано</span>
+        <span><b>${statusCounts.draft || 0}</b> черновиков</span>
+        <span><b>${statusCounts.hidden || 0}</b> скрыто</span>
+        <span><b>${statusCounts.archive || 0}</b> в архиве</span>
       </div>
       <div class="admin-product-export">
         <button class="ghost-button" type="button" data-admin-sync-catalog>Сохранить каталог на сервере</button>
@@ -5470,7 +5553,8 @@ const productTemplateColumns = [
   { key: "materials", label: "Материалы" },
   { key: "basePrice", label: "Базовая цена" },
   { key: "image", label: "URL фото" },
-  { key: "stock", label: "Статус" },
+  { key: "status", label: "Статус публикации" },
+  { key: "stock", label: "Статус наличия" },
 ];
 
 const productExportOnlyColumns = [
@@ -5491,6 +5575,8 @@ const productColumnAliases = {
   theme: ["Тематика", "Основная тематика", "Основная подборка"],
   collections: ["Тематики", "Подборки"],
   holidays: ["Праздник", "Праздники"],
+  status: ["Публикация", "Публикационный статус", "status"],
+  stock: ["Статус наличия", "Статус", "stock"],
   photoFolder: ["Папка", "Папка фото", "Папка с фото"],
 };
 
@@ -5888,7 +5974,7 @@ function adminModalHtml() {
             <small class="field-note">Рекомендуем: квадрат 1200x1200 px, JPG/WebP. В каталоге все фото будут отображаться квадратом.</small>
           </label>
           <label>
-            Статус
+            Статус наличия
             <select name="stock">
               <option value="ready">В наличии</option>
               <option value="made">Под заказ</option>
@@ -5959,6 +6045,7 @@ function productFromForm(form) {
     materials: splitList(data.materials),
     basePrice: Number(data.basePrice),
     image: data.image || "assets/production-workshop-1.png",
+    status: "draft",
     stock: data.stock,
     badge: "Новая карточка",
     description: "Карточка создана массовым генератором вариантов.",
@@ -6002,7 +6089,7 @@ function renderAdminPreview(items) {
             return `
             <article>
               <strong>${product.name}</strong>
-              <span>${product.baseSku} · ${product.variants.length} ${variantWord(product.variants.length)}</span>
+              <span>${product.baseSku} · ${productStatusLabel(product.status)} · ${product.variants.length} ${variantWord(product.variants.length)}</span>
               <small>${product.variants.slice(0, 6).map((variant) => variant.sku).join(", ")}${product.variants.length > 6 ? "..." : ""}</small>
               ${issue ? `<em class="admin-preview__issue">${issue}</em>` : `<em class="admin-preview__ok">Готово к добавлению</em>`}
             </article>
@@ -6111,6 +6198,7 @@ function downloadTemplate() {
       "Велюр; Габардин",
       "220",
       "",
+      "draft",
       "made",
       "Краткое описание для каталога",
       "Подробное описание для карточки товара",
@@ -6441,6 +6529,7 @@ async function importExcel(file) {
         materials: splitList(rowValue(row, "materials") || MATERIAL_OPTIONS.join(";")),
         basePrice: Number(rowValue(row, "basePrice") || 220),
         image: rowValue(row, "image") || "assets/production-workshop-1.png",
+        status: rowValue(row, "status") || "draft",
         stock: rowValue(row, "stock") || "made",
         gallery: splitList(rowValue(row, "gallery") || ""),
         photoFolder: rowValue(row, "photoFolder") || rowValue(row, "baseSku"),
@@ -7080,14 +7169,16 @@ function boot() {
     if (button.dataset.adminToggleProduct) {
       const product = products.find((item) => item.id === button.dataset.adminToggleProduct);
       if (product) {
-        product.hidden = !product.hidden;
+        product.status = isProductPublished(product) ? "hidden" : "published";
+        product.hidden = product.status !== "published";
+        Object.assign(product, normalizeProduct(product));
         saveProducts();
         renderCatalogHome();
         renderFilters();
         renderProducts();
         renderAdminProductsPage();
         renderAdminPricesPage();
-        showToast(product.hidden ? "Товар скрыт из каталога." : "Товар снова виден в каталоге.");
+        showToast(isProductPublished(product) ? "Товар опубликован в каталоге." : "Товар скрыт из каталога.");
       }
       return;
     }
@@ -7362,6 +7453,8 @@ function boot() {
       product.basePrice = Math.max(0, Number(data.basePrice || product.basePrice || 0));
       product.description = String(data.description || "").trim();
       product.detailDescription = String(data.detailDescription || "").trim();
+      product.status = productStatusFromValue(data.status) || normalizeProductStatus(product);
+      product.hidden = product.status !== "published";
       const normalized = normalizeProduct(product);
       Object.assign(product, normalized);
       saveProducts();

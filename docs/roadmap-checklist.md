@@ -40,7 +40,7 @@ Last updated: 2026-06-04
 
 3. [planned] Import/PIM 2.0:
    - [ ] Import batches with preview report and rollback.
-   - [ ] Product statuses: draft, published, hidden, archive.
+   - [x] Product statuses: draft, published, hidden, archive.
    - [ ] Real object storage for product images instead of Git/static previews.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
 

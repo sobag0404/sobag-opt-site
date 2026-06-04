@@ -3,6 +3,24 @@ const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/h
 const { getCatalog, saveCatalog } = require("../_lib/store");
 
 const MAX_PRODUCTS = 25000;
+const PRODUCT_STATUSES = new Set(["draft", "published", "hidden", "archive"]);
+
+function cleanProductStatus(product) {
+  const status = String(product?.status || "").trim().toLowerCase();
+  if (PRODUCT_STATUSES.has(status)) return status;
+  const aliases = {
+    "черновик": "draft",
+    "опубликован": "published",
+    "опубликовано": "published",
+    "публикация": "published",
+    "скрыт": "hidden",
+    "скрыто": "hidden",
+    "архив": "archive",
+    "архивный": "archive",
+  };
+  if (aliases[status]) return aliases[status];
+  return product?.hidden ? "hidden" : "published";
+}
 
 function cleanProduct(product) {
   if (!product || typeof product !== "object") return null;
@@ -10,11 +28,14 @@ function cleanProduct(product) {
   const baseSku = String(clean.baseSku || "").trim();
   const name = String(clean.name || "").trim();
   if (!baseSku || !name) return null;
+  const status = cleanProductStatus(clean);
   return {
     ...clean,
     id: String(clean.id || baseSku),
     baseSku,
     name,
+    status,
+    hidden: status !== "published",
     basePrice: Math.max(1, Number(clean.basePrice || 1)),
     categories: Array.isArray(clean.categories) ? clean.categories : [clean.category].filter(Boolean),
     collections: Array.isArray(clean.collections) ? clean.collections : [],

@@ -32,7 +32,8 @@ TEMPLATE_COLUMNS = [
     "Теги",
     "Краткое описание",
     "Описание в карточке",
-    "Статус",
+    "Статус публикации",
+    "Статус наличия",
     "Популярность",
     "Папка фото",
     "Главное фото",
@@ -52,6 +53,7 @@ SAMPLE_ROW = [
     "аниме; коты; подарок",
     "Готовая позиция с одним принтом и вариантами комплектации.",
     "Описание для карточки товара: материалы, уход, упаковка, сроки.",
+    "draft",
     "made",
     "80",
     "10345",
@@ -73,7 +75,8 @@ COLUMN_ALIASES = {
     "tags": ["Теги", "tags"],
     "description": ["Краткое описание", "Описание", "description"],
     "detailDescription": ["Описание в карточке", "Подробное описание", "detailDescription"],
-    "stock": ["Статус", "stock"],
+    "status": ["Статус публикации", "Публикация", "Публикационный статус", "status"],
+    "stock": ["Статус наличия", "Статус", "stock"],
     "popular": ["Популярность", "popular"],
     "photoFolder": ["Папка фото", "photoFolder"],
     "image": ["Главное фото", "URL фото", "image"],
@@ -84,6 +87,7 @@ COLUMN_ALIASES = {
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 FLAG_CATEGORY = "Флаги"
 STANDARD_OPTION = "Стандарт"
+PRODUCT_STATUSES = {"draft", "published", "hidden", "archive"}
 
 TYPE_FACTORS = {
     "Подушка": 0,
@@ -155,6 +159,30 @@ def clean_number(value: str, fallback: int) -> int:
         return int(float(value))
     except ValueError:
         return fallback
+
+
+def normalize_product_status(value: str, fallback: str = "published") -> str:
+    prepared = str(value or "").strip().casefold()
+    aliases = {
+        "draft": "draft",
+        "черновик": "draft",
+        "published": "published",
+        "опубликован": "published",
+        "опубликовано": "published",
+        "публикация": "published",
+        "hidden": "hidden",
+        "скрыт": "hidden",
+        "скрыто": "hidden",
+        "archive": "archive",
+        "archived": "archive",
+        "архив": "archive",
+        "архивный": "archive",
+    }
+    return aliases.get(prepared) or (fallback if fallback in PRODUCT_STATUSES else "published")
+
+
+def product_status(product: dict) -> str:
+    return normalize_product_status(str(product.get("status", "")), "hidden" if product.get("hidden") else "published")
 
 
 def row_value(row: dict[str, str], key: str, fallback: str = "") -> str:
@@ -335,7 +363,7 @@ def copy_photos(base_sku: str, photo_folder: Path | None, assets_dir: Path, proj
     return copied, []
 
 
-def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, project_root: Path) -> tuple[dict, dict]:
+def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, project_root: Path, default_status: str = "draft") -> tuple[dict, dict]:
     base_sku = normalize_base_sku(row_value(row, "baseSku"))
     photo_folder_name = row_value(row, "photoFolder", base_sku)
     folder = find_photo_folder(photos_root, photo_folder_name)
@@ -351,6 +379,7 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
     main_image = ordered_images[0] if ordered_images else "assets/production-workshop-1.png"
     if len(ordered_images) < 2:
         warnings.append("Мало фото: рекомендуем минимум 2-3 изображения на карточку")
+    status = normalize_product_status(row_value(row, "status"), default_status)
 
     product = {
         "id": f"{slug(base_sku)}-{hashlib.sha1(base_sku.encode('utf-8')).hexdigest()[:6]}",
@@ -368,6 +397,8 @@ def make_product(row: dict[str, str], photos_root: Path, assets_dir: Path, proje
         "basePrice": clean_number(row_value(row, "basePrice"), 220),
         "image": main_image,
         "gallery": ordered_images[1:],
+        "status": status,
+        "hidden": status != "published",
         "photoFolder": photo_folder_name,
         "stock": row_value(row, "stock", "made"),
         "badge": row_value(row, "badge"),
@@ -659,6 +690,7 @@ def command_scan_photos(args: argparse.Namespace) -> None:
                 "",
                 "",
                 "",
+                "draft",
                 "made",
                 "50",
                 relative_folder,
@@ -726,8 +758,9 @@ def command_import(args: argparse.Namespace) -> None:
         sku_key = normalized_sku(base_sku)
         if sku_key in existing_skus or sku_key in seen_skus:
             if args.update_existing and sku_key in existing_index_by_sku and sku_key not in seen_skus:
-                product, report = make_product(row, photos_root, assets_dir, project_root)
                 existing_index = existing_index_by_sku[sku_key]
+                existing_status = product_status(existing_products[existing_index])
+                product, report = make_product(row, photos_root, assets_dir, project_root, default_status=existing_status)
                 product["id"] = existing_products[existing_index].get("id") or product["id"]
                 product_variant_skus = {normalized_sku(str(variant["sku"])) for variant in product_variants(product)}
                 own_variant_skus = variant_sku_set([existing_products[existing_index]])

@@ -2368,6 +2368,7 @@ select[aria-invalid="true"] {
 .admin-products-filter input,
 .admin-products-filter select,
 .admin-product-fields input,
+.admin-product-fields select,
 .admin-product-fields textarea {
   width: 100%;
   min-height: 46px;
@@ -2462,12 +2463,25 @@ select[aria-invalid="true"] {
   text-transform: uppercase;
 }
 
+.admin-product-badge--draft {
+  background: #6f6f6f;
+}
+
+.admin-product-badge--published {
+  color: var(--canvas);
+  background: var(--on-dark);
+}
+
 .admin-product-badge--hidden {
-  background: #8a1f1f;
+  background: #444;
+}
+
+.admin-product-badge--archive {
+  background: #222;
 }
 
 .admin-product-fields {
-  grid-template-columns: minmax(0, 1fr) 160px;
+  grid-template-columns: minmax(0, 1fr) 150px 170px;
 }
 
 .admin-product-fields__wide {

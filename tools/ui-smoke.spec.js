@@ -104,6 +104,16 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await page.goto(`${BASE_URL}/admin-products?q=opt_`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelectorAll(".admin-product-card").length > 0);
   await expect(page.locator("#adminProductsPage")).toContainText("Экспорт вариантов");
+  await expect(page.locator('.admin-products-filter select[name="status"]')).toContainText("Опубликованные");
+  await page.goto(`${BASE_URL}/admin-products?status=all&q=opt_`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => document.querySelectorAll(".admin-product-card").length > 0);
+  await expect(page.locator('[data-admin-product-form] select[name="status"]').first()).toContainText("Черновик");
+  await expect(page.locator(".admin-product-badge").first()).toContainText("Опубликован");
+  await page.locator("[data-admin-toggle-product]").first().click();
+  await expect(page.locator(".admin-product-badge").first()).toContainText("Скрыт");
+  await expect(page.locator("[data-admin-toggle-product]").first()).toContainText("Опубликовать");
+  await page.locator("[data-admin-toggle-product]").first().click();
+  await expect(page.locator(".admin-product-badge").first()).toContainText("Опубликован");
 
   await page.goto(`${BASE_URL}/admin-prices?q=opt_`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelectorAll(".admin-price-row").length > 0);
