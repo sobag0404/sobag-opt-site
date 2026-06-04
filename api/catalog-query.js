@@ -1,0 +1,34 @@
+const staticProducts = require("../data/products-live.json");
+const { queryCatalog, paramsToQuery } = require("./_lib/catalog-query");
+const { handleError, methodNotAllowed, sendJson } = require("./_lib/http");
+const { getCatalog } = require("./_lib/store");
+
+function parseUrl(req) {
+  return new URL(req.url || "/api/catalog-query", `http://${req.headers.host || "localhost"}`);
+}
+
+async function loadCatalogProducts() {
+  try {
+    const catalog = await getCatalog();
+    if (catalog?.products?.length) return { products: catalog.products, updatedAt: catalog.updatedAt || null, source: "server" };
+  } catch (error) {
+    if (error.code !== "storage_not_configured") throw error;
+  }
+  return { products: staticProducts, updatedAt: null, source: "static" };
+}
+
+module.exports = async function handler(req, res) {
+  if (req.method !== "GET") return methodNotAllowed(res);
+  try {
+    const url = parseUrl(req);
+    const catalog = await loadCatalogProducts();
+    const result = queryCatalog(catalog.products, paramsToQuery(url));
+    return sendJson(res, 200, {
+      ...result,
+      updatedAt: catalog.updatedAt,
+      source: catalog.source,
+    });
+  } catch (error) {
+    return handleError(res, error);
+  }
+};

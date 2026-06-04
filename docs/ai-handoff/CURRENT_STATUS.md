@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this working update:
-- `ee76c10 Add normalized PIM catalog sidecar`
+- `ba7d8f2 Add admin PIM diagnostics export`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -25,10 +25,16 @@ Production URLs:
 
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
-- Import/PIM 2.0 is underway;
-- next implementation stage: decide between the later DB/storage split, first server-side catalog query/pagination, or SEO/content work.
+- Import/PIM 2.0 has sidecar and diagnostics/export slices;
+- Performance work has started with server-side catalog query/detail APIs; next performance step is frontend migration to smaller payloads or catalog virtualization.
 
 Completed most recently:
+- Server-side catalog query/detail first slice:
+  - added `api/_lib/catalog-query.js` for published-only query, filters, sort, page/cursor, facets, card payloads, and detail payloads;
+  - added public read-only `/api/catalog-query` for smaller card results and `/api/catalog-detail` for full published product details by `id`, `baseSku`, or generated variant `sku`;
+  - both endpoints fall back to `data/products-live.json` when storage env is absent and do not expose the PIM sidecar;
+  - added `tools/catalog-query-smoke.mjs` and included it in `tools/autofix.mjs`;
+  - added `docs/catalog-server-api.md`;
 - Admin PIM diagnostics/export slice:
   - added read-only `/api/admin/pim` for `admin` and `content` roles;
   - JSON views: `summary`, `full`, `products`, `variants`, `images`, `taxonomies`, and `import-batches`;
@@ -124,6 +130,16 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current catalog server query pass:
+  - `node --check api/_lib/catalog-query.js`
+  - `node --check api/catalog-query.js`
+  - `node --check api/catalog-detail.js`
+  - `node --check tools/catalog-query-smoke.mjs`
+  - `node tools/catalog-query-smoke.mjs`: passed exact SKU ranking, published-only filtering, category filter, cursor pagination, and detail payload checks.
+  - `git diff --check`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; passed product validation, PIM smoke, PIM report smoke, catalog query smoke, and bulk photo dry-run fixture.
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`; 8/8 passed.
 - Current PIM diagnostics/export pass:
   - `node --check api/_lib/pim-report.js`
   - `node --check api/admin/pim.js`
@@ -205,7 +221,7 @@ Important remaining work:
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
-- Performance for 10k+ products: server search, pagination, smaller API responses, WebP/AVIF responsive images.
+- Performance for 10k+ products: migrate frontend catalog list/product modal to `/api/catalog-query` and `/api/catalog-detail`, catalog virtualization, smaller server pages, WebP/AVIF responsive images.
 - QA/Ops: production smoke automation, access audit cadence, lightweight log review.
 
 Important constraints:
