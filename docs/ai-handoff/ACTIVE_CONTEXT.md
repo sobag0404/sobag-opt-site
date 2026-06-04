@@ -29,7 +29,8 @@ Last updated: 2026-06-04
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
-- Current pass 2026-06-04: frontend product modal now hydrates public product details from `/api/catalog-detail` before rendering, with static/local fallback and admin-page skip. Added Playwright smoke coverage for intercepted detail endpoint. Catalog/search list still uses the old full catalog path.
+- Current pass 2026-06-04: public catalog/search list now progressively renders compact cards from `/api/catalog-query`, uses server total counts and cursor "load more", and falls back to the old local list path when the endpoint is unavailable. Added Playwright smoke coverage for intercepted query endpoint and cursor pagination.
+- Current pass 2026-06-04: frontend product modal now hydrates public product details from `/api/catalog-detail` before rendering, with static/local fallback and admin-page skip. Added Playwright smoke coverage for intercepted detail endpoint.
 - Current pass 2026-06-04: first server-side catalog query/detail performance slice is implemented. Added `api/_lib/catalog-query.js`, public `/api/catalog-query` for published card results with q/filter/sort/page/cursor/facets, public `/api/catalog-detail` for full published product details, `tools/catalog-query-smoke.mjs` in AutoFix, and `docs/catalog-server-api.md`. Old `/api/catalog` remains compatible.
 - Current pass 2026-06-04: admin PIM diagnostics/export slice is implemented. Added read-only `/api/admin/pim` for `admin/content` roles, JSON views `summary/full/products/variants/images/taxonomies/import-batches`, CSV exports for table views, `api/_lib/pim-report.js`, and `tools/pim-report-smoke.mjs` in AutoFix. Updated `docs/pim-normalized-payload.md` and roadmap.
 - Current pass 2026-06-04: first normalized PIM sidecar slice is implemented. Added `api/_lib/pim.js`, `saveCatalog` now stores `pim` next to the current `products` array, import batch apply/rollback rebuilds sidecar metadata, public `/api/catalog` strips `pim`, admin catalog can inspect it, and `tools/pim-smoke.mjs` is included in AutoFix. New doc: `docs/pim-normalized-payload.md`.
@@ -47,7 +48,7 @@ Last updated: 2026-06-04
 - Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
-- Current next task: next performance slice after modal detail hydration: migrate catalog/search list and facets toward `/api/catalog-query`, add virtualization/smaller server pages, or move to SEO/content if performance is paused.
+- Current next task: continue performance after catalog-query list rendering: migrate visible filter/facet controls fully to server facets, add catalog virtualization/smaller server pages, or move to QA/Ops production smoke if performance is paused.
 - Следующая задача: либо bulk CLI/importer upload path для больших фото-партий в Blob/S3 без JSON body limits, либо явный `updateExisting` режим в UI import batches.
 - Следующий PIM шаг: нормализованный payload product/variant/images/tags/categories/collections/holidays/import batch metadata, публичный `/api/catalog` только для `published`, responsive WebP/AVIF strategy после bulk storage.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
@@ -60,6 +61,7 @@ Last updated: 2026-06-04
 
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `npm.cmd` is not in PATH; WindowsApps Codex `node.exe` returns Access denied in PowerShell. Use bundled Node `C:\Users\Lodbr\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe` with PATH prefixed to that folder, and bundled Python from the same runtime.
+- Current catalog/search query-list pass verified: `node --check app.js`, `node --check tools/ui-smoke.spec.js`, focused `ui-smoke --grep "catalog list renders server query"`, `git diff --check`, bundled Python `py_compile`, bundled Node `tools/autofix.mjs --check`, and full bundled Playwright `tools/ui-smoke.spec.js` 10/10.
 - Какие команды запускать перед финальным ответом: `npm.cmd run check`; для JS-изменений `node --check <file>`; для UI-изменений `npm.cmd run ui:smoke` или focused smoke.
 - Что проверять вручную: затронутые страницы, product modal, header search, cart/account/admin flows по риску изменения.
 - Что проверять после деплоя: affected production URL, `/api/health`, storage-ready signal, отсутствие visual regressions на ключевых страницах.

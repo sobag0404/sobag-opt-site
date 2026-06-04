@@ -569,6 +569,17 @@ const state = {
   search: "",
   sort: "popular",
   visibleLimit: 120,
+  serverCatalog: {
+    status: "idle",
+    key: "",
+    requestId: 0,
+    items: [],
+    total: 0,
+    nextCursor: "",
+    hasMore: false,
+    source: "",
+    loadingMore: false,
+  },
   cart: new Map(),
   favorites: new Set(cleanFavoriteIds(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"))),
   recentProducts: cleanFavoriteIds(JSON.parse(localStorage.getItem(STORAGE.recentProducts) || "[]")),
@@ -920,6 +931,207 @@ function hasActiveCatalogState() {
 
 function resetVisibleProducts() {
   state.visibleLimit = 120;
+  resetServerCatalogList();
+}
+
+function hasCatalogFilterValues() {
+  return Object.values(state.filters).some((bucket) => bucket.size);
+}
+
+function shouldUseServerCatalogList() {
+  if (!catalogListing || isFavoritesPage || shouldLoadAdminCatalog()) return false;
+  if (isSearchPage && !state.search.trim() && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !hasCatalogFilterValues()) {
+    return false;
+  }
+  return Boolean(isSearchPage || state.selectedCategory || state.selectedCollection || state.selectedHoliday || state.search.trim() || hasCatalogFilterValues());
+}
+
+function serverCatalogValues(key) {
+  const values = new Set([...state.filters[key]].map((value) => String(value || "").trim()).filter(Boolean));
+  if (key === "category" && state.selectedCategory) values.add(state.selectedCategory);
+  if (key === "collection" && state.selectedCollection) values.add(state.selectedCollection);
+  if (key === "holiday" && state.selectedHoliday) values.add(state.selectedHoliday);
+  return [...values].sort((left, right) => left.localeCompare(right, "ru", { sensitivity: "base", numeric: true }));
+}
+
+function serverCatalogSortValue() {
+  if (state.sort === "priceAsc") return "price_asc";
+  if (state.sort === "priceDesc") return "price_desc";
+  if (state.sort === "popular") return "popular";
+  return "relevance";
+}
+
+function serverCatalogKey() {
+  return JSON.stringify({
+    q: state.search.trim(),
+    sort: serverCatalogSortValue(),
+    category: serverCatalogValues("category"),
+    collection: serverCatalogValues("collection"),
+    holiday: serverCatalogValues("holiday"),
+    size: serverCatalogValues("size"),
+    material: serverCatalogValues("material"),
+  });
+}
+
+function serverCatalogParams(options = {}) {
+  const params = new URLSearchParams();
+  if (state.search.trim()) params.set("q", state.search.trim());
+  params.set("sort", serverCatalogSortValue());
+  params.set("pageSize", "120");
+  if (options.cursor) params.set("cursor", options.cursor);
+  [
+    ["category", serverCatalogValues("category")],
+    ["collection", serverCatalogValues("collection")],
+    ["holiday", serverCatalogValues("holiday")],
+    ["size", serverCatalogValues("size")],
+    ["material", serverCatalogValues("material")],
+  ].forEach(([name, values]) => values.forEach((value) => params.append(name, value)));
+  return params;
+}
+
+function resetServerCatalogList() {
+  state.serverCatalog.requestId += 1;
+  state.serverCatalog.status = "idle";
+  state.serverCatalog.key = "";
+  state.serverCatalog.items = [];
+  state.serverCatalog.total = 0;
+  state.serverCatalog.nextCursor = "";
+  state.serverCatalog.hasMore = false;
+  state.serverCatalog.source = "";
+  state.serverCatalog.loadingMore = false;
+}
+
+function serverCatalogImageMeta(card) {
+  const meta = normalizeProductImageMetadata(card?.imageMeta);
+  if (meta) return meta;
+  const image = String(card?.image || "").trim();
+  return image ? normalizeProductImageMetadata(image) : null;
+}
+
+function serverCatalogProduct(card = {}) {
+  const imageMeta = serverCatalogImageMeta(card);
+  const image = String(card.image || imageMeta?.url || "assets/production-workshop-1.png").trim();
+  const categories = uniqueList([...(Array.isArray(card.categories) ? card.categories : splitList(card.category)), card.category]);
+  return {
+    id: String(card.id || card.baseSku || "").trim(),
+    baseSku: String(card.baseSku || card.id || "").trim(),
+    name: String(card.name || "").trim(),
+    category: categories[0] || String(card.category || "").trim(),
+    categories,
+    collections: uniqueList(Array.isArray(card.collections) ? card.collections : splitList(card.collections)),
+    holidays: uniqueList(Array.isArray(card.holidays) ? card.holidays : splitList(card.holidays)),
+    tags: uniqueList(Array.isArray(card.tags) ? card.tags : splitList(card.tags)),
+    description: String(card.description || "").trim(),
+    detailDescription: "",
+    stock: String(card.stock || "").trim(),
+    status: "published",
+    hidden: false,
+    image,
+    images: imageMeta ? [imageMeta] : [],
+    gallery: [image],
+    types: [],
+    sizes: [],
+    materials: [],
+    variants: [],
+    minPrice: Number(card.minPrice || 0) || 0,
+    maxPrice: Number(card.maxPrice || card.minPrice || 0) || 0,
+    popular: Number(card.popular || 0) || 0,
+    variantCount: Number(card.variantCount || 0) || 0,
+  };
+}
+
+function rememberServerCatalogCards(items = []) {
+  const existingKeys = new Set(products.map(productKey));
+  const additions = items.filter((item) => !existingKeys.has(productKey(item)));
+  if (!additions.length) return;
+  products = [...products, ...additions];
+  addMissingCatalogCategories(products);
+}
+
+function currentServerCatalogResult() {
+  if (!shouldUseServerCatalogList()) return null;
+  const key = serverCatalogKey();
+  if (state.serverCatalog.status !== "ready" || state.serverCatalog.key !== key) return null;
+  return state.serverCatalog;
+}
+
+async function refreshServerCatalogList(options = {}) {
+  if (!shouldUseServerCatalogList()) {
+    resetServerCatalogList();
+    return false;
+  }
+  const key = serverCatalogKey();
+  const append = Boolean(options.append && state.serverCatalog.status === "ready" && state.serverCatalog.key === key && state.serverCatalog.nextCursor);
+  if (append) state.serverCatalog.loadingMore = true;
+  else {
+    state.serverCatalog.status = "loading";
+    state.serverCatalog.key = key;
+    state.serverCatalog.items = [];
+    state.serverCatalog.total = 0;
+    state.serverCatalog.nextCursor = "";
+    state.serverCatalog.hasMore = false;
+  }
+  const requestId = state.serverCatalog.requestId + 1;
+  state.serverCatalog.requestId = requestId;
+  try {
+    const params = serverCatalogParams({ cursor: append ? state.serverCatalog.nextCursor : "" });
+    const data = await apiRequest(`/api/catalog-query?${params.toString()}`);
+    if (requestId !== state.serverCatalog.requestId) return false;
+    const incoming = (Array.isArray(data.items) ? data.items : []).map(serverCatalogProduct).filter((product) => product.id && product.name);
+    const merged = append ? [...state.serverCatalog.items, ...incoming] : incoming;
+    const seen = new Set();
+    const items = merged.filter((product) => {
+      const keyValue = productKey(product);
+      if (!keyValue || seen.has(keyValue)) return false;
+      seen.add(keyValue);
+      return true;
+    });
+    rememberServerCatalogCards(items);
+    state.serverCatalog.status = "ready";
+    state.serverCatalog.key = key;
+    state.serverCatalog.items = items;
+    state.serverCatalog.total = Number(data.total || items.length) || items.length;
+    state.serverCatalog.nextCursor = String(data.pageInfo?.nextCursor || "");
+    state.serverCatalog.hasMore = Boolean(data.pageInfo?.hasMore);
+    state.serverCatalog.source = String(data.source || "");
+    state.serverCatalog.loadingMore = false;
+    return true;
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
+    if (requestId === state.serverCatalog.requestId) {
+      state.serverCatalog.status = "fallback";
+      state.serverCatalog.key = key;
+      state.serverCatalog.loadingMore = false;
+    }
+    return false;
+  }
+}
+
+function queueServerCatalogRefresh() {
+  if (!shouldUseServerCatalogList()) {
+    resetServerCatalogList();
+    return;
+  }
+  const key = serverCatalogKey();
+  if (state.serverCatalog.key === key && (state.serverCatalog.status === "loading" || state.serverCatalog.status === "ready" || state.serverCatalog.status === "fallback")) {
+    return;
+  }
+  refreshServerCatalogList().then((loaded) => {
+    if (!loaded) return;
+    renderFilters();
+    renderProducts();
+  });
+}
+
+async function loadMoreServerCatalogProducts() {
+  const result = currentServerCatalogResult();
+  if (!result?.hasMore || !result.nextCursor || result.loadingMore) return false;
+  const loaded = await refreshServerCatalogList({ append: true });
+  if (loaded) {
+    renderFilters();
+    renderProducts();
+  }
+  return loaded;
 }
 
 function navigateWithinSite(url) {
@@ -3291,9 +3503,10 @@ function setSearchQuery(query) {
   document.querySelector("#catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function renderSearchResultsPanel(list) {
+function renderSearchResultsPanel(list, total = list.length) {
   if (!searchResultsPanel) return;
   const query = state.search.trim();
+  const resultTotal = Number(total || 0) || 0;
   const suggestions = getSearchSuggestions();
   const source = list.length ? list : suggestions.length ? suggestions : products.filter((product) => !product.hidden).slice(0, 80);
   const categories = countSearchValues(source, (product) => product.categories || [product.category], 5);
@@ -3306,7 +3519,7 @@ function renderSearchResultsPanel(list) {
     <div class="search-results-panel__main">
       <span>Результаты поиска</span>
       <h3>${query ? escapeHtml(query) : "Введите запрос в поисковой строке"}</h3>
-      <p>${query ? `${list.length} ${productWord(list.length)} найдено. Сначала идут точные совпадения по артикулу, затем по названию и тематике.` : "Ищите по артикулу, названию, подборке, празднику или тегу."}</p>
+      <p>${query ? `${resultTotal} ${productWord(resultTotal)} найдено. Сначала идут точные совпадения по артикулу, затем по названию и тематике.` : "Ищите по артикулу, названию, подборке, празднику или тегу."}</p>
     </div>
     ${
       suggestions.length
@@ -3815,12 +4028,16 @@ function renderFilters() {
 
 function renderProducts() {
   if (!productGrid || !productCount) return;
-  const list = getFilteredProducts();
-  const visibleList = list.slice(0, state.visibleLimit);
+  queueServerCatalogRefresh();
+  const localList = getFilteredProducts();
+  const serverResult = currentServerCatalogResult();
+  const list = serverResult ? serverResult.items : localList;
+  const total = serverResult ? serverResult.total : list.length;
+  const visibleList = serverResult ? list : list.slice(0, state.visibleLimit);
   renderSearchSuggestions();
-  renderSearchResultsPanel(list);
+  renderSearchResultsPanel(list, total);
   renderActiveFilterChips();
-  productCount.textContent = `${list.length} ${productWord(list.length)}`;
+  productCount.textContent = `${total} ${productWord(total)}`;
   if (!list.length) {
     const searchPrompt = isSearchPage && !state.search.trim();
     productGrid.innerHTML = `
@@ -3876,10 +4093,18 @@ function renderProducts() {
     .join("");
 
   if (catalogLoadMore) {
-    catalogLoadMore.innerHTML =
-      list.length > visibleList.length
-        ? `<button class="ghost-button" type="button" data-show-more-products>Показать ещё ${Math.min(120, list.length - visibleList.length)} из ${list.length - visibleList.length}</button>`
-        : "";
+    if (serverResult) {
+      const remaining = Math.max(0, total - list.length);
+      catalogLoadMore.innerHTML =
+        serverResult.hasMore && remaining
+          ? `<button class="ghost-button" type="button" data-show-more-products>${state.serverCatalog.loadingMore ? "Загрузка..." : `Показать ещё ${Math.min(120, remaining)} из ${remaining}`}</button>`
+          : "";
+    } else {
+      catalogLoadMore.innerHTML =
+        list.length > visibleList.length
+          ? `<button class="ghost-button" type="button" data-show-more-products>Показать ещё ${Math.min(120, list.length - visibleList.length)} из ${list.length - visibleList.length}</button>`
+          : "";
+    }
   }
 
   renderRecentProducts();
@@ -7786,6 +8011,7 @@ function boot() {
       return;
     }
     if (button.dataset.showMoreProducts !== undefined) {
+      if (await loadMoreServerCatalogProducts()) return;
       state.visibleLimit += 120;
       renderProducts();
       return;

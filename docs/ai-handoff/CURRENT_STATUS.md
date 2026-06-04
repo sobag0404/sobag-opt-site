@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this working update:
-- `e3c5db0 Add server catalog query API`
+- `b1d89ba Hydrate product modal from catalog detail API`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -26,9 +26,15 @@ Production URLs:
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar and diagnostics/export slices;
-- Performance work has started with server-side catalog query/detail APIs and product modal detail hydration; next performance step is catalog/search list migration to smaller payloads or catalog virtualization.
+- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, and catalog/search list rendering through compact query payloads; next performance step is full server facet UI migration or catalog virtualization.
 
 Completed most recently:
+- Frontend catalog/search list query slice:
+  - public catalog/search pages progressively request `/api/catalog-query` for compact card payloads;
+  - list rendering uses server total counts and cursor-based "load more" pagination when the endpoint is available;
+  - old local/full-catalog list rendering remains the fallback when the query endpoint is unavailable;
+  - favorites and admin catalog screens still use the previous local/admin catalog flows;
+  - added a Playwright smoke case that intercepts `/api/catalog-query`, validates category params, and proves cursor pagination appends the second server page;
 - Frontend catalog detail hydration slice:
   - product modal opening now tries `/api/catalog-detail?id=...` on public pages before rendering the modal;
   - fetched detail replaces the in-memory product entry so variants/images/detail text come from the smaller detail endpoint;
@@ -136,6 +142,14 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current frontend catalog/search query-list pass:
+  - `node --check app.js`
+  - `node --check tools/ui-smoke.spec.js`
+  - focused smoke: `ui-smoke --grep "catalog list renders server query"`; passed.
+  - `git diff --check`
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; passed product validation, PIM smoke, PIM report smoke, catalog query smoke, and bulk photo dry-run fixture.
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`; 10/10 passed.
 - Current frontend detail hydration pass:
   - `node --check app.js`
   - `node --check tools/ui-smoke.spec.js`
@@ -235,7 +249,7 @@ Important remaining work:
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
-- Performance for 10k+ products: migrate frontend catalog/search list and facets to `/api/catalog-query`, catalog virtualization, smaller server pages, WebP/AVIF responsive images.
+- Performance for 10k+ products: migrate visible filter/facet controls fully to `/api/catalog-query` facets, catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
 - QA/Ops: production smoke automation, access audit cadence, lightweight log review.
 
 Important constraints:

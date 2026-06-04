@@ -96,6 +96,8 @@ Response shape:
 
 Both endpoints read the server catalog from storage when available and fall back to `data/products-live.json` when storage env is absent. They do not write to KV/Redis and do not expose PIM sidecar internals.
 
-The product modal now tries `/api/catalog-detail` before rendering, then falls back to the already loaded local product when the API is unavailable or returns 404. This keeps static local development working while letting production hydrate full detail from the smaller endpoint.
+The product modal tries `/api/catalog-detail` before rendering, then falls back to the already loaded local product when the API is unavailable or returns 404. This keeps static local development working while letting production hydrate full detail from the smaller endpoint.
 
-The catalog/search list still uses the existing full catalog data path. The next performance slice can switch list rendering and facets to `/api/catalog-query`.
+The public catalog/search list now progressively uses `/api/catalog-query` for compact card payloads, total counts, and cursor-based "load more" pagination. If the endpoint is unavailable, the old local/full-catalog rendering path remains the fallback. Favorites and admin catalog screens still use the local/admin catalog flow.
+
+The next performance slice can move the visible filter/facet controls fully to the server facet payload and then add virtualization or smaller server-rendered pages for very large catalogs.

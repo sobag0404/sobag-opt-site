@@ -512,6 +512,75 @@ test("product modal hydrates detail from server detail endpoint", async ({ page 
   await expect(page.locator("#productModal")).toContainText(detailMarker);
 });
 
+test("catalog list renders server query cards and cursor pages", async ({ page }) => {
+  const firstCard = {
+    id: "qa-server-query-1",
+    baseSku: "QA-SERVER-001",
+    name: "QA Server Query Card One",
+    category: "QA Server",
+    categories: ["QA Server"],
+    collections: [],
+    holidays: [],
+    tags: ["qa-server"],
+    image: "assets/production-workshop-1.png",
+    minPrice: 101,
+    maxPrice: 101,
+    variantCount: 1,
+  };
+  const secondCard = {
+    ...firstCard,
+    id: "qa-server-query-2",
+    baseSku: "QA-SERVER-002",
+    name: "QA Server Query Card Two",
+    minPrice: 202,
+    maxPrice: 202,
+  };
+  const requestedUrls = [];
+
+  await page.route("**/api/catalog-query?**", async (route) => {
+    const url = new URL(route.request().url());
+    requestedUrls.push(url);
+    const isSecondPage = url.searchParams.get("cursor") === "MQ";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        items: [isSecondPage ? secondCard : firstCard],
+        total: 2,
+        facets: {
+          categories: [{ value: "QA Server", count: 2 }],
+          collections: [],
+          holidays: [],
+          tags: [{ value: "qa-server", count: 2 }],
+          types: [],
+          sizes: [],
+          materials: [],
+          stock: [],
+        },
+        pageInfo: {
+          page: isSecondPage ? 2 : 1,
+          pageSize: 1,
+          offset: isSecondPage ? 1 : 0,
+          total: 2,
+          totalPages: 2,
+          hasMore: !isSecondPage,
+          nextCursor: isSecondPage ? "" : "MQ",
+        },
+        source: "qa-query",
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent("QA Server")}`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".product-card__sku").first()).toHaveText("QA-SERVER-001");
+  await expect(page.locator("#productCount")).toContainText("2");
+  await expect(page.locator("[data-show-more-products]")).toBeVisible();
+  await page.locator("[data-show-more-products]").click();
+  await expect(page.locator(".product-card__sku")).toHaveText(["QA-SERVER-001", "QA-SERVER-002"]);
+  expect(requestedUrls[0].searchParams.get("category")).toBe("QA Server");
+  expect(requestedUrls.some((url) => url.searchParams.get("cursor") === "MQ")).toBe(true);
+});
+
 test("search prioritizes exact sku and keeps suggestions for fuzzy queries", async ({ page }) => {
   await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
