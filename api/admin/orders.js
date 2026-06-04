@@ -117,6 +117,6 @@ module.exports = async function handler(req, res) {
     await saveStore(store);
     sendJson(res, 200, { order: updated });
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };

@@ -53,3 +53,5 @@ npm.cmd run smoke:prod -- --path /api/health
 ```bash
 npm.cmd run smoke:prod:self-test
 ```
+
+Если production smoke упал, использовать runbook `docs/error-log-review.md`.

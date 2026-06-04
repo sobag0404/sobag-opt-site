@@ -246,6 +246,6 @@ module.exports = async function handler(req, res) {
       savedCarts,
     });
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };

@@ -115,6 +115,6 @@ module.exports = async function handler(req, res) {
 
     return methodNotAllowed(res);
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };

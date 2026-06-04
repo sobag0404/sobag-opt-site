@@ -81,6 +81,6 @@ module.exports = async function handler(req, res) {
     const saved = await saveCatalog(products, user.email, { source: "admin-catalog-save" });
     sendJson(res, 200, { updatedAt: saved.updatedAt, count: products.length });
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };

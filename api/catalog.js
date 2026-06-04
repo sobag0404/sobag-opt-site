@@ -75,6 +75,6 @@ module.exports = async function handler(req, res) {
     if (error.code === "storage_not_configured") {
       return sendJson(res, 200, { products: publicProducts(staticProducts), reviews: [], updatedAt: null, source: "static" });
     }
-    return handleError(res, error);
+    return handleError(res, error, req);
   }
 };

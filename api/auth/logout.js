@@ -10,6 +10,6 @@ module.exports = async function handler(req, res) {
     res.setHeader("Set-Cookie", expiredSessionCookie());
     sendJson(res, 200, { ok: true });
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };

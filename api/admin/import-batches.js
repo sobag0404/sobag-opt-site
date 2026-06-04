@@ -316,6 +316,6 @@ module.exports = async function handler(req, res) {
 
     return sendJson(res, 400, { error: "unknown_action", message: "Неизвестное действие партии импорта." });
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };

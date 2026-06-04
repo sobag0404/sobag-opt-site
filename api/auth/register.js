@@ -39,6 +39,6 @@ module.exports = async function handler(req, res) {
     await createSession(res, email);
     sendJson(res, 201, { user: publicUser(store.users[email]) });
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };

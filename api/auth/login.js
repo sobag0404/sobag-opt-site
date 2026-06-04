@@ -18,6 +18,6 @@ module.exports = async function handler(req, res) {
     await createSession(res, email);
     sendJson(res, 200, { user: publicUser(user) });
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };

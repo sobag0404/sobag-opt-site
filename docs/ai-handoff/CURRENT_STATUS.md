@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this working update:
-- `dd39ebf Automate production smoke after checks`
+- `277638e Add periodic API access audit`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -27,9 +27,19 @@ Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar and diagnostics/export slices;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages;
-- QA/Ops now has automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, and periodic static API access audit through AutoFix/weekly GitHub Actions; next QA/Ops step is lightweight log/error review.
+- QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Lightweight error monitoring/log review workflow slice:
+  - shared `api/_lib/http.js` `handleError` now accepts `req`;
+  - API errors include `requestId` in response JSON and `X-Sobag-Request-Id` header;
+  - server-side `5xx` errors write structured JSON logs with `event=api_error`, request id, method, path without query string, status, code, and message;
+  - production logs omit stack traces; non-production logs keep a trimmed stack for local debugging;
+  - API routes now pass `req` to `handleError`, so logs include route context;
+  - added `tools/error-log-audit.mjs` and npm script `audit:errors`;
+  - AutoFix now runs error-log audit;
+  - added `docs/error-log-review.md` runbook and linked it from deploy/security docs;
+  - roadmap now marks error monitoring/log review workflow done;
 - Periodic API access audit slice:
   - added `tools/access-audit.mjs` with an explicit access matrix for every API route outside `api/_lib`;
   - audit checks route coverage, file-to-route consistency, method guards, `methodNotAllowed`, admin `requireUser` role sets, no buyer access on admin routes, session-owned write 401 guards, buyer order comment ownership, and password-field sanitization;
@@ -180,6 +190,14 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current lightweight error-log workflow pass:
+  - `node --check api/_lib/http.js`
+  - `node --check tools/error-log-audit.mjs`
+  - `node tools/error-log-audit.mjs`: passed 17 API routes and runtime log-shape checks.
+  - `git diff --check`
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; includes error-log audit.
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`.
 - Current periodic access audit pass:
   - `node --check tools/access-audit.mjs`
   - `node --check api/health.js`
@@ -329,7 +347,7 @@ Important remaining work:
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
-- QA/Ops: add lightweight log/error review.
+- QA/Ops current checklist is done; next work is performance/SEO/remaining Import-PIM larger items.
 
 Important constraints:
 - no secrets in repo/docs/ZIP/chat;

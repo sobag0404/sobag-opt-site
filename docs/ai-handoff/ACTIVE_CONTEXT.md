@@ -29,6 +29,7 @@ Last updated: 2026-06-04
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-04: added lightweight error monitoring/log review workflow. Shared `api/_lib/http.js` `handleError` now accepts `req`, adds `requestId` to error JSON and `X-Sobag-Request-Id`, and writes structured `api_error` JSON logs for 5xx without production stack traces or query strings. API routes now pass `req` to `handleError`. New `tools/error-log-audit.mjs`, npm script `audit:errors`, AutoFix coverage, and `docs/error-log-review.md` runbook. Roadmap QA/Ops error/log review is now checked.
 - Current pass 2026-06-04: added periodic API access audit slice. New `tools/access-audit.mjs` keeps a static route/method/role matrix for every API route, checks admin `requireUser` roles, method guards, owner checks for buyer order comments, and password-field sanitization. Added npm script `audit:access`; AutoFix now runs the audit, so the existing push/PR/weekly `autofix-check` workflow covers periodic access audit. `/api/health` is now GET-only via `methodNotAllowed`. New doc: `docs/access-audit.md`.
 - Current pass 2026-06-04: wired production smoke into post-push/post-deploy routine. Added `.github/workflows/production-smoke.yml`, triggered after successful `autofix-check` push to `main` and via manual dispatch for fallback/preview URLs. `tools/production-smoke.mjs` now supports `--retries` and `--retry-delay`; workflow runs read-only live GET smoke with retries and no secrets.
 - Current pass 2026-06-04: added read-only production smoke automation slice. New `tools/production-smoke.mjs` checks `/`, `/catalog`, `/cart`, and `/api/health` with GET-only requests; supports `--base-url`, repeated `--path`, `--timeout`, `--json`, and offline `--self-test`; npm scripts `smoke:prod` and `smoke:prod:self-test` were added; AutoFix runs only the self-test so local checks do not touch production; docs now include `docs/deploy-checklist.md`.
@@ -53,19 +54,20 @@ Last updated: 2026-06-04
 - Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
-- Current next task: continue QA/Ops with lightweight log/error review workflow, or return to performance items that need real catalog growth.
+- Current next task: return to performance items that need real catalog growth, or start SEO/content final-copy/schema work. QA/Ops current checklist items are done.
 - Следующая задача: либо bulk CLI/importer upload path для больших фото-партий в Blob/S3 без JSON body limits, либо явный `updateExisting` режим в UI import batches.
 - Следующий PIM шаг: нормализованный payload product/variant/images/tags/categories/collections/holidays/import batch metadata, публичный `/api/catalog` только для `published`, responsive WebP/AVIF strategy после bulk storage.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
 ## Useful Files
 - Главные файлы проекта: `app.js`, `cart.js`, `styles.css`, `components/site-shell.js`, `data/products-live.json`.
-- Документация: `docs/roadmap-checklist.md`, `docs/ai-handoff/CURRENT_STATUS.md`, `docs/product-import.md`, `docs/object-storage.md`, `docs/backend-security.md`, `docs/deploy-checklist.md`, `docs/access-audit.md`.
+- Документация: `docs/roadmap-checklist.md`, `docs/ai-handoff/CURRENT_STATUS.md`, `docs/product-import.md`, `docs/object-storage.md`, `docs/backend-security.md`, `docs/deploy-checklist.md`, `docs/access-audit.md`, `docs/error-log-review.md`.
 - Проверки: `package.json`, `tools/autofix.mjs`, `tools/ui-smoke.spec.js`, `tools/audit_catalog.py`.
 - API/Backend: `api/_lib/store.js`, `api/_lib/auth.js`, `api/_lib/http.js`, `api/_lib/object-storage.js`, `api/catalog.js`, `api/auth/me.js`, `api/orders.js`, `api/admin/orders.js`, `api/admin/users.js`, `api/admin/catalog.js`, `api/admin/content.js`, `api/admin/product-images.js`.
 
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `npm.cmd` is not in PATH; WindowsApps Codex `node.exe` returns Access denied in PowerShell. Use bundled Node `C:\Users\Lodbr\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe` with PATH prefixed to that folder, and bundled Python from the same runtime.
+- Current error-log workflow pass verification: `node --check api/_lib/http.js`; `node --check tools/error-log-audit.mjs`; `node tools/error-log-audit.mjs`; `git diff --check`; bundled Python `py_compile`; bundled Node `tools/autofix.mjs --check` (now includes error-log audit); full bundled Playwright `tools/ui-smoke.spec.js`.
 - Current access-audit pass verification: `node --check tools/access-audit.mjs`; `node --check api/health.js`; `node tools/access-audit.mjs`; `git diff --check`; bundled Python `py_compile`; bundled Node `tools/autofix.mjs --check` (now includes access audit); full bundled Playwright `tools/ui-smoke.spec.js`.
 - Current production-smoke workflow pass verification: `node --check tools/production-smoke.mjs`; `node tools/production-smoke.mjs --self-test --retries 1 --retry-delay 10`; `git diff --check`; bundled Python `py_compile`; bundled Node `tools/autofix.mjs --check` (includes production smoke self-test only, no live production); full bundled Playwright `tools/ui-smoke.spec.js`.
 - Previous production-smoke script pass verification: `node --check tools/production-smoke.mjs`; `node tools/production-smoke.mjs --self-test`; `git diff --check`; bundled Python `py_compile`; bundled Node `tools/autofix.mjs --check` (includes production smoke self-test only, no live production); full bundled Playwright `tools/ui-smoke.spec.js`.

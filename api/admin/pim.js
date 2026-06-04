@@ -36,6 +36,6 @@ module.exports = async function handler(req, res) {
 
     return sendJson(res, 200, reportForPimView(catalog, view));
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };

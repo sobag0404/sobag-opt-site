@@ -71,6 +71,6 @@ module.exports = async function handler(req, res) {
     const saved = await saveContent(content, user.email);
     sendJson(res, 200, { updatedAt: saved.updatedAt, count: Object.keys(content).length });
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };

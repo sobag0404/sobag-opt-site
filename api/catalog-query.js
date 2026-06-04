@@ -29,6 +29,6 @@ module.exports = async function handler(req, res) {
       source: catalog.source,
     });
   } catch (error) {
-    return handleError(res, error);
+    return handleError(res, error, req);
   }
 };

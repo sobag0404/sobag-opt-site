@@ -47,6 +47,6 @@ module.exports = async function handler(req, res) {
     await saveStore(store);
     sendJson(res, 200, { user: publicUser(store.users[email]) });
   } catch (error) {
-    handleError(res, error);
+    handleError(res, error, req);
   }
 };
