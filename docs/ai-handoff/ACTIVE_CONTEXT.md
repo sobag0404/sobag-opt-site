@@ -29,6 +29,7 @@ Last updated: 2026-06-04
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-04: admin PIM diagnostics/export slice is implemented. Added read-only `/api/admin/pim` for `admin/content` roles, JSON views `summary/full/products/variants/images/taxonomies/import-batches`, CSV exports for table views, `api/_lib/pim-report.js`, and `tools/pim-report-smoke.mjs` in AutoFix. Updated `docs/pim-normalized-payload.md` and roadmap.
 - Current pass 2026-06-04: first normalized PIM sidecar slice is implemented. Added `api/_lib/pim.js`, `saveCatalog` now stores `pim` next to the current `products` array, import batch apply/rollback rebuilds sidecar metadata, public `/api/catalog` strips `pim`, admin catalog can inspect it, and `tools/pim-smoke.mjs` is included in AutoFix. New doc: `docs/pim-normalized-payload.md`.
 - Current pass 2026-06-04: готов responsive image variants срез. `tools/bulk-upload-product-photos.mjs` поддерживает `--responsive`, `--variant-widths`, `--variant-formats`, `--variant-quality`; dry-run планирует `ready_variant` без Blob/Sharp; реальная генерация требует optional `sharp` и грузит WebP/AVIF variants через object-storage adapter; `images[].variants` сохраняются в API/frontend normalization/validator; product cards, product modal, thumbnails и admin cards используют WebP variants как `srcset`, AVIF metadata сохранена для будущего `<picture>` pass.
 - Current pass 2026-06-04: готов bulk CLI upload path для больших фото-партий. Добавлен `tools/bulk-upload-product-photos.mjs`: dry-run сканирует products JSON и папки фото, пишет CSV report; реальный upload идет file-by-file через `api/_lib/object-storage.js`, без JSON body `/api/admin/product-images`; output products JSON получает `images` metadata и совместимые `image/gallery`; report statuses `ready/uploaded/skipped/missing/failed`; добавлен `tools/bulk-upload-product-photos.test.mjs`, он включен в `tools/autofix.mjs`; npm script `upload:photos`.
@@ -44,7 +45,7 @@ Last updated: 2026-06-04
 - Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
-- Current next task: next PIM slice after the normalized sidecar: admin diagnostics/export for PIM payload, deeper import report rows, or the first server-side catalog query/pagination step for 10k+ products.
+- Current next task: choose the next roadmap slice after PIM diagnostics/export: later DB/storage split planning, first server-side catalog query/pagination for 10k+ products, or SEO/content schema/copy work.
 - Следующая задача: либо bulk CLI/importer upload path для больших фото-партий в Blob/S3 без JSON body limits, либо явный `updateExisting` режим в UI import batches.
 - Следующий PIM шаг: нормализованный payload product/variant/images/tags/categories/collections/holidays/import batch metadata, публичный `/api/catalog` только для `published`, responsive WebP/AVIF strategy после bulk storage.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.

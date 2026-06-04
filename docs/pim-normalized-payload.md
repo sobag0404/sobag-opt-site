@@ -41,6 +41,32 @@ The public `/api/catalog` response strips `pim` and returns only the current pub
 
 Admin `/api/admin/catalog` can read the sidecar for diagnostics and future PIM tools.
 
+## Admin Diagnostics And Export
+
+`GET /api/admin/pim` is a read-only diagnostics endpoint for `admin` and `content` roles.
+
+JSON views:
+
+- `view=summary` default: counts, diagnostics, and small samples.
+- `view=full`: full sidecar for admin inspection.
+- `view=products`
+- `view=variants`
+- `view=images`
+- `view=taxonomies`
+- `view=import-batches`
+
+CSV exports:
+
+- `GET /api/admin/pim?format=csv` exports products by default.
+- `GET /api/admin/pim?view=variants&format=csv`
+- `GET /api/admin/pim?view=images&format=csv`
+- `GET /api/admin/pim?view=taxonomies&format=csv`
+- `GET /api/admin/pim?view=import-batches&format=csv`
+
+CSV exports flatten counts and use `; ` inside multi-value cells such as categories, collections, holidays, and tags.
+
+Diagnostics compare stored sidecar counts with a freshly rebuilt PIM view and report mismatches without writing to storage.
+
 ## Included Records
 
 - `products`: one normalized record per catalog product, including `id`, `baseSku`, `name`, publication status, taxonomy arrays, base price, stock, image count, and variant count.

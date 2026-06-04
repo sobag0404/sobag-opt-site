@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this working update:
-- `3690ba2 Add responsive product image variants`
+- `ee76c10 Add normalized PIM catalog sidecar`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -26,9 +26,16 @@ Production URLs:
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 is underway;
-- next implementation stage: deeper normalized PIM payloads, then SEO/content/performance work.
+- next implementation stage: decide between the later DB/storage split, first server-side catalog query/pagination, or SEO/content work.
 
 Completed most recently:
+- Admin PIM diagnostics/export slice:
+  - added read-only `/api/admin/pim` for `admin` and `content` roles;
+  - JSON views: `summary`, `full`, `products`, `variants`, `images`, `taxonomies`, and `import-batches`;
+  - CSV exports for products, variants, images, taxonomies, and import batch summaries;
+  - added `api/_lib/pim-report.js` with diagnostics that compare stored sidecar counts with a freshly rebuilt PIM view without writing to storage;
+  - added `tools/pim-report-smoke.mjs` and included it in `tools/autofix.mjs`;
+  - updated `docs/pim-normalized-payload.md` and roadmap with the diagnostics/export endpoint;
 - Normalized PIM sidecar first slice:
   - added `api/_lib/pim.js` to build a normalized sidecar from the current catalog without changing the public catalog shape;
   - sidecar includes normalized products, generated variants, image metadata including responsive variants, category/collection/holiday/tag taxonomies, counts, and safe import batch summaries;
@@ -117,6 +124,15 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current PIM diagnostics/export pass:
+  - `node --check api/_lib/pim-report.js`
+  - `node --check api/admin/pim.js`
+  - `node --check tools/pim-report-smoke.mjs`
+  - `node tools/pim-report-smoke.mjs`: passed for sample PIM summary, images view, products CSV, and import-batches CSV.
+  - `git diff --check`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; passed product validation, PIM smoke, PIM report smoke, and bulk photo dry-run fixture.
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`; 8/8 passed.
 - Current PIM sidecar pass:
   - `node --check api/_lib/pim.js`
   - `node --check api/_lib/store.js`
@@ -186,7 +202,7 @@ Backend/storage state:
 - Do not expose env values in chat/docs/repo.
 
 Important remaining work:
-- Import/PIM 2.0: use the new normalized sidecar for admin diagnostics/export, deepen import report rows if needed, and keep public `/api/catalog` published-only.
+- Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: server search, pagination, smaller API responses, WebP/AVIF responsive images.
