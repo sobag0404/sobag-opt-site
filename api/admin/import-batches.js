@@ -13,6 +13,12 @@ function text(value) {
   return String(value || "").trim();
 }
 
+function hasRawValue(source, key) {
+  const value = source?.[key];
+  if (Array.isArray(value)) return value.length > 0;
+  return text(value) !== "";
+}
+
 function cleanList(value) {
   const items = Array.isArray(value) ? value : String(value || "").split(value && String(value).includes(";") ? ";" : ",");
   const seen = new Set();
@@ -160,7 +166,19 @@ function makeBatch(products, currentProducts, user, options = {}) {
       return;
     }
 
-    const ownVariantSkus = exists ? variantSkuSet([cleanProduct(existingBySku.get(sku)).product].filter(Boolean)) : new Set();
+    const existingProduct = exists ? cleanProduct(existingBySku.get(sku)).product : null;
+    if (exists && updateExisting && existingProduct) {
+      product.id = text(existingProduct.id) || product.id;
+      if (!hasRawValue(raw, "status")) {
+        product.status = existingProduct.status;
+        product.hidden = product.status !== "published";
+      }
+      if (!hasRawValue(raw, "image") && existingProduct.image) product.image = existingProduct.image;
+      if (!hasRawValue(raw, "gallery") && existingProduct.gallery?.length) product.gallery = existingProduct.gallery;
+      if (!hasRawValue(raw, "images") && existingProduct.images?.length) product.images = existingProduct.images;
+    }
+
+    const ownVariantSkus = existingProduct ? variantSkuSet([existingProduct]) : new Set();
     const productVariantSkus = new Set(variantSkus(product).map(baseSkuKey));
     const collisions = [...productVariantSkus].filter((variantSku) => (existingVariantSkus.has(variantSku) && !ownVariantSkus.has(variantSku)) || seenVariantSkus.has(variantSku));
     if (collisions.length) {

@@ -132,7 +132,10 @@ test("admin import page and custom print calculator render", async ({ page }) =>
   await expect(page.locator("#adminImportPage")).toContainText("Импорт");
   await expect(page.locator("#adminImportPage")).toContainText("Партии импорта");
   await expect(page.locator("#adminImportPage")).toContainText("Фото текущего предпросмотра");
+  await expect(page.locator("#importUpdateExisting")).toBeVisible();
+  await page.locator("#importUpdateExisting").check();
   await page.locator("#excelInput").setInputFiles(path.join(process.cwd(), "templates", "sobag-products-template.csv"));
+  await expect(page.locator(".import-batch-card").first()).toContainText("Режим: обновление");
   await expect(page.locator(".import-batch-card").first()).toContainText("Предпросмотр");
   await expect(page.locator("[data-apply-import-batch]").first()).toContainText("Применить");
   await expect(page.locator("[data-export-import-batch]").first()).toContainText("Скачать отчет CSV");

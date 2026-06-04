@@ -76,6 +76,8 @@ python tools/product_importer.py scan-photos --photos "C:\Path\YandexDisk\Фот
 
 `admin-import.html` теперь работает через партии импорта. Загрузка Excel/CSV сначала создает preview-партию и не меняет каталог до нажатия `Применить`.
 
+Перед загрузкой файла можно включить режим `Обновлять существующие товары по baseSku`. Без него строки с уже существующим `baseSku` попадают в отчет как `duplicate_skipped`; с ним такие строки получают action `updated`. Импорт не удаляет старые товары, а при обновлении сохраняет текущие `status`, `image`, `gallery` и `images`, если соответствующие колонки/metadata не переданы в файле.
+
 В карточке партии видны:
 
 - статус партии: `preview`, `applied`, `rejected`, `rolled_back`;

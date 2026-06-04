@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this handoff update:
-- `1d7a723 Add product image object storage adapter`
+- `7ff20c3 Add import photo upload report`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -29,6 +29,13 @@ Current focus:
 - next implementation stage: bulk CLI/importer photo migration to Blob/S3, explicit update-existing mode in admin import UI, and then deeper normalized PIM payloads.
 
 Completed most recently:
+- Explicit update-existing mode in admin import UI:
+  - `admin-import.html` now has an `Обновлять существующие товары по baseSku` checkbox before file upload;
+  - preview requests send `updateExisting` to `/api/admin/import-batches`, and local fallback batches keep the same mode;
+  - existing products are updated only when the mode is enabled, and imports still never delete old products;
+  - update previews preserve existing `id`, `status`, `image`, `gallery`, `images`, and common optional fields when the uploaded file omits them;
+  - batch cards show whether they are in update mode or create-only mode;
+  - smoke covers the checkbox and update-mode batch label;
 - Admin import photo flow:
   - `admin-import.html` now has a photo workspace for the current product import preview;
   - admins can select image files or a folder;
@@ -86,6 +93,13 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Bundled Node/Python were used on this device because `npm.cmd` is not installed in PATH and the WindowsApps Codex `node.exe` returns Access denied in PowerShell.
+- `C:\Users\Lodbr\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --check app.js`
+- `C:\Users\Lodbr\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --check api/admin/import-batches.js`
+- `C:\Users\Lodbr\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --check tools/ui-smoke.spec.js`
+- equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check` and PATH prefixed to bundled Node; passed product validation for 808 products / 12943 variants.
+- bundled Python: `python -m py_compile tools/product_importer.py tools/audit_catalog.py`
+- equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`; 8/8 passed.
 - `node --check app.js`
 - `node --check tools/ui-smoke.spec.js`
 - `node --check api/_lib/object-storage.js`
@@ -128,7 +142,7 @@ Backend/storage state:
 - Do not expose env values in chat/docs/repo.
 
 Important remaining work:
-- Import/PIM 2.0: expose explicit update-existing mode in the admin batch UI, deepen normalized product/import payloads, and keep public `/api/catalog` published-only.
+- Import/PIM 2.0: deepen normalized product/import payloads and keep public `/api/catalog` published-only.
 - Durable image storage: add bulk CLI/importer upload path, retry/report handling for large batches, responsive WebP/AVIF strategy, and later implement the S3-compatible provider for VPS/MinIO/R2.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: server search, pagination, smaller API responses, WebP/AVIF responsive images.

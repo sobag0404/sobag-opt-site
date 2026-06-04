@@ -39,8 +39,9 @@ Last updated: 2026-06-04
    - [x] Better customer list and segmentation.
 
 3. [planned] Import/PIM 2.0:
-   - [x] Import batches with preview report and rollback.
+  - [x] Import batches with preview report and rollback.
      - First slice: KV-backed `/api/admin/import-batches`, admin preview/apply/reject/CSV report UI, and latest applied batch rollback snapshot.
+     - Explicit update-existing mode in admin import UI: existing products update only when enabled, imports never delete old products, and omitted status/images are preserved on update.
    - [x] Product statuses: draft, published, hidden, archive.
    - [ ] Real object storage for product images instead of Git/static previews.
      - [x] First slice: object storage adapter, Vercel Blob provider, admin image API, product image metadata shape, and stronger ignored local photo folders.

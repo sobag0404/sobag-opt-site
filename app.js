@@ -588,6 +588,7 @@ const state = {
   importPhotoUploading: false,
   importBatches: loadStoredImportBatches(),
   activeImportBatchId: "",
+  importUpdateExisting: false,
   pricePreview: [],
 };
 
@@ -5303,11 +5304,15 @@ async function loadImportBatches() {
   }
 }
 
-async function createImportBatch(items, source = "admin-import") {
-  const fallbackBatch = importBatchFromProducts(items, source);
+async function createImportBatch(items, source = "admin-import", options = {}) {
+  const batchOptions = { updateExisting: Boolean(options.updateExisting) };
+  const fallbackBatch = importBatchFromProducts(items, source, batchOptions);
   state.adminPreview = items;
   try {
-    const data = await apiRequest("/api/admin/import-batches", { method: "POST", body: { action: "preview", source, products: cleanProductsForBatch(items) } });
+    const data = await apiRequest("/api/admin/import-batches", {
+      method: "POST",
+      body: { action: "preview", source, updateExisting: batchOptions.updateExisting, products: cleanProductsForBatch(items) },
+    });
     if (data.batch) {
       state.importBatches = [data.batch, ...state.importBatches.filter((batch) => batch.id !== data.batch.id)].slice(0, 30);
       state.activeImportBatchId = data.batch.id;
@@ -5521,7 +5526,7 @@ async function uploadImportPhotos() {
     }
   }
   state.importPhotoUploading = false;
-  if (uploaded) await createImportBatch(state.adminPreview, "admin-import+photos");
+  if (uploaded) await createImportBatch(state.adminPreview, "admin-import+photos", { updateExisting: state.importUpdateExisting });
   else renderAdminImportPage();
   showToast(uploaded ? `Фото загружены: ${uploaded}. Создан новый preview с metadata.` : "Фото не загружены. Проверьте отчет.");
 }
@@ -5708,6 +5713,7 @@ function importBatchCardHtml(batch, index) {
         <span><b>${counts.skipped || 0}</b> пропущено</span>
         <span><b>${counts.errors || 0}</b> ошибок</span>
       </div>
+      <p class="admin-section-note">${batch.updateExisting ? "Режим: обновление существующих по baseSku" : "Режим: только новые товары, существующие baseSku пропускаются"}</p>
       ${importBatchRowsHtml(batch)}
       <div class="order-actions">
         ${batch.status === "preview" ? `<button class="primary-button" type="button" data-apply-import-batch="${escapeHtml(batch.id)}">Применить</button><button class="ghost-button" type="button" data-reject-import-batch="${escapeHtml(batch.id)}">Отклонить</button>` : ""}
@@ -5732,6 +5738,10 @@ function adminImportPageHtml() {
         <label>
           Файл товаров
           <input id="excelInput" type="file" accept=".xlsx,.xls,.csv" />
+        </label>
+        <label class="admin-section-note">
+          <input id="importUpdateExisting" type="checkbox" ${state.importUpdateExisting ? "checked" : ""} />
+          Обновлять существующие товары по baseSku. Включите перед загрузкой файла; импорт не удаляет старые товары.
         </label>
         <small>Рекомендуемый разделитель в CSV: ;. Для списков категорий, типов, размеров, материалов, подборок и тегов тоже используйте ;.</small>
       </div>
@@ -6723,8 +6733,10 @@ function renderAdminPreview(items) {
     ? items
         .map(
           (product) => {
-            const baseDuplicate = existingSkus.has(baseSkuKey(product.baseSku));
-            const variantDuplicate = [...productVariantSkuKeys(product)].some((sku) => existingVariantSkus.has(sku));
+            const rawBaseDuplicate = existingSkus.has(baseSkuKey(product.baseSku));
+            const baseDuplicate = rawBaseDuplicate && !state.importUpdateExisting;
+            const updateDuplicate = rawBaseDuplicate && state.importUpdateExisting;
+            const variantDuplicate = [...productVariantSkuKeys(product)].some((sku) => existingVariantSkus.has(sku)) && !updateDuplicate;
             const issue = baseDuplicate ? "Основной артикул уже есть в каталоге" : variantDuplicate ? "Есть пересечение артикулов вариантов" : "";
             return `
             <article>
@@ -6747,6 +6759,60 @@ function saveGeneratedProducts(options = {}) {
   }
   const batch = options.batchId ? importBatchById(options.batchId) : null;
   if (batch && !batch.snapshot) batch.snapshot = { products: cleanProductsForStorage(), createdAt: new Date().toISOString() };
+  if (batch?.updateExisting) {
+    const currentProducts = [...products];
+    const bySku = new Map(currentProducts.map((product) => [baseSkuKey(product.baseSku), product]));
+    const existingSkuSet = new Set(bySku.keys());
+    const createdProducts = [];
+    let updatedCount = 0;
+    let applySkipped = 0;
+    (batch.products || []).forEach((entry) => {
+      const product = normalizeProduct(entry.product || {});
+      const sku = baseSkuKey(product.baseSku);
+      if (!sku) {
+        applySkipped += 1;
+        return;
+      }
+      if (entry.action === "updated" && bySku.has(sku)) {
+        bySku.set(sku, product);
+        updatedCount += 1;
+        return;
+      }
+      if (entry.action === "created" && !bySku.has(sku)) {
+        bySku.set(sku, product);
+        createdProducts.push(product);
+        return;
+      }
+      applySkipped += 1;
+    });
+    if (!createdProducts.length && !updatedCount) {
+      showToast("Партия не применена локально: нет строк для создания или обновления.");
+      return;
+    }
+    products = [
+      ...createdProducts.filter((product) => !existingSkuSet.has(baseSkuKey(product.baseSku))),
+      ...currentProducts.map((product) => bySku.get(baseSkuKey(product.baseSku)) || product),
+    ];
+    batch.status = "applied";
+    batch.appliedAt = new Date().toISOString();
+    batch.counts = {
+      ...(batch.counts || {}),
+      created: createdProducts.length,
+      updated: updatedCount,
+      skipped: (batch.rows || []).filter((row) => row.action === "skipped").length + applySkipped,
+    };
+    addMissingCatalogCategories(products);
+    saveProducts();
+    saveStoredImportBatches();
+    renderCatalogHome();
+    renderCatalogShell();
+    renderFilters();
+    renderProducts();
+    renderAdminPreview([]);
+    renderAdminImportPage();
+    showToast(`Партия применена локально: создано ${createdProducts.length}, обновлено ${updatedCount}.`);
+    return;
+  }
   const existingSkus = new Set(products.map((product) => baseSkuKey(product.baseSku)));
   const existingVariantSkus = collectVariantSkuKeys(products);
   const seenSkus = new Set();
@@ -7149,6 +7215,8 @@ function addMissingCatalogItems(currentItems, names, makeItem) {
 
 async function importExcel(file) {
   const rows = await readProductRowsFromFile(file);
+  const updateExisting = Boolean(state.importUpdateExisting);
+  const existingBySku = new Map(products.map((product) => [baseSkuKey(product.baseSku), product]));
   const existingSkus = new Set(products.map((product) => baseSkuKey(product.baseSku)));
   const seenSkus = new Set();
   let skippedDuplicates = 0;
@@ -7156,44 +7224,63 @@ async function importExcel(file) {
     if (!rowValue(row, "name") || !rowValue(row, "baseSku")) return items;
     const baseSku = normalizeBaseSku(rowValue(row, "baseSku"));
     const skuKey = baseSkuKey(baseSku);
-    if (existingSkus.has(skuKey) || seenSkus.has(skuKey)) {
+    const existingProduct = updateExisting ? existingBySku.get(skuKey) : null;
+    if ((existingSkus.has(skuKey) && !updateExisting) || seenSkus.has(skuKey)) {
       skippedDuplicates += 1;
       return items;
     }
     seenSkus.add(skuKey);
+    if (existingProduct) {
+      if (!rowValue(row, "category")) row.category = existingProduct.category;
+      if (!rowValue(row, "description")) row.description = existingProduct.description;
+      if (!rowValue(row, "detailDescription")) row.detailDescription = existingProduct.detailDescription;
+    }
+    const gallery = splitList(rowValue(row, "gallery") || "");
+    const rowImage = rowValue(row, "image");
+    const rowStatus = rowValue(row, "status");
     items.push(
       normalizeProduct({
-        id: `${rowValue(row, "baseSku")}-${Date.now()}-${Math.random().toString(16).slice(2)}`.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+        id: existingProduct?.id || `${rowValue(row, "baseSku")}-${Date.now()}-${Math.random().toString(16).slice(2)}`.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
         baseSku,
         name: String(rowValue(row, "name")).trim(),
         category: String(rowValue(row, "category") || "Подушки").trim(),
         categories: splitList(rowValue(row, "category") || "Подушки"),
-        theme: String(rowValue(row, "theme") || "").trim(),
-        collections: splitList(rowValue(row, "collections") || rowValue(row, "theme") || ""),
-        holidays: splitList(rowValue(row, "holidays") || ""),
-        tags: splitList(rowValue(row, "tags") || rowValue(row, "theme") || ""),
-        types: splitList(rowValue(row, "types") || TYPE_OPTIONS.join(";")),
-        sizes: splitList(rowValue(row, "sizes") || SIZE_OPTIONS.join(";")),
-        materials: splitList(rowValue(row, "materials") || MATERIAL_OPTIONS.join(";")),
-        basePrice: Number(rowValue(row, "basePrice") || 220),
-        image: rowValue(row, "image") || "assets/production-workshop-1.png",
-        status: rowValue(row, "status") || "draft",
-        stock: rowValue(row, "stock") || "made",
-        gallery: splitList(rowValue(row, "gallery") || ""),
-        photoFolder: rowValue(row, "photoFolder") || rowValue(row, "baseSku"),
-        badge: rowValue(row, "badge") || "Excel",
+        theme: String(rowValue(row, "theme") || existingProduct?.theme || "").trim(),
+        collections: splitList(rowValue(row, "collections") || rowValue(row, "theme") || existingProduct?.collections?.join(";") || existingProduct?.theme || ""),
+        holidays: splitList(rowValue(row, "holidays") || existingProduct?.holidays?.join(";") || ""),
+        tags: splitList(rowValue(row, "tags") || rowValue(row, "theme") || existingProduct?.tags?.join(";") || existingProduct?.theme || ""),
+        types: splitList(rowValue(row, "types") || existingProduct?.types?.join(";") || TYPE_OPTIONS.join(";")),
+        sizes: splitList(rowValue(row, "sizes") || existingProduct?.sizes?.join(";") || SIZE_OPTIONS.join(";")),
+        materials: splitList(rowValue(row, "materials") || existingProduct?.materials?.join(";") || MATERIAL_OPTIONS.join(";")),
+        basePrice: Number(rowValue(row, "basePrice") || existingProduct?.basePrice || 220),
+        image: rowImage || existingProduct?.image || "assets/production-workshop-1.png",
+        status: rowStatus || existingProduct?.status || "draft",
+        stock: rowValue(row, "stock") || existingProduct?.stock || "made",
+        gallery: gallery.length ? gallery : existingProduct?.gallery || [],
+        images: existingProduct?.images || [],
+        photoFolder: rowValue(row, "photoFolder") || existingProduct?.photoFolder || rowValue(row, "baseSku"),
+        badge: rowValue(row, "badge") || existingProduct?.badge || "Excel",
         description: rowValue(row, "description") || "Карточка импортирована из Excel.",
         detailDescription: rowValue(row, "detailDescription") || "Карточка импортирована из Excel. Фото и параметры можно уточнить перед публикацией.",
-        popular: Number(rowValue(row, "popular") || 55),
+        popular: Number(rowValue(row, "popular") || existingProduct?.popular || 55),
+        variantPrices: existingProduct?.variantPrices || {},
       })
     );
     return items;
   }, []);
   addMissingCatalogCategories(imported);
-  await createImportBatch(imported, file.name || "admin-import");
+  await createImportBatch(imported, file.name || "admin-import", { updateExisting });
   if (state.importPhotoFiles.length) {
     buildImportPhotoReport(state.importPhotoFiles);
     renderAdminImportPage();
+  }
+  if (updateExisting) {
+    showToast(
+      skippedDuplicates
+        ? `Из Excel загружено строк для предпросмотра: ${imported.length}. Повторы в файле пропущены: ${skippedDuplicates}.`
+        : `Из Excel загружено строк для предпросмотра: ${imported.length}.`
+    );
+    return;
   }
   showToast(
     skippedDuplicates
@@ -7996,6 +8083,11 @@ function boot() {
       state.sort = event.target.value;
       resetVisibleProducts();
       renderProducts();
+    }
+    if (event.target.id === "importUpdateExisting") {
+      state.importUpdateExisting = event.target.checked;
+      renderAdminImportPage();
+      return;
     }
     if (event.target.id === "excelInput" && event.target.files[0]) importExcel(event.target.files[0]);
     if (event.target.id === "photoUploadInput" || event.target.id === "photoFolderInput") {
