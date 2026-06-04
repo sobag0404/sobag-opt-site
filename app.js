@@ -583,6 +583,9 @@ const state = {
   productReviews: [],
   adminReviews: [],
   adminPreview: [],
+  importPhotoFiles: [],
+  importPhotoReport: [],
+  importPhotoUploading: false,
   importBatches: loadStoredImportBatches(),
   activeImportBatchId: "",
   pricePreview: [],
@@ -5326,6 +5329,258 @@ function cleanProductsForBatch(items) {
   return items.map(({ variants, minPrice, maxPrice, ...product }) => product);
 }
 
+function normalizePhotoMatchKey(value) {
+  return String(value || "")
+    .trim()
+    .toLocaleLowerCase("ru-RU")
+    .replace(/\.[a-z0-9]{2,5}$/i, "")
+    .replace(/opt[_\s-]*/g, "opt ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function photoProductKeys(product) {
+  return [...new Set([product.baseSku, product.photoFolder, product.id].map(normalizePhotoMatchKey).filter((key) => key.length >= 2))];
+}
+
+function photoFileSearchText(file) {
+  const relative = String(file.webkitRelativePath || file.name || "");
+  const parts = relative.split(/[\\/]/).filter(Boolean);
+  const parent = parts.length > 1 ? parts[parts.length - 2] : "";
+  return normalizePhotoMatchKey([relative, parent, file.name].filter(Boolean).join(" "));
+}
+
+function findProductForPhotoFile(file) {
+  const searchText = photoFileSearchText(file);
+  return state.adminPreview.find((product) => photoProductKeys(product).some((key) => searchText === key || searchText.includes(key) || key.includes(searchText)));
+}
+
+function photoReportCounts(rows = state.importPhotoReport) {
+  return rows.reduce(
+    (counts, row) => {
+      if (row.status === "ready") counts.ready += 1;
+      else if (row.status === "uploaded") counts.uploaded += 1;
+      else if (row.status === "failed") counts.failed += 1;
+      else if (row.status === "missing") counts.missing += 1;
+      else if (row.status === "repeated") counts.repeated += 1;
+      return counts;
+    },
+    { ready: 0, uploaded: 0, failed: 0, missing: 0, repeated: 0 }
+  );
+}
+
+function importPhotoStatusLabel(status) {
+  return (
+    {
+      ready: "Готово к загрузке",
+      uploaded: "Загружено",
+      failed: "Ошибка",
+      missing: "Нет фото",
+      repeated: "Повтор",
+    }[status] || status || ""
+  );
+}
+
+function importPhotoReasonLabel(reason) {
+  return (
+    {
+      no_preview_products: "сначала загрузите Excel/CSV",
+      no_product_match: "товар не найден по имени файла или папки",
+      unsupported_file: "файл не является изображением",
+      repeated_image: "повторное фото для товара",
+      missing_image: "для товара не выбран файл",
+      backend_unavailable: "серверный upload недоступен",
+    }[reason] || reason || ""
+  );
+}
+
+function buildImportPhotoReport(files) {
+  const selected = Array.from(files || []).filter(Boolean);
+  const rows = [];
+  const matchedProducts = new Set();
+  const seenProductImages = new Set();
+  state.importPhotoFiles = selected;
+
+  if (!state.adminPreview.length) {
+    selected.forEach((file, index) => rows.push({ status: "failed", reason: "no_preview_products", fileIndex: index, fileName: file.name, baseSku: "", productName: "" }));
+    state.importPhotoReport = rows;
+    return rows;
+  }
+
+  selected.forEach((file, index) => {
+    if (!String(file.type || "").startsWith("image/")) {
+      rows.push({ status: "failed", reason: "unsupported_file", fileIndex: index, fileName: file.name, baseSku: "", productName: "" });
+      return;
+    }
+    const product = findProductForPhotoFile(file);
+    if (!product) {
+      rows.push({ status: "failed", reason: "no_product_match", fileIndex: index, fileName: file.webkitRelativePath || file.name, baseSku: "", productName: "" });
+      return;
+    }
+    const duplicateKey = `${baseSkuKey(product.baseSku)}::${normalizePhotoMatchKey(file.name)}`;
+    const status = seenProductImages.has(duplicateKey) ? "repeated" : "ready";
+    if (status === "ready") seenProductImages.add(duplicateKey);
+    matchedProducts.add(productKey(product));
+    rows.push({
+      status,
+      reason: status === "repeated" ? "repeated_image" : "",
+      fileIndex: index,
+      fileName: file.webkitRelativePath || file.name,
+      baseSku: product.baseSku,
+      productName: product.name,
+      productId: product.id,
+    });
+  });
+
+  state.adminPreview.forEach((product) => {
+    if (!matchedProducts.has(productKey(product))) {
+      rows.push({ status: "missing", reason: "missing_image", fileIndex: -1, fileName: "", baseSku: product.baseSku, productName: product.name, productId: product.id });
+    }
+  });
+  state.importPhotoReport = rows;
+  return rows;
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result || "")));
+    reader.addEventListener("error", () => reject(reader.error || new Error("Не удалось прочитать файл.")));
+    reader.readAsDataURL(file);
+  });
+}
+
+function imageSizeFromDataUrl(dataUrl) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve({ width: image.naturalWidth || null, height: image.naturalHeight || null }));
+    image.addEventListener("error", () => resolve({ width: null, height: null }));
+    image.src = dataUrl;
+  });
+}
+
+function updatePreviewProductImage(baseSku, imageMetadata) {
+  const sku = baseSkuKey(baseSku);
+  state.adminPreview = state.adminPreview.map((product) => {
+    if (baseSkuKey(product.baseSku) !== sku) return product;
+    const nextImages = normalizeProductImages([...(product.images || []), imageMetadata]);
+    const uploadedUrl = productImageMetadataUrl(nextImages[nextImages.length - 1]);
+    const currentImage = String(product.image || "");
+    const nextImage = !currentImage || currentImage === "assets/production-workshop-1.png" ? uploadedUrl || currentImage : currentImage;
+    return normalizeProduct({
+      ...product,
+      image: nextImage,
+      images: nextImages,
+      gallery: [...new Set([nextImage, ...(product.gallery || []), uploadedUrl].filter(Boolean))],
+    });
+  });
+}
+
+async function uploadImportPhotos() {
+  if (state.importPhotoUploading) return;
+  const readyRows = state.importPhotoReport.filter((row) => row.status === "ready");
+  if (!readyRows.length) {
+    showToast("Нет фото, готовых к загрузке.");
+    return;
+  }
+  state.importPhotoUploading = true;
+  renderAdminImportPage();
+  let uploaded = 0;
+  for (const row of readyRows) {
+    const file = state.importPhotoFiles[row.fileIndex];
+    if (!file) {
+      row.status = "failed";
+      row.reason = "missing_image";
+      continue;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const dimensions = await imageSizeFromDataUrl(dataUrl);
+      const result = await apiRequest("/api/admin/product-images", {
+        method: "POST",
+        body: {
+          action: "upload",
+          productKey: row.baseSku,
+          fileName: file.name,
+          mime: file.type || "image/jpeg",
+          dataUrl,
+          width: dimensions.width,
+          height: dimensions.height,
+        },
+      });
+      row.status = "uploaded";
+      row.reason = "";
+      row.url = result.image?.url || "";
+      row.storageKey = result.image?.storageKey || "";
+      updatePreviewProductImage(row.baseSku, result.image);
+      uploaded += 1;
+    } catch (error) {
+      row.status = "failed";
+      row.reason = isBackendUnavailable(error) || error.status === 404 ? "backend_unavailable" : error.message || "upload_failed";
+    }
+  }
+  state.importPhotoUploading = false;
+  if (uploaded) await createImportBatch(state.adminPreview, "admin-import+photos");
+  else renderAdminImportPage();
+  showToast(uploaded ? `Фото загружены: ${uploaded}. Создан новый preview с metadata.` : "Фото не загружены. Проверьте отчет.");
+}
+
+function importPhotoReportHtml() {
+  const rows = state.importPhotoReport.slice(0, 80);
+  const counts = photoReportCounts();
+  return `
+    <section class="import-photo-workspace">
+      <div class="section-head section-head--compact">
+        <div>
+          <h3>Фото текущего предпросмотра</h3>
+          <p>Выберите файлы или папку с фото. Preview сопоставит изображения с товарами по baseSku и полю "Папка фото", затем загрузка отправит их в object storage через API product-images.</p>
+        </div>
+        <div class="admin-actions">
+          <button class="primary-button" type="button" data-upload-import-photos ${counts.ready && !state.importPhotoUploading ? "" : "disabled"}>${state.importPhotoUploading ? "Загрузка..." : "Загрузить фото"}</button>
+          <button class="ghost-button" type="button" data-export-import-photo-report ${state.importPhotoReport.length ? "" : "disabled"}>Скачать отчет фото CSV</button>
+          <button class="ghost-button" type="button" data-clear-import-photo-report ${state.importPhotoReport.length ? "" : "disabled"}>Очистить отчет</button>
+        </div>
+      </div>
+      <label class="import-photo-picker">
+        Файлы фото
+        <input id="photoUploadInput" type="file" accept="image/*" multiple />
+      </label>
+      <label class="import-photo-picker">
+        Папка фото
+        <input id="photoFolderInput" type="file" accept="image/*" multiple webkitdirectory />
+      </label>
+      <div class="admin-orders-summary">
+        <span><b>${state.importPhotoFiles.length}</b> файлов выбрано</span>
+        <span><b>${counts.ready}</b> готовы</span>
+        <span><b>${counts.uploaded}</b> загружено</span>
+        <span><b>${counts.missing}</b> без фото</span>
+        <span><b>${counts.repeated}</b> повторов</span>
+        <span><b>${counts.failed}</b> ошибок</span>
+      </div>
+      ${rows.length ? `
+        <div class="import-photo-table">
+          <div class="import-photo-table__head"><span>Статус</span><span>Артикул</span><span>Товар</span><span>Файл</span><span>Причина</span></div>
+          ${rows
+            .map(
+              (row) => `
+                <div>
+                  <strong>${escapeHtml(importPhotoStatusLabel(row.status))}</strong>
+                  <b>${escapeHtml(row.baseSku || "")}</b>
+                  <span>${escapeHtml(row.productName || "")}</span>
+                  <span>${escapeHtml(row.fileName || row.storageKey || "")}</span>
+                  <em>${escapeHtml(importPhotoReasonLabel(row.reason))}</em>
+                </div>
+              `
+            )
+            .join("")}
+        </div>
+        ${state.importPhotoReport.length > rows.length ? `<p class="admin-section-note">Показаны первые ${rows.length} строк из ${state.importPhotoReport.length}.</p>` : ""}
+      ` : "<p>Пока нет отчета по фото. Загрузите Excel/CSV и выберите файлы изображений.</p>"}
+    </section>
+  `;
+}
+
 function importBatchById(id) {
   return state.importBatches.find((batch) => batch.id === id);
 }
@@ -5486,6 +5741,7 @@ function adminImportPageHtml() {
         <span><b>${state.importBatches.length}</b> партий</span>
       </div>
     </div>
+    ${importPhotoReportHtml()}
     <section class="import-batch-workspace">
       <div class="section-head section-head--compact">
         <div>
@@ -6935,6 +7191,10 @@ async function importExcel(file) {
   }, []);
   addMissingCatalogCategories(imported);
   await createImportBatch(imported, file.name || "admin-import");
+  if (state.importPhotoFiles.length) {
+    buildImportPhotoReport(state.importPhotoFiles);
+    renderAdminImportPage();
+  }
   showToast(
     skippedDuplicates
       ? `Из Excel загружено новых карточек: ${imported.length}. Дубли пропущены: ${skippedDuplicates}.`
@@ -7533,6 +7793,31 @@ function boot() {
       await loadImportBatches();
       return;
     }
+    if (button.dataset.uploadImportPhotos !== undefined) {
+      await uploadImportPhotos();
+      return;
+    }
+    if (button.dataset.clearImportPhotoReport !== undefined) {
+      state.importPhotoFiles = [];
+      state.importPhotoReport = [];
+      renderAdminImportPage();
+      return;
+    }
+    if (button.dataset.exportImportPhotoReport !== undefined) {
+      downloadCsv("sobag-import-photo-report.csv", [
+        ["Статус", "Основной артикул", "Товар", "Файл", "Причина", "URL", "Storage key"],
+        ...state.importPhotoReport.map((row) => [
+          importPhotoStatusLabel(row.status),
+          row.baseSku || "",
+          row.productName || "",
+          row.fileName || "",
+          importPhotoReasonLabel(row.reason),
+          row.url || "",
+          row.storageKey || "",
+        ]),
+      ]);
+      return;
+    }
     if (button.dataset.applyImportBatch) {
       await applyImportBatch(button.dataset.applyImportBatch);
       return;
@@ -7713,6 +7998,11 @@ function boot() {
       renderProducts();
     }
     if (event.target.id === "excelInput" && event.target.files[0]) importExcel(event.target.files[0]);
+    if (event.target.id === "photoUploadInput" || event.target.id === "photoFolderInput") {
+      buildImportPhotoReport(event.target.files || []);
+      renderAdminImportPage();
+      showToast("Отчет по фото подготовлен.");
+    }
     if (event.target.dataset.contentImage) readContentFile(event.target);
     if (event.target.dataset.adminPriceImport !== undefined && event.target.files[0]) {
       importPriceFile(event.target.files[0]).finally(() => {

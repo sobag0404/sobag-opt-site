@@ -101,6 +101,8 @@ python tools/product_importer.py scan-photos --photos "C:\Path\YandexDisk\Фот
 
 Первый provider: Vercel Blob. В репозитории хранится только код и metadata, а секрет `BLOB_READ_WRITE_TOKEN` должен жить только в окружении Vercel/локальной машине. В товаре можно хранить старые поля `image`/`gallery` для совместимости и новое поле `images` с metadata: `url`, `storageKey`, `provider`, `width`, `height`, `mime`, `uploadedAt`.
 
+В `admin-import.html` после загрузки Excel/CSV можно выбрать файлы или папку фото. Страница сопоставляет изображения с товарами по `baseSku` и `Папка фото`, показывает отчет `ready/missing/repeated/uploaded/failed`, умеет скачать CSV-отчет и после успешной загрузки создает новый preview batch с Blob/S3 metadata.
+
 ## Локальный импорт
 
 ```powershell

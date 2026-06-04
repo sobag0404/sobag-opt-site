@@ -45,6 +45,20 @@ products/<safe-product-key>/<timestamp>-<random>-<file-name>
 
 The JSON upload endpoint is meant for small/admin uploads and previews. Large bulk photo migration should use a dedicated importer or direct Blob/S3 tooling, then write returned metadata into products.
 
+## Admin Import Photo Flow
+
+`admin-import.html` has a photo workspace for the current product import preview:
+
+- choose image files or a folder;
+- preview matches files to products by `baseSku`, `photoFolder`, or product id;
+- report statuses: `ready`, `missing`, `repeated`, `uploaded`, `failed`;
+- CSV report export is available before/after upload;
+- successful uploads call `/api/admin/product-images`;
+- uploaded image metadata is merged into product `images`;
+- the page creates a refreshed preview batch with the new metadata so `Применить` writes Blob/S3 metadata into the catalog.
+
+This flow is for controlled admin uploads. The next step for very large catalogs is a bulk CLI/importer path that can upload many files without JSON body limits and can generate responsive WebP/AVIF variants.
+
 ## Product Image Metadata
 
 Products may keep the legacy public fields:

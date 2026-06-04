@@ -1,4 +1,5 @@
 const { test, expect } = require("@playwright/test");
+const fs = require("node:fs");
 const path = require("node:path");
 
 const BASE_URL = process.env.SOBAG_BASE_URL || "http://127.0.0.1:4173";
@@ -130,10 +131,18 @@ test("admin import page and custom print calculator render", async ({ page }) =>
   await page.goto(`${BASE_URL}/admin-import.html`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminImportPage")).toContainText("Импорт");
   await expect(page.locator("#adminImportPage")).toContainText("Партии импорта");
+  await expect(page.locator("#adminImportPage")).toContainText("Фото текущего предпросмотра");
   await page.locator("#excelInput").setInputFiles(path.join(process.cwd(), "templates", "sobag-products-template.csv"));
   await expect(page.locator(".import-batch-card").first()).toContainText("Предпросмотр");
   await expect(page.locator("[data-apply-import-batch]").first()).toContainText("Применить");
   await expect(page.locator("[data-export-import-batch]").first()).toContainText("Скачать отчет CSV");
+  await page.locator("#photoUploadInput").setInputFiles({
+    name: "10345.jpg",
+    mimeType: "image/png",
+    buffer: fs.readFileSync(path.join(process.cwd(), "assets", "production-workshop-1.png")),
+  });
+  await expect(page.locator(".import-photo-table").first()).toContainText("10345");
+  await expect(page.locator("[data-upload-import-photos]").first()).toBeEnabled();
 
   await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
   await page.locator("#accountButton").click();

@@ -44,7 +44,8 @@ Last updated: 2026-06-04
    - [x] Product statuses: draft, published, hidden, archive.
    - [ ] Real object storage for product images instead of Git/static previews.
      - [x] First slice: object storage adapter, Vercel Blob provider, admin image API, product image metadata shape, and stronger ignored local photo folders.
-     - [ ] Wire bulk photo import/admin UI to Blob/S3 and stop relying on new Git/static preview images for new product batches.
+     - [x] Admin import photo flow: preview matching, missing/repeated/failed/uploaded report, Blob API upload, and refreshed preview batch with image metadata.
+     - [ ] Bulk CLI/importer photo migration to Blob/S3 and responsive WebP/AVIF variants for large catalogs.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
 
 4. [planned] SEO/content:

@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this handoff update:
-- `c116f94 Add import batch preview workflow`
+- `1d7a723 Add product image object storage adapter`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -26,9 +26,18 @@ Production URLs:
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 is underway;
-- next implementation stage: wire bulk/admin photo workflows to the object storage adapter and then deepen normalized PIM payloads.
+- next implementation stage: bulk CLI/importer photo migration to Blob/S3, explicit update-existing mode in admin import UI, and then deeper normalized PIM payloads.
 
 Completed most recently:
+- Admin import photo flow:
+  - `admin-import.html` now has a photo workspace for the current product import preview;
+  - admins can select image files or a folder;
+  - preview matches images to products by `baseSku`, `photoFolder`, or product id;
+  - report statuses cover `ready`, `missing`, `repeated`, `uploaded`, and `failed`;
+  - report CSV export is available;
+  - upload sends matched images to `/api/admin/product-images`;
+  - successful uploads merge returned storage metadata into product `images` and create a refreshed preview batch, so applying the batch writes image metadata into the catalog;
+  - smoke now verifies the photo preview report without requiring Blob env;
 - Object storage first slice for product photos:
   - added `@vercel/blob`;
   - added `api/_lib/object-storage.js` with provider switch, Vercel Blob implementation, S3-compatible placeholder, upload/list/delete-or-markUnused/getPublicUrl interface;
@@ -78,6 +87,7 @@ Completed most recently:
 
 Verification from this handoff pass:
 - `node --check app.js`
+- `node --check tools/ui-smoke.spec.js`
 - `node --check api/_lib/object-storage.js`
 - `node --check api/admin/product-images.js`
 - `node --check api/health.js`
@@ -119,7 +129,7 @@ Backend/storage state:
 
 Important remaining work:
 - Import/PIM 2.0: expose explicit update-existing mode in the admin batch UI, deepen normalized product/import payloads, and keep public `/api/catalog` published-only.
-- Durable image storage: connect admin/bulk photo upload flows to the new adapter, add failure/retry/report handling, and later implement the S3-compatible provider for VPS/MinIO/R2.
+- Durable image storage: add bulk CLI/importer upload path, retry/report handling for large batches, responsive WebP/AVIF strategy, and later implement the S3-compatible provider for VPS/MinIO/R2.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: server search, pagination, smaller API responses, WebP/AVIF responsive images.
 - QA/Ops: production smoke automation, access audit cadence, lightweight log review.

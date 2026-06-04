@@ -2398,9 +2398,21 @@ select[aria-invalid="true"] {
 }
 
 .import-batch-workspace,
+.import-photo-workspace,
 .import-batch-list {
   display: grid;
   gap: 12px;
+}
+
+.import-photo-picker {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .import-batch-card {
@@ -2426,12 +2438,14 @@ select[aria-invalid="true"] {
 
 .import-batch-card__head span,
 .import-batch-card__head b,
-.import-batch-table em {
+.import-batch-table em,
+.import-photo-table em {
   color: var(--muted);
   font-size: 12px;
 }
 
-.import-batch-table {
+.import-batch-table,
+.import-photo-table {
   display: grid;
   overflow-x: auto;
   border: 1px solid var(--hairline);
@@ -2448,11 +2462,24 @@ select[aria-invalid="true"] {
   border-bottom: 1px solid var(--hairline);
 }
 
-.import-batch-table > div:last-child {
+.import-photo-table__head,
+.import-photo-table > div {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(110px, 0.8fr) minmax(160px, 1.2fr) minmax(180px, 1.2fr) minmax(150px, 1fr);
+  gap: 8px;
+  min-width: 720px;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.import-batch-table > div:last-child,
+.import-photo-table > div:last-child {
   border-bottom: 0;
 }
 
-.import-batch-table__head {
+.import-batch-table__head,
+.import-photo-table__head {
   color: var(--muted);
   background: var(--surface-card);
   font-size: 11px;
