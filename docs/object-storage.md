@@ -57,7 +57,37 @@ The JSON upload endpoint is meant for small/admin uploads and previews. Large bu
 - uploaded image metadata is merged into product `images`;
 - the page creates a refreshed preview batch with the new metadata so `Применить` writes Blob/S3 metadata into the catalog.
 
-This flow is for controlled admin uploads. The next step for very large catalogs is a bulk CLI/importer path that can upload many files without JSON body limits and can generate responsive WebP/AVIF variants.
+This flow is for controlled admin uploads. Very large catalogs should use the bulk CLI path below, then later add responsive WebP/AVIF variants.
+
+## Bulk CLI Upload
+
+`tools/bulk-upload-product-photos.mjs` uploads local product photo folders directly through the object-storage adapter. It does not send image bytes through `/api/admin/product-images`, so it avoids JSON body limits.
+
+Dry-run first:
+
+```powershell
+node tools/bulk-upload-product-photos.mjs --products data/products.import.json --photos "C:\Path\Photos" --dry-run
+```
+
+Real upload to Vercel Blob requires `BLOB_READ_WRITE_TOKEN` in the local environment, not in Git or docs:
+
+```powershell
+node tools/bulk-upload-product-photos.mjs --products data/products.import.json --photos "C:\Path\Photos" --out local-import-output\products-with-object-images.json --report local-import-output\bulk-photo-upload-report.csv
+```
+
+Useful options:
+
+- `--replace-existing-images` replaces existing image metadata/gallery for products uploaded in this run.
+- `--limit <number>` caps processed image files for a small pilot run.
+- `--retries <number>` controls per-file upload retries.
+- `--provider vercel-blob` is the current provider; `s3-compatible` remains reserved for the future VPS/MinIO/R2 implementation.
+
+The CLI writes:
+
+- CSV report with `ready/uploaded/skipped/missing/failed`;
+- products JSON with `images` metadata and updated legacy `image`/`gallery` fields for successful uploads.
+
+`npm run check` runs a dry-run fixture test for this CLI, so the matching/report path stays covered without needing a real Blob token.
 
 ## Product Image Metadata
 

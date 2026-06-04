@@ -7,6 +7,7 @@
   "scripts": {
     "dev:static": "node tools/static-server.mjs --port 4173",
     "dev:vercel": "npx -y vercel dev --listen 4173",
+    "upload:photos": "node tools/bulk-upload-product-photos.mjs",
     "check": "node tools/autofix.mjs --check",
     "autofix": "node tools/autofix.mjs --write",
     "ui:smoke": "playwright test tools/ui-smoke.spec.js",

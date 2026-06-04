@@ -105,6 +105,15 @@ python tools/product_importer.py scan-photos --photos "C:\Path\YandexDisk\Фот
 
 В `admin-import.html` после загрузки Excel/CSV можно выбрать файлы или папку фото. Страница сопоставляет изображения с товарами по `baseSku` и `Папка фото`, показывает отчет `ready/missing/repeated/uploaded/failed`, умеет скачать CSV-отчет и после успешной загрузки создает новый preview batch с Blob/S3 metadata.
 
+Для больших партий используйте CLI, чтобы не передавать файлы через JSON API:
+
+```powershell
+node tools/bulk-upload-product-photos.mjs --products data/products.import.json --photos "C:\Path\Photos" --dry-run
+node tools/bulk-upload-product-photos.mjs --products data/products.import.json --photos "C:\Path\Photos" --out local-import-output\products-with-object-images.json --report local-import-output\bulk-photo-upload-report.csv
+```
+
+Реальный upload требует `BLOB_READ_WRITE_TOKEN` только в локальном/production окружении. CLI пишет CSV-отчет и products JSON с `images` metadata, не добавляя bulk-фото в Git.
+
 ## Локальный импорт
 
 ```powershell

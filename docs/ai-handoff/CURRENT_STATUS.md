@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this handoff update:
-- `7ff20c3 Add import photo upload report`
+- `ba6c643 Add explicit import update mode`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -26,9 +26,18 @@ Production URLs:
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 is underway;
-- next implementation stage: bulk CLI/importer photo migration to Blob/S3, explicit update-existing mode in admin import UI, and then deeper normalized PIM payloads.
+- next implementation stage: responsive image variants, deeper normalized PIM payloads, and then SEO/content/performance work.
 
 Completed most recently:
+- Bulk CLI photo upload path:
+  - added `tools/bulk-upload-product-photos.mjs` for large product photo folders;
+  - dry-run scans products and photo folders and writes a CSV report without Blob env;
+  - real upload uses the existing object-storage adapter, so Vercel Blob works now and the output shape stays provider-ready;
+  - image bytes are read from disk and uploaded file-by-file, not sent through `/api/admin/product-images` JSON bodies;
+  - successful uploads write products JSON with `images` metadata plus compatible `image`/`gallery`;
+  - report statuses cover `ready`, `uploaded`, `skipped`, `missing`, and `failed`;
+  - `tools/bulk-upload-product-photos.test.mjs` covers dry-run matching/reporting and is called from `tools/autofix.mjs`;
+  - added npm script `upload:photos`;
 - Explicit update-existing mode in admin import UI:
   - `admin-import.html` now has an `Обновлять существующие товары по baseSku` checkbox before file upload;
   - preview requests send `updateExisting` to `/api/admin/import-batches`, and local fallback batches keep the same mode;
@@ -93,6 +102,10 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- `node --check tools/bulk-upload-product-photos.mjs`
+- `node --check tools/bulk-upload-product-photos.test.mjs`
+- `node --check tools/autofix.mjs`
+- `node tools/bulk-upload-product-photos.test.mjs`
 - Bundled Node/Python were used on this device because `npm.cmd` is not installed in PATH and the WindowsApps Codex `node.exe` returns Access denied in PowerShell.
 - `C:\Users\Lodbr\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --check app.js`
 - `C:\Users\Lodbr\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --check api/admin/import-batches.js`
@@ -143,7 +156,7 @@ Backend/storage state:
 
 Important remaining work:
 - Import/PIM 2.0: deepen normalized product/import payloads and keep public `/api/catalog` published-only.
-- Durable image storage: add bulk CLI/importer upload path, retry/report handling for large batches, responsive WebP/AVIF strategy, and later implement the S3-compatible provider for VPS/MinIO/R2.
+- Durable image storage: add responsive WebP/AVIF strategy for large catalogs and later implement the S3-compatible provider for VPS/MinIO/R2.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: server search, pagination, smaller API responses, WebP/AVIF responsive images.
 - QA/Ops: production smoke automation, access audit cadence, lightweight log review.

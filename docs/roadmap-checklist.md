@@ -47,6 +47,8 @@ Last updated: 2026-06-04
      - [x] First slice: object storage adapter, Vercel Blob provider, admin image API, product image metadata shape, and stronger ignored local photo folders.
      - [x] Admin import photo flow: preview matching, missing/repeated/failed/uploaded report, Blob API upload, and refreshed preview batch with image metadata.
      - [ ] Bulk CLI/importer photo migration to Blob/S3 and responsive WebP/AVIF variants for large catalogs.
+       - [x] Bulk CLI upload/report path: `tools/bulk-upload-product-photos.mjs` scans product photo folders, supports dry-run, uploads through the object-storage adapter, writes CSV report, and outputs products JSON with image metadata without using JSON upload bodies.
+       - [ ] Responsive WebP/AVIF variants for large catalogs.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
 
 4. [planned] SEO/content:
