@@ -138,6 +138,20 @@ function assertProducts() {
             if (image.provider && !["vercel-blob", "s3-compatible"].includes(normalizeText(image.provider))) errors.push(`${label}: images[${imageIndex}] has unsupported provider`);
             if (image.width !== undefined && image.width !== null && Number(image.width) <= 0) errors.push(`${label}: images[${imageIndex}] width must be positive`);
             if (image.height !== undefined && image.height !== null && Number(image.height) <= 0) errors.push(`${label}: images[${imageIndex}] height must be positive`);
+            if (image.variants !== undefined) {
+              if (!Array.isArray(image.variants)) errors.push(`${label}: images[${imageIndex}].variants must be an array`);
+              else {
+                image.variants.forEach((variant, variantIndex) => {
+                  if (!variant || typeof variant !== "object") errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] must be an object`);
+                  if (variant && typeof variant === "object") {
+                    if (!normalizeText(variant.url) && !normalizeText(variant.storageKey)) errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] needs url or storageKey`);
+                    if (variant.provider && !["vercel-blob", "s3-compatible"].includes(normalizeText(variant.provider))) errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] has unsupported provider`);
+                    if (variant.width !== undefined && variant.width !== null && Number(variant.width) <= 0) errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] width must be positive`);
+                    if (variant.height !== undefined && variant.height !== null && Number(variant.height) <= 0) errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] height must be positive`);
+                  }
+                });
+              }
+            }
           }
         });
       }

@@ -58,6 +58,20 @@ function normalizeImageMetadata(input = {}) {
   const url = text(input.url || input.downloadUrl || input.publicUrl);
   const storageKey = text(input.storageKey || input.pathname || input.key);
   if (!url && !storageKey) return null;
+  const variants = Array.isArray(input.variants)
+    ? input.variants
+        .map((variant) => {
+          const normalized = normalizeImageMetadata(variant);
+          return normalized
+            ? {
+                ...normalized,
+                label: text(variant.label || variant.variantLabel),
+                format: text(variant.format || variant.mime).replace(/^image\//, ""),
+              }
+            : null;
+        })
+        .filter(Boolean)
+    : [];
   return {
     url,
     storageKey,
@@ -70,6 +84,7 @@ function normalizeImageMetadata(input = {}) {
     size: Number(input.size || 0) || null,
     etag: text(input.etag),
     status: text(input.status) || "active",
+    variants,
   };
 }
 

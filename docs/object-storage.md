@@ -57,7 +57,7 @@ The JSON upload endpoint is meant for small/admin uploads and previews. Large bu
 - uploaded image metadata is merged into product `images`;
 - the page creates a refreshed preview batch with the new metadata so `Применить` writes Blob/S3 metadata into the catalog.
 
-This flow is for controlled admin uploads. Very large catalogs should use the bulk CLI path below, then later add responsive WebP/AVIF variants.
+This flow is for controlled admin uploads. Very large catalogs should use the bulk CLI path below.
 
 ## Bulk CLI Upload
 
@@ -78,16 +78,20 @@ node tools/bulk-upload-product-photos.mjs --products data/products.import.json -
 Useful options:
 
 - `--replace-existing-images` replaces existing image metadata/gallery for products uploaded in this run.
+- `--responsive` generates responsive WebP/AVIF variants before upload. Real generation requires optional `sharp` installed locally; dry-run can still plan variants without it.
+- `--variant-widths 480,960,1200` controls responsive widths.
+- `--variant-formats webp,avif` controls responsive formats.
+- `--variant-quality 82` controls generated variant quality.
 - `--limit <number>` caps processed image files for a small pilot run.
 - `--retries <number>` controls per-file upload retries.
 - `--provider vercel-blob` is the current provider; `s3-compatible` remains reserved for the future VPS/MinIO/R2 implementation.
 
 The CLI writes:
 
-- CSV report with `ready/uploaded/skipped/missing/failed`;
+- CSV report with `ready/ready_variant/uploaded/uploaded_variant/skipped/missing/failed/failed_variant`;
 - products JSON with `images` metadata and updated legacy `image`/`gallery` fields for successful uploads.
 
-`npm run check` runs a dry-run fixture test for this CLI, so the matching/report path stays covered without needing a real Blob token.
+`npm run check` runs a dry-run fixture test for this CLI, including responsive variant planning, so the matching/report path stays covered without needing a real Blob token.
 
 ## Product Image Metadata
 
@@ -107,12 +111,24 @@ New durable metadata lives in `images`:
     "width": 1200,
     "height": 1200,
     "mime": "image/webp",
-    "uploadedAt": "2026-06-04T00:00:00.000Z"
+    "uploadedAt": "2026-06-04T00:00:00.000Z",
+    "variants": [
+      {
+        "url": "https://example.public.blob.vercel-storage.com/products/opt-123/1-480w.webp",
+        "storageKey": "products/opt-123/1-480w.webp",
+        "provider": "vercel-blob",
+        "width": 480,
+        "height": 480,
+        "mime": "image/webp",
+        "format": "webp",
+        "label": "480w-webp"
+      }
+    ]
   }
 ]
 ```
 
-The frontend still renders `image` and `gallery`; normalized products also merge URLs from `images` into the gallery so old and new catalogs remain compatible.
+The frontend still renders `image` and `gallery`; normalized products also merge URLs from `images` into the gallery so old and new catalogs remain compatible. Product cards, product modal main images, gallery thumbnails, and admin product cards use WebP variants as `srcset` when metadata is present. AVIF metadata is preserved for a later `<picture>`/format-selection pass.
 
 ## Git Hygiene
 

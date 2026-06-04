@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
-import { pathToFileURL, fileURLToPath } from "node:url";
+import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -27,9 +27,30 @@ Options:
   --provider <name>              vercel-blob or s3-compatible. Default: env/default adapter provider.
   --dry-run                      Scan and report only, no uploads and no products output.
   --replace-existing-images      Replace existing image metadata/gallery for products that upload successfully.
+  --responsive                   Generate responsive WebP/AVIF variants before upload. Requires optional sharp package for real uploads.
+  --variant-widths <list>        Responsive widths. Default: 480,960,1200.
+  --variant-formats <list>       Responsive formats. Default: webp,avif.
+  --variant-quality <number>     Responsive variant quality. Default: 82.
   --limit <number>               Max image files to process.
   --retries <number>             Upload retries per file. Default: 2.
 `;
+}
+
+function parseNumberList(value, fallback) {
+  const items = String(value || "")
+    .split(",")
+    .map((item) => Math.max(0, Number(item.trim()) || 0))
+    .filter(Boolean);
+  return items.length ? [...new Set(items)].sort((a, b) => a - b) : fallback;
+}
+
+function parseFormatList(value, fallback) {
+  const allowed = new Set(["webp", "avif"]);
+  const items = String(value || "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase().replace(/^image\//, ""))
+    .filter((item) => allowed.has(item));
+  return items.length ? [...new Set(items)] : fallback;
 }
 
 function parseArgs(argv) {
@@ -41,6 +62,10 @@ function parseArgs(argv) {
     provider: "",
     dryRun: false,
     replaceExistingImages: false,
+    responsive: false,
+    variantWidths: [480, 960, 1200],
+    variantFormats: ["webp", "avif"],
+    variantQuality: 82,
     limit: 0,
     retries: 2,
     help: false,
@@ -66,6 +91,15 @@ function parseArgs(argv) {
     } else if (key === "--provider") {
       args.provider = nextValue || "";
       if (consumeValue) index += 1;
+    } else if (key === "--variant-widths") {
+      args.variantWidths = parseNumberList(nextValue, args.variantWidths);
+      if (consumeValue) index += 1;
+    } else if (key === "--variant-formats") {
+      args.variantFormats = parseFormatList(nextValue, args.variantFormats);
+      if (consumeValue) index += 1;
+    } else if (key === "--variant-quality") {
+      args.variantQuality = Math.min(100, Math.max(1, Number(nextValue || args.variantQuality) || args.variantQuality));
+      if (consumeValue) index += 1;
     } else if (key === "--limit") {
       args.limit = Math.max(0, Number(nextValue || 0) || 0);
       if (consumeValue) index += 1;
@@ -74,6 +108,7 @@ function parseArgs(argv) {
       if (consumeValue) index += 1;
     } else if (token === "--dry-run") args.dryRun = true;
     else if (token === "--replace-existing-images") args.replaceExistingImages = true;
+    else if (token === "--responsive") args.responsive = true;
     else throw new Error(`Unknown argument: ${token}`);
   }
   return args;
@@ -148,16 +183,58 @@ function imageSize(buffer, mime) {
   return {};
 }
 
+async function loadSharp() {
+  try {
+    const sharp = await import("sharp");
+    return sharp.default || sharp;
+  } catch {
+    throw new Error("Responsive variant generation requires optional dependency sharp. Install it locally with npm install sharp or rerun without --responsive.");
+  }
+}
+
+function responsiveVariantSpecs(filePath, args, dimensions = {}) {
+  const originalWidth = Number(dimensions.width || 0);
+  const sourceName = basename(filePath, extname(filePath)).replace(/[\\/:*?"<>|]+/g, "-");
+  const widths = originalWidth ? args.variantWidths.filter((width) => width <= originalWidth) : args.variantWidths;
+  const preparedWidths = widths.length ? widths : originalWidth ? [originalWidth] : args.variantWidths;
+  return preparedWidths.flatMap((width) =>
+    args.variantFormats.map((format) => ({
+      width,
+      format,
+      mime: `image/${format}`,
+      fileName: `${sourceName}-${width}w.${format}`,
+      label: `${width}w-${format}`,
+    }))
+  );
+}
+
+async function renderResponsiveVariant(sharp, sourceBuffer, spec, quality) {
+  let pipeline = sharp(sourceBuffer).rotate().resize({ width: spec.width, withoutEnlargement: true });
+  if (spec.format === "avif") pipeline = pipeline.avif({ quality });
+  else pipeline = pipeline.webp({ quality });
+  const { data, info } = await pipeline.toBuffer({ resolveWithObject: true });
+  return {
+    body: data,
+    width: info.width,
+    height: info.height,
+    mime: spec.mime,
+    fileName: spec.fileName,
+    format: spec.format,
+    label: spec.label,
+    size: data.length,
+  };
+}
+
 function uniqueImages(images) {
   const seen = new Set();
   return images
     .map((image) => normalizeImageMetadata(image))
     .filter(Boolean)
     .filter((normalized) => {
-    const key = normalized?.storageKey || normalized?.url;
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
+      const key = normalized?.storageKey || normalized?.url;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
 }
 
@@ -244,7 +321,7 @@ function csvCell(value) {
 }
 
 async function writeCsv(path, rows) {
-  const headers = ["baseSku", "name", "photoFolder", "file", "status", "reason", "url", "storageKey", "provider", "size"];
+  const headers = ["baseSku", "name", "photoFolder", "file", "kind", "format", "width", "height", "status", "reason", "url", "storageKey", "provider", "size"];
   const lines = [headers.join(";"), ...rows.map((row) => headers.map((header) => csvCell(row[header])).join(";"))];
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `\uFEFF${lines.join("\n")}\n`, "utf8");
@@ -277,7 +354,7 @@ function updateProductImages(product, uploaded, replaceExistingImages) {
   };
 }
 
-async function processProduct({ adapter, args, index, photosRoot, product, processedFiles }) {
+async function processProduct({ adapter, args, imageTool, index, photosRoot, product, processedFiles }) {
   const rows = [];
   const uploaded = [];
   const baseSku = text(product.baseSku || product.id);
@@ -309,7 +386,23 @@ async function processProduct({ adapter, args, index, photosRoot, product, proce
     const mime = mimeFromPath(file);
     if (args.dryRun) {
       const size = (await stat(file)).size;
-      rows.push({ baseSku, name, photoFolder: photoFolderValue, file, status: "ready", reason: "", provider: normalizeProvider(args.provider), size });
+      rows.push({ baseSku, name, photoFolder: photoFolderValue, file, kind: "original", format: mime.replace(/^image\//, ""), status: "ready", reason: "", provider: normalizeProvider(args.provider), size });
+      if (args.responsive) {
+        responsiveVariantSpecs(file, args).forEach((spec) => {
+          rows.push({
+            baseSku,
+            name,
+            photoFolder: photoFolderValue,
+            file: spec.fileName,
+            kind: "variant",
+            format: spec.format,
+            width: spec.width,
+            status: "ready_variant",
+            reason: "",
+            provider: normalizeProvider(args.provider),
+          });
+        });
+      }
       continue;
     }
     try {
@@ -328,12 +421,70 @@ async function processProduct({ adapter, args, index, photosRoot, product, proce
         },
         args.retries
       );
+      const variantImages = [];
+      if (args.responsive) {
+        const specs = responsiveVariantSpecs(file, args, dimensions);
+        for (const spec of specs) {
+          try {
+            const variant = await renderResponsiveVariant(imageTool, body, spec, args.variantQuality);
+            const uploadedVariant = await uploadWithRetries(
+              adapter,
+              {
+                productKey: baseSku,
+                fileName: variant.fileName,
+                body: variant.body,
+                mime: variant.mime,
+                width: variant.width,
+                height: variant.height,
+                size: variant.size,
+              },
+              args.retries
+            );
+            const nextVariant = { ...uploadedVariant, label: variant.label, format: variant.format };
+            variantImages.push(nextVariant);
+            rows.push({
+              baseSku,
+              name,
+              photoFolder: photoFolderValue,
+              file: variant.fileName,
+              kind: "variant",
+              format: variant.format,
+              width: variant.width,
+              height: variant.height,
+              status: "uploaded_variant",
+              reason: "",
+              url: nextVariant.url,
+              storageKey: nextVariant.storageKey,
+              provider: nextVariant.provider,
+              size: nextVariant.size,
+            });
+          } catch (error) {
+            rows.push({
+              baseSku,
+              name,
+              photoFolder: photoFolderValue,
+              file: spec.fileName,
+              kind: "variant",
+              format: spec.format,
+              width: spec.width,
+              status: "failed_variant",
+              reason: error?.code || error?.message || "variant_upload_failed",
+              provider: normalizeProvider(args.provider),
+            });
+          }
+        }
+      }
+      image.variants = variantImages;
       uploaded.push(image);
       rows.push({
         baseSku,
         name,
         photoFolder: photoFolderValue,
         file,
+        kind: "original",
+        format: mime.replace(/^image\//, ""),
+        width: dimensions.width || image.width || "",
+        height: dimensions.height || image.height || "",
         status: "uploaded",
         reason: "",
         url: image.url,
@@ -363,7 +514,7 @@ function summarize(rows, productsTotal, output, dryRun) {
       acc[row.status] = (acc[row.status] || 0) + 1;
       return acc;
     },
-    { ready: 0, uploaded: 0, skipped: 0, missing: 0, failed: 0 }
+    { ready: 0, ready_variant: 0, uploaded: 0, uploaded_variant: 0, skipped: 0, missing: 0, failed: 0, failed_variant: 0 }
   );
   return { products: productsTotal, ...counts, output: dryRun ? "" : output };
 }
@@ -385,12 +536,13 @@ export async function runBulkUpload(argv = process.argv.slice(2)) {
   const { products, wrap } = await readJson(productsPath);
   const folderIndex = await buildPhotoFolderIndex(photosRoot);
   const adapter = args.dryRun ? null : createObjectStorageAdapter(args.provider || undefined);
+  const imageTool = args.responsive && !args.dryRun ? await loadSharp() : null;
   const nextProducts = [];
   const allRows = [];
   let processedFiles = 0;
 
   for (const product of products) {
-    const result = await processProduct({ adapter, args, index: folderIndex, photosRoot, product, processedFiles });
+    const result = await processProduct({ adapter, args, imageTool, index: folderIndex, photosRoot, product, processedFiles });
     processedFiles = result.processedFiles;
     nextProducts.push(result.product);
     allRows.push(...result.rows);

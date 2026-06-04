@@ -1562,6 +1562,20 @@ function normalizeProductImageMetadata(item) {
   const url = String(item.url || item.publicUrl || item.downloadUrl || "").trim();
   const storageKey = String(item.storageKey || item.pathname || item.key || "").trim();
   if (!url && !storageKey) return null;
+  const variants = Array.isArray(item.variants)
+    ? item.variants
+        .map((variant) => {
+          const normalized = normalizeProductImageMetadata(variant);
+          return normalized
+            ? {
+                ...normalized,
+                label: String(variant.label || variant.variantLabel || "").trim(),
+                format: String(variant.format || variant.mime || "").replace(/^image\//, "").trim(),
+              }
+            : null;
+        })
+        .filter(Boolean)
+    : [];
   return {
     url,
     storageKey,
@@ -1574,6 +1588,7 @@ function normalizeProductImageMetadata(item) {
     size: Number(item.size || 0) || null,
     etag: String(item.etag || "").trim(),
     status: String(item.status || "active").trim(),
+    variants,
   };
 }
 
@@ -1593,6 +1608,48 @@ function normalizeProductImages(images) {
 
 function productImageMetadataUrl(image) {
   return String(image?.url || image?.publicUrl || "").trim();
+}
+
+function productImageMetadataForUrl(product, url) {
+  const target = String(url || "").trim();
+  if (!target) return null;
+  return (product?.images || []).find(
+    (image) => productImageMetadataUrl(image) === target || (image.variants || []).some((variant) => productImageMetadataUrl(variant) === target)
+  );
+}
+
+function productImageVariantSrcsetValue(product, url, preferredFormat = "webp") {
+  const image = productImageMetadataForUrl(product, url);
+  const variants = (image?.variants || [])
+    .map((variant) => ({
+      url: productImageMetadataUrl(variant),
+      width: Number(variant.width || 0),
+      format: String(variant.format || variant.mime || "").replace(/^image\//, "").toLowerCase(),
+    }))
+    .filter((variant) => variant.url && variant.width > 0);
+  const preferred = variants.filter((variant) => variant.format === preferredFormat);
+  const selected = preferred.length ? preferred : variants;
+  const srcset = selected
+    .sort((left, right) => left.width - right.width)
+    .map((variant) => `${variant.url} ${variant.width}w`)
+    .join(", ");
+  return srcset;
+}
+
+function productImageVariantSrcset(product, url, preferredFormat = "webp") {
+  const srcset = productImageVariantSrcsetValue(product, url, preferredFormat);
+  return srcset ? `srcset="${escapeHtml(srcset)}" sizes="(max-width: 720px) 92vw, 640px"` : "";
+}
+
+function applyProductImageVariantSrcset(node, product, url) {
+  const srcset = productImageVariantSrcsetValue(product, url);
+  if (srcset) {
+    node.setAttribute("srcset", srcset);
+    node.setAttribute("sizes", "(max-width: 720px) 92vw, 640px");
+  } else {
+    node.removeAttribute("srcset");
+    node.removeAttribute("sizes");
+  }
 }
 
 function normalizeProduct(product) {
@@ -3340,7 +3397,7 @@ function renderActiveFilterChips() {
 function miniProductCard(product) {
   return `
     <button class="mini-product-card" type="button" data-open-product="${escapeHtml(product.id)}">
-      <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" ${imageAttrs(160, 160)} />
+      <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" ${imageAttrs(160, 160)} ${productImageVariantSrcset(product, product.image)} />
       <span>${escapeHtml(product.baseSku)}</span>
       <strong>${escapeHtml(product.name)}</strong>
       <b>от ${formatMoney(product.minPrice)}</b>
@@ -3763,7 +3820,7 @@ function renderProducts() {
         <article class="product-card">
           <div class="product-card__image">
             <button class="product-card__image-button" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}">
-              <img src="${product.image}" alt="${product.name}" ${imageAttrs(640, 640)} />
+              <img src="${product.image}" alt="${product.name}" ${imageAttrs(640, 640)} ${productImageVariantSrcset(product, product.image)} />
             </button>
             <button class="favorite-button${favorite}" type="button" title="${favoritePressed === "true" ? "Убрать из избранного" : "В избранное"}" data-favorite="${product.id}" aria-pressed="${favoritePressed}">
               <i data-lucide="heart"></i>
@@ -4029,13 +4086,13 @@ function productModalHtml(product) {
         <div class="product-detail__layout">
           <div class="product-detail__main">
             <div class="product-detail__media">
-              <img id="detailMainImage" src="${gallery[0]}" alt="${product.name}" ${imageAttrs(900, 900, "eager", "high")} />
+              <img id="detailMainImage" src="${gallery[0]}" alt="${product.name}" ${imageAttrs(900, 900, "eager", "high")} ${productImageVariantSrcset(product, gallery[0])} />
               <div class="product-gallery" aria-label="Фотографии товара">
                 ${gallery
                   .map(
                     (image, index) => `
                       <button class="product-gallery__thumb${index === 0 ? " is-active" : ""}" type="button" data-detail-image="${image}" aria-label="Фото ${index + 1}">
-                        <img src="${image}" alt="" ${imageAttrs(160, 160)} />
+                        <img src="${image}" alt="" ${imageAttrs(160, 160)} ${productImageVariantSrcset(product, image)} />
                       </button>
                     `
                   )
@@ -4649,7 +4706,7 @@ function adminProductCardHtml(product) {
         <span>Выбрать</span>
       </label>
       <div class="admin-product-card__media">
-        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" ${imageAttrs(160, 160)} />
+        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" ${imageAttrs(160, 160)} ${productImageVariantSrcset(product, product.image)} />
       </div>
       <form class="admin-product-card__body" data-admin-product-form="${escapeHtml(product.id)}">
         <div class="admin-product-card__head">
@@ -7717,7 +7774,10 @@ function boot() {
     }
     if (button.dataset.detailImage) {
       const image = document.querySelector("#detailMainImage");
-      if (image) image.src = button.dataset.detailImage;
+      if (image) {
+        image.src = button.dataset.detailImage;
+        applyProductImageVariantSrcset(image, products.find((product) => product.id === state.activeProductId), button.dataset.detailImage);
+      }
       document.querySelectorAll(".product-gallery__thumb").forEach((node) => node.classList.toggle("is-active", node === button));
     }
     if (button.dataset.variantKey) {

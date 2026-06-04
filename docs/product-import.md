@@ -109,10 +109,10 @@ python tools/product_importer.py scan-photos --photos "C:\Path\YandexDisk\Фот
 
 ```powershell
 node tools/bulk-upload-product-photos.mjs --products data/products.import.json --photos "C:\Path\Photos" --dry-run
-node tools/bulk-upload-product-photos.mjs --products data/products.import.json --photos "C:\Path\Photos" --out local-import-output\products-with-object-images.json --report local-import-output\bulk-photo-upload-report.csv
+node tools/bulk-upload-product-photos.mjs --products data/products.import.json --photos "C:\Path\Photos" --out local-import-output\products-with-object-images.json --report local-import-output\bulk-photo-upload-report.csv --responsive
 ```
 
-Реальный upload требует `BLOB_READ_WRITE_TOKEN` только в локальном/production окружении. CLI пишет CSV-отчет и products JSON с `images` metadata, не добавляя bulk-фото в Git.
+Реальный upload требует `BLOB_READ_WRITE_TOKEN` только в локальном/production окружении. Для реальной генерации responsive WebP/AVIF variants нужен optional `sharp`; dry-run строит план variants без него. CLI пишет CSV-отчет и products JSON с `images` metadata, не добавляя bulk-фото в Git.
 
 ## Локальный импорт
 

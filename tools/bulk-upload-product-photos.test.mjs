@@ -15,13 +15,16 @@ const result = await runBulkUpload([
   "--report",
   relative(process.cwd(), fixture.reportPath),
   "--dry-run",
+  "--responsive",
 ]);
 
 const report = await readFile(fixture.reportPath, "utf8");
 assert(result.summary.products === 2, "expected two products in dry-run fixture");
 assert(result.summary.ready === 1, "expected one ready image row");
+assert(result.summary.ready_variant === 6, "expected six planned responsive variant rows");
 assert(result.summary.missing === 1, "expected one missing product row");
 assert(report.includes("opt_100") && report.includes("ready"), "report should include ready row");
+assert(report.includes("ready_variant") && report.includes("webp") && report.includes("avif"), "report should include responsive variant rows");
 assert(report.includes("opt_200") && report.includes("missing"), "report should include missing row");
 
 console.log("bulk-upload-product-photos dry-run test passed");
