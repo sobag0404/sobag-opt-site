@@ -2,6 +2,8 @@
   "name": "sobag-opt-site",
   "private": true,
   "scripts": {
+    "dev:static": "node tools/static-server.mjs --port 4173",
+    "dev:vercel": "npx -y vercel dev --listen 4173",
     "check": "node tools/autofix.mjs --check",
     "autofix": "node tools/autofix.mjs --write",
     "ui:smoke": "playwright test tools/ui-smoke.spec.js",

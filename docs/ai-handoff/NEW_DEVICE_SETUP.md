@@ -46,8 +46,10 @@ The project is mostly static, but `npm install` is useful for scripts and API de
 
 ## Run Locally
 
+For normal UI/layout work, use the lightweight static server:
+
 ```powershell
-python -m http.server 4173 --bind 127.0.0.1
+npm run dev:static
 ```
 
 Open:
@@ -58,7 +60,13 @@ Open:
 - `http://127.0.0.1:4173/about.html`
 - `http://127.0.0.1:4173/contacts.html`
 
-Local static server does not emulate Vercel API routes. For API/server checks use Vercel production/preview or `vercel dev` after official Vercel login.
+Local static server does not emulate Vercel API routes. For API/server checks use Vercel production/preview or `dev:vercel` after official Vercel login:
+
+```powershell
+npm run dev:vercel
+```
+
+Important: do not leave multiple `dev:vercel` sessions running. `vercel dev` can spawn many `@vercel/node/dist/dev-server.mjs` child processes on Windows. Use it only when Vercel Functions/env behavior is needed; otherwise use `dev:static`.
 
 ## Basic Verification
 
@@ -70,6 +78,21 @@ node --check tools\autofix.mjs
 python -m py_compile tools/product_importer.py tools/publish_imported_products.py
 npm run check
 git status --short
+```
+
+If Python is not installed, `npm run check` now skips only Python syntax checks with a warning. Install Python on the new device to restore full importer coverage.
+
+Current recommended smoke checks after clone/pull:
+
+```powershell
+npm run ui:smoke
+```
+
+If a full smoke run is too slow, run the recently touched focused checks:
+
+```powershell
+npm run ui:smoke -- --grep "manager order|account favorites"
+npm run ui:smoke -- --grep "mobile pages"
 ```
 
 Manual checks:

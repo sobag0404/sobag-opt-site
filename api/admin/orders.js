@@ -3,6 +3,7 @@ const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/h
 const { saveStore } = require("../_lib/store");
 
 const allowedStatuses = new Set(["new", "processing", "waiting", "production", "ready", "shipped", "done", "canceled"]);
+const allowedCommentVisibility = new Set(["internal", "customer"]);
 
 function orderStatusLabel(status) {
   if (status === "new") return "Новый";
@@ -36,6 +37,23 @@ function historyEntry(order, patch, actor) {
   };
 }
 
+function sanitizeCommentText(value) {
+  return String(value || "").trim().slice(0, 1200);
+}
+
+function crmThreadEntry({ text, visibility, actor, role }) {
+  const prepared = sanitizeCommentText(text);
+  if (!prepared) return null;
+  return {
+    id: `CRM-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    at: new Date().toISOString(),
+    actor: String(actor || "").slice(0, 120),
+    role: String(role || "").slice(0, 40),
+    visibility: allowedCommentVisibility.has(visibility) ? visibility : "internal",
+    text: prepared,
+  };
+}
+
 module.exports = async function handler(req, res) {
   try {
     const { store, user } = await requireUser(req, ["admin", "manager"]);
@@ -64,10 +82,17 @@ module.exports = async function handler(req, res) {
         ...(Object.prototype.hasOwnProperty.call(data, "managerEmail") ? { managerEmail, managerName } : {}),
         ...(Object.prototype.hasOwnProperty.call(data, "managerNote") ? { managerNote: String(data.managerNote || "").trim() } : {}),
       };
+      const crmEntry = crmThreadEntry({
+        text: data.commentText,
+        visibility: data.commentVisibility,
+        actor: user.name || user.email,
+        role: user.role || "manager",
+      });
       const entry = historyEntry(order, patch, user.email);
       updated = {
         ...order,
         ...patch,
+        crmThread: crmEntry ? [crmEntry, ...(order.crmThread || [])].slice(0, 200) : order.crmThread || [],
         statusHistory: entry ? [entry, ...(order.statusHistory || [])].slice(0, 100) : order.statusHistory || [],
         updatedAt: new Date().toISOString(),
         updatedBy: user.email,

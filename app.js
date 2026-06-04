@@ -1787,6 +1787,37 @@ function orderHistoryEntry(order, patch, actor = "") {
   };
 }
 
+function normalizeOrderCommentText(value, limit = 1200) {
+  return String(value || "").trim().slice(0, limit);
+}
+
+function normalizeOrderThread(items, includeInternal = false) {
+  return (Array.isArray(items) ? items : [])
+    .map((entry) => ({
+      id: String(entry?.id || `CRM-${Date.now().toString(36)}`).slice(0, 80),
+      at: String(entry?.at || new Date().toISOString()).slice(0, 40),
+      actor: normalizeOrderCommentText(entry?.actor || "", 120),
+      role: normalizeOrderCommentText(entry?.role || "buyer", 40),
+      visibility: entry?.visibility === "internal" ? "internal" : "customer",
+      text: normalizeOrderCommentText(entry?.text || ""),
+    }))
+    .filter((entry) => entry.text && (includeInternal || entry.visibility !== "internal"))
+    .slice(0, 200);
+}
+
+function orderThreadEntry({ text, visibility = "customer", actor = "", role = "buyer" }) {
+  const prepared = normalizeOrderCommentText(text);
+  if (!prepared) return null;
+  return {
+    id: `CRM-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    at: new Date().toISOString(),
+    actor: normalizeOrderCommentText(actor || state.currentUser || "local", 120),
+    role: normalizeOrderCommentText(role, 40),
+    visibility: visibility === "internal" ? "internal" : "customer",
+    text: prepared,
+  };
+}
+
 function canManageOrders(user) {
   return user?.role === "admin" || user?.role === "manager";
 }
@@ -1835,12 +1866,15 @@ function saveOrderRecord(order, userKey = state.currentUser) {
 
 function updateOrderRecord(orderId, patch) {
   let preparedPatch = null;
+  const { crmEntry: crmEntryInput, ...orderPatch } = patch;
   const orders = getOrders().map((order) => {
     if (order.id !== orderId) return order;
-    const entry = orderHistoryEntry(order, patch);
+    const entry = orderHistoryEntry(order, orderPatch);
+    const crmEntry = orderThreadEntry(crmEntryInput || {});
     preparedPatch = {
-      ...patch,
+      ...orderPatch,
       updatedAt: new Date().toISOString(),
+      crmThread: crmEntry ? [crmEntry, ...(order.crmThread || [])].slice(0, 200) : order.crmThread || [],
       statusHistory: entry ? [entry, ...(order.statusHistory || [])].slice(0, 100) : order.statusHistory || [],
     };
     return { ...order, ...preparedPatch };
@@ -1854,8 +1888,87 @@ function updateOrderRecord(orderId, patch) {
   saveUsers(users);
 }
 
+function appendLocalOrderComment(orderId, entry) {
+  if (!entry) return false;
+  updateOrderRecord(orderId, { crmEntry: entry });
+  return true;
+}
+
 function updateOrderStatus(orderId, status) {
   updateOrderRecord(orderId, { status });
+}
+
+async function submitManagerOrderMessage(form) {
+  const orderId = form.dataset.orderManagerMessageForm;
+  const data = Object.fromEntries(new FormData(form).entries());
+  const text = normalizeOrderCommentText(data.commentText || "");
+  if (!text) {
+    showToast("Напишите комментарий по заказу.");
+    return;
+  }
+  const visibility = data.commentVisibility === "customer" ? "customer" : "internal";
+  try {
+    const result = await apiRequest("/api/admin/orders", {
+      method: "PATCH",
+      body: { id: orderId, commentText: text, commentVisibility: visibility },
+    });
+    if (result.order) mirrorServerOrder(result.order, result.order.userEmail || result.order.customer?.email || "");
+    await loadBackendAccountData();
+  } catch (error) {
+    if (!isBackendUnavailable(error)) {
+      showToast(error.message || "Не удалось добавить комментарий.");
+      return;
+    }
+    const user = getUsers()[state.currentUser] || {};
+    appendLocalOrderComment(
+      orderId,
+      orderThreadEntry({
+        text,
+        visibility,
+        actor: user.name || user.email || "Менеджер",
+        role: user.role || "manager",
+      })
+    );
+  }
+  form.reset();
+  if (isAdminOrdersPage || isAdminOrderPage || isAdminCustomerPage) renderManagementPages();
+  else rerenderAccountModal();
+  showToast(visibility === "customer" ? "Сообщение покупателю добавлено." : "Внутренний комментарий добавлен.");
+}
+
+async function submitCustomerOrderMessage(form) {
+  const orderId = form.dataset.orderCustomerMessageForm;
+  const text = normalizeOrderCommentText(new FormData(form).get("commentText") || "");
+  if (!text) {
+    showToast("Напишите сообщение по заказу.");
+    return;
+  }
+  const user = getUsers()[state.currentUser] || {};
+  try {
+    const result = await apiRequest("/api/orders", {
+      method: "PATCH",
+      body: { id: orderId, commentText: text },
+    });
+    if (result.order) mirrorServerOrder(result.order, result.order.userEmail || state.currentUser);
+    await loadBackendAccountData();
+  } catch (error) {
+    if (!isBackendUnavailable(error)) {
+      showToast(error.message || "Не удалось отправить сообщение.");
+      return;
+    }
+    appendLocalOrderComment(
+      orderId,
+      orderThreadEntry({
+        text,
+        visibility: "customer",
+        actor: user.name || user.email || "Покупатель",
+        role: "buyer",
+      })
+    );
+  }
+  form.reset();
+  rerenderAccountModal();
+  showToast("Сообщение по заказу добавлено.");
 }
 
 function setUserRole(email, role) {
@@ -4052,6 +4165,64 @@ function orderHistoryHtml(order) {
   `;
 }
 
+function orderThreadHtml(order, managerMode = false) {
+  const thread = normalizeOrderThread(order.crmThread, managerMode);
+  if (!thread.length) return "";
+  return `
+    <details class="order-thread" open>
+      <summary>Обсуждение заказа: ${thread.length}</summary>
+      <ul>
+        ${thread
+          .map(
+            (entry) => `
+              <li class="${entry.visibility === "internal" ? "is-internal" : ""}">
+                <div>
+                  <b>${escapeHtml(new Date(entry.at || Date.now()).toLocaleString("ru-RU"))}</b>
+                  <small>${escapeHtml(entry.actor || "Участник")}${entry.visibility === "internal" ? " · внутренне" : ""}</small>
+                </div>
+                <span>${escapeHtml(entry.text)}</span>
+              </li>
+            `
+          )
+          .join("")}
+      </ul>
+    </details>
+  `;
+}
+
+function orderCustomerMessageForm(order) {
+  if (!order?.id) return "";
+  return `
+    <form class="order-message-form" data-order-customer-message-form="${escapeHtml(order.id)}">
+      <label>
+        Сообщение по заказу
+        <textarea name="commentText" rows="2" placeholder="Например: приложу макет позже или нужно уточнить доставку"></textarea>
+      </label>
+      <button class="ghost-button" type="submit">Отправить сообщение</button>
+    </form>
+  `;
+}
+
+function orderManagerMessageForm(order) {
+  if (!order?.id) return "";
+  return `
+    <form class="order-message-form order-message-form--manager" data-order-manager-message-form="${escapeHtml(order.id)}">
+      <label>
+        Комментарий CRM
+        <textarea name="commentText" rows="2" placeholder="Сообщение по заказу или внутренняя заметка"></textarea>
+      </label>
+      <label>
+        Видимость
+        <select name="commentVisibility">
+          <option value="internal">Внутренне: только админ и менеджер</option>
+          <option value="customer">Покупателю: видно в личном кабинете</option>
+        </select>
+      </label>
+      <button class="ghost-button" type="submit">Добавить в ленту</button>
+    </form>
+  `;
+}
+
 function orderCardHtml(order, managerMode = false) {
   const items = order.items || [];
   const customer = order.customer || {};
@@ -4071,9 +4242,10 @@ function orderCardHtml(order, managerMode = false) {
       ${order.managerNote ? `<p class="order-card__note">${escapeHtml(order.managerNote)}</p>` : ""}
       ${orderItemsPreview(items)}
       ${managerMode ? orderHistoryHtml(order) : ""}
+      ${orderThreadHtml(order, managerMode)}
       ${
         !managerMode && items.length
-          ? `<div class="order-actions"><button class="ghost-button" type="button" data-repeat-order="${escapeHtml(order.id || "")}">Повторить заказ</button></div>`
+          ? `<div class="order-actions"><button class="ghost-button" type="button" data-repeat-order="${escapeHtml(order.id || "")}">Повторить заказ</button></div>${orderCustomerMessageForm(order)}`
           : ""
       }
       ${
@@ -4097,6 +4269,7 @@ function orderCardHtml(order, managerMode = false) {
               </label>
               <button class="ghost-button" type="submit">Сохранить</button>
             </form>
+            ${orderManagerMessageForm(order)}
             <div class="order-actions">
               ${orderStatusOptions
                 .map(
@@ -4174,6 +4347,81 @@ function filteredAdminOrders(params = new URLSearchParams(window.location.search
   });
 }
 
+function customerSegment(customer) {
+  if (customer.total >= 100000) return "VIP";
+  if (customer.orders >= 2) return "Повторный";
+  if (!customer.email) return "Без email";
+  return "Новый";
+}
+
+function aggregateCustomersFromOrders(orders) {
+  const customers = new Map();
+  orders.forEach((order) => {
+    const customer = order.customer || {};
+    const email = String(customer.email || order.userEmail || "").trim().toLowerCase();
+    const phone = String(customer.phone || "").trim();
+    const key = email || phone || order.id || `guest-${customers.size}`;
+    const current = customers.get(key) || {
+      key,
+      email,
+      phone,
+      name: customer.name || customer.company || email || phone || "Покупатель",
+      company: customer.company || "",
+      orders: 0,
+      total: 0,
+      lastDate: "",
+      lastStatus: "",
+    };
+    current.orders += 1;
+    current.total += Number(order.total || 0);
+    current.lastDate = order.date || order.createdAt || current.lastDate;
+    current.lastStatus = order.status || current.lastStatus;
+    current.name = current.name || customer.name || customer.company || email || phone || "Покупатель";
+    current.company = current.company || customer.company || "";
+    customers.set(key, current);
+  });
+  return [...customers.values()].sort((a, b) => b.total - a.total || b.orders - a.orders);
+}
+
+function adminCustomersPanelHtml(orders) {
+  const customers = aggregateCustomersFromOrders(orders);
+  const segmentCounts = customers.reduce((acc, customer) => {
+    const segment = customerSegment(customer);
+    acc[segment] = (acc[segment] || 0) + 1;
+    return acc;
+  }, {});
+  return `
+    <section class="admin-customers-panel" aria-label="Клиенты по текущему фильтру">
+      <div class="account-section__head">
+        <h3>Клиенты по текущему списку</h3>
+        <div class="admin-customer-segments">
+          ${["Новый", "Повторный", "VIP", "Без email"].map((segment) => `<span><b>${segmentCounts[segment] || 0}</b> ${segment.toLowerCase()}</span>`).join("")}
+        </div>
+      </div>
+      ${
+        customers.length
+          ? `<div class="admin-customers-list">
+              ${customers
+                .slice(0, 12)
+                .map(
+                  (customer) => `
+                    <article>
+                      <strong>${escapeHtml(customer.name)}</strong>
+                      <span>${escapeHtml(customer.company || customer.email || customer.phone || "Контакт не указан")}</span>
+                      <b>${customer.orders} ${pluralRu(customer.orders, "заказ", "заказа", "заказов")} · ${formatMoney(customer.total)}</b>
+                      <small>${escapeHtml(customerSegment(customer))} · ${escapeHtml(orderStatusLabel(customer.lastStatus))}</small>
+                      ${customer.email ? `<a class="ghost-button" href="${adminCustomerUrl(customer.email)}" target="_blank" rel="noopener">Профиль</a>` : ""}
+                    </article>
+                  `
+                )
+                .join("")}
+            </div>`
+          : "<p>Клиентов по выбранным условиям нет.</p>"
+      }
+    </section>
+  `;
+}
+
 function adminOrdersPageHtml() {
   const params = new URLSearchParams(window.location.search);
   const status = String(params.get("status") || "all");
@@ -4205,6 +4453,7 @@ function adminOrdersPageHtml() {
         ${orderStatusOptions.map(([key, label]) => `<span><b>${statusCounts[key] || 0}</b> ${label.toLowerCase()}</span>`).join("")}
       </div>
     </div>
+    ${adminCustomersPanelHtml(orders)}
     <div class="orders-list admin-orders-list">
       ${orders.length ? orders.map((order) => orderCardHtml(order, true)).join("") : "<p>Заказов по выбранным условиям нет.</p>"}
     </div>
@@ -7176,6 +7425,16 @@ function boot() {
       closeModal();
       openAccount();
       showToast("Данные заказа сохранены.");
+      return;
+    }
+    if (event.target.dataset.orderManagerMessageForm) {
+      event.preventDefault();
+      await submitManagerOrderMessage(event.target);
+      return;
+    }
+    if (event.target.dataset.orderCustomerMessageForm) {
+      event.preventDefault();
+      await submitCustomerOrderMessage(event.target);
       return;
     }
   });

@@ -1,6 +1,6 @@
 # Server And Storage Handoff
 
-Last updated: 2026-05-29
+Last updated: 2026-06-04
 
 ## Hosting
 
@@ -32,6 +32,9 @@ Current purpose:
 - admin/manager order status updates;
 - admin role updates;
 - health check.
+- product reviews and moderation through existing storage/content flows;
+- saved commercial proposal drafts;
+- order CRM thread entries with internal manager notes and customer-visible messages.
 
 Health check:
 - `https://sobag-shop.online/api/health`
@@ -124,15 +127,23 @@ Recommended first real backend model:
 
 ## Current Store Additions
 
-As of 2026-06-02, the shared Redis/KV store also keeps lightweight personal state:
+As of 2026-06-04, the shared Redis/KV store also keeps lightweight personal state:
 - `store.carts[email] = { items, updatedAt }`
 - `store.favorites[email] = { items, updatedAt }`
+- `user.savedCarts`
+- `user.reviews`
+- `order.crmThread`
 
 Endpoint:
 - `GET /api/auth/me` returns `cartItems` and `favoriteItems` for the signed-in user;
 - `PUT /api/auth/me` accepts `cartItems` and/or `favoriteItems` and saves them for the signed-in user.
 
 These are still prototype-grade JSON blobs, but they make cart/favorites portable across devices once the user is logged in. Product images/admin uploads still need durable object storage later.
+
+Important CRM visibility rule:
+- `crmThread` entries with `visibility: "internal"` are for admin/manager only.
+- Buyer-facing order APIs must return only public/customer-visible entries.
+- Do not expose internal notes in buyer exports, account views, or print/PDF views.
 
 ## Security Notes
 

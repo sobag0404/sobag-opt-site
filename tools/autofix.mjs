@@ -22,6 +22,31 @@ function run(command, args) {
   if (result.status !== 0) throw new Error(`${command} ${args.join(" ")} failed`);
 }
 
+function tryRun(command, args) {
+  const result = spawnSync(command, args, { cwd: root, encoding: "utf8" });
+  if (result.error) return { ok: false, error: result.error };
+  return result;
+}
+
+function compilePythonFiles(files) {
+  const candidates = [
+    ["python", ["-m", "py_compile"]],
+    ["py", ["-3", "-m", "py_compile"]],
+  ];
+  const probe = candidates.find(([command, args]) => {
+    const result = tryRun(command, args[0] === "-3" ? ["-3", "--version"] : ["--version"]);
+    return result.status === 0;
+  });
+
+  if (!probe) {
+    console.warn("AutoFix: Python is not installed, skipping Python tool syntax checks.");
+    return;
+  }
+
+  const [command, baseArgs] = probe;
+  files.forEach((file) => run(command, [...baseArgs, file]));
+}
+
 function parseJson(file) {
   JSON.parse(readFileSync(join(root, file), "utf8"));
 }
@@ -143,8 +168,8 @@ function main() {
   parseJson("vercel.json");
   parseJson("data/products-live.json");
   walk(join(root, "api"), (file) => file.endsWith(".js")).forEach((file) => run("node", ["--check", file]));
-  ["app.js", "cart.js", "components/site-shell.js"].forEach((file) => run("node", ["--check", file]));
-  ["tools/product_importer.py", "tools/publish_imported_products.py", "tools/audit_catalog.py"].forEach((file) => run("python", ["-m", "py_compile", file]));
+  ["app.js", "cart.js", "components/site-shell.js", "tools/static-server.mjs"].forEach((file) => run("node", ["--check", file]));
+  compilePythonFiles(["tools/product_importer.py", "tools/publish_imported_products.py", "tools/audit_catalog.py"]);
   run("node", ["tools/validate-products.mjs"]);
   assertNoPattern("app.js", /products-live\.json\?v=\$\{Date\.now\(\)\}/, "нельзя отключать кэш каталога через Date.now()");
   assertNoPattern("cart.js", /password:\s*["'`]/, "пароли не должны появляться в cart.js");

@@ -15,6 +15,7 @@ Last updated: 2026-06-04
 - Основной стек: static HTML/CSS/JS, Vercel API routes, Upstash Redis / Vercel KV-compatible storage.
 - Где лежит основной код: `app.js`, `cart.js`, HTML pages in repo root, shared shell in `components/site-shell.js`, API in `api/`.
 - Где лежат тесты/проверки: `tools/autofix.mjs`, `tools/ui-smoke.spec.js`, `tools/audit_catalog.py`.
+- Локальный запуск: `npm run dev:static` для легкой верстки без API; `npm run dev:vercel` только для Vercel Functions/env проверок.
 
 ## Current Product / Goal
 - Что это за проект: B2B-сайт Sobag Opt для оптовой продажи текстиля с каталогом, вариантами товаров, корзиной-КП, заявками, аккаунтами, ролями и админ-инструментами.
@@ -28,14 +29,16 @@ Last updated: 2026-06-04
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
-- Последние важные изменения: исправлены квадратные фото в карточке товара; добавлены отзывы товаров; добавлены сохраненные КП 2.1: отдельная страница `quotes.html`, комментарий покупателя, внутренний комментарий менеджера, история, восстановление КП с предупреждением о пропавших SKU или изменившихся ценах; добавлен XLSX-экспорт конкретного заказа из админки; исправлено локальное обновление статуса/данных заказа; внутренние комментарии КП скрыты от покупателей и не попадают в их экспорт/печать.
-- Последние коммиты: `c252c4c Add product reviews workflow`, `6f41dbb Update active handoff context`, `d9d736a Add active context for token-efficient handoff`.
-- Что уже проверено: `node --check app.js`; `node --check cart.js`; `node --check api/auth/me.js`; `node --check tools/ui-smoke.spec.js`; `npm.cmd run check`; `npm.cmd run ui:smoke` locally.
+- Последние важные изменения: добавлена CRM-лента по заказам: внутренние комментарии менеджеров, комментарии видимые покупателю, сообщения покупателя по заказу, фильтрация внутренних записей из покупательских API, клиентская панель в админском списке заказов с сегментами; сохраненные КП 2.1 и отзывы товаров уже реализованы ранее.
+- Локальная RAM-правка: осиротевшие `vercel dev --listen 4173` и `@vercel/node/dist/dev-server.mjs` процессы были точечно остановлены; добавлен легкий `tools/static-server.mjs` и npm scripts `dev:static`/`dev:vercel`.
+- Последние коммиты до handoff: `7788c84 Protect internal saved quote notes`, `5fb959e Add saved quote workspace`, `c252c4c Add product reviews workflow`.
+- Что уже проверено в текущем проходе: `node --check app.js`; `node --check api/admin/orders.js`; `node --check api/orders.js`; `node --check api/auth/me.js`; `node --check tools/autofix.mjs`; `node --check tools/ui-smoke.spec.js`; `npm.cmd run check`; focused smoke `manager order|account favorites`; focused smoke `mobile pages`.
+- Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
-- Следующая задача: Order/customer CRM polish.
-- Требования: расширить текущую CRM заказов: лента внутренних комментариев менеджера, видимые покупателю сообщения по заказу, более удобный список клиентов и сегментация.
-- Риски: не сломать текущие заказы, статусы, роли admin/manager, историю заказов покупателей, отправку КП менеджеру и storage-ready production API.
+- Следующая задача: подготовить Import/PIM 2.0 и хранение фото.
+- Требования: партии импорта, предпросмотр дублей/ошибок, отчет создано/пропущено/обновлено, статусы товаров `draft/published/hidden/archive`, схема хранения фото в Blob/S3/R2 без больших файлов в Git.
+- Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
 ## Useful Files
 - Главные файлы проекта: `app.js`, `cart.js`, `styles.css`, `components/site-shell.js`, `data/products-live.json`.

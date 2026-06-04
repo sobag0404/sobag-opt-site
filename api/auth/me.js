@@ -184,6 +184,13 @@ function sanitizeReview(input, user) {
   };
 }
 
+function publicOrder(order) {
+  return {
+    ...order,
+    crmThread: (Array.isArray(order.crmThread) ? order.crmThread : []).filter((entry) => entry?.visibility !== "internal"),
+  };
+}
+
 module.exports = async function handler(req, res) {
   try {
     const { user, store } = await currentUser(req);
@@ -227,7 +234,7 @@ module.exports = async function handler(req, res) {
     }
 
     const freshUser = store.users[user.email] || user;
-    const orders = store.orders.filter((order) => order.userEmail === freshUser.email);
+    const orders = store.orders.filter((order) => order.userEmail === freshUser.email).map(publicOrder);
     const reviews = (store.reviews || []).filter((review) => review.userEmail === freshUser.email);
     const savedCarts = sanitizeSavedCarts(store.savedCarts[freshUser.email]?.items || [], {
       includeInternal: canUseInternalSavedCartFields(freshUser),

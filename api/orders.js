@@ -24,9 +24,47 @@ function uniqueNonEmpty(items) {
   return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
 }
 
+function publicOrder(order) {
+  return {
+    ...order,
+    crmThread: (Array.isArray(order.crmThread) ? order.crmThread : []).filter((entry) => entry?.visibility !== "internal"),
+  };
+}
+
 module.exports = async function handler(req, res) {
-  if (req.method !== "POST") return methodNotAllowed(res);
   try {
+    if (req.method === "PATCH") {
+      const data = await readJson(req);
+      const { user, store } = await currentUser(req);
+      if (!user) return sendJson(res, 401, { error: "unauthorized", message: "Нужно войти в аккаунт." });
+      const text = String(data.commentText || "").trim().slice(0, 1200);
+      if (!text) return sendJson(res, 400, { error: "empty_comment", message: "Напишите сообщение по заказу." });
+      let updated = null;
+      store.orders = store.orders.map((order) => {
+        const customerEmail = String(order.customer?.email || order.userEmail || "").toLowerCase();
+        if (order.id !== data.id || customerEmail !== String(user.email || "").toLowerCase()) return order;
+        const entry = {
+          id: `CRM-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          at: new Date().toISOString(),
+          actor: user.name || user.company || user.email,
+          role: "buyer",
+          visibility: "customer",
+          text,
+        };
+        updated = {
+          ...order,
+          crmThread: [entry, ...(order.crmThread || [])].slice(0, 200),
+          updatedAt: new Date().toISOString(),
+          updatedBy: user.email,
+        };
+        return updated;
+      });
+      if (!updated) return sendJson(res, 404, { error: "not_found", message: "Заказ не найден." });
+      await saveStore(store);
+      return sendJson(res, 200, { order: publicOrder(updated) });
+    }
+    if (req.method !== "POST") return methodNotAllowed(res);
+
     const data = await readJson(req);
     const { user, store } = await currentUser(req);
     const items = Array.isArray(data.items) ? data.items.map(sanitizeLine).filter((line) => line.variant.sku) : [];

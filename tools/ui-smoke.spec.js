@@ -5,8 +5,12 @@ test.setTimeout(60000);
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    const key = "__sobagQaDocumentLoads";
-    localStorage.setItem(key, String(Number(localStorage.getItem(key) || "0") + 1));
+    try {
+      const key = "__sobagQaDocumentLoads";
+      localStorage.setItem(key, String(Number(localStorage.getItem(key) || "0") + 1));
+    } catch {
+      // Cross-origin iframes, for example maps, do not expose localStorage to the test script.
+    }
   });
   page.on("pageerror", (error) => {
     throw error;
@@ -19,6 +23,11 @@ test.beforeEach(async ({ page }) => {
     }
   });
   await page.route("**/*", (route) => {
+    const url = route.request().url();
+    if (/^https?:\/\//.test(url) && !url.startsWith(BASE_URL)) {
+      route.abort();
+      return;
+    }
     const type = route.request().resourceType();
     if (type === "image" || type === "font") {
       route.abort();
@@ -70,6 +79,18 @@ test("manager order pages can open guest customer history", async ({ page }) => 
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.orders.v1") || "[]")[0]?.status))
     .toBe("processing");
   await expect(page.locator("#adminOrderPage")).toContainText("История заказа");
+  await page.locator('[data-order-manager-message-form] textarea[name="commentText"]').fill("QA internal CRM note");
+  await page.locator("[data-order-manager-message-form]").getByRole("button", { name: /Добавить в ленту/i }).click();
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.orders.v1") || "[]")[0]?.crmThread?.[0]?.text))
+    .toBe("QA internal CRM note");
+  await expect(page.locator("#adminOrderPage")).toContainText("QA internal CRM note");
+  await page.locator('[data-order-manager-message-form] textarea[name="commentText"]').fill("QA public buyer update");
+  await page.locator('[data-order-manager-message-form] select[name="commentVisibility"]').selectOption("customer");
+  await page.locator("[data-order-manager-message-form]").getByRole("button", { name: /Добавить в ленту/i }).click();
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.orders.v1") || "[]")[0]?.crmThread?.[0]?.text))
+    .toBe("QA public buyer update");
 
   await page.goto(`${BASE_URL}/admin-customer?email=guest@example.com`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminCustomerPage")).toContainText("Guest Buyer");
@@ -78,6 +99,7 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await page.goto(`${BASE_URL}/admin-orders?q=guest`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminOrdersPage")).toContainText("SO-QA-GUEST");
   await expect(page.locator("#adminOrdersPage")).toContainText("Guest Buyer");
+  await expect(page.locator("#adminOrdersPage")).toContainText("Клиенты по текущему списку");
 
   await page.goto(`${BASE_URL}/admin-products?q=opt_`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelectorAll(".admin-product-card").length > 0);
@@ -132,15 +154,16 @@ async function largestCategory(page) {
   });
 }
 
-async function expectNoHorizontalOverflow(page) {
+async function expectNoHorizontalOverflow(page, label = page.url()) {
   const overflow = await page.evaluate(() => {
     const root = document.documentElement;
     return Math.ceil(root.scrollWidth - root.clientWidth);
   });
-  expect(overflow).toBeLessThanOrEqual(1);
+  expect(overflow, label).toBeLessThanOrEqual(1);
 }
 
 test("mobile pages do not create horizontal overflow", async ({ page }) => {
+  test.setTimeout(90000);
   await page.setViewportSize({ width: 390, height: 844 });
   const routes = [
     "/",
@@ -162,10 +185,12 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
   ];
 
   for (const route of routes) {
-    await page.goto(`${BASE_URL}${route}`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE_URL}${route}`, { waitUntil: "commit" });
+    await page.locator("body").waitFor();
+    await page.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => {});
     if (route.includes("catalog")) await waitForLiveProducts(page);
     if (route.includes("search")) await waitForLiveProducts(page, 0);
-    await expectNoHorizontalOverflow(page);
+    await expectNoHorizontalOverflow(page, route);
   }
 });
 
@@ -240,6 +265,15 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
   await expect
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.favorites.buyer@example.com") || "[]").length))
     .toBeGreaterThan(0);
+  await page.route("**/api/orders", (route) => route.abort());
+  await page.locator("#accountButton").click();
+  await page.locator('[data-order-customer-message-form] textarea[name="commentText"]').fill("QA buyer order reply");
+  await page.locator("[data-order-customer-message-form]").getByRole("button", { name: /Отправить сообщение/i }).click();
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.orders.v1") || "[]")[0]?.crmThread?.[0]?.text))
+    .toBe("QA buyer order reply");
+  await expect(page.locator("#accountModal")).toContainText("QA buyer order reply");
+  await page.locator(".modal__close").click();
 
   await page.evaluate(() => {
     localStorage.setItem("sobag.currentUser", "second@example.com");

@@ -1,6 +1,6 @@
 # Sobag Opt Site AI Handoff
 
-Last updated: 2026-06-03
+Last updated: 2026-06-04
 
 ## Project
 
@@ -13,7 +13,7 @@ Repository:
 - Vercel fallback/project domain: `https://sobag-opt-site.vercel.app/`
 
 Latest functional commit before this handoff update:
-- `f232ec0 Update handoff after search production check`
+- `7788c84 Protect internal saved quote notes`
 
 ## Current State
 
@@ -234,6 +234,46 @@ Large product-photo folders must not be committed to GitHub/Vercel.
 - Product reviews were added to the roadmap as the next major feature: registered-user star/text reviews plus admin moderation.
 - Commit `9d0d4f9 Add search results page and roadmap checklist` was pushed to `origin/main`.
 - Production verification passed on `https://sobag-shop.online`: fresh marker `20260603-search-results`, `/`, `/catalog`, `/cart`, `/search?q=opt_22434`, `/api/health`, exact SKU search, and product-modal copy toast above the modal layer.
+
+## Latest CRM / Device Handoff Update
+
+- Date: 2026-06-04.
+- Current branch: `main`.
+- CRM order polish was implemented in the current handoff pass:
+  - admin/manager order updates can append CRM thread entries;
+  - manager entries can be `internal` or `customer`;
+  - buyers can send customer-visible order messages from the account order history;
+  - buyer-facing `/api/orders` and `/api/auth/me` strip internal CRM thread entries;
+  - admin order cards show the communication thread and manager message form;
+  - buyer order cards show public thread entries and a buyer message form;
+  - admin orders page includes a customer segment panel based on the current filtered order list.
+- AutoFix now tolerates a missing local Python installation by skipping only Python syntax checks with a warning; on a new device install Python to restore full importer syntax coverage.
+- Smoke test hardening:
+  - external CDN resources are aborted in UI smoke to keep local tests stable;
+  - the document-load counter is protected from cross-origin iframe `localStorage` errors;
+  - mobile overflow smoke uses a short lifecycle wait instead of hanging on slow external scripts.
+- Local development RAM fix:
+  - orphaned `vercel dev --listen 4173` and `@vercel/node/dist/dev-server.mjs` processes were identified and stopped by exact PID/command line;
+  - `tools/static-server.mjs` was added for lightweight static UI development;
+  - npm scripts now include `dev:static` for normal UI work and `dev:vercel` only when Vercel Functions/env are needed.
+- Roadmap update: Order/customer CRM polish is marked done in `docs/roadmap-checklist.md`.
+- Next major work after this handoff:
+  1. Import/PIM 2.0: import batches, duplicate/error preview, created/skipped/updated reports, product statuses.
+  2. Photo storage plan: choose Blob/S3/R2 and prepare non-Git image path scheme.
+  3. Content/SEO fill-out: company/contact/business/marketplaces copy, FAQ/Product schema, Yandex map final setup.
+
+Current verification in this pass:
+- `node --check app.js`
+- `node --check api/admin/orders.js`
+- `node --check api/orders.js`
+- `node --check api/auth/me.js`
+- `node --check tools/autofix.mjs`
+- `node --check tools/ui-smoke.spec.js`
+- `npm.cmd run check`
+- focused UI smoke: `manager order|account favorites`
+- focused UI smoke: `mobile pages`
+
+Full `npm.cmd run ui:smoke` should be rerun on the next device after clone/pull; before handoff, all previously failing focused scenarios were made green.
 
 ## Verification Status
 

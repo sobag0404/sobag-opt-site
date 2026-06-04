@@ -30,13 +30,13 @@ Last updated: 2026-06-04
    - [x] Saved proposal customer comment, internal manager comment, and history.
    - [x] Repeat saved proposal into cart with conflict warnings for changed prices or missing SKU.
 
-2. [planned] Order/customer CRM polish:
+2. [done] Order/customer CRM polish:
    - [x] Basic order status history and manager note are already visible in admin/manager flows.
    - [x] Admin can open order detail, customer profile, export order CSV/XLSX, and print/PDF order.
-   - [ ] Internal manager comments timeline beyond the current single manager note.
-   - [ ] Customer-visible comments/status messages.
+   - [x] Internal manager comments timeline beyond the current single manager note.
+   - [x] Customer-visible comments/status messages.
    - [x] Export order detail to XLSX from admin.
-   - [ ] Better customer list and segmentation.
+   - [x] Better customer list and segmentation.
 
 3. [planned] Import/PIM 2.0:
    - [ ] Import batches with preview report and rollback.

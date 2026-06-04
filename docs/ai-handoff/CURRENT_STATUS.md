@@ -1,12 +1,9 @@
 # Current Status Snapshot
 
-Date: 2026-05-29
+Date: 2026-06-04
 
-Latest functional commit before this handoff update:
-- `6c7eb4a Prevent same-page navigation flicker`
-
-Working tree at the start of handoff preparation:
-- clean
+Latest committed state before this handoff update:
+- `7788c84 Protect internal saved quote notes`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -16,42 +13,74 @@ Repository:
 Production URLs:
 - Main: `https://sobag-shop.online/`
 - Catalog: `https://sobag-shop.online/catalog`
+- Search: `https://sobag-shop.online/search?q=opt_22434`
 - Cart: `https://sobag-shop.online/cart`
+- Quotes: `https://sobag-shop.online/quotes`
 - Favorites: `https://sobag-shop.online/favorites`
 - Custom print: `https://sobag-shop.online/custom`
 - Marketplaces: `https://sobag-shop.online/marketplaces`
 - About: `https://sobag-shop.online/about`
 - Contacts: `https://sobag-shop.online/contacts`
+- Health: `https://sobag-shop.online/api/health`
 
 Current focus:
 - preparing the project to continue from another device;
-- keeping handoff docs and ZIP current;
-- next work likely continues UI polish, catalog behavior, admin/content controls, and product import workflow.
+- keeping `ACTIVE_CONTEXT.md` as the first short context file;
+- next implementation stage: Import/PIM 2.0 and durable photo storage planning.
 
 Completed most recently:
-- fixed favorite-heart flicker by avoiding full product-grid rebuilds;
-- fixed same-page navigation flicker, especially repeated clicks on `Каталог`;
-- added same-route/placeholder link guards in both `app.js` and `cart.js`;
-- kept catalog entrance animations from replaying after every data refresh;
-- verified production script versions and storage health;
-- confirmed GitHub repo is private with no outside collaborators, invitations, deploy keys, webhooks, or forks.
+- product reviews with buyer-only submission and admin moderation;
+- saved commercial proposal workspace on `quotes.html`;
+- saved proposal comments, manager-only internal notes, history, export/print/send/restore;
+- order detail XLSX export from admin;
+- order/customer CRM thread:
+  - internal manager comments;
+  - customer-visible manager messages;
+  - buyer replies in account order history;
+  - internal entries stripped from buyer APIs;
+  - customer segment panel in admin orders;
+- smoke-test hardening:
+  - external CDN resources aborted during smoke;
+  - cross-origin map iframe no longer breaks localStorage document-load counter;
+  - mobile overflow smoke is stable again;
+- local RAM cleanup:
+  - duplicate/orphaned `vercel dev --listen 4173` processes and their `@vercel/node` children were stopped by exact PID/command line;
+  - port `4173` was freed after cleanup;
+  - `dev:static` and `dev:vercel` scripts were added;
+- `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
+
+Verification from this handoff pass:
+- `node --check app.js`
+- `node --check api/admin/orders.js`
+- `node --check api/orders.js`
+- `node --check api/auth/me.js`
+- `node --check tools/autofix.mjs`
+- `node --check tools/ui-smoke.spec.js`
+- `npm.cmd run check`
+- `npm.cmd run ui:smoke -- --grep "manager order|account favorites"`
+- `npm.cmd run ui:smoke -- --grep "mobile pages"`
+
+Recommended first verification on a new device:
+1. Install Node.js, Git, Python, GitHub CLI, and optionally Vercel CLI.
+2. Clone/pull the repo.
+3. Run `npm install`.
+4. Use `npm run dev:static` for ordinary UI work.
+5. Use `npm run dev:vercel` only for Vercel Functions/env checks.
+6. Run `npm.cmd run check`.
+7. Run `npm.cmd run ui:smoke`; if slow, first run the two focused smoke commands listed above.
 
 Backend/storage state:
-- Vercel API routes exist under `api/`;
-- Upstash Redis / Vercel KV-compatible storage is configured in Vercel;
-- `/api/health` on production returns storage ready;
-- do not expose env values in chat/docs/repo.
+- Vercel API routes exist under `api/`.
+- Upstash Redis / Vercel KV-compatible storage is configured in Vercel.
+- `/api/health` on production should return storage ready.
+- Do not expose env values in chat/docs/repo.
 
 Important remaining work:
-- continue visual polish and bug fixing;
-- harden real backend/auth/order flows beyond prototype behavior;
-- real product import workflow for large batches;
-- duplicate-safe import/update process;
-- optional AI-assisted descriptions/tags/collections from photos;
-- separate price-editing file per variant;
-- durable storage for admin uploads/product images;
-- server cart/favorites are now backed by Redis/KV prototype endpoints, but full database/object storage is still the next production-grade step;
-- legal pages and final consent/privacy text review.
+- Import/PIM 2.0: batches, preview report, duplicate/error report, product statuses.
+- Durable image storage: Vercel Blob, S3-compatible storage, or Cloudflare R2; no large raw photos in Git.
+- Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
+- Performance for 10k+ products: server search, pagination, smaller API responses, WebP/AVIF responsive images.
+- QA/Ops: production smoke automation, access audit cadence, lightweight log review.
 
 Important constraints:
 - no secrets in repo/docs/ZIP/chat;
