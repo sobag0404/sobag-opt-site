@@ -3889,6 +3889,104 @@ function setJsonLd(id, data) {
   node.textContent = JSON.stringify(data);
 }
 
+function removeJsonLd(id) {
+  document.head.querySelector(`script#${id}`)?.remove();
+}
+
+function absoluteUrl(value) {
+  const url = String(value || "").trim();
+  if (!url) return "";
+  try {
+    return new URL(url, location.origin).href;
+  } catch {
+    return url;
+  }
+}
+
+function productSchemaImages(product) {
+  return [
+    product?.image,
+    ...(product?.gallery || []),
+    ...(product?.images || []).map(productImageMetadataUrl),
+  ]
+    .map(absoluteUrl)
+    .filter(Boolean)
+    .filter((url, index, list) => list.indexOf(url) === index);
+}
+
+function productSchemaReviews(product) {
+  return reviewsForProduct(product)
+    .filter((review) => review.text)
+    .slice(0, 5)
+    .map((review) => ({
+      "@type": "Review",
+      author: {
+        "@type": "Person",
+        name: review.authorName || "Sobag Opt buyer",
+      },
+      datePublished: review.createdAt || undefined,
+      reviewBody: review.text,
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: review.rating,
+        bestRating: 5,
+        worstRating: 1,
+      },
+    }));
+}
+
+function productSchemaData(product) {
+  const variant = findVariant(product);
+  const prices = (product.variants || [])
+    .map((item) => Number(item.price || 0))
+    .filter((price) => Number.isFinite(price) && price > 0);
+  const stats = reviewStats(product);
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.detailDescription || product.description || product.name,
+    sku: product.baseSku || variant?.sku || product.id,
+    mpn: product.baseSku || variant?.sku || product.id,
+    brand: {
+      "@type": "Brand",
+      name: "Sobag Opt",
+    },
+    category: product.category || (product.categories || [])[0],
+    image: productSchemaImages(product),
+    url: `${location.origin}${location.pathname}#product-${encodeURIComponent(product.id)}`,
+    offers: {
+      "@type": "AggregateOffer",
+      priceCurrency: "RUB",
+      lowPrice: prices.length ? Math.min(...prices) : Number(product.minPrice || product.basePrice || 0) || 0,
+      highPrice: prices.length ? Math.max(...prices) : Number(product.maxPrice || product.basePrice || 0) || 0,
+      offerCount: Math.max((product.variants || []).length, prices.length, 1),
+      availability: product.stock === "ready" ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
+    },
+  };
+  if (stats.count) {
+    data.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: Number(stats.average.toFixed(1)),
+      reviewCount: stats.count,
+      bestRating: 5,
+      worstRating: 1,
+    };
+  }
+  const reviews = productSchemaReviews(product);
+  if (reviews.length) data.review = reviews;
+  if (!data.image.length) delete data.image;
+  return data;
+}
+
+function syncProductJsonLd(product) {
+  if (!product || shouldLoadAdminCatalog() || !isProductPublished(product)) {
+    removeJsonLd("sobag-product-jsonld");
+    return;
+  }
+  setJsonLd("sobag-product-jsonld", productSchemaData(product));
+}
+
 function updateCatalogSeo() {
   if (!document.body.classList.contains("catalog-page")) return;
   const content = getSiteContent();
@@ -4494,6 +4592,7 @@ async function openProduct(productId) {
     qty: 0,
   };
   document.body.insertAdjacentHTML("beforeend", productModalHtml(product));
+  syncProductJsonLd(product);
   activateModal(document.querySelector("#productModal"));
   if (window.lucide) window.lucide.createIcons();
 }
@@ -4523,6 +4622,7 @@ function refreshProductModal() {
   modal.querySelectorAll(".variant-option").forEach((button) => {
     button.classList.toggle("is-active", state.activeVariant[button.dataset.variantKey] === button.dataset.variantValue);
   });
+  syncProductJsonLd(product);
 }
 
 function addVariantLineToCart(product, variant, qty) {
@@ -7824,6 +7924,7 @@ function finishModalClose() {
 function closeModal() {
   const modals = [...document.querySelectorAll(".modal")];
   if (!modals.length) return;
+  if (modals.some((modal) => modal.id === "productModal")) removeJsonLd("sobag-product-jsonld");
   if (prefersReducedMotion()) {
     modals.forEach((modal) => modal.remove());
     finishModalClose();

@@ -510,6 +510,16 @@ test("product modal hydrates detail from server detail endpoint", async ({ page 
   await page.locator(".product-card").first().locator("[data-open-product]").first().click();
   await expect.poll(() => detailRequested).toBe(true);
   await expect(page.locator("#productModal")).toContainText(detailMarker);
+
+  const schemaText = await page.locator("#sobag-product-jsonld").textContent();
+  const schema = JSON.parse(schemaText || "{}");
+  expect(schema["@type"]).toBe("Product");
+  expect(schema.sku).toBe(source.baseSku);
+  expect(schema.description).toContain(detailMarker);
+  expect(schema.offers.priceCurrency).toBe("RUB");
+
+  await page.locator("#productModal .modal__close").click();
+  await expect(page.locator("#sobag-product-jsonld")).toHaveCount(0);
 });
 
 test("catalog list renders server query cards and cursor pages", async ({ page }) => {

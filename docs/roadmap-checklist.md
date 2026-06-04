@@ -57,6 +57,8 @@ Last updated: 2026-06-04
 4. [planned] SEO/content:
    - [ ] Fill final legal/company/contact copy.
    - [ ] Add Product/FAQ schema where appropriate.
+     - [x] Product schema for public product modal/detail state, including offers, images, and approved review aggregate data.
+     - [ ] FAQ schema only after real FAQ blocks exist.
    - [ ] SEO landing copy for important categories, collections, and holidays.
    - [ ] Yandex map final address setup.
 

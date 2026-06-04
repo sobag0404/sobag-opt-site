@@ -2,8 +2,8 @@
 
 Date: 2026-06-04
 
-Latest committed state before this working update:
-- `277638e Add periodic API access audit`
+Latest committed state after this working update:
+- `Add product structured data for modal`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -27,9 +27,16 @@ Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar and diagnostics/export slices;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages;
+- SEO/content work has started with Product structured data for the public product modal/detail state;
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Product structured data slice:
+  - public product modal now writes `#sobag-product-jsonld` with schema.org `Product` data after detail hydration;
+  - schema includes product name, description, baseSku/mpn, category, absolute image URLs, Sobag Opt brand, RUB AggregateOffer price range, and approved review aggregate/review data when present;
+  - admin catalog preview does not publish Product JSON-LD for draft/hidden/admin products;
+  - Product JSON-LD is removed when the modal closes to avoid stale structured data on the listing page;
+  - Playwright smoke now checks schema creation from `/api/catalog-detail` data and removal on modal close;
 - Lightweight error monitoring/log review workflow slice:
   - shared `api/_lib/http.js` `handleError` now accepts `req`;
   - API errors include `requestId` in response JSON and `X-Sobag-Request-Id` header;
@@ -190,6 +197,15 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current product structured data pass:
+  - `node --check app.js`
+  - `node --check tools/ui-smoke.spec.js`
+  - focused smoke: `ui-smoke --grep "product modal hydrates detail"`; passed and checks Product JSON-LD creation/removal.
+  - `git diff --check`
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; passed product validation, PIM smoke, PIM report smoke, catalog query smoke, bulk photo dry-run fixture, production smoke self-test, access audit, and error-log audit.
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`; 10/10 passed.
+  - In-app Browser check was attempted for local product schema, but `iab` browser was unavailable in this session; Playwright verification passed.
 - Current lightweight error-log workflow pass:
   - `node --check api/_lib/http.js`
   - `node --check tools/error-log-audit.mjs`
@@ -345,7 +361,7 @@ Backend/storage state:
 Important remaining work:
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
-- Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
+- Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, FAQ schema after real FAQ blocks exist, final Yandex map setup.
 - Performance for 10k+ products: catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
 - QA/Ops current checklist is done; next work is performance/SEO/remaining Import-PIM larger items.
 
