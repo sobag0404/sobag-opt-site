@@ -74,8 +74,8 @@ Last updated: 2026-06-04
 
 6. [planned] QA/security/ops:
    - [x] Stronger mojibake guard in AutoFix.
-   - [ ] Automated production smoke after deploy.
+   - [x] Automated production smoke after deploy.
      - [x] Read-only production smoke script for `/`, `/catalog`, `/cart`, and `/api/health`, with offline self-test in AutoFix.
-     - [ ] Wire the live smoke into the post-deploy routine after push/deploy.
+     - [x] Wire the live smoke into the post-deploy routine after push/deploy: GitHub Actions runs it after successful `autofix-check` on `main`, with manual fallback/preview dispatch support.
    - [ ] Error monitoring/log review workflow.
    - [ ] Periodic security/access audit.

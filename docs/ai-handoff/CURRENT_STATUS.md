@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this working update:
-- `0dbfdfc Skip full catalog bootstrap on server listings`
+- `d7931ed Add production smoke workflow`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -27,9 +27,17 @@ Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar and diagnostics/export slices;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages;
-- QA/Ops now has a read-only production smoke script with offline self-test; next QA/Ops step is wiring live smoke into the post-deploy routine, then log/error review or access audit.
+- QA/Ops now has automated read-only production smoke after successful `autofix-check` pushes to `main`, plus manual fallback/preview dispatch; next QA/Ops step is log/error review or access audit.
 
 Completed most recently:
+- Production smoke post-deploy workflow slice:
+  - added `.github/workflows/production-smoke.yml`;
+  - workflow runs after successful `autofix-check` workflow runs caused by push to `main`;
+  - workflow can also be launched manually with a custom `base_url` for fallback/preview checks;
+  - it uses Node 22 and runs `tools/production-smoke.mjs` directly, so no secrets or Vercel API are needed;
+  - `tools/production-smoke.mjs` now supports `--retries` and `--retry-delay`;
+  - CI smoke uses `--timeout 15000 --retries 6 --retry-delay 20000` to tolerate async Vercel deploy timing;
+  - roadmap now marks automated production smoke after deploy as done;
 - Production smoke automation slice:
   - added `tools/production-smoke.mjs`;
   - default live target is `https://sobag-shop.online`;
@@ -164,6 +172,13 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current production smoke workflow pass:
+  - `node --check tools/production-smoke.mjs`
+  - `node tools/production-smoke.mjs --self-test --retries 1 --retry-delay 10`: passed 4/4 fixture routes.
+  - `git diff --check`
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; includes production smoke self-test only and does not call production.
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`.
 - Current production smoke automation pass:
   - `node --check tools/production-smoke.mjs`
   - `node tools/production-smoke.mjs --self-test`: passed 4/4 fixture routes.
@@ -298,7 +313,7 @@ Important remaining work:
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
-- QA/Ops: wire production smoke into the post-deploy routine, then add access audit cadence and lightweight log/error review.
+- QA/Ops: add access audit cadence and lightweight log/error review.
 
 Important constraints:
 - no secrets in repo/docs/ZIP/chat;

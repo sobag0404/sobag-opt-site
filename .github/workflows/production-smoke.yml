@@ -1,0 +1,44 @@
+name: production-smoke
+
+on:
+  workflow_run:
+    workflows: ["autofix-check"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Production or fallback base URL"
+        required: false
+        default: "https://sobag-shop.online"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-smoke-${{ github.event.workflow_run.head_branch || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'main'
+        )
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run read-only production smoke
+        env:
+          SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || 'https://sobag-shop.online' }}
+        run: node tools/production-smoke.mjs --timeout 15000 --retries 6 --retry-delay 20000

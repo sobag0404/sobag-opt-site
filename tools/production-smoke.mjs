@@ -6,12 +6,16 @@ import { performance } from "node:perf_hooks";
 const DEFAULT_BASE_URL = "https://sobag-shop.online";
 const DEFAULT_PATHS = ["/", "/catalog", "/cart", "/api/health"];
 const DEFAULT_TIMEOUT_MS = 10000;
+const DEFAULT_RETRIES = 0;
+const DEFAULT_RETRY_DELAY_MS = 5000;
 
 function parseArgs(argv) {
   const options = {
     baseUrl: process.env.SOBAG_PRODUCTION_BASE_URL || DEFAULT_BASE_URL,
     paths: [],
     timeoutMs: DEFAULT_TIMEOUT_MS,
+    retries: DEFAULT_RETRIES,
+    retryDelayMs: DEFAULT_RETRY_DELAY_MS,
     json: false,
     selfTest: false,
     help: false,
@@ -35,6 +39,16 @@ function parseArgs(argv) {
       options.timeoutMs = Number(argv[index]);
     } else if (arg.startsWith("--timeout=")) {
       options.timeoutMs = Number(arg.slice("--timeout=".length));
+    } else if (arg === "--retries") {
+      index += 1;
+      options.retries = Number(argv[index]);
+    } else if (arg.startsWith("--retries=")) {
+      options.retries = Number(arg.slice("--retries=".length));
+    } else if (arg === "--retry-delay") {
+      index += 1;
+      options.retryDelayMs = Number(argv[index]);
+    } else if (arg.startsWith("--retry-delay=")) {
+      options.retryDelayMs = Number(arg.slice("--retry-delay=".length));
     } else if (arg === "--path") {
       index += 1;
       options.paths.push(argv[index]);
@@ -47,6 +61,12 @@ function parseArgs(argv) {
 
   if (!Number.isFinite(options.timeoutMs) || options.timeoutMs < 1000) {
     throw new Error("--timeout must be a number >= 1000");
+  }
+  if (!Number.isInteger(options.retries) || options.retries < 0) {
+    throw new Error("--retries must be an integer >= 0");
+  }
+  if (!Number.isFinite(options.retryDelayMs) || options.retryDelayMs < 0) {
+    throw new Error("--retry-delay must be a number >= 0");
   }
   options.paths = options.paths.length ? options.paths : DEFAULT_PATHS;
   options.paths = options.paths.map((path) => (path.startsWith("/") ? path : `/${path}`));
@@ -62,6 +82,8 @@ Options:
   --base-url <url>   Base URL. Default: SOBAG_PRODUCTION_BASE_URL or ${DEFAULT_BASE_URL}
   --path <path>      Path to check. Can be repeated. Default: ${DEFAULT_PATHS.join(", ")}
   --timeout <ms>     Per-request timeout. Default: ${DEFAULT_TIMEOUT_MS}
+  --retries <count>  Retry failed smoke runs. Default: ${DEFAULT_RETRIES}
+  --retry-delay <ms> Delay between retries. Default: ${DEFAULT_RETRY_DELAY_MS}
   --json             Print machine-readable JSON.
   --self-test        Run against a local in-process fixture server, not production.
   --help             Show this help.
@@ -204,9 +226,31 @@ async function runSmoke(options) {
   };
 }
 
+async function sleep(ms) {
+  if (!ms) return;
+  await new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function runSmokeWithRetries(options, onRetry = null) {
+  const maxAttempts = options.retries + 1;
+  let report = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    report = await runSmoke(options);
+    report.attempt = attempt;
+    report.maxAttempts = maxAttempts;
+    if (report.ok || attempt === maxAttempts) return report;
+    if (onRetry) onRetry(report, options.retryDelayMs);
+    await sleep(options.retryDelayMs);
+  }
+  return report;
+}
+
 function printHuman(report, { selfTest = false } = {}) {
   const label = selfTest ? "Production smoke self-test" : "Production smoke";
-  console.log(`${label}: ${report.baseUrl}`);
+  const attemptLabel = report.maxAttempts > 1 ? ` (attempt ${report.attempt}/${report.maxAttempts})` : "";
+  console.log(`${label}: ${report.baseUrl}${attemptLabel}`);
   for (const result of report.results) {
     if (result.ok) {
       console.log(`OK ${result.status} ${String(result.elapsedMs).padStart(4, " ")}ms ${result.path}`);
@@ -215,6 +259,14 @@ function printHuman(report, { selfTest = false } = {}) {
     }
   }
   console.log(`${label} ${report.ok ? "passed" : "failed"}: ${report.results.filter((result) => result.ok).length}/${report.results.length}`);
+}
+
+function printRetry(report, retryDelayMs) {
+  const failed = report.results.filter((result) => !result.ok);
+  console.log(`Production smoke attempt ${report.attempt}/${report.maxAttempts} failed; retrying in ${retryDelayMs}ms.`);
+  failed.forEach((result) => {
+    console.log(`FAIL ${result.path} - ${result.error}`);
+  });
 }
 
 async function closeServer(server) {
@@ -259,7 +311,10 @@ async function main() {
   if (options.selfTest) {
     const fixture = await createSelfTestServer();
     try {
-      const report = await runSmoke({ ...options, baseUrl: fixture.baseUrl });
+      const report = await runSmokeWithRetries(
+        { ...options, baseUrl: fixture.baseUrl },
+        options.json ? null : printRetry
+      );
       if (options.json) console.log(JSON.stringify(report, null, 2));
       else printHuman(report, { selfTest: true });
       if (!report.ok) process.exitCode = 1;
@@ -269,7 +324,7 @@ async function main() {
     return;
   }
 
-  const report = await runSmoke(options);
+  const report = await runSmokeWithRetries(options, options.json ? null : printRetry);
   if (options.json) console.log(JSON.stringify(report, null, 2));
   else printHuman(report);
   if (!report.ok) process.exitCode = 1;

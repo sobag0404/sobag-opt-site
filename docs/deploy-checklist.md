@@ -18,6 +18,11 @@ npm.cmd run ui:smoke
 
 ## После Deploy
 
+GitHub Actions workflow `.github/workflows/production-smoke.yml` запускается после успешного `autofix-check` для push в `main`.
+Он делает live production smoke с retry, чтобы дождаться асинхронного Vercel deploy.
+
+Этот же workflow можно запустить вручную через `workflow_dispatch` и передать fallback/preview URL.
+
 Production smoke является read-only: он делает только `GET`-запросы к публичным URL и не использует Vercel API.
 
 ```bash

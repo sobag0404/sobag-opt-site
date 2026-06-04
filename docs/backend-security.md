@@ -65,6 +65,9 @@ npm run smoke:prod
 It sends only public `GET` requests to `/`, `/catalog`, `/cart`, and `/api/health`.
 Use `npm run smoke:prod:self-test` for the offline fixture check that is also covered by AutoFix.
 
+GitHub Actions also runs `.github/workflows/production-smoke.yml` after a successful `autofix-check` push to `main`.
+The workflow uses the same read-only script with retries, because Vercel deploys can finish asynchronously after GitHub push.
+
 ## AutoFix
 
 Local checks:
