@@ -63,6 +63,13 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await page.goto(`${BASE_URL}/admin-order?id=SO-QA-GUEST`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminOrderPage")).toContainText("SO-QA-GUEST");
   await expect(page.locator("#adminOrderPage")).toContainText("Guest Buyer");
+  await expect(page.locator("#adminOrderPage")).toContainText("Экспорт XLSX");
+  await page.route("**/api/admin/orders", (route) => route.abort());
+  await page.locator('[data-order-status="SO-QA-GUEST"][data-status-value="processing"]').click();
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.orders.v1") || "[]")[0]?.status))
+    .toBe("processing");
+  await expect(page.locator("#adminOrderPage")).toContainText("История заказа");
 
   await page.goto(`${BASE_URL}/admin-customer?email=guest@example.com`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminCustomerPage")).toContainText("Guest Buyer");
@@ -140,6 +147,7 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
     `/catalog?category=${encodeURIComponent(await largestCategory(page))}`,
     "/search?q=opt_22434",
     "/cart.html",
+    "/quotes.html",
     "/favorites.html",
     "/admin-orders.html",
     "/admin-products.html",
@@ -293,6 +301,15 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.savedCarts.buyer@example.com") || "[]")[0]?.title))
     .toBe("QA renamed cart");
 
+  await page.locator(".modal__close").click();
+  await page.goto(`${BASE_URL}/quotes.html`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#savedQuotesPage")).toContainText("QA renamed cart");
+  await page.locator('[data-saved-cart-comment-form] textarea[name="customerComment"]').first().fill("QA quote customer comment");
+  await page.locator("[data-saved-cart-comment-form]").first().getByRole("button", { name: /Сохранить комментарии/i }).click();
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.savedCarts.buyer@example.com") || "[]")[0]?.customerComment))
+    .toBe("QA quote customer comment");
+
   const downloadPromise = page.waitForEvent("download");
   await page.locator("[data-download-saved-cart]").first().click();
   const download = await downloadPromise;
@@ -308,6 +325,17 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.orders.v1") || "[]").some((order) => order.source === "saved_cart")))
     .toBe(true);
 
+  page.once("dialog", (dialog) => {
+    expect(dialog.message()).toContain("расхождения");
+    expect(dialog.message()).toMatch(/было|Не найдены/);
+    dialog.accept();
+  });
+  await page.evaluate(() => {
+    const key = "sobag.savedCarts.buyer@example.com";
+    const carts = JSON.parse(localStorage.getItem(key) || "[]");
+    if (carts[0]?.items?.[0]?.[1]?.variant) carts[0].items[0][1].variant.price = 1;
+    localStorage.setItem(key, JSON.stringify(carts));
+  });
   await page.locator("[data-restore-saved-cart]").first().click();
   await expect(page).toHaveURL(/\/cart(?:\.html)?$/);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.cart.buyer@example.com") || "[]").length)).toBe(1);

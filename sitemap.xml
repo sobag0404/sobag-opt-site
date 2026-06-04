@@ -13,6 +13,10 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://sobag-shop.online/quotes.html</loc>
+    <priority>0.4</priority>
+  </url>
+  <url>
     <loc>https://sobag-shop.online/business.html</loc>
     <priority>0.8</priority>
   </url>

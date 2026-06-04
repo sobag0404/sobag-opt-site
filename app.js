@@ -1834,19 +1834,21 @@ function saveOrderRecord(order, userKey = state.currentUser) {
 }
 
 function updateOrderRecord(orderId, patch) {
+  let preparedPatch = null;
   const orders = getOrders().map((order) => {
     if (order.id !== orderId) return order;
     const entry = orderHistoryEntry(order, patch);
-    const prepared = {
+    preparedPatch = {
       ...patch,
       updatedAt: new Date().toISOString(),
       statusHistory: entry ? [entry, ...(order.statusHistory || [])].slice(0, 100) : order.statusHistory || [],
     };
-    return { ...order, ...prepared };
+    return { ...order, ...preparedPatch };
   });
+  if (!preparedPatch) return;
   const users = getUsers();
   Object.values(users).forEach((user) => {
-    user.orders = (user.orders || []).map((order) => (order.id === orderId ? { ...order, ...prepared } : order));
+    user.orders = (user.orders || []).map((order) => (order.id === orderId ? { ...order, ...preparedPatch } : order));
   });
   saveOrders(orders);
   saveUsers(users);
@@ -1963,6 +1965,24 @@ function totalsFromCartEntries(entries) {
   return { qty, subtotal, discount, total };
 }
 
+function normalizeSavedCartText(value, limit = 1000) {
+  return String(value || "").trim().slice(0, limit);
+}
+
+function normalizeSavedCartHistory(items) {
+  return (Array.isArray(items) ? items : [])
+    .map((entry) => ({
+      at: normalizeSavedCartText(entry?.at || new Date().toISOString(), 40),
+      actor: normalizeSavedCartText(entry?.actor || "", 120),
+      role: normalizeSavedCartText(entry?.role || "", 40),
+      type: normalizeSavedCartText(entry?.type || "comment", 40),
+      text: normalizeSavedCartText(entry?.text || "", 1000),
+      visibility: entry?.visibility === "internal" ? "internal" : "customer",
+    }))
+    .filter((entry) => entry.text)
+    .slice(0, 20);
+}
+
 function normalizeSavedCart(item) {
   const items = cleanCartEntries(item?.items || []);
   if (!items.length) return null;
@@ -1978,6 +1998,9 @@ function normalizeSavedCart(item) {
     status: item.status === "sent" ? "sent" : "draft",
     sentAt: item.sentAt || "",
     sentOrderId: item.sentOrderId || "",
+    customerComment: normalizeSavedCartText(item.customerComment || item.comment || ""),
+    managerComment: normalizeSavedCartText(item.managerComment || ""),
+    commentHistory: normalizeSavedCartHistory(item.commentHistory),
     ...totals,
   };
 }
@@ -2029,8 +2052,73 @@ function saveCurrentCartDraft(title = "") {
     items,
   });
   const saved = saveSavedCarts([draft, ...getSavedCarts()]);
+  renderSavedQuotesPage();
   showToast("Черновик корзины сохранен.");
   return saved[0];
+}
+
+function findCurrentVariantBySku(sku) {
+  const key = baseSkuKey(sku);
+  if (!key) return null;
+  for (const product of products) {
+    const variant = (product.variants || []).find((item) => baseSkuKey(item.sku) === key);
+    if (variant) return { product, variant };
+  }
+  return null;
+}
+
+function savedCartRestoreAnalysis(cart) {
+  const missingSkus = [];
+  const changedPrices = [];
+  const refreshedEntries = cleanCartEntries(cart.items).map(([key, line]) => {
+    const sku = line?.variant?.sku || line?.variantSku || "";
+    const current = findCurrentVariantBySku(sku);
+    if (!current) {
+      missingSkus.push(sku || key);
+      return [key, line];
+    }
+    const oldPrice = Number(line?.variant?.price || 0);
+    const newPrice = Number(current.variant.price || 0);
+    const nextKey = `${current.product.id}:${current.variant.sku}`;
+    if (oldPrice !== newPrice) {
+      changedPrices.push({
+        sku: current.variant.sku,
+        oldPrice,
+        newPrice,
+      });
+    }
+    return [
+      nextKey,
+      {
+        ...line,
+        key: nextKey,
+        productId: current.product.id,
+        productName: current.variant.name || current.product.name || line.productName || "",
+        productImage: current.product.image || line.productImage || "",
+        variant: {
+          ...(line.variant || {}),
+          ...current.variant,
+        },
+      },
+    ];
+  });
+  return { missingSkus, changedPrices, refreshedEntries };
+}
+
+function savedCartRestoreWarning(analysis) {
+  const lines = [];
+  if (analysis.changedPrices.length) {
+    lines.push(
+      `Изменились цены у ${analysis.changedPrices.length} ${pluralRu(analysis.changedPrices.length, "варианта", "вариантов", "вариантов")}.`
+    );
+    analysis.changedPrices.slice(0, 5).forEach((item) => {
+      lines.push(`${item.sku}: было ${formatMoney(item.oldPrice)}, сейчас ${formatMoney(item.newPrice)}`);
+    });
+  }
+  if (analysis.missingSkus.length) {
+    lines.push(`Не найдены в текущем каталоге: ${analysis.missingSkus.slice(0, 8).join(", ")}.`);
+  }
+  return lines.join("\n");
 }
 
 function restoreSavedCart(cartId) {
@@ -2039,17 +2127,22 @@ function restoreSavedCart(cartId) {
     showToast("Черновик корзины не найден.");
     return;
   }
-  state.cart = new Map(cleanCartEntries(draft.items));
+  const analysis = savedCartRestoreAnalysis(draft);
+  const warning = savedCartRestoreWarning(analysis);
+  if (warning && !window.confirm(`В сохраненном КП есть расхождения с текущим каталогом:\n\n${warning}\n\nВосстановить КП с актуальными ценами там, где SKU найден?`)) {
+    return;
+  }
+  state.cart = new Map(analysis.refreshedEntries);
   saveCart();
   renderCart();
   closeModal();
   navigateWithinSite("cart.html");
-  showToast("Черновик восстановлен в корзину.");
+  showToast(warning ? "КП восстановлено с учетом актуальных цен." : "Черновик восстановлен в корзину.");
 }
 
 function deleteSavedCart(cartId) {
   saveSavedCarts(getSavedCarts().filter((item) => item.id !== cartId));
-  rerenderAccountModal();
+  refreshSavedCartViews();
   showToast("Черновик удален.");
 }
 
@@ -2078,7 +2171,7 @@ function renameSavedCart(cartId) {
   const prepared = title.trim();
   if (!prepared || prepared === draft.title) return;
   updateSavedCart(cartId, { title: prepared, status: draft.status || "draft" });
-  rerenderAccountModal();
+  refreshSavedCartViews();
   showToast("Название КП обновлено.");
 }
 
@@ -2100,6 +2193,8 @@ function savedCartQuoteRows(cart) {
     ["Дата", new Date(cart.updatedAt || cart.createdAt || Date.now()).toLocaleString("ru-RU")],
     ["Статус", cart.status === "sent" ? "Отправлено менеджеру" : "Черновик"],
     ["Номер заказа", cart.sentOrderId || ""],
+    ["Комментарий покупателя", cart.customerComment || ""],
+    ["Комментарий менеджера", cart.managerComment || ""],
     ["Сумма товаров", totals.subtotal],
     ["Скидка по корзине", `${totals.discount}%`],
     ["Итого", totals.total],
@@ -2165,13 +2260,17 @@ function printSavedCartQuote(cartId) {
     showToast("Браузер заблокировал окно печати.");
     return;
   }
-  win.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${escapeHtml(draft.title)} · Sobag Opt</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}h1{font-size:28px}p{margin:6px 0}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f4f4f4}.total{font-size:22px;font-weight:800;margin-top:18px}</style></head><body><h1>${escapeHtml(draft.title)}</h1><p>Коммерческое предложение Sobag Opt</p><p>Статус: ${draft.status === "sent" ? "отправлено менеджеру" : "черновик"}</p><p>Скидка по корзине: ${totals.discount}%</p><table><thead><tr><th>Артикул</th><th>Наименование</th><th>Параметры</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead><tbody>${rows}</tbody></table><p class="total">Итого: ${formatMoney(totals.total)}</p><script>window.print();</script></body></html>`);
+  const comments = [
+    draft.customerComment ? `<p><b>Комментарий покупателя:</b> ${escapeHtml(draft.customerComment)}</p>` : "",
+    draft.managerComment ? `<p><b>Комментарий менеджера:</b> ${escapeHtml(draft.managerComment)}</p>` : "",
+  ].join("");
+  win.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${escapeHtml(draft.title)} · Sobag Opt</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}h1{font-size:28px}p{margin:6px 0}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f4f4f4}.total{font-size:22px;font-weight:800;margin-top:18px}</style></head><body><h1>${escapeHtml(draft.title)}</h1><p>Коммерческое предложение Sobag Opt</p><p>Статус: ${draft.status === "sent" ? "отправлено менеджеру" : "черновик"}</p><p>Скидка по корзине: ${totals.discount}%</p>${comments}<table><thead><tr><th>Артикул</th><th>Наименование</th><th>Параметры</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead><tbody>${rows}</tbody></table><p class="total">Итого: ${formatMoney(totals.total)}</p><script>window.print();</script></body></html>`);
   win.document.close();
 }
 
 function customerFromSavedCartProfile(user, draft) {
   const note = `Заказ создан из сохраненного КП "${draft.title}".`;
-  const comment = [note, user.orderComment || user.lastCustomer?.comment || ""].filter(Boolean).join("\n");
+  const comment = [note, draft.customerComment ? `Комментарий к КП: ${draft.customerComment}` : "", user.orderComment || user.lastCustomer?.comment || ""].filter(Boolean).join("\n");
   return {
     name: user.name || user.company || "",
     email: user.email || state.currentUser || "",
@@ -2240,9 +2339,61 @@ async function sendSavedCartToManager(cartId) {
     status: "sent",
     sentAt: new Date().toISOString(),
     sentOrderId: order.id || "",
+    commentHistory: [
+      ...normalizeSavedCartHistory(draft.commentHistory),
+      {
+        at: new Date().toISOString(),
+        actor: user.name || user.email || "Покупатель",
+        role: "buyer",
+        type: "sent",
+        visibility: "customer",
+        text: `КП отправлено менеджеру как заказ ${order.id || ""}.`,
+      },
+    ],
   });
-  rerenderAccountModal();
+  refreshSavedCartViews();
   showToast(`КП отправлено менеджеру. Заказ ${order.id || ""}`);
+}
+
+function saveSavedCartComments(form) {
+  const cartId = form.dataset.savedCartCommentForm;
+  const draft = getSavedCarts().find((item) => item.id === cartId);
+  if (!draft) {
+    showToast("Черновик КП не найден.");
+    return;
+  }
+  const user = getUsers()[state.currentUser] || {};
+  const data = Object.fromEntries(new FormData(form).entries());
+  const customerComment = normalizeSavedCartText(data.customerComment || "");
+  const managerComment = canManageOrders(user) ? normalizeSavedCartText(data.managerComment || "") : draft.managerComment || "";
+  const history = normalizeSavedCartHistory(draft.commentHistory);
+  if (customerComment !== (draft.customerComment || "")) {
+    history.push({
+      at: new Date().toISOString(),
+      actor: user.name || user.email || "Покупатель",
+      role: user.role || "buyer",
+      type: "comment",
+      visibility: "customer",
+      text: customerComment ? `Комментарий покупателя обновлен: ${customerComment}` : "Комментарий покупателя очищен.",
+    });
+  }
+  if (managerComment !== (draft.managerComment || "")) {
+    history.push({
+      at: new Date().toISOString(),
+      actor: user.name || user.email || "Менеджер",
+      role: user.role || "manager",
+      type: "manager_comment",
+      visibility: "internal",
+      text: managerComment ? `Внутренний комментарий менеджера обновлен: ${managerComment}` : "Внутренний комментарий менеджера очищен.",
+    });
+  }
+  updateSavedCart(cartId, {
+    customerComment,
+    managerComment,
+    commentHistory: history,
+  });
+  refreshSavedCartViews();
+  showToast("Комментарии КП сохранены.");
 }
 
 async function submitProductReview(form) {
@@ -3926,6 +4077,7 @@ function orderCardHtml(order, managerMode = false) {
               <a class="ghost-button" href="${adminOrderUrl(order.id)}" target="_blank" rel="noopener">Открыть заказ</a>
               ${customerEmail ? `<a class="ghost-button" href="${adminCustomerUrl(customerEmail)}" target="_blank" rel="noopener">Профиль покупателя</a>` : ""}
               <button class="ghost-button" type="button" data-export-order="${escapeHtml(order.id || "")}">Экспорт CSV</button>
+              <button class="ghost-button" type="button" data-export-order-xlsx="${escapeHtml(order.id || "")}">Экспорт XLSX</button>
               <button class="ghost-button" type="button" data-print-order="${escapeHtml(order.id || "")}">Печать / PDF</button>
             </div>
             <form class="order-manager-form" data-order-manager-form="${escapeHtml(order.id || "")}">
@@ -4809,6 +4961,78 @@ function buyerProfileHtml(user) {
   `;
 }
 
+function savedCartStatusText(cart) {
+  return `${cart.status === "sent" ? "Отправлено менеджеру" : "Черновик"}${cart.sentOrderId ? ` · заказ ${cart.sentOrderId}` : ""}`;
+}
+
+function savedCartHistoryHtml(cart) {
+  const history = normalizeSavedCartHistory(cart.commentHistory);
+  if (!history.length) return "";
+  return `
+    <details class="saved-cart-history">
+      <summary>История комментариев: ${history.length}</summary>
+      <ul>
+        ${history
+          .map(
+            (entry) => `
+              <li>
+                <b>${escapeHtml(new Date(entry.at || Date.now()).toLocaleString("ru-RU"))}</b>
+                <span>${escapeHtml(entry.text)}</span>
+                ${entry.actor ? `<small>${escapeHtml(entry.actor)}${entry.visibility === "internal" ? " · внутренне" : ""}</small>` : ""}
+              </li>
+            `
+          )
+          .join("")}
+      </ul>
+    </details>
+  `;
+}
+
+function savedCartCardHtml(cart, options = {}) {
+  const compact = Boolean(options.compact);
+  const user = getUsers()[state.currentUser];
+  const managerMode = canManageOrders(user);
+  return `
+    <article class="saved-cart-card${compact ? " saved-cart-card--compact" : ""}">
+      <div class="saved-cart-card__main">
+        <strong>${escapeHtml(cart.title)}</strong>
+        <span>${escapeHtml(cart.date || new Date(cart.updatedAt).toLocaleString("ru-RU"))}</span>
+        <span>${escapeHtml(savedCartStatusText(cart))}</span>
+        ${cart.customerComment ? `<p>${escapeHtml(cart.customerComment)}</p>` : ""}
+        ${managerMode && cart.managerComment ? `<p class="saved-cart-card__internal">Внутренне: ${escapeHtml(cart.managerComment)}</p>` : ""}
+      </div>
+      <div class="saved-cart-card__meta">
+        <span>${cart.qty} ${productWord(cart.qty)}</span>
+        <b>${formatMoney(cart.total)}</b>
+      </div>
+      <div class="order-actions">
+        <button class="ghost-button" type="button" data-rename-saved-cart="${escapeHtml(cart.id)}">Переименовать</button>
+        <button class="ghost-button" type="button" data-download-saved-cart="${escapeHtml(cart.id)}">Скачать XLSX</button>
+        <button class="ghost-button" type="button" data-print-saved-cart="${escapeHtml(cart.id)}">Печать / PDF</button>
+        <button class="ghost-button" type="button" data-send-saved-cart="${escapeHtml(cart.id)}">${cart.status === "sent" ? "Отправить повторно" : "Отправить менеджеру"}</button>
+        <button class="primary-button" type="button" data-restore-saved-cart="${escapeHtml(cart.id)}">Восстановить</button>
+        <button class="ghost-button" type="button" data-delete-saved-cart="${escapeHtml(cart.id)}">Удалить</button>
+      </div>
+      <form class="saved-cart-comments" data-saved-cart-comment-form="${escapeHtml(cart.id)}">
+        <label>
+          Комментарий покупателя к КП
+          <textarea name="customerComment" rows="3" placeholder="Например: нужен расчет по срокам, упаковке или поставке">${escapeHtml(cart.customerComment || "")}</textarea>
+        </label>
+        ${
+          managerMode
+            ? `<label>
+                Внутренний комментарий менеджера
+                <textarea name="managerComment" rows="3" placeholder="Виден только администратору и менеджеру">${escapeHtml(cart.managerComment || "")}</textarea>
+              </label>`
+            : ""
+        }
+        <button class="ghost-button" type="submit">Сохранить комментарии</button>
+      </form>
+      ${savedCartHistoryHtml(cart)}
+    </article>
+  `;
+}
+
 function savedCartsHtml() {
   const savedCarts = getSavedCarts();
   const totals = getCartTotals();
@@ -4816,44 +5040,71 @@ function savedCartsHtml() {
     <div class="account-section">
       <div class="account-section__head">
         <div>
-          <h3>Сохраненные корзины</h3>
-          <span>Черновики КП и повторных закупок</span>
+          <h3>Сохраненные КП</h3>
+          <span>Черновики коммерческих предложений и повторных закупок</span>
         </div>
-        ${totals.qty ? '<button class="ghost-button" type="button" data-save-current-cart>Сохранить текущую</button>' : ""}
+        <div class="account-section__actions">
+          ${totals.qty ? '<button class="ghost-button" type="button" data-save-current-cart>Сохранить текущую</button>' : ""}
+          <a class="ghost-button" href="quotes.html">Открыть все КП</a>
+        </div>
       </div>
       <div class="saved-carts-list">
         ${
           savedCarts.length
             ? savedCarts
-                .map(
-                  (cart) => `
-                    <article class="saved-cart-card">
-                      <div>
-                        <strong>${escapeHtml(cart.title)}</strong>
-                        <span>${escapeHtml(cart.date || new Date(cart.updatedAt).toLocaleString("ru-RU"))}</span>
-                        <span>${cart.status === "sent" ? "Отправлено менеджеру" : "Черновик"}${cart.sentOrderId ? ` · заказ ${escapeHtml(cart.sentOrderId)}` : ""}</span>
-                      </div>
-                      <div class="saved-cart-card__meta">
-                        <span>${cart.qty} ${productWord(cart.qty)}</span>
-                        <b>${formatMoney(cart.total)}</b>
-                      </div>
-                      <div class="order-actions">
-                        <button class="ghost-button" type="button" data-rename-saved-cart="${escapeHtml(cart.id)}">Переименовать</button>
-                        <button class="ghost-button" type="button" data-download-saved-cart="${escapeHtml(cart.id)}">Скачать XLSX</button>
-                        <button class="ghost-button" type="button" data-print-saved-cart="${escapeHtml(cart.id)}">Печать / PDF</button>
-                        <button class="ghost-button" type="button" data-send-saved-cart="${escapeHtml(cart.id)}">${cart.status === "sent" ? "Отправить повторно" : "Отправить менеджеру"}</button>
-                        <button class="primary-button" type="button" data-restore-saved-cart="${escapeHtml(cart.id)}">Восстановить</button>
-                        <button class="ghost-button" type="button" data-delete-saved-cart="${escapeHtml(cart.id)}">Удалить</button>
-                      </div>
-                    </article>
-                  `
-                )
+                .slice(0, 3)
+                .map((cart) => savedCartCardHtml(cart, { compact: true }))
                 .join("")
-            : "<p>Сохраненных корзин пока нет. Соберите корзину и сохраните ее как черновик.</p>"
+            : "<p>Сохраненных КП пока нет. Соберите корзину и сохраните ее как черновик.</p>"
         }
       </div>
     </div>
   `;
+}
+
+function savedQuotesPageHtml() {
+  const user = getUsers()[state.currentUser];
+  const savedCarts = getSavedCarts();
+  const totals = getCartTotals();
+  if (!user) {
+    return `
+      <section class="quotes-empty">
+        <i data-lucide="file-lock-2"></i>
+        <h2>Войдите, чтобы открыть сохраненные КП</h2>
+        <p>Черновики коммерческих предложений сохраняются за аккаунтом и доступны на разных устройствах.</p>
+        <button class="primary-button" type="button" data-open-account>Войти или зарегистрироваться</button>
+      </section>
+    `;
+  }
+  return `
+    <section class="quotes-page__head">
+      <div>
+        <div class="accent-stripe" aria-hidden="true"></div>
+        <h1>Сохраненные КП</h1>
+        <p>Здесь можно хранить черновики оптовых закупок, добавлять комментарии, скачивать XLSX/PDF и отправлять КП менеджеру.</p>
+      </div>
+      <div class="quotes-page__summary">
+        <span>${savedCarts.length} ${pluralRu(savedCarts.length, "КП", "КП", "КП")}</span>
+        <strong>${formatMoney(savedCarts.reduce((sum, cart) => sum + Number(cart.total || 0), 0))}</strong>
+        ${totals.qty ? '<button class="ghost-button" type="button" data-save-current-cart>Сохранить текущую корзину</button>' : ""}
+      </div>
+    </section>
+    <div class="saved-carts-list saved-carts-list--page">
+      ${savedCarts.length ? savedCarts.map((cart) => savedCartCardHtml(cart)).join("") : "<p>Сохраненных КП пока нет. Соберите корзину и сохраните ее как черновик.</p>"}
+    </div>
+  `;
+}
+
+function renderSavedQuotesPage() {
+  const node = document.querySelector("#savedQuotesPage");
+  if (!node) return;
+  node.innerHTML = savedQuotesPageHtml();
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function refreshSavedCartViews() {
+  renderSavedQuotesPage();
+  rerenderAccountModal();
 }
 
 function accountModalHtml() {
@@ -5808,6 +6059,21 @@ function downloadOrderCsv(orderId) {
   downloadCsv(`sobag-order-${order.id || "order"}.csv`, orderCsvRows(order));
 }
 
+function downloadOrderXlsx(orderId) {
+  const order = getOrders().find((item) => item.id === orderId);
+  if (!order) {
+    showToast("Заказ не найден.");
+    return;
+  }
+  const rows = orderCsvRows(order);
+  if (downloadRowsXlsx(rows, `sobag-order-${order.id || "order"}.xlsx`, "Заказ")) {
+    showToast("Заказ скачан в XLSX.");
+    return;
+  }
+  downloadCsv(`sobag-order-${order.id || "order"}.csv`, rows);
+  showToast("XLSX недоступен на этой странице, скачан CSV.");
+}
+
 function printOrder(orderId) {
   const order = getOrders().find((item) => item.id === orderId);
   if (!order) {
@@ -6240,6 +6506,7 @@ function boot() {
   renderAccountButton();
   renderSiteContent();
   renderManagementPages();
+  renderSavedQuotesPage();
   renderAdminProductsPage();
   renderAdminPricesPage();
   renderAdminImportPage();
@@ -6257,6 +6524,7 @@ function boot() {
     renderProducts();
     renderAccountButton();
     renderManagementPages();
+    renderSavedQuotesPage();
     renderAdminProductsPage();
     renderAdminPricesPage();
     renderAdminImportPage();
@@ -6398,7 +6666,7 @@ function boot() {
     if (button.dataset.saveCurrentCart !== undefined) {
       const title = window.prompt("Название черновика корзины", `Корзина от ${new Date().toLocaleDateString("ru-RU")}`) || "";
       saveCurrentCartDraft(title.trim());
-      rerenderAccountModal();
+      refreshSavedCartViews();
       return;
     }
     if (button.dataset.restoreSavedCart) {
@@ -6532,6 +6800,7 @@ function boot() {
     if (button.dataset.exportFilteredVariantPrices !== undefined) downloadVariantPricesCsv(getFilteredProducts(), "sobag-variant-prices-filtered.csv");
     if (button.dataset.exportOrders !== undefined) downloadOrdersCsv();
     if (button.dataset.exportOrder) downloadOrderCsv(button.dataset.exportOrder);
+    if (button.dataset.exportOrderXlsx) downloadOrderXlsx(button.dataset.exportOrderXlsx);
     if (button.dataset.printOrder) printOrder(button.dataset.printOrder);
     if (button.dataset.adminSyncCatalog !== undefined) {
       syncCatalogNow();
@@ -6700,6 +6969,11 @@ function boot() {
     if (event.target.dataset.reviewForm) {
       event.preventDefault();
       await submitProductReview(event.target);
+      return;
+    }
+    if (event.target.dataset.savedCartCommentForm) {
+      event.preventDefault();
+      saveSavedCartComments(event.target);
       return;
     }
     if (event.target.id === "authForm") {

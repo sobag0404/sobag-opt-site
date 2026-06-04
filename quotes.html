@@ -1,39 +1,34 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sobag Opt | Товары</title>
-    <meta name="description" content="Управление товарами Sobag Opt для администратора." />
+    <title>Sobag Opt | Сохраненные КП</title>
+    <meta name="description" content="Сохраненные коммерческие предложения Sobag Opt для повторных оптовых закупок." />
+    <link rel="canonical" href="https://sobag-shop.online/quotes.html" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Crect x='6' y='6' width='52' height='52' fill='%23fff'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial,sans-serif' font-size='34' font-weight='900' fill='%23000'%3ES%3C/text%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="styles.css?v=20260604-saved-quotes" />
   </head>
-  <body class="admin-products-page">
+  <body class="quotes-page">
     <div data-site-topline></div>
+
     <div data-site-header="commerce"></div>
 
-    <main class="content-page">
+    <main class="quotes-page__main">
       <div class="container page-back">
-        <a class="ghost-button" href="catalog.html"><i data-lucide="arrow-left"></i> В каталог</a>
-        <strong>Товары</strong>
+        <a class="ghost-button" href="cart.html"><i data-lucide="arrow-left"></i> В корзину</a>
+        <strong>Сохраненные КП</strong>
       </div>
-      <section class="container info-page">
-        <div class="section-head">
-          <div>
-            <div class="accent-stripe" aria-hidden="true"></div>
-            <h1>Товары каталога</h1>
-            <p>Поиск, фильтры, быстрый просмотр, редактирование базовой цены и экспорт товаров/вариантов. Удаления здесь нет: товар можно только скрыть из каталога.</p>
-          </div>
-        </div>
-        <div id="adminProductsPage"></div>
-      </section>
+      <section class="container quotes-page__layout" id="savedQuotesPage"></section>
     </main>
 
     <div data-site-footer></div>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
     <script src="components/site-shell.js?v=20260604-saved-quotes"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>

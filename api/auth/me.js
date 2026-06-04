@@ -121,6 +121,17 @@ function sanitizeSavedCarts(items) {
       const title = String(item.title || "Сохраненная корзина").trim().slice(0, 120);
       const createdAt = String(item.createdAt || item.updatedAt || new Date().toISOString()).slice(0, 40);
       const updatedAt = String(item.updatedAt || createdAt).slice(0, 40);
+      const commentHistory = (Array.isArray(item.commentHistory) ? item.commentHistory : [])
+        .map((entry) => ({
+          at: String(entry?.at || new Date().toISOString()).slice(0, 40),
+          actor: String(entry?.actor || "").trim().slice(0, 120),
+          role: String(entry?.role || "").trim().slice(0, 40),
+          type: String(entry?.type || "comment").trim().slice(0, 40),
+          visibility: entry?.visibility === "internal" ? "internal" : "customer",
+          text: String(entry?.text || "").trim().slice(0, 1000),
+        }))
+        .filter((entry) => entry.text)
+        .slice(0, 20);
       return {
         id,
         title,
@@ -135,6 +146,9 @@ function sanitizeSavedCarts(items) {
         status: item.status === "sent" ? "sent" : "draft",
         sentAt: String(item.sentAt || "").slice(0, 40),
         sentOrderId: String(item.sentOrderId || "").slice(0, 80),
+        customerComment: String(item.customerComment || item.comment || "").trim().slice(0, 1000),
+        managerComment: String(item.managerComment || "").trim().slice(0, 1000),
+        commentHistory,
       };
     })
     .filter(Boolean)

@@ -493,6 +493,24 @@ function totalsFromCartEntries(entries) {
   return { qty, subtotal, discount, total };
 }
 
+function normalizeSavedCartText(value, limit = 1000) {
+  return String(value || "").trim().slice(0, limit);
+}
+
+function normalizeSavedCartHistory(items) {
+  return (Array.isArray(items) ? items : [])
+    .map((entry) => ({
+      at: normalizeSavedCartText(entry?.at || new Date().toISOString(), 40),
+      actor: normalizeSavedCartText(entry?.actor || "", 120),
+      role: normalizeSavedCartText(entry?.role || "", 40),
+      type: normalizeSavedCartText(entry?.type || "comment", 40),
+      text: normalizeSavedCartText(entry?.text || "", 1000),
+      visibility: entry?.visibility === "internal" ? "internal" : "customer",
+    }))
+    .filter((entry) => entry.text)
+    .slice(0, 20);
+}
+
 function normalizeSavedCart(item) {
   const items = cleanCartEntries(item?.items || []);
   if (!items.length) return null;
@@ -508,6 +526,9 @@ function normalizeSavedCart(item) {
     status: item.status === "sent" ? "sent" : "draft",
     sentAt: item.sentAt || "",
     sentOrderId: item.sentOrderId || "",
+    customerComment: normalizeSavedCartText(item.customerComment || item.comment || ""),
+    managerComment: normalizeSavedCartText(item.managerComment || ""),
+    commentHistory: normalizeSavedCartHistory(item.commentHistory),
     ...totals,
   };
 }

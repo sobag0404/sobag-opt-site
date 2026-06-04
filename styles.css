@@ -6149,6 +6149,10 @@ body.theme-night .theme-toggle__track::after {
   gap: 10px;
 }
 
+.saved-carts-list--page {
+  gap: 16px;
+}
+
 .account-profile-form {
   display: grid;
   gap: 14px;
@@ -6194,6 +6198,13 @@ body.theme-night .theme-toggle__track::after {
   grid-column: 1 / -1;
 }
 
+.account-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .saved-cart-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(110px, auto) minmax(260px, 0.9fr);
@@ -6203,6 +6214,15 @@ body.theme-night .theme-toggle__track::after {
   background: var(--canvas);
   border: 1px solid var(--hairline-strong);
   border-radius: var(--control-radius);
+}
+
+.saved-cart-card--compact {
+  grid-template-columns: minmax(0, 1fr) minmax(100px, auto) minmax(220px, 0.9fr);
+}
+
+.saved-cart-card__main {
+  display: grid;
+  gap: 3px;
 }
 
 .saved-cart-card strong,
@@ -6219,6 +6239,17 @@ body.theme-night .theme-toggle__track::after {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.saved-cart-card p {
+  margin: 6px 0 0;
+  color: var(--body);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.saved-cart-card__internal {
+  color: var(--muted);
 }
 
 .saved-cart-card__meta {
@@ -6241,6 +6272,142 @@ body.theme-night .theme-toggle__track::after {
   min-height: 34px;
   padding: 0 10px;
   font-size: 11px;
+}
+
+.saved-cart-comments {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+}
+
+.saved-cart-card--compact .saved-cart-comments {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.saved-cart-card--compact .saved-cart-comments label:nth-of-type(2) {
+  grid-column: 1 / -1;
+}
+
+.saved-cart-comments label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.saved-cart-comments textarea {
+  min-height: 72px;
+  padding: 10px 12px;
+  color: var(--on-dark);
+  background: var(--canvas);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--control-radius);
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.saved-cart-history {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.saved-cart-history summary {
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.saved-cart-history ul {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-cart-history li {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+}
+
+.quotes-page__main {
+  padding: 32px 0 56px;
+}
+
+.quotes-page__layout {
+  display: grid;
+  gap: 20px;
+}
+
+.quotes-page__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  gap: 20px;
+  align-items: end;
+  padding: 28px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+}
+
+.quotes-page__head h1 {
+  margin: 12px 0 8px;
+  font-size: clamp(36px, 6vw, 72px);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.quotes-page__head p,
+.quotes-empty p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.quotes-page__summary {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 18px;
+  background: var(--canvas);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--control-radius);
+}
+
+.quotes-page__summary span {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.quotes-page__summary strong {
+  font-size: 26px;
+}
+
+.quotes-empty {
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  min-height: 360px;
+  padding: 36px;
+  text-align: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+}
+
+.quotes-empty i {
+  width: 42px;
+  height: 42px;
 }
 
 @media (max-width: 640px) {
@@ -6290,6 +6457,12 @@ body.theme-night .theme-toggle__track::after {
   }
 
   .saved-cart-card {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-cart-comments,
+  .saved-cart-card--compact .saved-cart-comments,
+  .quotes-page__head {
     grid-template-columns: 1fr;
   }
 

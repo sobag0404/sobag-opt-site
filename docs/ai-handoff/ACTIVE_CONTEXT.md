@@ -28,14 +28,14 @@ Last updated: 2026-06-04
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
-- Последние важные изменения: исправлены квадратные фото в карточке товара; добавлен стабильный `readJson` для API; добавлены отзывы товаров без новых Vercel Functions; админ может видеть, одобрять, скрывать и удалять отзывы; smoke-тест блокирует изображения/шрифты для экономии ресурсов.
-- Последние коммиты: `6f41dbb Update active handoff context`, `d9d736a Add active context for token-efficient handoff`, `f232ec0 Update handoff after search production check`.
-- Что уже проверено: `node --check app.js`; `node --check` для измененных API; `node --check tools/ui-smoke.spec.js`; `npm.cmd run check`; `npm.cmd run ui:smoke` locally.
+- Последние важные изменения: исправлены квадратные фото в карточке товара; добавлены отзывы товаров; добавлены сохраненные КП 2.1: отдельная страница `quotes.html`, комментарий покупателя, внутренний комментарий менеджера, история, восстановление КП с предупреждением о пропавших SKU или изменившихся ценах; добавлен XLSX-экспорт конкретного заказа из админки; исправлено локальное обновление статуса/данных заказа.
+- Последние коммиты: `c252c4c Add product reviews workflow`, `6f41dbb Update active handoff context`, `d9d736a Add active context for token-efficient handoff`.
+- Что уже проверено: `node --check app.js`; `node --check cart.js`; `node --check api/auth/me.js`; `node --check tools/ui-smoke.spec.js`; `npm.cmd run check`; `npm.cmd run ui:smoke` locally.
 
 ## Current Next Work
-- Следующая задача: Saved carts / commercial proposals polish.
-- Требования: отдельный раздел/страница сохраненных КП, комментарий покупателя, внутренний комментарий менеджера, предупреждение при повторе КП в корзину, если цены или SKU изменились.
-- Риски: не сломать текущие сохраненные корзины старого формата, отправку КП менеджеру, корзину и историю заказов.
+- Следующая задача: Order/customer CRM polish.
+- Требования: расширить текущую CRM заказов: лента внутренних комментариев менеджера, видимые покупателю сообщения по заказу, более удобный список клиентов и сегментация.
+- Риски: не сломать текущие заказы, статусы, роли admin/manager, историю заказов покупателей, отправку КП менеджеру и storage-ready production API.
 
 ## Useful Files
 - Главные файлы проекта: `app.js`, `cart.js`, `styles.css`, `components/site-shell.js`, `data/products-live.json`.

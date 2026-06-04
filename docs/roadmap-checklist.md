@@ -25,15 +25,17 @@ Last updated: 2026-06-04
 
 ## Remaining Checklist
 
-1. [planned] Saved carts / commercial proposals polish:
-   - [ ] Saved proposals list as a separate account tab/page.
-   - [ ] Saved proposal comments and manager reply history.
-   - [ ] Repeat saved proposal into cart with conflict warnings for changed prices.
+1. [done] Saved carts / commercial proposals polish:
+   - [x] Saved proposals list as a separate account page: `quotes.html`.
+   - [x] Saved proposal customer comment, internal manager comment, and history.
+   - [x] Repeat saved proposal into cart with conflict warnings for changed prices or missing SKU.
 
 2. [planned] Order/customer CRM polish:
-   - [ ] Internal manager comments timeline.
+   - [x] Basic order status history and manager note are already visible in admin/manager flows.
+   - [x] Admin can open order detail, customer profile, export order CSV/XLSX, and print/PDF order.
+   - [ ] Internal manager comments timeline beyond the current single manager note.
    - [ ] Customer-visible comments/status messages.
-   - [ ] Export order detail to XLSX/PDF from admin.
+   - [x] Export order detail to XLSX from admin.
    - [ ] Better customer list and segmentation.
 
 3. [planned] Import/PIM 2.0:
