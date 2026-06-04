@@ -2,8 +2,8 @@
 
 Date: 2026-06-04
 
-Latest committed state before this handoff update:
-- `f2d6ec2 Add bulk product photo upload CLI`
+Latest committed state before this working update:
+- `3690ba2 Add responsive product image variants`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -29,6 +29,14 @@ Current focus:
 - next implementation stage: deeper normalized PIM payloads, then SEO/content/performance work.
 
 Completed most recently:
+- Normalized PIM sidecar first slice:
+  - added `api/_lib/pim.js` to build a normalized sidecar from the current catalog without changing the public catalog shape;
+  - sidecar includes normalized products, generated variants, image metadata including responsive variants, category/collection/holiday/tag taxonomies, counts, and safe import batch summaries;
+  - `saveCatalog` writes `pim` next to the existing `products` array and preserves/imports batch summaries;
+  - import batch apply/rollback rebuilds the catalog sidecar with final batch metadata;
+  - `/api/catalog` strips `pim` from public responses, while admin catalog reads can inspect it;
+  - added `tools/pim-smoke.mjs` and included it in `tools/autofix.mjs`;
+  - added `docs/pim-normalized-payload.md`;
 - Responsive image variants:
   - bulk CLI now supports `--responsive`, `--variant-widths`, `--variant-formats`, and `--variant-quality`;
   - dry-run plans `ready_variant` rows without requiring Blob env or Sharp;
@@ -109,6 +117,16 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current PIM sidecar pass:
+  - `node --check api/_lib/pim.js`
+  - `node --check api/_lib/store.js`
+  - `node --check api/admin/import-batches.js`
+  - `node --check tools/pim-smoke.mjs`
+  - `node tools/pim-smoke.mjs`: passed for 808 products, 12943 variants, 2768 images, 6 categories.
+  - `git diff --check`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; passed product validation, PIM smoke, and bulk photo dry-run fixture.
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`; 8/8 passed.
 - `node --check app.js`
 - `node --check api/_lib/object-storage.js`
 - `node --check tools/bulk-upload-product-photos.mjs`
@@ -168,7 +186,7 @@ Backend/storage state:
 - Do not expose env values in chat/docs/repo.
 
 Important remaining work:
-- Import/PIM 2.0: deepen normalized product/import payloads and keep public `/api/catalog` published-only.
+- Import/PIM 2.0: use the new normalized sidecar for admin diagnostics/export, deepen import report rows if needed, and keep public `/api/catalog` published-only.
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
 - Performance for 10k+ products: server search, pagination, smaller API responses, WebP/AVIF responsive images.

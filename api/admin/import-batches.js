@@ -293,9 +293,11 @@ module.exports = async function handler(req, res) {
       const nextProducts = applyBatchProducts(currentProducts, batch);
       if (!nextProducts.length || nextProducts.length > MAX_PRODUCTS) return sendJson(res, 400, { error: "invalid_catalog_size", message: "После импорта каталог имеет некорректный размер." });
       const snapshot = { products: currentProducts, updatedAt: catalog?.updatedAt || null, updatedBy: catalog?.updatedBy || "" };
-      const savedCatalog = await saveCatalog(nextProducts, user.email);
-      batches[batchIndex] = { ...batch, status: "applied", appliedAt: savedCatalog.updatedAt, appliedBy: user.email, snapshot };
-      const saved = await saveImportBatches(batches);
+      const appliedAt = new Date().toISOString();
+      const nextBatches = batches.slice();
+      nextBatches[batchIndex] = { ...batch, status: "applied", appliedAt, appliedBy: user.email, snapshot };
+      const savedCatalog = await saveCatalog(nextProducts, user.email, { source: "import-batch-apply", importBatches: nextBatches, updatedAt: appliedAt });
+      const saved = await saveImportBatches(nextBatches);
       return sendJson(res, 200, { batch: batchSummary(saved[batchIndex], true), count: nextProducts.length, updatedAt: savedCatalog.updatedAt });
     }
 
@@ -304,9 +306,11 @@ module.exports = async function handler(req, res) {
         .filter((item) => item.status === "applied" && item.snapshot?.products?.length)
         .sort((a, b) => text(b.appliedAt || b.createdAt).localeCompare(text(a.appliedAt || a.createdAt)));
       if (!applied.length || applied[0].id !== batch.id) return sendJson(res, 400, { error: "not_latest_applied_batch", message: "Откат доступен только для последней примененной партии." });
-      const savedCatalog = await saveCatalog(batch.snapshot.products, user.email);
-      batches[batchIndex] = { ...batch, status: "rolled_back", rolledBackAt: savedCatalog.updatedAt, rolledBackBy: user.email };
-      const saved = await saveImportBatches(batches);
+      const rolledBackAt = new Date().toISOString();
+      const nextBatches = batches.slice();
+      nextBatches[batchIndex] = { ...batch, status: "rolled_back", rolledBackAt, rolledBackBy: user.email };
+      const savedCatalog = await saveCatalog(batch.snapshot.products, user.email, { source: "import-batch-rollback", importBatches: nextBatches, updatedAt: rolledBackAt });
+      const saved = await saveImportBatches(nextBatches);
       return sendJson(res, 200, { batch: batchSummary(saved[batchIndex], true), count: batch.snapshot.products.length, updatedAt: savedCatalog.updatedAt });
     }
 

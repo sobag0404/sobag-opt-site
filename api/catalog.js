@@ -66,7 +66,8 @@ module.exports = async function handler(req, res) {
     const catalog = await getCatalog();
     if (catalog?.products?.length) {
       const products = publicProducts(catalog.products);
-      return sendJson(res, 200, { ...catalog, products, reviews: reviewsForProducts(reviews, products), source: "server" });
+      const { pim, ...publicCatalog } = catalog;
+      return sendJson(res, 200, { ...publicCatalog, products, reviews: reviewsForProducts(reviews, products), source: "server" });
     }
     const products = publicProducts(staticProducts);
     return sendJson(res, 200, { products, reviews: reviewsForProducts(reviews, products), updatedAt: null, source: "static" });

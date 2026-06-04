@@ -1,4 +1,5 @@
 const { Redis } = require("@upstash/redis");
+const { buildCatalogPim, summarizeImportBatches } = require("./pim");
 
 const STORE_KEY = process.env.SOBAG_STORE_KEY || "sobag:store:v1";
 const CATALOG_KEY = process.env.SOBAG_CATALOG_KEY || "sobag:catalog:v1";
@@ -66,16 +67,24 @@ async function saveStore(store) {
   return prepared;
 }
 
+function storedPimFor(products, parsed) {
+  const pim = parsed?.pim && typeof parsed.pim === "object" && !Array.isArray(parsed.pim) ? parsed.pim : null;
+  if (pim && Array.isArray(pim.products) && Array.isArray(pim.variants) && Array.isArray(pim.images) && pim.taxonomies) return pim;
+  return buildCatalogPim(products, { source: "catalog-normalize", importBatches: pim?.importBatches || [] });
+}
+
 function normalizeCatalog(value) {
   if (!value) return null;
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
   const products = Array.isArray(parsed) ? parsed : parsed.products;
   if (!Array.isArray(products) || !products.length) return null;
+  const meta = Array.isArray(parsed) ? {} : parsed;
   return {
     products,
-    updatedAt: parsed.updatedAt || null,
-    updatedBy: parsed.updatedBy || "",
-    version: Number(parsed.version || 1),
+    updatedAt: meta.updatedAt || null,
+    updatedBy: meta.updatedBy || "",
+    version: Number(meta.version || 1),
+    pim: storedPimFor(products, meta),
   };
 }
 
@@ -96,13 +105,24 @@ async function getImportBatches() {
   return normalizeImportBatches(await redis.get(IMPORT_BATCHES_KEY));
 }
 
-async function saveCatalog(products, updatedBy = "") {
+async function saveCatalog(products, updatedBy = "", options = {}) {
   const redis = getRedis();
+  let importBatches = Array.isArray(options.importBatches) ? options.importBatches : null;
+  if (!importBatches) {
+    const current = normalizeCatalog(await redis.get(CATALOG_KEY));
+    importBatches = current?.pim?.importBatches || [];
+  }
+  const updatedAt = options.updatedAt || new Date().toISOString();
   const payload = {
     products,
-    updatedAt: new Date().toISOString(),
+    updatedAt,
     updatedBy,
     version: 1,
+    pim: buildCatalogPim(products, {
+      source: options.source || "catalog-save",
+      generatedAt: updatedAt,
+      importBatches,
+    }),
   };
   await redis.set(CATALOG_KEY, payload);
   return payload;
@@ -111,7 +131,12 @@ async function saveCatalog(products, updatedBy = "") {
 async function saveImportBatches(batches) {
   const redis = getRedis();
   const prepared = normalizeImportBatches(batches).slice(0, 50);
-  await redis.set(IMPORT_BATCHES_KEY, { batches: prepared, updatedAt: new Date().toISOString(), version: 1 });
+  await redis.set(IMPORT_BATCHES_KEY, {
+    batches: prepared,
+    updatedAt: new Date().toISOString(),
+    version: 1,
+    pim: { version: 1, importBatches: summarizeImportBatches(prepared) },
+  });
   return prepared;
 }
 

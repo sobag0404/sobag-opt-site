@@ -50,6 +50,8 @@ Last updated: 2026-06-04
        - [x] Bulk CLI upload/report path: `tools/bulk-upload-product-photos.mjs` scans product photo folders, supports dry-run, uploads through the object-storage adapter, writes CSV report, and outputs products JSON with image metadata without using JSON upload bodies.
        - [x] Responsive WebP/AVIF variants for large catalogs: bulk CLI supports `--responsive`, dry-run variant planning, optional Sharp-based generation/upload, image metadata `variants`, and WebP `srcset` rendering in product UI.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
+     - [x] First compatible sidecar payload in the current catalog storage shape: normalized products, variants, images, taxonomies, counts, and safe import batch summaries.
+     - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:
    - [ ] Fill final legal/company/contact copy.

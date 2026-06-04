@@ -78,7 +78,7 @@ module.exports = async function handler(req, res) {
     if (!products.length) return sendJson(res, 400, { error: "empty_catalog", message: "Каталог не должен быть пустым." });
     if (products.length > MAX_PRODUCTS) return sendJson(res, 400, { error: "catalog_too_large", message: "Слишком много товаров в одном сохранении." });
 
-    const saved = await saveCatalog(products, user.email);
+    const saved = await saveCatalog(products, user.email, { source: "admin-catalog-save" });
     sendJson(res, 200, { updatedAt: saved.updatedAt, count: products.length });
   } catch (error) {
     handleError(res, error);
