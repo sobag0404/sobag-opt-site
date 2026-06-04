@@ -28,6 +28,15 @@ const category = first.categories?.[0] || first.category;
 const filtered = queryCatalog(products, { filters: { category: [category] }, pageSize: 7, sort: "sku" });
 assert(filtered.items.length > 0, "category filter should return products");
 assert(filtered.items.every((item) => (item.categories || []).includes(category)), "category filter returned an unrelated product");
+assert(filtered.facetOptions?.categories?.some((item) => item.value === category), "facet options should include category options for UI filters");
+assert(Array.isArray(filtered.facetOptions?.sizes), "facet options should include size options for UI filters");
+
+const firstSize = first.sizes?.[0];
+if (firstSize) {
+  const sizeFiltered = queryCatalog(products, { filters: { category: [category], size: [firstSize] }, pageSize: 7 });
+  assert(sizeFiltered.items.length > 0, "category+size filter should return products");
+  assert(sizeFiltered.facetOptions.sizes.some((item) => item.value === firstSize), "size facet options should keep selected size available");
+}
 
 const pageOne = queryCatalog(products, { pageSize: 3, sort: "sku" });
 assert(pageOne.items.length === 3, "page one should respect pageSize");

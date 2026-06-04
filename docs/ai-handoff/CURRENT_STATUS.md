@@ -3,7 +3,7 @@
 Date: 2026-06-04
 
 Latest committed state before this working update:
-- `b1d89ba Hydrate product modal from catalog detail API`
+- `e5f0419 Render catalog list from server query API`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -26,9 +26,14 @@ Production URLs:
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar and diagnostics/export slices;
-- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, and catalog/search list rendering through compact query payloads; next performance step is full server facet UI migration or catalog virtualization.
+- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, and server-backed visible filter options; next performance step is avoiding full catalog bootstrap on server-query listing pages or catalog virtualization.
 
 Completed most recently:
+- Frontend catalog/search server facet-options slice:
+  - `/api/catalog-query` now returns `facetOptions` for UI filter controls;
+  - each facet option bucket is calculated with the current query and the other active filters, but without that bucket's own filter;
+  - visible catalog/search filter controls use server `facetOptions` when available and keep the old local option calculation as fallback;
+  - Playwright smoke now verifies server-provided size/material filter options and confirms selected size is sent back to `/api/catalog-query`;
 - Frontend catalog/search list query slice:
   - public catalog/search pages progressively request `/api/catalog-query` for compact card payloads;
   - list rendering uses server total counts and cursor-based "load more" pagination when the endpoint is available;
@@ -142,6 +147,17 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current frontend catalog/search server facet-options pass:
+  - `node --check api/_lib/catalog-query.js`
+  - `node --check app.js`
+  - `node --check tools/catalog-query-smoke.mjs`
+  - `node --check tools/ui-smoke.spec.js`
+  - `node tools/catalog-query-smoke.mjs`: passed exact SKU ranking, published-only filtering, category filter, facetOptions checks, cursor pagination, and detail payload checks.
+  - focused smoke: `ui-smoke --grep "catalog list renders server query"`; passed with server facetOptions.
+  - `git diff --check`
+  - bundled Python: `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - equivalent of `npm run check`: bundled Node with `tools/autofix.mjs --check`; passed product validation, PIM smoke, PIM report smoke, catalog query smoke with facetOptions checks, and bulk photo dry-run fixture.
+  - equivalent of `npm run ui:smoke`: bundled Node with `node_modules/@playwright/test/cli.js test tools/ui-smoke.spec.js`; 10/10 passed.
 - Current frontend catalog/search query-list pass:
   - `node --check app.js`
   - `node --check tools/ui-smoke.spec.js`
@@ -249,7 +265,7 @@ Important remaining work:
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, Product/FAQ schema, final Yandex map setup.
-- Performance for 10k+ products: migrate visible filter/facet controls fully to `/api/catalog-query` facets, catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
+- Performance for 10k+ products: avoid full `/api/catalog` bootstrap on public server-query listing pages, catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
 - QA/Ops: production smoke automation, access audit cadence, lightweight log review.
 
 Important constraints:

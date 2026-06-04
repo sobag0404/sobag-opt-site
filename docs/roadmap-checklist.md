@@ -66,7 +66,8 @@ Last updated: 2026-06-04
      - [x] Migrate frontend catalog list/product modal to the new smaller API payloads.
        - [x] Product modal now hydrates public product detail from `/api/catalog-detail` with static/local fallback.
        - [x] Catalog/search list rendering now uses `/api/catalog-query` compact cards and cursor pagination with local fallback.
-     - [ ] Full server-side facet UI migration beyond the current fallback filter controls.
+     - [x] Full server-side facet UI migration beyond the current fallback filter controls: `/api/catalog-query` now returns `facetOptions`, and visible catalog/search filters use them with local fallback.
+     - [ ] Avoid full `/api/catalog` bootstrap on public server-query listing pages.
    - [ ] Image storage with responsive WebP/AVIF variants.
    - [ ] Catalog virtualization or smaller server pages.
    - [ ] Core Web Vitals audit after real catalog growth.

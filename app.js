@@ -575,6 +575,8 @@ const state = {
     requestId: 0,
     items: [],
     total: 0,
+    facets: {},
+    facetOptions: {},
     nextCursor: "",
     hasMore: false,
     source: "",
@@ -995,6 +997,8 @@ function resetServerCatalogList() {
   state.serverCatalog.key = "";
   state.serverCatalog.items = [];
   state.serverCatalog.total = 0;
+  state.serverCatalog.facets = {};
+  state.serverCatalog.facetOptions = {};
   state.serverCatalog.nextCursor = "";
   state.serverCatalog.hasMore = false;
   state.serverCatalog.source = "";
@@ -1068,6 +1072,8 @@ async function refreshServerCatalogList(options = {}) {
     state.serverCatalog.key = key;
     state.serverCatalog.items = [];
     state.serverCatalog.total = 0;
+    state.serverCatalog.facets = {};
+    state.serverCatalog.facetOptions = {};
     state.serverCatalog.nextCursor = "";
     state.serverCatalog.hasMore = false;
   }
@@ -1091,6 +1097,8 @@ async function refreshServerCatalogList(options = {}) {
     state.serverCatalog.key = key;
     state.serverCatalog.items = items;
     state.serverCatalog.total = Number(data.total || items.length) || items.length;
+    state.serverCatalog.facets = data.facets && typeof data.facets === "object" ? data.facets : {};
+    state.serverCatalog.facetOptions = data.facetOptions && typeof data.facetOptions === "object" ? data.facetOptions : {};
     state.serverCatalog.nextCursor = String(data.pageInfo?.nextCursor || "");
     state.serverCatalog.hasMore = Boolean(data.pageInfo?.hasMore);
     state.serverCatalog.source = String(data.source || "");
@@ -3341,6 +3349,31 @@ function stockLabel(stock) {
   return stock === "ready" ? "В наличии" : "Под заказ";
 }
 
+function serverFacetBucketKey(key) {
+  return {
+    category: "categories",
+    collection: "collections",
+    holiday: "holidays",
+    size: "sizes",
+    material: "materials",
+  }[key] || key;
+}
+
+function selectedFilterValues(key) {
+  return [...(state.filters[key] || new Set())];
+}
+
+function serverFacetOptionsForKey(key) {
+  const result = currentServerCatalogResult();
+  if (!result) return null;
+  const bucket = serverFacetBucketKey(key);
+  const source = result.facetOptions?.[bucket] || result.facets?.[bucket];
+  if (!Array.isArray(source)) return null;
+  return uniqueList([...source.map((item) => item?.value || item), ...selectedFilterValues(key)]).sort((left, right) =>
+    left.localeCompare(right, "ru", { sensitivity: "base", numeric: true })
+  );
+}
+
 function productsForFilterOptions(key) {
   return products.filter((product) => {
     if (product.hidden) return false;
@@ -3365,6 +3398,8 @@ function productsForFilterOptions(key) {
 }
 
 function uniqueOptions(key) {
+  const serverOptions = serverFacetOptionsForKey(key);
+  if (serverOptions) return serverOptions;
   const sourceProducts = productsForFilterOptions(key);
   if (key === "size" || key === "material") {
     const variants = sourceProducts.flatMap((product) => product.variants);

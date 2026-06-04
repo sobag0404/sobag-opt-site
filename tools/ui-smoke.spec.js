@@ -557,6 +557,16 @@ test("catalog list renders server query cards and cursor pages", async ({ page }
           materials: [],
           stock: [],
         },
+        facetOptions: {
+          categories: [{ value: "QA Server", count: 2 }],
+          collections: [],
+          holidays: [],
+          tags: [{ value: "qa-server", count: 2 }],
+          types: [],
+          sizes: [{ value: "QA Size", count: 2 }],
+          materials: [{ value: "QA Material", count: 2 }],
+          stock: [],
+        },
         pageInfo: {
           page: isSecondPage ? 2 : 1,
           pageSize: 1,
@@ -574,6 +584,10 @@ test("catalog list renders server query cards and cursor pages", async ({ page }
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent("QA Server")}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".product-card__sku").first()).toHaveText("QA-SERVER-001");
   await expect(page.locator("#productCount")).toContainText("2");
+  await expect(page.locator('[data-filter-group="size"] .filter-options')).toContainText("QA Size");
+  await expect(page.locator('[data-filter-group="material"] .filter-options')).toContainText("QA Material");
+  await page.locator('[data-filter="size"][value="QA Size"]').check();
+  await expect.poll(() => requestedUrls.some((url) => url.searchParams.get("size") === "QA Size")).toBe(true);
   await expect(page.locator("[data-show-more-products]")).toBeVisible();
   await page.locator("[data-show-more-products]").click();
   await expect(page.locator(".product-card__sku")).toHaveText(["QA-SERVER-001", "QA-SERVER-002"]);

@@ -3,6 +3,16 @@ const { imageRecordsForProduct, productStatus, variantRecordsForProduct } = requ
 const DEFAULT_PAGE_SIZE = 48;
 const MAX_PAGE_SIZE = 120;
 const SORT_OPTIONS = new Set(["relevance", "name", "price_asc", "price_desc", "sku", "popular"]);
+const FACET_BUCKETS = {
+  category: "categories",
+  collection: "collections",
+  holiday: "holidays",
+  tag: "tags",
+  type: "types",
+  size: "sizes",
+  material: "materials",
+  stock: "stock",
+};
 
 function text(value) {
   return String(value || "").trim();
@@ -247,6 +257,23 @@ function facetBuckets(products) {
   );
 }
 
+function filtersWithoutGroup(filters = {}, group) {
+  return Object.fromEntries(
+    Object.keys(FACET_BUCKETS).map((key) => [key, key === group ? [] : list(filters[key])])
+  );
+}
+
+function facetOptionBuckets(scoredItems, filters = {}) {
+  return Object.fromEntries(
+    Object.entries(FACET_BUCKETS).map(([group, bucket]) => {
+      const products = scoredItems
+        .filter((item) => productMatchesFilters(item.product, filtersWithoutGroup(filters, group)))
+        .map((item) => item.product);
+      return [bucket, facetBuckets(products)[bucket] || []];
+    })
+  );
+}
+
 function compareProducts(a, b, sort) {
   const aName = text(a.product.name);
   const bName = text(b.product.name);
@@ -270,16 +297,18 @@ function queryCatalog(products = [], options = {}) {
     pageSize: Math.min(MAX_PAGE_SIZE, Math.max(1, Number(options.pageSize || DEFAULT_PAGE_SIZE) || DEFAULT_PAGE_SIZE)),
     offset: Math.max(0, Number(options.offset || 0) || 0),
   };
-  const prepared = publicItems
+  const scored = publicItems
     .map((product) => {
       const summary = variantSummary(product);
       const score = scoreProduct(product, query.q, summary.skus);
       return { product, summary, score };
     })
     .filter((item) => (!query.q ? true : item.score > 0))
-    .filter((item) => productMatchesFilters(item.product, query.filters))
     .filter((item) => !query.minPrice || item.summary.maxPrice >= query.minPrice)
-    .filter((item) => !query.maxPrice || item.summary.minPrice <= query.maxPrice)
+    .filter((item) => !query.maxPrice || item.summary.minPrice <= query.maxPrice);
+
+  const prepared = scored
+    .filter((item) => productMatchesFilters(item.product, query.filters))
     .sort((a, b) => compareProducts(a, b, query.sort));
 
   const offset = Math.min(query.offset, prepared.length);
@@ -289,6 +318,7 @@ function queryCatalog(products = [], options = {}) {
     items: pageItems.map((item) => productCard(item.product, item.summary)),
     total: prepared.length,
     facets: facetBuckets(prepared.map((item) => item.product)),
+    facetOptions: facetOptionBuckets(scored, query.filters),
     pageInfo: {
       page: Math.floor(offset / query.pageSize) + 1,
       pageSize: query.pageSize,
