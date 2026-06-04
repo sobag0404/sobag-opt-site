@@ -112,7 +112,12 @@ function sanitizeProfile(profile = {}, existing = {}) {
   };
 }
 
-function sanitizeSavedCarts(items) {
+function canUseInternalSavedCartFields(user) {
+  return user?.role === "admin" || user?.role === "manager";
+}
+
+function sanitizeSavedCarts(items, options = {}) {
+  const includeInternal = Boolean(options.includeInternal);
   return (Array.isArray(items) ? items : [])
     .map((item) => {
       const entries = sanitizeCart(item.items || []);
@@ -130,9 +135,9 @@ function sanitizeSavedCarts(items) {
           visibility: entry?.visibility === "internal" ? "internal" : "customer",
           text: String(entry?.text || "").trim().slice(0, 1000),
         }))
-        .filter((entry) => entry.text)
-        .slice(0, 20);
-      return {
+        .filter((entry) => entry.text && (includeInternal || entry.visibility !== "internal"))
+        .slice(-20);
+      const savedCart = {
         id,
         title,
         createdAt,
@@ -147,9 +152,10 @@ function sanitizeSavedCarts(items) {
         sentAt: String(item.sentAt || "").slice(0, 40),
         sentOrderId: String(item.sentOrderId || "").slice(0, 80),
         customerComment: String(item.customerComment || item.comment || "").trim().slice(0, 1000),
-        managerComment: String(item.managerComment || "").trim().slice(0, 1000),
         commentHistory,
       };
+      if (includeInternal) savedCart.managerComment = String(item.managerComment || "").trim().slice(0, 1000);
+      return savedCart;
     })
     .filter(Boolean)
     .slice(0, MAX_SAVED_CARTS);
@@ -199,7 +205,7 @@ module.exports = async function handler(req, res) {
       }
       if (Object.prototype.hasOwnProperty.call(data, "savedCarts")) {
         store.savedCarts[user.email] = {
-          items: sanitizeSavedCarts(data.savedCarts),
+          items: sanitizeSavedCarts(data.savedCarts, { includeInternal: canUseInternalSavedCartFields(user) }),
           updatedAt: new Date().toISOString(),
         };
       }
@@ -223,11 +229,14 @@ module.exports = async function handler(req, res) {
     const freshUser = store.users[user.email] || user;
     const orders = store.orders.filter((order) => order.userEmail === freshUser.email);
     const reviews = (store.reviews || []).filter((review) => review.userEmail === freshUser.email);
+    const savedCarts = sanitizeSavedCarts(store.savedCarts[freshUser.email]?.items || [], {
+      includeInternal: canUseInternalSavedCartFields(freshUser),
+    });
     sendJson(res, 200, {
       user: { ...publicUser(freshUser), orders, reviews },
       cartItems: store.carts[freshUser.email]?.items || [],
       favoriteItems: store.favorites[freshUser.email]?.items || [],
-      savedCarts: store.savedCarts[freshUser.email]?.items || [],
+      savedCarts,
     });
   } catch (error) {
     handleError(res, error);

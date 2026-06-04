@@ -309,6 +309,25 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
   await expect
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.savedCarts.buyer@example.com") || "[]")[0]?.customerComment))
     .toBe("QA quote customer comment");
+  await page.evaluate(() => {
+    const key = "sobag.savedCarts.buyer@example.com";
+    const carts = JSON.parse(localStorage.getItem(key) || "[]");
+    carts[0].managerComment = "QA internal manager secret";
+    carts[0].commentHistory = [
+      ...(carts[0].commentHistory || []),
+      {
+        at: new Date().toISOString(),
+        actor: "Manager",
+        role: "manager",
+        type: "manager_comment",
+        visibility: "internal",
+        text: "QA internal manager secret",
+      },
+    ];
+    localStorage.setItem(key, JSON.stringify(carts));
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator("#savedQuotesPage")).not.toContainText("QA internal manager secret");
 
   const downloadPromise = page.waitForEvent("download");
   await page.locator("[data-download-saved-cart]").first().click();

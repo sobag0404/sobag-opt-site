@@ -1980,7 +1980,7 @@ function normalizeSavedCartHistory(items) {
       visibility: entry?.visibility === "internal" ? "internal" : "customer",
     }))
     .filter((entry) => entry.text)
-    .slice(0, 20);
+    .slice(-20);
 }
 
 function normalizeSavedCart(item) {
@@ -2185,8 +2185,13 @@ function savedCartFileName(cart, extension) {
   return `sobag-${slug}-${cart.id}.${extension}`;
 }
 
-function savedCartQuoteRows(cart) {
+function canViewSavedCartInternal() {
+  return canManageOrders(getUsers()[state.currentUser]);
+}
+
+function savedCartQuoteRows(cart, options = {}) {
   const totals = totalsFromCartEntries(cart.items);
+  const includeInternal = Boolean(options.includeInternal);
   return [
     ["Коммерческое предложение Sobag Opt"],
     ["Название", cart.title],
@@ -2194,7 +2199,7 @@ function savedCartQuoteRows(cart) {
     ["Статус", cart.status === "sent" ? "Отправлено менеджеру" : "Черновик"],
     ["Номер заказа", cart.sentOrderId || ""],
     ["Комментарий покупателя", cart.customerComment || ""],
-    ["Комментарий менеджера", cart.managerComment || ""],
+    ...(includeInternal ? [["Комментарий менеджера", cart.managerComment || ""]] : []),
     ["Сумма товаров", totals.subtotal],
     ["Скидка по корзине", `${totals.discount}%`],
     ["Итого", totals.total],
@@ -2233,7 +2238,7 @@ function downloadSavedCartQuote(cartId) {
     showToast("Черновик корзины не найден.");
     return;
   }
-  const rows = savedCartQuoteRows(draft);
+  const rows = savedCartQuoteRows(draft, { includeInternal: canViewSavedCartInternal() });
   if (downloadRowsXlsx(rows, savedCartFileName(draft, "xlsx"), "КП")) {
     showToast("КП скачано в XLSX.");
     return;
@@ -2260,9 +2265,10 @@ function printSavedCartQuote(cartId) {
     showToast("Браузер заблокировал окно печати.");
     return;
   }
+  const includeInternal = canViewSavedCartInternal();
   const comments = [
     draft.customerComment ? `<p><b>Комментарий покупателя:</b> ${escapeHtml(draft.customerComment)}</p>` : "",
-    draft.managerComment ? `<p><b>Комментарий менеджера:</b> ${escapeHtml(draft.managerComment)}</p>` : "",
+    includeInternal && draft.managerComment ? `<p><b>Комментарий менеджера:</b> ${escapeHtml(draft.managerComment)}</p>` : "",
   ].join("");
   win.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${escapeHtml(draft.title)} · Sobag Opt</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}h1{font-size:28px}p{margin:6px 0}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f4f4f4}.total{font-size:22px;font-weight:800;margin-top:18px}</style></head><body><h1>${escapeHtml(draft.title)}</h1><p>Коммерческое предложение Sobag Opt</p><p>Статус: ${draft.status === "sent" ? "отправлено менеджеру" : "черновик"}</p><p>Скидка по корзине: ${totals.discount}%</p>${comments}<table><thead><tr><th>Артикул</th><th>Наименование</th><th>Параметры</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead><tbody>${rows}</tbody></table><p class="total">Итого: ${formatMoney(totals.total)}</p><script>window.print();</script></body></html>`);
   win.document.close();
@@ -4965,8 +4971,8 @@ function savedCartStatusText(cart) {
   return `${cart.status === "sent" ? "Отправлено менеджеру" : "Черновик"}${cart.sentOrderId ? ` · заказ ${cart.sentOrderId}` : ""}`;
 }
 
-function savedCartHistoryHtml(cart) {
-  const history = normalizeSavedCartHistory(cart.commentHistory);
+function savedCartHistoryHtml(cart, includeInternal = false) {
+  const history = normalizeSavedCartHistory(cart.commentHistory).filter((entry) => includeInternal || entry.visibility !== "internal");
   if (!history.length) return "";
   return `
     <details class="saved-cart-history">
@@ -5028,7 +5034,7 @@ function savedCartCardHtml(cart, options = {}) {
         }
         <button class="ghost-button" type="submit">Сохранить комментарии</button>
       </form>
-      ${savedCartHistoryHtml(cart)}
+      ${savedCartHistoryHtml(cart, managerMode)}
     </article>
   `;
 }
