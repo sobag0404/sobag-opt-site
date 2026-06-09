@@ -114,6 +114,12 @@ node tools/bulk-upload-product-photos.mjs --products data/products.import.json -
 
 Реальный upload требует provider env только в локальном/production окружении: `BLOB_READ_WRITE_TOKEN` для Vercel Blob или `SOBAG_S3_*` для S3-compatible. Для реальной генерации responsive WebP/AVIF variants нужен optional `sharp`; dry-run строит план variants без него. CLI пишет CSV-отчет и products JSON с `images` metadata, не добавляя bulk-фото в Git.
 
+После миграции фото проверьте metadata перед публикацией:
+
+```bash
+node tools/image-metadata-audit.mjs --products local-import-output\products-with-object-images.json --published-only --require-metadata --require-responsive --require-square
+```
+
 ## Локальный импорт
 
 ```powershell

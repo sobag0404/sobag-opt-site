@@ -79,6 +79,7 @@ Last updated: 2026-06-09
      - [x] 10k catalog query scale smoke and helper optimization: AutoFix now covers synthetic 10k published-only pagination, compact card payloads, exact SKU lookup, and detail hydration.
    - [ ] Image storage with responsive WebP/AVIF variants.
      - [x] Frontend `<picture>` rendering uses stored AVIF sources first and WebP fallback for product cards, related cards, product modal/gallery, and admin product previews.
+     - [x] Offline image metadata audit for migrated catalogs: provider metadata, square dimensions, and WebP/AVIF variant records can be checked before publication.
      - [ ] Validate WebP/AVIF behavior on the real migrated catalog image set.
    - [ ] Catalog virtualization or smaller server pages.
      - [x] Smaller public catalog page payload: frontend now requests `/api/catalog-query` with the server default `pageSize=48` instead of 120, and UI smoke asserts the request size.

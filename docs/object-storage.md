@@ -103,6 +103,12 @@ The CLI writes:
 
 `npm run check` runs a dry-run fixture test for this CLI, including responsive variant planning, so the matching/report path stays covered without needing a real Blob token.
 
+Use `npm run audit:images` after preparing or migrating product images. The audit checks image metadata shape, providers, dimensions, responsive WebP/AVIF variant records, and duplicate image keys. For the real migrated catalog, run the stricter mode:
+
+```bash
+node tools/image-metadata-audit.mjs --products local-import-output/products-with-object-images.json --published-only --require-metadata --require-responsive --require-square
+```
+
 ## Product Image Metadata
 
 Products may keep the legacy public fields:
@@ -138,7 +144,7 @@ New durable metadata lives in `images`:
 ]
 ```
 
-The frontend still renders `image` and `gallery`; normalized products also merge URLs from `images` into the gallery so old and new catalogs remain compatible. Product cards, product modal main images, gallery thumbnails, and admin product cards use WebP variants as `srcset` when metadata is present. AVIF metadata is preserved for a later `<picture>`/format-selection pass.
+The frontend still renders `image` and `gallery`; normalized products also merge URLs from `images` into the gallery so old and new catalogs remain compatible. Product cards, product modal main images, gallery thumbnails, and admin product cards use AVIF/WebP variants through `<picture>` when metadata is present.
 
 ## Git Hygiene
 

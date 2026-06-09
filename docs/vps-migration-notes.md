@@ -67,6 +67,14 @@ SOBAG_S3_PUBLIC_BASE_URL=...
 
 Do not commit these values.
 
+Before switching the VPS catalog to object-storage images, audit the migrated products JSON:
+
+```bash
+node tools/image-metadata-audit.mjs --products local-import-output/products-with-object-images.json --published-only --require-metadata --require-responsive --require-square
+```
+
+The audit is offline and prints no secrets. It checks provider metadata, dimensions, square image metadata, and WebP/AVIF responsive variants.
+
 ## Fallback
 
 Keep Vercel configured with Redis/KV and Vercel Blob/S3 env as a fallback path. Do not switch Vercel to the file provider.

@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on local `main` before this catalog-query scale pass:
-- `ee3285f Document catalog image UI invariant`
+Latest committed state currently on local `main` before this image metadata audit pass:
+- `6f2a861 Add catalog query scale smoke`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -38,6 +38,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Image metadata audit slice:
+  - added `tools/image-metadata-audit.mjs` and npm script `audit:images`;
+  - AutoFix now runs the current catalog metadata audit and the offline self-test fixture;
+  - strict mode can require published products to have complete square image metadata and WebP/AVIF responsive variants before publication;
+  - docs now include the command for validating migrated object-storage catalog JSON before VPS switch.
 - Catalog query scale/performance slice:
   - added `tools/catalog-query-scale-smoke.mjs` and npm script `smoke:catalog:scale`;
   - AutoFix now runs the offline synthetic 10k catalog query smoke;
@@ -280,6 +285,13 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current image metadata audit pass:
+  - `node --check tools/image-metadata-audit.mjs`
+  - `node --check tools/autofix.mjs`
+  - package JSON parse
+  - `npm.cmd run audit:images`: passed for current catalog shape.
+  - `node tools/image-metadata-audit.mjs --self-test`: passed strict fixture.
+  - `npm.cmd run check`: passed, includes image metadata audit and self-test.
 - Current catalog query scale pass:
   - `node --check api/_lib/catalog-query.js`
   - `node --check tools/catalog-query-scale-smoke.mjs`
