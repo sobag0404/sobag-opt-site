@@ -56,14 +56,6 @@ jobs:
           chmod 600 ~/.ssh/vps_deploy_key
           ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
 
-      - name: Package release
-        run: git archive --format=tar.gz -o release.tar.gz "$DEPLOY_SHA"
-
-      - name: Upload release
-        run: |
-          scp -i ~/.ssh/vps_deploy_key release.tar.gz \
-            "$VPS_USER@$VPS_HOST:/tmp/sobag-opt-site-$DEPLOY_SHA.tar.gz"
-
       - name: Activate release
         run: |
           ssh -i ~/.ssh/vps_deploy_key "$VPS_USER@$VPS_HOST" \
@@ -71,14 +63,24 @@ jobs:
           set -euo pipefail
 
           app_dir="/opt/sobag-opt"
-          archive="/tmp/sobag-opt-site-$DEPLOY_SHA.tar.gz"
+          repo_dir="$app_dir/repo"
           release="$(date -u +%Y%m%dT%H%M%SZ)-${DEPLOY_SHA:0:7}"
           release_dir="$app_dir/releases/$release"
 
-          sudo install -d -o "$USER" -g "$USER" "$app_dir/releases" "$app_dir/shared" /var/lib/sobag-opt/store /var/backups/sobag-opt
+          sudo install -d -o "$USER" -g "$USER" "$app_dir/releases" "$app_dir/shared" "$repo_dir" /var/lib/sobag-opt/store /var/backups/sobag-opt
+
+          export GIT_SSH_COMMAND="ssh -i /home/$USER/.ssh/github_repo_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          if [ ! -d "$repo_dir/.git" ]; then
+            rm -rf "$repo_dir"
+            git clone --no-checkout git@github.com:sobag0404/sobag-opt-site.git "$repo_dir"
+          fi
+
+          cd "$repo_dir"
+          git fetch --prune origin main
+          git cat-file -e "$DEPLOY_SHA^{commit}"
+
           mkdir -p "$release_dir"
-          tar -xzf "$archive" -C "$release_dir"
-          rm -f "$archive"
+          git archive --format=tar "$DEPLOY_SHA" | tar -x -C "$release_dir"
 
           cd "$release_dir"
           npm ci --omit=dev
