@@ -77,6 +77,8 @@ Last updated: 2026-06-09
      - [x] Full server-side facet UI migration beyond the current fallback filter controls: `/api/catalog-query` now returns `facetOptions`, and visible catalog/search filters use them with local fallback.
      - [x] Avoid full `/api/catalog` bootstrap on public server-query listing pages when `/api/catalog-query` succeeds, with full/static fallback when the query endpoint is unavailable.
    - [ ] Image storage with responsive WebP/AVIF variants.
+     - [x] Frontend `<picture>` rendering uses stored AVIF sources first and WebP fallback for product cards, related cards, product modal/gallery, and admin product previews.
+     - [ ] Validate WebP/AVIF behavior on the real migrated catalog image set.
    - [ ] Catalog virtualization or smaller server pages.
      - [x] Smaller public catalog page payload: frontend now requests `/api/catalog-query` with the server default `pageSize=48` instead of 120, and UI smoke asserts the request size.
    - [ ] Core Web Vitals audit after real catalog growth.

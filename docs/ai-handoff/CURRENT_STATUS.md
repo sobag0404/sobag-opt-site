@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on `main` before this VPS write-smoke pass:
-- `da6efab Add VPS Node runtime`
+Latest committed state currently on `main` before this AVIF/WebP picture pass:
+- `3e1df9f Add VPS API write smoke`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -31,10 +31,17 @@ Current focus:
 - VPS runtime path now has `server.mjs` for static clean URLs plus existing `/api/*` handlers;
 - UI invariant: product photos and category/collection/holiday photos should stay square; selected catalog pages should say `В каталог` for the return action;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, and smaller public query page size;
+- Responsive product images now have frontend `<picture>` selection for stored AVIF/WebP variants; real migrated catalog validation is still pending.
 - SEO/content structured data covers Product/FAQ schema; production-safe public copy and first catalog landing copy slices are committed locally;
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- AVIF/WebP product image rendering slice:
+  - product cards, related product cards, product modal main image/gallery thumbnails, and admin product previews now render `<picture>`;
+  - stored responsive variants are emitted as AVIF `<source>` first, WebP `<source>` second, and the original image remains the fallback;
+  - gallery image switching refreshes the surrounding `<picture>` sources, not only the `img src`;
+  - CSS keeps all touched product image surfaces square 1:1;
+  - UI smoke covers AVIF/WebP sources in server-query cards and hydrated product modal detail.
 - VPS API write-smoke slice:
   - added `tools/vps-write-smoke.mjs` and npm script `smoke:vps:write`;
   - smoke runs `server.mjs` with a temporary file-store directory and fake smoke credentials;
@@ -248,6 +255,12 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current AVIF/WebP picture pass:
+  - `node --check app.js`
+  - `node --check tools/ui-smoke.spec.js`
+  - focused `npm.cmd run ui:smoke -- --grep "product modal hydrates detail|catalog list renders server query|catalog filters"`: 3/3 passed after starting `npm.cmd run dev:static`; exact static-server PID `7644` was stopped.
+  - `npm.cmd run check`
+  - `npm.cmd run ui:smoke`: 11/11 passed after starting `npm.cmd run dev:static`; exact static-server PID `22064` was stopped.
 - Current VPS API write-smoke pass:
   - `node --check tools/vps-write-smoke.mjs`
   - `node --check tools/autofix.mjs`
@@ -478,7 +491,7 @@ Backend/storage state:
 Important remaining work:
 - Deployment: prepare VPS migration notes/deploy path when the stable stage is ready, while preserving Vercel fallback context.
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
-- Durable image storage: choose/configure the real provider env for the next photo migration run and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
+- Durable image storage: choose/configure the real provider env for the next photo migration run and validate AVIF/WebP behavior on the real migrated catalog image set.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, final Yandex map setup.
 - Performance for 10k+ products: catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
 - QA/Ops current checklist is done; next work is performance/SEO/remaining Import-PIM larger items.

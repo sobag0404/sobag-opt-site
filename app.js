@@ -1873,34 +1873,86 @@ function productImageMetadataForUrl(product, url) {
   );
 }
 
-function productImageVariantSrcsetValue(product, url, preferredFormat = "webp") {
+const PRODUCT_IMAGE_SIZES = "(max-width: 720px) 92vw, 640px";
+
+function productImageVariantCandidates(product, url) {
   const image = productImageMetadataForUrl(product, url);
-  const variants = (image?.variants || [])
+  return (image?.variants || [])
     .map((variant) => ({
       url: productImageMetadataUrl(variant),
       width: Number(variant.width || 0),
       format: String(variant.format || variant.mime || "").replace(/^image\//, "").toLowerCase(),
     }))
     .filter((variant) => variant.url && variant.width > 0);
-  const preferred = variants.filter((variant) => variant.format === preferredFormat);
-  const selected = preferred.length ? preferred : variants;
-  const srcset = selected
+}
+
+function srcsetFromImageVariants(variants) {
+  return variants
     .sort((left, right) => left.width - right.width)
     .map((variant) => `${variant.url} ${variant.width}w`)
     .join(", ");
-  return srcset;
 }
 
-function productImageVariantSrcset(product, url, preferredFormat = "webp") {
-  const srcset = productImageVariantSrcsetValue(product, url, preferredFormat);
-  return srcset ? `srcset="${escapeHtml(srcset)}" sizes="(max-width: 720px) 92vw, 640px"` : "";
+function productImageVariantSrcsetForFormat(product, url, preferredFormat = "webp") {
+  const format = String(preferredFormat || "").toLowerCase();
+  const variants = productImageVariantCandidates(product, url).filter((variant) => variant.format === format);
+  return srcsetFromImageVariants(variants);
+}
+
+function productImageVariantSrcsetValue(product, url, preferredFormat = "webp") {
+  const format = String(preferredFormat || "").toLowerCase();
+  const variants = productImageVariantCandidates(product, url);
+  const preferred = variants.filter((variant) => variant.format === format);
+  const selected = preferred.length ? preferred : variants;
+  return srcsetFromImageVariants(selected);
+}
+
+function productImageVariantSourceData(product, url) {
+  return ["avif", "webp"]
+    .map((format) => ({
+      format,
+      type: `image/${format}`,
+      srcset: productImageVariantSrcsetForFormat(product, url, format),
+    }))
+    .filter((source) => source.srcset);
+}
+
+function productImageSourcesHtml(product, url) {
+  return productImageVariantSourceData(product, url)
+    .map(
+      (source) =>
+        `<source data-product-source="${source.format}" type="${source.type}" srcset="${escapeHtml(source.srcset)}" sizes="${PRODUCT_IMAGE_SIZES}" />`
+    )
+    .join("");
+}
+
+function productPictureHtml(product, url, alt, attrs = "") {
+  const src = String(url || "").trim() || "assets/production-workshop-1.png";
+  const img = `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt || "")}" ${attrs} />`;
+  const sources = productImageSourcesHtml(product, src);
+  return sources ? `<picture>${sources}${img}</picture>` : img;
 }
 
 function applyProductImageVariantSrcset(node, product, url) {
+  const picture = node?.closest?.("picture");
+  if (picture) {
+    picture.querySelectorAll("source[data-product-source]").forEach((source) => source.remove());
+    productImageVariantSourceData(product, url).forEach((sourceData) => {
+      const source = document.createElement("source");
+      source.dataset.productSource = sourceData.format;
+      source.type = sourceData.type;
+      source.srcset = sourceData.srcset;
+      source.sizes = PRODUCT_IMAGE_SIZES;
+      picture.insertBefore(source, node);
+    });
+    node.removeAttribute("srcset");
+    node.removeAttribute("sizes");
+    return;
+  }
   const srcset = productImageVariantSrcsetValue(product, url);
   if (srcset) {
     node.setAttribute("srcset", srcset);
-    node.setAttribute("sizes", "(max-width: 720px) 92vw, 640px");
+    node.setAttribute("sizes", PRODUCT_IMAGE_SIZES);
   } else {
     node.removeAttribute("srcset");
     node.removeAttribute("sizes");
@@ -3756,7 +3808,7 @@ function renderCatalogSeoCopy(total = 0) {
 function miniProductCard(product) {
   return `
     <button class="mini-product-card" type="button" data-open-product="${escapeHtml(product.id)}">
-      <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" ${imageAttrs(160, 160)} ${productImageVariantSrcset(product, product.image)} />
+      ${productPictureHtml(product, product.image, product.name, imageAttrs(160, 160))}
       <span>${escapeHtml(product.baseSku)}</span>
       <strong>${escapeHtml(product.name)}</strong>
       <b>от ${formatMoney(product.minPrice)}</b>
@@ -4315,7 +4367,7 @@ function renderProducts() {
         <article class="product-card">
           <div class="product-card__image">
             <button class="product-card__image-button" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}">
-              <img src="${product.image}" alt="${product.name}" ${imageAttrs(640, 640)} ${productImageVariantSrcset(product, product.image)} />
+              ${productPictureHtml(product, product.image, product.name, imageAttrs(640, 640))}
             </button>
             <button class="favorite-button${favorite}" type="button" title="${favoritePressed === "true" ? "Убрать из избранного" : "В избранное"}" data-favorite="${product.id}" aria-pressed="${favoritePressed}">
               <i data-lucide="heart"></i>
@@ -4589,13 +4641,13 @@ function productModalHtml(product) {
         <div class="product-detail__layout">
           <div class="product-detail__main">
             <div class="product-detail__media">
-              <img id="detailMainImage" src="${gallery[0]}" alt="${product.name}" ${imageAttrs(900, 900, "eager", "high")} ${productImageVariantSrcset(product, gallery[0])} />
+              ${productPictureHtml(product, gallery[0], product.name, `id="detailMainImage" ${imageAttrs(900, 900, "eager", "high")}`)}
               <div class="product-gallery" aria-label="Фотографии товара">
                 ${gallery
                   .map(
                     (image, index) => `
                       <button class="product-gallery__thumb${index === 0 ? " is-active" : ""}" type="button" data-detail-image="${image}" aria-label="Фото ${index + 1}">
-                        <img src="${image}" alt="" ${imageAttrs(160, 160)} ${productImageVariantSrcset(product, image)} />
+                        ${productPictureHtml(product, image, "", imageAttrs(160, 160))}
                       </button>
                     `
                   )
@@ -5212,7 +5264,7 @@ function adminProductCardHtml(product) {
         <span>Выбрать</span>
       </label>
       <div class="admin-product-card__media">
-        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" ${imageAttrs(160, 160)} ${productImageVariantSrcset(product, product.image)} />
+        ${productPictureHtml(product, product.image, product.name, imageAttrs(160, 160))}
       </div>
       <form class="admin-product-card__body" data-admin-product-form="${escapeHtml(product.id)}">
         <div class="admin-product-card__head">

@@ -520,6 +520,29 @@ test("product modal hydrates detail from server detail endpoint", async ({ page 
   const sourceProducts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data", "products-live.json"), "utf8"));
   const source = sourceProducts[0];
   const detailMarker = "QA detail endpoint marker";
+  const imageUrl = source.image || "assets/production-workshop-1.png";
+  const secondImageUrl = `${imageUrl}?qa-gallery=2`;
+  const responsiveImage = {
+    url: imageUrl,
+    width: 900,
+    height: 900,
+    mime: "image/png",
+    variants: [
+      { url: `${imageUrl}?qa-detail-avif=320`, width: 320, height: 320, mime: "image/avif", format: "avif" },
+      { url: `${imageUrl}?qa-detail-avif=640`, width: 640, height: 640, mime: "image/avif", format: "avif" },
+      { url: `${imageUrl}?qa-detail-webp=320`, width: 320, height: 320, mime: "image/webp", format: "webp" },
+    ],
+  };
+  const secondResponsiveImage = {
+    url: secondImageUrl,
+    width: 900,
+    height: 900,
+    mime: "image/png",
+    variants: [
+      { url: `${imageUrl}?qa-detail-second-avif=320`, width: 320, height: 320, mime: "image/avif", format: "avif" },
+      { url: `${imageUrl}?qa-detail-second-webp=320`, width: 320, height: 320, mime: "image/webp", format: "webp" },
+    ],
+  };
   let detailRequested = false;
 
   await page.route("**/api/catalog-detail?**", async (route) => {
@@ -534,6 +557,9 @@ test("product modal hydrates detail from server detail endpoint", async ({ page 
           ...source,
           status: "published",
           hidden: false,
+          image: imageUrl,
+          gallery: [imageUrl, secondImageUrl],
+          images: [responsiveImage, secondResponsiveImage],
           description: "QA detail endpoint description",
           detailDescription: detailMarker,
         },
@@ -547,6 +573,18 @@ test("product modal hydrates detail from server detail endpoint", async ({ page 
   await page.locator(".product-card").first().locator("[data-open-product]").first().click();
   await expect.poll(() => detailRequested).toBe(true);
   await expect(page.locator("#productModal")).toContainText(detailMarker);
+  await expect(page.locator("#productModal picture source[type='image/avif']").first()).toHaveAttribute("srcset", /qa-detail-avif=320/);
+  await expect(page.locator("#productModal picture source[type='image/webp']").first()).toHaveAttribute("srcset", /qa-detail-webp=320/);
+  await page.locator(".product-gallery__thumb").nth(1).click();
+  await expect(page.locator("#detailMainImage")).toHaveAttribute("src", /qa-gallery=2/);
+  const detailSourceOrder = await page.locator("#detailMainImage").evaluate((image) =>
+    [...image.closest("picture").querySelectorAll("source")].map((source) => ({
+      type: source.getAttribute("type"),
+      srcset: source.getAttribute("srcset"),
+    }))
+  );
+  expect(detailSourceOrder.map((source) => source.type)).toEqual(["image/avif", "image/webp"]);
+  expect(detailSourceOrder[0].srcset).toContain("qa-detail-second-avif=320");
 
   const schemaText = await page.locator("#sobag-product-jsonld").textContent();
   const schema = JSON.parse(schemaText || "{}");
@@ -560,6 +598,17 @@ test("product modal hydrates detail from server detail endpoint", async ({ page 
 });
 
 test("catalog list renders server query cards and cursor pages", async ({ page }) => {
+  const responsiveImage = {
+    url: "assets/production-workshop-1.png",
+    width: 900,
+    height: 900,
+    mime: "image/png",
+    variants: [
+      { url: "assets/production-workshop-1.png?qa-card-avif=320", width: 320, height: 320, mime: "image/avif", format: "avif" },
+      { url: "assets/production-workshop-1.png?qa-card-avif=640", width: 640, height: 640, mime: "image/avif", format: "avif" },
+      { url: "assets/production-workshop-1.png?qa-card-webp=320", width: 320, height: 320, mime: "image/webp", format: "webp" },
+    ],
+  };
   const firstCard = {
     id: "qa-server-query-1",
     baseSku: "QA-SERVER-001",
@@ -570,6 +619,7 @@ test("catalog list renders server query cards and cursor pages", async ({ page }
     holidays: [],
     tags: ["qa-server"],
     image: "assets/production-workshop-1.png",
+    imageMeta: responsiveImage,
     minPrice: 101,
     maxPrice: 101,
     variantCount: 1,
@@ -640,6 +690,8 @@ test("catalog list renders server query cards and cursor pages", async ({ page }
 
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent("QA Server")}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".product-card__sku").first()).toHaveText("QA-SERVER-001");
+  await expect(page.locator(".product-card picture source[type='image/avif']").first()).toHaveAttribute("srcset", /qa-card-avif=320/);
+  await expect(page.locator(".product-card picture source[type='image/webp']").first()).toHaveAttribute("srcset", /qa-card-webp=320/);
   await expect(page.locator("#productCount")).toContainText("2");
   await expect(page.locator('[data-filter-group="size"] .filter-options')).toContainText("QA Size");
   await expect(page.locator('[data-filter-group="material"] .filter-options')).toContainText("QA Material");
