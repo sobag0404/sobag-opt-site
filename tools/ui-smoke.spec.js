@@ -440,6 +440,9 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await waitForLiveProducts(page);
 
   await expect(page.locator("#catalogTitle")).toContainText(category);
+  await expect(page.locator("#catalogSeoCopy")).toBeVisible();
+  await expect(page.locator("#catalogSeoCopy")).toContainText(category);
+  await expect(page.locator("#catalogSeoCopy")).toContainText("оптовая");
   await expect(page.locator('[data-filter-group="category"]')).toHaveCount(0);
   await expect(page.locator('#activeFilterChips [data-clear-filter="selectedCategory"]')).toHaveCount(1);
   await expect(page.locator("[data-show-more-products]")).toBeVisible();

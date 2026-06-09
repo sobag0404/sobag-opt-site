@@ -6180,6 +6180,33 @@ body.theme-night .theme-toggle__track::after {
   display: none;
 }
 
+.catalog-seo-copy {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 18px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--control-radius);
+}
+
+.catalog-seo-copy.is-hidden {
+  display: none;
+}
+
+.catalog-seo-copy h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.catalog-seo-copy p {
+  max-width: 920px;
+  margin: 0;
+  color: var(--body);
+  line-height: 1.55;
+}
+
 .active-filter-chips button,
 .catalog-load-more .ghost-button {
   min-height: 36px;

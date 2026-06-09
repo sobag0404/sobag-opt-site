@@ -57,10 +57,12 @@ Last updated: 2026-06-09
 
 4. [planned] SEO/content:
    - [ ] Fill final legal/company/contact copy.
+     - [x] First production-safe public copy pass: removed test/prototype wording from about, contacts, business, marketplace, footer, cart promo, and terms fallbacks without inventing final legal реквизиты or address.
    - [x] Add Product/FAQ schema where appropriate.
      - [x] Product schema for public product modal/detail state, including offers, images, and approved review aggregate data.
      - [x] FAQ schema for the real business terms FAQ block.
    - [ ] SEO landing copy for important categories, collections, and holidays.
+     - [x] First catalog landing copy slice: selected category/collection/holiday pages now render contextual SEO copy from the current content/catalog state.
    - [ ] Yandex map final address setup.
 
 5. [planned] Performance:

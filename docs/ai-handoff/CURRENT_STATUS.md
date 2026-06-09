@@ -28,10 +28,15 @@ Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages;
-- SEO/content structured data now covers Product structured data for the public product modal/detail state and FAQ structured data for the business terms FAQ block;
+- SEO/content structured data covers Product/FAQ schema, and the first production-safe public copy/catalog landing copy slice is in progress after the S3 provider commits;
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- SEO/content cleanup and catalog landing copy slice:
+  - public fallback copy no longer says test/prototype on about, contacts, business, marketplace, footer, cart promo, and terms surfaces;
+  - fake static production address wording was replaced with manager-confirmed address/отгрузка wording; final Yandex address remains intentionally unconfigured until real data is confirmed;
+  - catalog category/collection/holiday listing pages now render contextual `#catalogSeoCopy` landing copy from the current content/catalog state;
+  - UI smoke now checks that selected category pages expose the SEO copy block.
 - S3-compatible object storage provider slice:
   - replaced the `s3-compatible` placeholder in `api/_lib/object-storage.js` with a real provider-ready adapter for VPS/MinIO/R2 style endpoints;
   - adapter uses AWS Signature Version 4 over Node `fetch` and supports image upload, list by product prefix, hard delete, mark-unused, and public URL generation through `SOBAG_S3_PUBLIC_BASE_URL`;
@@ -210,6 +215,14 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current SEO/content cleanup pass:
+  - `node --check app.js`
+  - `node --check cart.js`
+  - `node --check components/site-shell.js`
+  - `node --check tools/ui-smoke.spec.js`
+  - `git diff --check`
+  - `npm.cmd run check`
+  - `npm.cmd run ui:smoke`: 11/11 passed and covers the new catalog SEO copy block on selected category pages.
 - Current business FAQ schema pass:
   - `node --check app.js`
   - `node --check tools/ui-smoke.spec.js`

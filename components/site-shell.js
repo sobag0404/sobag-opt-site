@@ -66,14 +66,14 @@
     },
     footer: `    <footer class="footer" id="contacts">
       <div class="container footer__brand-row">
-        <div><strong data-footer-brand>SOBAG OPT</strong><p data-footer-text>Тестовый B2B-каталог для оптовых заказов текстиля с принтами, производства под макет и поставок партиями.</p></div>
+        <div><strong data-footer-brand>SOBAG OPT</strong><p data-footer-text>B2B-каталог для оптовых заказов текстиля с принтами, производства под макет и поставок партиями.</p></div>
         <div><span data-footer-sales-label>Отдел опта</span><a href="mailto:opt@sobag-shop.online" data-footer-email>opt@sobag-shop.online</a><a href="tel:+79001234567" data-footer-phone>+7 900 123-45-67</a></div>
       </div>
       <div class="container footer__columns">
         <section><h3 data-footer-company-title>Компания</h3><div data-footer-company-links><a href="about.html">О компании</a><a href="contacts.html">Контакты</a><a href="assets/legal/personal-data-consent.pdf" target="_blank" rel="noopener">Политика конфиденциальности</a><a href="terms.html" target="_blank" rel="noopener">Пользовательское соглашение</a></div></section>
         <section><h3 data-footer-clients-title>Клиентам</h3><div data-footer-clients-links><a href="catalog.html">Как оформить заказ</a><a href="#">Доставка товара</a><a href="#">Оплата товара</a><a href="#">Возврат товара</a><a href="custom.html">Изделия с вашим принтом</a></div></section>
         <section><h3 data-footer-partners-title>Партнерам</h3><div data-footer-partners-links><a href="business.html">Условия для бизнеса</a><a href="marketplaces.html">Мы на маркетплейсах</a><a href="#">Поддержка селлеров</a><a href="#">Оптовые партии</a></div></section>
-        <section><h3 data-footer-contacts-title>Контакты</h3><div><a href="mailto:opt@sobag-shop.online" data-footer-email>opt@sobag-shop.online</a><a href="tel:+79001234567" data-footer-phone>+7 900 123-45-67</a><span data-footer-address>Тестовый адрес: Москва, ул. Текстильщиков, 12, стр. 2</span><a href="contacts.html">Все контакты</a></div></section>
+        <section><h3 data-footer-contacts-title>Контакты</h3><div><a href="mailto:opt@sobag-shop.online" data-footer-email>opt@sobag-shop.online</a><a href="tel:+79001234567" data-footer-phone>+7 900 123-45-67</a><span data-footer-address>Адрес отгрузки согласуется с менеджером</span><a href="contacts.html">Все контакты</a></div></section>
       </div>
     </footer>`,
   };
