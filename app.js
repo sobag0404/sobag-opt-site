@@ -551,6 +551,7 @@ let actualSlideIndex = 0;
 let actualSlideTimer = null;
 let lastFocusedElement = null;
 let catalogHomeHasAnimated = false;
+const SERVER_CATALOG_PAGE_SIZE = 48;
 const focusableSelector =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -1011,7 +1012,7 @@ function serverCatalogParams(options = {}) {
   const params = new URLSearchParams();
   if (state.search.trim()) params.set("q", state.search.trim());
   params.set("sort", serverCatalogSortValue());
-  params.set("pageSize", "120");
+  params.set("pageSize", String(SERVER_CATALOG_PAGE_SIZE));
   if (options.cursor) params.set("cursor", options.cursor);
   [
     ["category", serverCatalogValues("category")],
@@ -4342,7 +4343,7 @@ function renderProducts() {
       const remaining = Math.max(0, total - list.length);
       catalogLoadMore.innerHTML =
         serverResult.hasMore && remaining
-          ? `<button class="ghost-button" type="button" data-show-more-products>${state.serverCatalog.loadingMore ? "Загрузка..." : `Показать ещё ${Math.min(120, remaining)} из ${remaining}`}</button>`
+          ? `<button class="ghost-button" type="button" data-show-more-products>${state.serverCatalog.loadingMore ? "Загрузка..." : `Показать ещё ${Math.min(SERVER_CATALOG_PAGE_SIZE, remaining)} из ${remaining}`}</button>`
           : "";
     } else {
       catalogLoadMore.innerHTML =

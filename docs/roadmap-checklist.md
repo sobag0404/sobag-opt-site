@@ -76,6 +76,7 @@ Last updated: 2026-06-09
      - [x] Avoid full `/api/catalog` bootstrap on public server-query listing pages when `/api/catalog-query` succeeds, with full/static fallback when the query endpoint is unavailable.
    - [ ] Image storage with responsive WebP/AVIF variants.
    - [ ] Catalog virtualization or smaller server pages.
+     - [x] Smaller public catalog page payload: frontend now requests `/api/catalog-query` with the server default `pageSize=48` instead of 120, and UI smoke asserts the request size.
    - [ ] Core Web Vitals audit after real catalog growth.
 
 6. [planned] QA/security/ops:

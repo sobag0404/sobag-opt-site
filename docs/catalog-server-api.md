@@ -103,4 +103,4 @@ The product modal tries `/api/catalog-detail` before rendering, then falls back 
 
 The public catalog/search list now progressively uses `/api/catalog-query` for compact card payloads, total counts, cursor-based "load more" pagination, and visible filter options from `facetOptions`. On active server-query listing pages, successful `/api/catalog-query` bootstrap skips the full `/api/catalog` request. If the endpoint is unavailable, the old local/full-catalog rendering path remains the fallback. Favorites, catalog home, empty search, and admin catalog screens still use the local/admin/full catalog flow.
 
-The next performance slice can add virtualization or smaller server-rendered pages for very large catalogs.
+The frontend requests the server default `pageSize=48` for public listing pages, so the initial list and cursor pages do not force the previous 120-card payload. The next performance slice can add catalog virtualization or server-rendered pages for very large catalogs.

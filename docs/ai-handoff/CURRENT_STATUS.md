@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on `main` before this catalog SEO description pass:
-- `740972f Add SEO content landing copy`
+Latest committed state currently on `main` before this smaller catalog page pass:
+- `500d9ca Expand catalog SEO descriptions`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -27,11 +27,15 @@ Production URLs:
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
-- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages;
+- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, and smaller public query page size;
 - SEO/content structured data covers Product/FAQ schema; production-safe public copy and first catalog landing copy slices are committed locally;
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Smaller catalog page payload slice:
+  - frontend `/api/catalog-query` requests now use `pageSize=48`, matching the server default instead of forcing 120 cards per page;
+  - server-query "show more" copy uses the same page-size constant;
+  - UI smoke asserts the compact page size on initial and cursor requests.
 - Catalog SEO description slice:
   - default category descriptions are fuller and better suited for landing copy;
   - default collection/holiday content now carries editable `description`;
@@ -221,6 +225,12 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current smaller catalog page payload pass:
+  - `node --check app.js`
+  - `node --check tools/ui-smoke.spec.js`
+  - `git diff --check`
+  - `npm.cmd run check`
+  - `npm.cmd run ui:smoke`: 11/11 passed after starting `npm.cmd run dev:static`; the exact static-server PID was stopped.
 - Current catalog SEO description pass:
   - `node --check app.js`
   - `node --check tools/ui-smoke.spec.js`

@@ -30,6 +30,7 @@ Last updated: 2026-06-09
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-09: reduced public server-query catalog payload size. Frontend now requests `/api/catalog-query` with `pageSize=48` instead of 120, the "show more" label uses the same server page constant, and UI smoke asserts the compact page size on initial and cursor requests.
 - Current pass 2026-06-09: deepened catalog SEO landing copy. Default category descriptions are now fuller, default collection/holiday records carry editable `description`, admin content accepts `name | description | icon` while still preserving old `name | icon` rows, imported missing collections/holidays get editable placeholder descriptions, and UI smoke covers collection/holiday SEO copy.
 - Current pass 2026-06-09: added first SEO/content cleanup slice. Public fallback copy no longer says test/prototype on about, contacts, business, marketplace, footer, cart promo, and terms pages; fake static production address was replaced with manager-confirmed address wording; catalog category/collection/holiday listing pages now render contextual `#catalogSeoCopy` landing copy from current content state. No final Yandex address was configured.
 - Current pass 2026-06-09: replaced the S3-compatible object-storage placeholder with a real provider-ready adapter in `api/_lib/object-storage.js`. It supports AWS SigV4 PUT/list/delete for VPS/MinIO/R2 style endpoints, safe `objectStorageStatus()`, public URL generation through `SOBAG_S3_PUBLIC_BASE_URL`, bulk CLI provider compatibility, docs, and offline smoke coverage through `tools/object-storage-s3-smoke.mjs`.
@@ -64,7 +65,7 @@ Last updated: 2026-06-09
 - SEO next step: real company/legal/contact details only after confirmed facts; Product/FAQ schema and editable catalog landing copy are already covered.
 - Import/PIM next step: later DB/storage split for product, variant, image, taxonomy, and import-batch entities. The current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
 - Deployment next step: when the stable stage is ready, prepare VPS migration notes and deployment path, while keeping Vercel as fallback/parallel reference.
-- Performance next step: catalog virtualization/smaller server pages, real-catalog WebP/AVIF validation, and Core Web Vitals audit after larger catalog growth.
+- Performance next step: catalog virtualization, real-catalog WebP/AVIF validation, and Core Web Vitals audit after larger catalog growth.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
 ## Useful Files
