@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on local `main` before this VPS release audit pass:
-- `2495103 Add normalized PIM export`
+Latest committed state currently on local `main` before this SEO/content audit pass:
+- `cfb2d72 Add VPS release audit`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -35,9 +35,16 @@ Current focus:
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, smaller public query page size, and smaller local fallback pages;
 - Responsive product images now have frontend `<picture>` selection for stored AVIF/WebP variants; real migrated catalog validation is still pending.
 - SEO/content structured data covers Product/FAQ schema; production-safe public copy and first catalog landing copy slices are committed locally;
+- Offline SEO/content audit now guards public pages and current default content against stale test/prototype/Tilda/placeholder copy, fake contacts, missing public meta descriptions, and missing catalog/FAQ SEO surfaces;
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- SEO/content audit slice:
+  - added `tools/content-seo-audit.mjs` and npm script `audit:content`;
+  - audit checks public pages and current `defaultSiteContent` for stale test/prototype/Tilda/placeholder copy, fake contacts, required meta descriptions, catalog SEO copy, FAQ schema surface, `В каталог`, and editable category/collection/holiday descriptions;
+  - AutoFix now runs the audit and self-test fixture;
+  - removed the remaining public "Для теста" wording from `business.html`;
+  - replaced the public personal-data consent draft note with production-safe wording that avoids fake реквизиты/address.
 - VPS release audit slice:
   - added `tools/vps-release-audit.mjs` and npm script `audit:vps-release`;
   - audit checks required VPS runtime files, Vercel fallback scripts, package scripts, `.gitignore` safety rules, and forbidden tracked secret/local-output/raw photo artifacts;
@@ -294,6 +301,15 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current SEO/content audit pass:
+  - `node --check tools/content-seo-audit.mjs`
+  - `node tools/content-seo-audit.mjs`: passed for 12 public pages, 6 categories, 10 collections, and 6 holidays.
+  - `node tools/content-seo-audit.mjs --self-test`: passed.
+  - `node --check tools/autofix.mjs`
+  - `node --check tools/vps-release-audit.mjs`
+  - package JSON parse
+  - `npm.cmd run audit:vps-release`: passed with the new content audit script requirement.
+  - `npm.cmd run check`: passed, includes SEO/content audit and self-test.
 - Current VPS release audit pass:
   - `node --check tools/vps-release-audit.mjs`
   - `node --check tools/autofix.mjs`

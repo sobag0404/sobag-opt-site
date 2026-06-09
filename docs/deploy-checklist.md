@@ -14,7 +14,7 @@ npm.cmd run check
 npm.cmd run ui:smoke
 ```
 
-`npm.cmd run check` включает offline-аудит VPS/Vercel fallback готовности: обязательные runtime-файлы, package scripts, ignore-правила для секретов/local output/raw фото и отсутствие запрещенных tracked artifacts.
+`npm.cmd run check` включает offline-аудит SEO/content и VPS/Vercel fallback готовности: публичные тексты без старых test/prototype/Tilda/placeholder формулировок, обязательные runtime-файлы, package scripts, ignore-правила для секретов/local output/raw фото и отсутствие запрещенных tracked artifacts.
 
 На устройстве, где `npm.cmd` недоступен, использовать bundled Node/Python из handoff.
 

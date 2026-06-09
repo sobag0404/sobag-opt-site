@@ -61,6 +61,7 @@ Last updated: 2026-06-09
 4. [planned] SEO/content:
    - [ ] Fill final legal/company/contact copy.
      - [x] First production-safe public copy pass: removed test/prototype wording from about, contacts, business, marketplace, footer, cart promo, and terms fallbacks without inventing final legal реквизиты or address.
+     - [x] Offline SEO/content audit: public pages and current default content are checked for stale test/prototype/Tilda/placeholder copy, fake contacts, required meta descriptions, catalog SEO copy, FAQ schema surface, `В каталог`, and editable category/collection/holiday descriptions.
    - [x] Add Product/FAQ schema where appropriate.
      - [x] Product schema for public product modal/detail state, including offers, images, and approved review aggregate data.
      - [x] FAQ schema for the real business terms FAQ block.

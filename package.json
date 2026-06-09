@@ -23,6 +23,7 @@
     "autofix": "node tools/autofix.mjs --write",
     "ui:smoke": "playwright test tools/ui-smoke.spec.js",
     "audit:catalog": "python tools/audit_catalog.py",
+    "audit:content": "node tools/content-seo-audit.mjs",
     "audit:images": "node tools/image-metadata-audit.mjs",
     "audit:vps-release": "node tools/vps-release-audit.mjs",
     "audit:access": "node tools/access-audit.mjs",

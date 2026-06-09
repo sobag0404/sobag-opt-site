@@ -30,6 +30,7 @@ const REQUIRED_SCRIPTS = {
   "backup:store": "tools/file-store-backup.mjs",
   "backup:store:self-test": "tools/file-store-backup.mjs --self-test",
   "audit:images": "tools/image-metadata-audit.mjs",
+  "audit:content": "tools/content-seo-audit.mjs",
   "export:pim": "tools/pim-export-normalized.mjs",
   "smoke:prod": "tools/production-smoke.mjs",
   "smoke:prod:self-test": "tools/production-smoke.mjs --self-test",
