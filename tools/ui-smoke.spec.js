@@ -162,6 +162,18 @@ test("admin import page and custom print calculator render", async ({ page }) =>
   await expect(page.locator("#customCalcTotal")).not.toHaveText("0 ₽");
 });
 
+test("business page exposes visible FAQ and FAQ schema", async ({ page }) => {
+  await page.goto(`${BASE_URL}/business.html`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("[data-faq-schema]")).toBeVisible();
+  await expect(page.locator("[data-faq-schema] details")).toHaveCount(4);
+
+  const schemaText = await page.locator("#sobag-faq-jsonld").textContent();
+  const schema = JSON.parse(schemaText || "{}");
+  expect(schema["@type"]).toBe("FAQPage");
+  expect(schema.mainEntity).toHaveLength(4);
+  expect(schema.mainEntity[0].acceptedAnswer.text).toContain("оптовая заявка");
+});
+
 async function waitForLiveProducts(page, minCount = 10) {
   await page.waitForFunction((min) => document.querySelectorAll(".product-card").length > min, minCount);
 }

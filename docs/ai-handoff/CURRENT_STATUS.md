@@ -1,9 +1,9 @@
 # Current Status Snapshot
 
-Date: 2026-06-04
+Date: 2026-06-09
 
 Latest committed state after this working update:
-- `Add product structured data for modal`
+- `Add business FAQ structured data`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -27,10 +27,16 @@ Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar and diagnostics/export slices;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages;
-- SEO/content work has started with Product structured data for the public product modal/detail state;
+- SEO/content structured data now covers Product structured data for the public product modal/detail state and FAQ structured data for the business terms FAQ block;
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Business FAQ structured data slice:
+  - `business.html` now has a real visible FAQ block for wholesale order questions;
+  - `app.js` publishes `#sobag-faq-jsonld` as schema.org `FAQPage` from visible `[data-faq-schema]` content and removes stale schema when no FAQ section exists;
+  - `styles.css` includes the FAQ layout and mobile-safe one-column heading behavior;
+  - Playwright smoke verifies the visible FAQ and generated FAQ JSON-LD;
+  - roadmap now marks Product/FAQ schema done;
 - Product structured data slice:
   - public product modal now writes `#sobag-product-jsonld` with schema.org `Product` data after detail hydration;
   - schema includes product name, description, baseSku/mpn, category, absolute image URLs, Sobag Opt brand, RUB AggregateOffer price range, and approved review aggregate/review data when present;
@@ -197,6 +203,14 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current business FAQ schema pass:
+  - `node --check app.js`
+  - `node --check tools/ui-smoke.spec.js`
+  - `git diff --check`
+  - `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`
+  - `npm.cmd run check`
+  - focused smoke: `npm.cmd run ui:smoke -- --grep "business page exposes visible FAQ"`
+  - full smoke: `npm.cmd run ui:smoke`
 - Current product structured data pass:
   - `node --check app.js`
   - `node --check tools/ui-smoke.spec.js`

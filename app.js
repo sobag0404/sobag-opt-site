@@ -3987,6 +3987,39 @@ function syncProductJsonLd(product) {
   setJsonLd("sobag-product-jsonld", productSchemaData(product));
 }
 
+function syncFaqJsonLd() {
+  const section = document.querySelector("[data-faq-schema]");
+  if (!section) {
+    removeJsonLd("sobag-faq-jsonld");
+    return;
+  }
+  const questions = [...section.querySelectorAll("details")]
+    .map((item) => {
+      const question = item.querySelector("[data-faq-question]")?.textContent?.trim() || "";
+      const answer = item.querySelector("[data-faq-answer]")?.textContent?.replace(/\s+/g, " ").trim() || "";
+      return question && answer
+        ? {
+            "@type": "Question",
+            name: question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: answer,
+            },
+          }
+        : null;
+    })
+    .filter(Boolean);
+  if (!questions.length) {
+    removeJsonLd("sobag-faq-jsonld");
+    return;
+  }
+  setJsonLd("sobag-faq-jsonld", {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: questions,
+  });
+}
+
 function updateCatalogSeo() {
   if (!document.body.classList.contains("catalog-page")) return;
   const content = getSiteContent();
@@ -8044,6 +8077,7 @@ function boot() {
   renderCart();
   renderAccountButton();
   renderSiteContent();
+  syncFaqJsonLd();
   renderManagementPages();
   renderSavedQuotesPage();
   renderAdminProductsPage();
