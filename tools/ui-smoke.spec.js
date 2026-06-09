@@ -443,6 +443,19 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator("#catalogSeoCopy")).toBeVisible();
   await expect(page.locator("#catalogSeoCopy")).toContainText(category);
   await expect(page.locator("#catalogSeoCopy")).toContainText("оптовая");
+
+  await page.goto(`${BASE_URL}/catalog?collection=${encodeURIComponent("Паттерны")}`, { waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
+  await expect(page.locator("#catalogSeoCopy")).toContainText("Паттерны");
+  await expect(page.locator("#catalogSeoCopy")).toContainText("Повторяющиеся");
+
+  await page.goto(`${BASE_URL}/catalog?holiday=${encodeURIComponent("23 февраля")}`, { waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
+  await expect(page.locator("#catalogSeoCopy")).toContainText("23 февраля");
+  await expect(page.locator("#catalogSeoCopy")).toContainText("Сезонная подборка");
+
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
   await expect(page.locator('[data-filter-group="category"]')).toHaveCount(0);
   await expect(page.locator('#activeFilterChips [data-clear-filter="selectedCategory"]')).toHaveCount(1);
   await expect(page.locator("[data-show-more-products]")).toBeVisible();

@@ -63,6 +63,7 @@ Last updated: 2026-06-09
      - [x] FAQ schema for the real business terms FAQ block.
    - [ ] SEO landing copy for important categories, collections, and holidays.
      - [x] First catalog landing copy slice: selected category/collection/holiday pages now render contextual SEO copy from the current content/catalog state.
+     - [x] Editable SEO descriptions for default collections and holidays: admin content supports `name | description | icon`, with backward compatibility for old `name | icon` rows.
    - [ ] Yandex map final address setup.
 
 5. [planned] Performance:

@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on `main` before this uncommitted S3-compatible provider pass:
-- `Add business FAQ structured data`
+Latest committed state currently on `main` before this catalog SEO description pass:
+- `740972f Add SEO content landing copy`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -28,10 +28,16 @@ Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages;
-- SEO/content structured data covers Product/FAQ schema, and the first production-safe public copy/catalog landing copy slice is in progress after the S3 provider commits;
+- SEO/content structured data covers Product/FAQ schema; production-safe public copy and first catalog landing copy slices are committed locally;
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Catalog SEO description slice:
+  - default category descriptions are fuller and better suited for landing copy;
+  - default collection/holiday content now carries editable `description`;
+  - admin content supports `name | description | icon` for collections/holidays while preserving old `name | icon` rows;
+  - imported missing collections/holidays get editable placeholder descriptions;
+  - UI smoke checks collection and holiday SEO copy.
 - SEO/content cleanup and catalog landing copy slice:
   - public fallback copy no longer says test/prototype on about, contacts, business, marketplace, footer, cart promo, and terms surfaces;
   - fake static production address wording was replaced with manager-confirmed address/отгрузка wording; final Yandex address remains intentionally unconfigured until real data is confirmed;
@@ -215,6 +221,12 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current catalog SEO description pass:
+  - `node --check app.js`
+  - `node --check tools/ui-smoke.spec.js`
+  - `git diff --check`
+  - `npm.cmd run check`
+  - `npm.cmd run ui:smoke`: first attempt failed because no local server was listening on `127.0.0.1:4173`; after starting `npm.cmd run dev:static`, 11/11 passed and the exact static-server PID was stopped.
 - Current SEO/content cleanup pass:
   - `node --check app.js`
   - `node --check cart.js`

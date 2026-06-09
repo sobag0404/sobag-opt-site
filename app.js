@@ -47,55 +47,55 @@ const catalogCategories = [
   {
     name: "Подушки",
     icon: "square-stack",
-    description: "Декоративные подушки с наполнителем",
+    description: "Оптовые декоративные подушки с принтами, наполнителем и вариантами размеров для магазинов, подарочных витрин и маркетплейсов.",
   },
   {
     name: "Наволочки",
     icon: "panel-top",
-    description: "Съемные наволочки под готовые линейки",
+    description: "Съемные наволочки под готовые линейки и сезонные коллекции: удобно обновлять витрину без замены наполнителя.",
   },
   {
     name: "Пледы",
     icon: "layers",
-    description: "Пледы с полноцветными принтами",
+    description: "Пледы с полноцветными принтами для подарочных, интерьерных и корпоративных партий с подбором дизайнов под аудиторию.",
   },
   {
     name: "Мешки для обуви",
     icon: "package",
-    description: "Легкие мешки для школ, спорта и мерча",
+    description: "Легкие мешки для обуви и сменной формы для школ, спорта, сувенирных наборов и брендированного мерча.",
   },
   {
     name: "Чехлы на кулер",
     icon: "container",
-    description: "Текстильные чехлы под корпоративные заказы",
+    description: "Текстильные чехлы на кулер под корпоративные заказы, промоакции и оформление офисных зон.",
   },
   {
     name: "Чехлы на чемодан",
     icon: "briefcase",
-    description: "Принтованные чехлы для багажа",
+    description: "Принтованные чехлы на чемодан для тревел-витрин, подарочных наборов и маркетплейс-поставок.",
   },
 ];
 
 const catalogCollections = [
-  { name: "Аниме", icon: "sparkles" },
-  { name: "Мемы", icon: "message-circle" },
-  { name: "Животные", icon: "paw-print" },
-  { name: "Паттерны", icon: "palette" },
-  { name: "Игры", icon: "gamepad-2" },
-  { name: "Космос", icon: "orbit" },
-  { name: "Военные", icon: "shield" },
-  { name: "Бренд", icon: "badge-check" },
-  { name: "Подарки", icon: "gift" },
-  { name: "Именные", icon: "type" },
+  { name: "Аниме", icon: "sparkles", description: "Подборка принтов в аниме-стилистике для молодежных витрин, фан-мерча и тематических партий." },
+  { name: "Мемы", icon: "message-circle", description: "Ироничные и узнаваемые принты для быстрых розничных запусков, подарочных полок и маркетплейсов." },
+  { name: "Животные", icon: "paw-print", description: "Коллекция с декоративными сюжетами для семейных магазинов, подарков и уютных интерьерных линеек." },
+  { name: "Паттерны", icon: "palette", description: "Повторяющиеся орнаменты и графика для спокойных интерьерных серий, базовых полок и регулярных допоставок." },
+  { name: "Игры", icon: "gamepad-2", description: "Тематические игровые принты для молодежных коллекций, сувенирных партий и промо-наборов." },
+  { name: "Космос", icon: "orbit", description: "Космические мотивы для детских, подростковых и подарочных витрин с выразимыми полноцветными принтами." },
+  { name: "Военные", icon: "shield", description: "Строгие тематические дизайны для сезонных заявок, сувенирных наборов и патриотических коллекций." },
+  { name: "Бренд", icon: "badge-check", description: "Брендируемые изделия для корпоративных подарков, мерча, промоакций и единых фирменных комплектов." },
+  { name: "Подарки", icon: "gift", description: "Универсальные подарочные дизайны для готовых наборов, праздничных полок и быстрой сборки партии." },
+  { name: "Именные", icon: "type", description: "Персонализируемые макеты для именных подарков, небольших серий и расширения ассортимента без новой формы изделия." },
 ];
 
 const catalogHolidays = [
-  { name: "Новый год", icon: "snowflake" },
-  { name: "14 февраля", icon: "heart" },
-  { name: "8 марта", icon: "flower-2" },
-  { name: "23 февраля", icon: "medal" },
-  { name: "День учителя", icon: "graduation-cap" },
-  { name: "День рождения", icon: "cake" },
+  { name: "Новый год", icon: "snowflake", description: "Новогодние принты для сезонных подарков, корпоративных наборов, маркетплейсов и декабрьских витрин." },
+  { name: "14 февраля", icon: "heart", description: "Романтические дизайны для подарочных партий ко Дню святого Валентина и тематических февральских продаж." },
+  { name: "8 марта", icon: "flower-2", description: "Весенние принты для подарочных наборов, розничных витрин и корпоративных заказов к 8 марта." },
+  { name: "23 февраля", icon: "medal", description: "Сезонная подборка к 23 февраля для подарочных партий, сувенирных полок и корпоративных заявок." },
+  { name: "День учителя", icon: "graduation-cap", description: "Текстильные подарки ко Дню учителя для школьных закупок, классов, родительских комитетов и розницы." },
+  { name: "День рождения", icon: "cake", description: "Праздничные принты для универсальных подарков, персональных наборов и круглогодичных витрин." },
 ];
 
 const actualItems = [
@@ -657,8 +657,9 @@ function normalizeCatalogList(items, fallbackItems, options = {}) {
         icon: String(item.icon || fallback.icon || "tag").trim(),
         image: String(item.image || "").trim(),
       };
-      if (options.description) {
-        prepared.description = String(item.description || fallback.description || "").trim();
+      const description = item.description || fallback.description || "";
+      if (options.description || description) {
+        prepared.description = String(description).trim();
       }
       return prepared;
     })
@@ -3722,9 +3723,15 @@ function catalogSeoCopyData(total = 0) {
   const titleParts = [state.selectedCategory, state.selectedCollection, state.selectedHoliday].filter(Boolean);
   const label = titleParts.join(" · ");
   const category = catalogContentItem(content.catalogCategories, state.selectedCategory);
+  const collection = catalogContentItem(content.catalogCollections, state.selectedCollection);
+  const holiday = catalogContentItem(content.catalogHolidays, state.selectedHoliday);
   const countText = total ? `${total} ${productWord(total)} в текущей выдаче.` : "Ассортимент обновляется после уточнения фильтров.";
   const intro = category?.description
     ? category.description
+    : collection?.description
+    ? collection.description
+    : holiday?.description
+    ? holiday.description
     : state.selectedCollection
     ? "Подборка объединяет принты и изделия, которые удобно закупать одной партией для магазина, витрины или маркетплейса."
     : "Праздничная витрина помогает быстро собрать сезонную оптовую заявку по нужным изделиям, размерам и материалам.";
@@ -6794,7 +6801,12 @@ function serializeCategoryList(items) {
 }
 
 function serializeSimpleList(items) {
-  return items.map((item) => [item.name, item.icon].map((value) => value || "").join(" | ")).join("\n");
+  return items
+    .map((item) => {
+      const parts = item.description ? [item.name, item.description, item.icon] : [item.name, item.icon];
+      return parts.map((value) => value || "").join(" | ");
+    })
+    .join("\n");
 }
 
 function serializeActualList(items) {
@@ -7068,8 +7080,8 @@ function adminModalHtml() {
             <p class="admin-section-note">Редактируются справочники, которые видит покупатель на главной странице каталога. Иконки указываются названиями Lucide, например: square-stack, gift, heart, palette.</p>
             <div class="admin-content-grid">
               ${adminListTextarea("catalogCategoriesText", "Категории", serializeCategoryList(content.catalogCategories), "Одна строка = категория. Формат: название | описание | иконка. Фото категорий пока не используем, оставляем схему.")}
-              ${adminListTextarea("catalogCollectionsText", "Подборки", serializeSimpleList(content.catalogCollections), "Одна строка = подборка. Формат: название | иконка. Фото можно загрузить ниже после сохранения новой строки.")}
-              ${adminListTextarea("catalogHolidaysText", "Праздники", serializeSimpleList(content.catalogHolidays), "Одна строка = праздник. Формат: название | иконка. Фото можно загрузить ниже после сохранения новой строки.")}
+              ${adminListTextarea("catalogCollectionsText", "Подборки", serializeSimpleList(content.catalogCollections), "Одна строка = подборка. Формат: название | описание | иконка. Старый формат название | иконка тоже поддерживается.")}
+              ${adminListTextarea("catalogHolidaysText", "Праздники", serializeSimpleList(content.catalogHolidays), "Одна строка = праздник. Формат: название | описание | иконка. Старый формат название | иконка тоже поддерживается.")}
             </div>
             ${adminCatalogImagesHtml("catalogCollections", content.catalogCollections, "Фото подборок", "Рекомендуем: 900x520 px, JPG/WebP до 1.5 МБ.")}
             ${adminCatalogImagesHtml("catalogHolidays", content.catalogHolidays, "Фото праздников", "Рекомендуем: 900x520 px, JPG/WebP до 1.5 МБ.")}
@@ -7731,11 +7743,13 @@ function addMissingCatalogCategories(sourceProducts) {
   const catalogCollections = addMissingCatalogItems(content.catalogCollections, sourceProducts.flatMap((product) => product.collections || []), (name) => ({
     name,
     icon: "tag",
+    description: "Подборка добавлена из импорта. Название, описание и эмблему можно уточнить в админке.",
     image: "",
   }));
   const catalogHolidays = addMissingCatalogItems(content.catalogHolidays, sourceProducts.flatMap((product) => product.holidays || []), (name) => ({
     name,
     icon: "calendar-days",
+    description: "Праздник добавлен из импорта. Сезонное описание и эмблему можно уточнить в админке.",
     image: "",
   }));
   if (
@@ -7909,6 +7923,10 @@ function findCatalogItemByName(items, name) {
   return items.find((item) => String(item.name || item.label || "").trim().toLocaleLowerCase("ru-RU") === prepared);
 }
 
+function looksLikeIconName(value) {
+  return /^[a-z0-9][a-z0-9-]*$/i.test(String(value || "").trim());
+}
+
 function parseCatalogLines(text, currentItems, fallbackItems, options = {}) {
   const rows = String(text || "")
     .split(/\r?\n/)
@@ -7918,10 +7936,11 @@ function parseCatalogLines(text, currentItems, fallbackItems, options = {}) {
     const [nameRaw, secondRaw, thirdRaw] = line.split("|").map((part) => part.trim());
     const previous = findCatalogItemByName(currentItems, nameRaw) || currentItems[index] || {};
     if (options.description) {
+      const secondIsLegacyIcon = options.optionalDescription && !thirdRaw && looksLikeIconName(secondRaw);
       return {
         name: nameRaw || previous.name || "",
-        description: secondRaw || previous.description || "",
-        icon: thirdRaw || previous.icon || "tag",
+        description: secondIsLegacyIcon ? previous.description || "" : secondRaw || previous.description || "",
+        icon: secondIsLegacyIcon ? secondRaw || previous.icon || "tag" : thirdRaw || previous.icon || "tag",
         image: previous.image || "",
       };
     }
@@ -7986,13 +8005,13 @@ function contentFromAdminForm(form) {
   const catalogCollections = applyAdminIndexedImages(
     form,
     "catalogCollections",
-    parseCatalogLines(data.catalogCollectionsText, current.catalogCollections, defaultSiteContent.catalogCollections),
+    parseCatalogLines(data.catalogCollectionsText, current.catalogCollections, defaultSiteContent.catalogCollections, { description: true, optionalDescription: true }),
     current.catalogCollections
   );
   const catalogHolidays = applyAdminIndexedImages(
     form,
     "catalogHolidays",
-    parseCatalogLines(data.catalogHolidaysText, current.catalogHolidays, defaultSiteContent.catalogHolidays),
+    parseCatalogLines(data.catalogHolidaysText, current.catalogHolidays, defaultSiteContent.catalogHolidays, { description: true, optionalDescription: true }),
     current.catalogHolidays
   );
   const textContent = Object.fromEntries(
