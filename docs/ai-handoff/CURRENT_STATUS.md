@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on `main` before this local fallback catalog page-size pass:
-- `b1973d6 Add VPS environment preflight`
+Latest committed state currently on `main` before this file-store backup pass:
+- `d20c90f Reduce local catalog fallback page size`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -30,6 +30,7 @@ Current focus:
 - VPS migration path now has an explicit filesystem store bridge for shared API data, while Vercel remains on Redis/KV fallback;
 - VPS runtime path now has `server.mjs` for static clean URLs plus existing `/api/*` handlers;
 - VPS env readiness now has a safe local preflight script and offline self-test coverage;
+- VPS file-store backups now have a local helper and offline backup/restore self-test coverage;
 - UI invariant: product photos and category/collection/holiday photos should stay square; selected catalog pages should say `В каталог` for the return action;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, smaller public query page size, and smaller local fallback pages;
 - Responsive product images now have frontend `<picture>` selection for stored AVIF/WebP variants; real migrated catalog validation is still pending.
@@ -37,6 +38,13 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS file-store backup/restore slice:
+  - added `tools/file-store-backup.mjs`;
+  - backup mode copies only file-store JSON records into a timestamped backup folder and writes `manifest.json`;
+  - restore mode refuses to overwrite existing JSON records unless `--force` is passed;
+  - added npm scripts `backup:store` and `backup:store:self-test`;
+  - ignored local `sobag-store-backups/`;
+  - AutoFix runs the offline self-test fixture.
 - Local fallback catalog page-size slice:
   - introduced shared `CATALOG_PAGE_SIZE=48`;
   - server-query page size still uses 48;
@@ -267,6 +275,12 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current VPS file-store backup pass:
+  - `node --check tools/file-store-backup.mjs`
+  - `node --check tools/autofix.mjs`
+  - package JSON parse
+  - `npm.cmd run backup:store:self-test`
+  - `npm.cmd run check`
 - Current local fallback catalog page-size pass:
   - `node --check app.js`
   - `node --check tools/ui-smoke.spec.js`

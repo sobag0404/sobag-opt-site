@@ -95,3 +95,4 @@ It includes the static access matrix audit from `tools/access-audit.mjs`; see `d
 It also includes the API error-log audit from `tools/error-log-audit.mjs`; see `docs/error-log-review.md`.
 It also includes the VPS runtime smokes from `tools/vps-server-smoke.mjs` and `tools/vps-write-smoke.mjs`.
 It also includes the offline VPS env preflight fixture from `tools/vps-preflight.mjs --self-test`.
+It also includes the offline file-store backup/restore fixture from `tools/file-store-backup.mjs --self-test`.

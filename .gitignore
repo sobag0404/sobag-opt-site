@@ -1,5 +1,6 @@
 .vercel
 .sobag-store/
+sobag-store-backups/
 local-import-output/
 local-photo-import/
 raw-product-photos/

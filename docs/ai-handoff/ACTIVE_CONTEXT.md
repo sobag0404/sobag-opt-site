@@ -31,6 +31,7 @@ Last updated: 2026-06-09
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-09: added VPS file-store backup/restore helper. `tools/file-store-backup.mjs` copies only JSON file-store records into timestamped backup folders with a manifest, supports guarded restore with `--force`, ignores local `sobag-store-backups/`, and AutoFix runs the offline self-test fixture.
 - Current pass 2026-06-09: reduced local fallback catalog rendering step to 48 cards. The same `CATALOG_PAGE_SIZE` now drives server query page size and client fallback visible-limit/show-more increments; UI smoke covers the fallback path when `/api/catalog-query` is unavailable.
 - Current pass 2026-06-09: added VPS environment preflight coverage. `tools/vps-preflight.mjs` checks Node 20+, `server.mjs`, file-store provider/env/writability, bootstrap admin env, and S3-compatible object-storage env without printing secrets. Added npm scripts `preflight:vps` and `preflight:vps:self-test`; AutoFix runs the self-test fixture.
 - Current pass 2026-06-09: added frontend `<picture>` selection for stored responsive product image variants. Product cards, related product cards, product modal main image/gallery thumbnails, and admin product previews now render AVIF sources first and WebP fallback before the original image, while preserving square 1:1 layouts.
@@ -84,6 +85,7 @@ Last updated: 2026-06-09
 
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `node`, `npm.cmd`, `python`, and `py` are available in PATH on this device.
+- Current file-store backup pass verification: `node --check tools/file-store-backup.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `npm.cmd run backup:store:self-test`; `npm.cmd run check`.
 - Current local fallback catalog page-size pass verification: `node --check app.js`; `node --check tools/ui-smoke.spec.js`; focused `npm.cmd run ui:smoke -- --grep "catalog local fallback|catalog filters|catalog list renders server query"` 3/3 after `npm.cmd run dev:static` with PID `15144` stopped; `npm.cmd run check`; full `npm.cmd run ui:smoke` 12/12 after `npm.cmd run dev:static` with PID `20852` stopped.
 - Current VPS preflight pass verification: `node --check tools/vps-preflight.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `npm.cmd run preflight:vps:self-test`; `npm.cmd run check`.
 - Current AVIF/WebP picture pass verification: `node --check app.js`; `node --check tools/ui-smoke.spec.js`; focused `npm.cmd run ui:smoke -- --grep "product modal hydrates detail|catalog list renders server query|catalog filters"` 3/3 after `npm.cmd run dev:static` with PID `7644` stopped; `npm.cmd run check`; full `npm.cmd run ui:smoke` 11/11 after `npm.cmd run dev:static` with PID `22064` stopped.

@@ -12,6 +12,8 @@
     "smoke:vps:write": "node tools/vps-write-smoke.mjs",
     "preflight:vps": "node tools/vps-preflight.mjs",
     "preflight:vps:self-test": "node tools/vps-preflight.mjs --self-test",
+    "backup:store": "node tools/file-store-backup.mjs",
+    "backup:store:self-test": "node tools/file-store-backup.mjs --self-test",
     "upload:photos": "node tools/bulk-upload-product-photos.mjs",
     "smoke:prod": "node tools/production-smoke.mjs",
     "smoke:prod:self-test": "node tools/production-smoke.mjs --self-test",

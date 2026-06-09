@@ -37,6 +37,20 @@ Stored data includes:
 
 It does not expose filesystem paths or secrets.
 
+Before deploys, imports, or manual maintenance, create a file-store backup:
+
+```bash
+npm run backup:store -- --source /var/lib/sobag-opt/store --dest /var/backups/sobag-opt
+```
+
+Restore only during a maintenance window and only to the intended store directory:
+
+```bash
+npm run backup:store -- --restore /var/backups/sobag-opt/store-YYYYMMDDTHHMMSSZ --target /var/lib/sobag-opt/store --force
+```
+
+The backup tool copies only file-store JSON records and writes a `manifest.json`; it does not print record contents or secret values. Use `npm run backup:store:self-test` for the offline backup/restore fixture covered by AutoFix. Local `sobag-store-backups/` output is ignored by Git.
+
 ## Object Storage
 
 For product photos on VPS/MinIO/R2, keep using the object-storage adapter:
