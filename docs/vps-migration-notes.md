@@ -74,6 +74,9 @@ npm run start:vps
 
 ```bash
 npm run smoke:vps
+npm run smoke:vps:write
 ```
+
+`smoke:vps` checks read-only public/runtime routes. `smoke:vps:write` uses a temporary file-store directory and fake smoke credentials to verify admin login/content save, buyer registration/session, order creation, buyer comments, admin order updates, and internal-note filtering.
 
 Put Nginx/Caddy in front of the Node process for TLS, compression, request size limits, and access logs. Keep the app process behind localhost unless a separate firewall policy is configured.

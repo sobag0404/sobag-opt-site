@@ -93,4 +93,4 @@ npm run check
 The same check runs in GitHub Actions on push, pull request, and every Monday at 06:00 UTC.
 It includes the static access matrix audit from `tools/access-audit.mjs`; see `docs/access-audit.md`.
 It also includes the API error-log audit from `tools/error-log-audit.mjs`; see `docs/error-log-review.md`.
-It also includes the VPS runtime smoke from `tools/vps-server-smoke.mjs`.
+It also includes the VPS runtime smokes from `tools/vps-server-smoke.mjs` and `tools/vps-write-smoke.mjs`.

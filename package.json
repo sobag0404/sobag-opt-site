@@ -9,6 +9,7 @@
     "dev:vercel": "npx -y vercel dev --listen 4173",
     "start:vps": "node server.mjs",
     "smoke:vps": "node tools/vps-server-smoke.mjs",
+    "smoke:vps:write": "node tools/vps-write-smoke.mjs",
     "upload:photos": "node tools/bulk-upload-product-photos.mjs",
     "smoke:prod": "node tools/production-smoke.mjs",
     "smoke:prod:self-test": "node tools/production-smoke.mjs --self-test",

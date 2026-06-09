@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on `main` before this VPS runtime pass:
-- `28b1502 Add store health status and square catalog previews`
+Latest committed state currently on `main` before this VPS write-smoke pass:
+- `da6efab Add VPS Node runtime`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -35,6 +35,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS API write-smoke slice:
+  - added `tools/vps-write-smoke.mjs` and npm script `smoke:vps:write`;
+  - smoke runs `server.mjs` with a temporary file-store directory and fake smoke credentials;
+  - it verifies admin login/content save, public content read, buyer registration/session, order creation, buyer order comments, admin order status/internal note update, buyer internal-note filtering, and admin order visibility;
+  - AutoFix now runs the write smoke alongside the read-only VPS runtime smoke.
 - VPS runtime slice:
   - added `server.mjs` to serve static files with clean URLs and dispatch the existing API handlers outside Vercel;
   - added npm scripts `start:vps` and `smoke:vps`;
@@ -243,6 +248,14 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current VPS API write-smoke pass:
+  - `node --check tools/vps-write-smoke.mjs`
+  - `node --check tools/autofix.mjs`
+  - `node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package json ok')"`
+  - `npm.cmd run smoke:vps:write`
+  - `git diff --check`
+  - `npm.cmd run check`
+  - `npm.cmd run ui:smoke`: 11/11 passed after starting `npm.cmd run dev:static`; exact static-server PID `19768` was stopped.
 - Current VPS runtime pass:
   - `node --check server.mjs`
   - `node --check tools/vps-server-smoke.mjs`
