@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on local `main` before this SEO/content audit pass:
-- `cfb2d72 Add VPS release audit`
+Latest committed state currently on local `main` before this VPS launch runbook pass:
+- `b1dbfbe Add SEO content audit`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -31,6 +31,7 @@ Current focus:
 - VPS runtime path now has `server.mjs` for static clean URLs plus existing `/api/*` handlers;
 - VPS env readiness now has a safe local preflight script and offline self-test coverage;
 - VPS file-store backups now have a local helper and offline backup/restore self-test coverage;
+- VPS launch/cutover now has a step-by-step runbook with preflight, smoke, DNS cutover, rollback, backup, photo/catalog, and Vercel fallback checks;
 - Goal-mode UI invariant: product photos and category/collection/holiday photos should stay square 1:1; selected catalog pages should say `В каталог`, not `На главную`, for the top return action;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, smaller public query page size, and smaller local fallback pages;
 - Responsive product images now have frontend `<picture>` selection for stored AVIF/WebP variants; real migrated catalog validation is still pending.
@@ -39,6 +40,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS launch runbook slice:
+  - added `docs/vps-launch-runbook.md`;
+  - runbook covers local gates, VPS setup, env variable names without values, preflight, runtime start, VPS URL smoke, DNS cutover, rollback, backup restore, migrated photo audit, and Vercel fallback checks;
+  - `docs/vps-migration-notes.md` and `docs/deploy-checklist.md` link to it;
+  - `tools/vps-release-audit.mjs` now requires the runbook file.
 - SEO/content audit slice:
   - added `tools/content-seo-audit.mjs` and npm script `audit:content`;
   - audit checks public pages and current `defaultSiteContent` for stale test/prototype/Tilda/placeholder copy, fake contacts, required meta descriptions, catalog SEO copy, FAQ schema surface, `В каталог`, and editable category/collection/holiday descriptions;
@@ -301,6 +307,10 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current VPS launch runbook pass:
+  - `node --check tools/vps-release-audit.mjs`
+  - `npm.cmd run audit:vps-release`: passed with the new runbook requirement.
+  - `npm.cmd run check`: passed, includes VPS release audit and self-test.
 - Current SEO/content audit pass:
   - `node --check tools/content-seo-audit.mjs`
   - `node tools/content-seo-audit.mjs`: passed for 12 public pages, 6 categories, 10 collections, and 6 holidays.

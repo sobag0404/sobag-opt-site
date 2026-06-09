@@ -57,3 +57,5 @@ npm.cmd run smoke:prod:self-test
 ```
 
 Если production smoke упал, использовать runbook `docs/error-log-review.md`.
+
+Для VPS запуска и cutover использовать `docs/vps-launch-runbook.md`.

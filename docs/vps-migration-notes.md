@@ -4,6 +4,8 @@ Last updated: 2026-06-09
 
 These notes prepare the VPS path without changing production data or Vercel fallback behavior.
 
+For the step-by-step launch/cutover process, use `docs/vps-launch-runbook.md`.
+
 Run the local release audit before VPS packaging:
 
 ```bash

@@ -16,6 +16,7 @@ const REQUIRED_FILES = [
   "tools/file-store-backup.mjs",
   "tools/production-smoke.mjs",
   "docs/vps-migration-notes.md",
+  "docs/vps-launch-runbook.md",
   "docs/deploy-checklist.md",
 ];
 
