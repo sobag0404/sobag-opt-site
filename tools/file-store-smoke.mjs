@@ -21,6 +21,7 @@ const {
   saveImportBatches,
   saveSession,
   saveStore,
+  storeStatus,
 } = require("../api/_lib/store.js");
 
 function assert(condition, message) {
@@ -28,6 +29,9 @@ function assert(condition, message) {
 }
 
 try {
+  assert(storeStatus().provider === "file", "file store status should report file provider");
+  assert(storeStatus().configured === true, "file store status should be configured without secrets");
+
   const empty = await getStore();
   assert(empty.version === 1, "empty file store should normalize store payload");
   assert(Array.isArray(empty.orders) && empty.orders.length === 0, "empty file store should include orders array");

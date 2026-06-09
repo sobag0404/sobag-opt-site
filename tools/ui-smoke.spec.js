@@ -153,6 +153,11 @@ test("admin import page and custom print calculator render", async ({ page }) =>
   await expect(page.locator("#adminContentForm")).toBeVisible();
   await expect(page.locator(".admin-content-toolbar")).toContainText("Сохранить на сервере");
   await expect(page.locator(".admin-content-sidebar")).toContainText("Страницы");
+  const adminCatalogPreviewGeometry = await page.evaluate(() => {
+    const rect = document.querySelector(".admin-image-upload--catalogCollections img")?.getBoundingClientRect();
+    return rect ? Math.abs(rect.width - rect.height) : 999;
+  });
+  expect(adminCatalogPreviewGeometry).toBeLessThanOrEqual(1);
 
   await page.goto(`${BASE_URL}/custom.html`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#customCalculator")).toBeVisible();
@@ -440,6 +445,8 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await waitForLiveProducts(page);
 
   await expect(page.locator("#catalogTitle")).toContainText(category);
+  await expect(page.locator("[data-back-catalog]")).toContainText("В каталог");
+  await expect(page.locator(".page-back .ghost-button")).toContainText("В каталог");
   await expect(page.locator("#catalogSeoCopy")).toBeVisible();
   await expect(page.locator("#catalogSeoCopy")).toContainText(category);
   await expect(page.locator("#catalogSeoCopy")).toContainText("оптовая");
@@ -479,10 +486,12 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
       return Math.abs(rect.width - rect.height);
     };
     return {
+      card: squareDiff(".product-card__image"),
       main: squareDiff("#detailMainImage"),
       thumb: squareDiff(".product-gallery__thumb img"),
     };
   });
+  expect(imageGeometry.card).toBeLessThanOrEqual(1);
   expect(imageGeometry.main).toBeLessThanOrEqual(1);
   expect(imageGeometry.thumb).toBeLessThanOrEqual(1);
   const firstSku = await page.locator("#selectedSku").innerText();

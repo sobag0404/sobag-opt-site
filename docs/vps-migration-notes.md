@@ -29,6 +29,14 @@ Stored data includes:
 - catalog payload with PIM sidecar;
 - import batch previews/snapshots.
 
+`/api/health` reports the active store family as safe metadata:
+
+```json
+{"store":{"provider":"file","configured":true}}
+```
+
+It does not expose filesystem paths or secrets.
+
 ## Object Storage
 
 For product photos on VPS/MinIO/R2, keep using the object-storage adapter:

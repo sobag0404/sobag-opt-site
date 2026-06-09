@@ -22,6 +22,7 @@ Last updated: 2026-06-09
 - [x] Smoke tests and autofix checks.
 - [x] Separate search results page: `/search?q=...`, result count, suggestions, quick filters, exact SKU priority, production check.
 - [x] Product reviews: authorized buyer form, rating/text, approved reviews in product modal, admin moderation and persistence through existing storage/API.
+- [x] UI invariant: product photos and category/collection/holiday photos render as square 1:1 previews; selected catalog pages use `В каталог` for the top/catalog return action.
 
 ## Remaining Checklist
 

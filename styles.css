@@ -3068,16 +3068,30 @@ select[aria-invalid="true"] {
   min-width: 0;
 }
 
-.admin-image-upload img {
-  width: 100%;
+.admin-image-upload__preview {
+  display: block;
   aspect-ratio: 16 / 10;
-  object-fit: cover;
+  overflow: hidden;
   background: var(--canvas);
   border: 1px solid var(--hairline);
 }
 
-.admin-image-upload--brandLogo img {
+.admin-image-upload--square .admin-image-upload__preview {
+  aspect-ratio: 1 / 1;
+}
+
+.admin-image-upload img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-image-upload--brandLogo .admin-image-upload__preview {
   aspect-ratio: 1;
+}
+
+.admin-image-upload--brandLogo img {
   object-fit: contain;
   padding: 18px;
 }
@@ -4261,6 +4275,7 @@ main {
 .theme-tile__image {
   width: 42px;
   height: 42px;
+  aspect-ratio: 1 / 1;
   flex: 0 0 42px;
   object-fit: cover;
   background: var(--surface-soft);
@@ -6180,6 +6195,11 @@ body.theme-night .theme-toggle__track::after {
   display: none;
 }
 
+.page-back .ghost-button,
+[data-back-catalog] {
+  text-transform: none;
+}
+
 .catalog-seo-copy {
   display: grid;
   gap: 8px;
@@ -7160,4 +7180,9 @@ textarea.is-shaking {
   .hero__actual-nav button:hover {
     transform: none !important;
   }
+}
+
+.page-back .ghost-button,
+.catalog-section .catalog-return-button {
+  text-transform: none !important;
 }

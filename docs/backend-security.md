@@ -60,10 +60,12 @@ curl https://sobag-shop.online/api/health
 Expected:
 
 ```json
-{"ok":true,"storage":"ready"}
+{"ok":true,"storage":"ready","store":{"provider":"redis","configured":true}}
 ```
 
 If storage is not configured, the API returns `503` and the frontend uses the prototype fallback.
+
+The `store` object is intentionally safe: it exposes only the provider family (`redis` or `file`) and readiness flag, never URLs, tokens, paths, or credentials.
 
 ## Production Smoke
 

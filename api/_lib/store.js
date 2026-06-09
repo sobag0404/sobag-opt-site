@@ -13,6 +13,16 @@ function storeProvider() {
   return String(process.env.SOBAG_STORE_PROVIDER || "redis").trim().toLowerCase();
 }
 
+function normalizedStoreProvider() {
+  return ["file", "filesystem", "fs"].includes(storeProvider()) ? "file" : "redis";
+}
+
+function storeStatus() {
+  const provider = normalizedStoreProvider();
+  const configured = provider === "file" ? true : Boolean(redisConfig());
+  return { provider, configured };
+}
+
 function redisConfig() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -89,7 +99,7 @@ async function deleteFileStoreValue(key) {
 }
 
 function getStoreClient() {
-  if (["file", "filesystem", "fs"].includes(storeProvider())) {
+  if (normalizedStoreProvider() === "file") {
     return {
       get: readFileStoreValue,
       set: writeFileStoreValue,
@@ -258,4 +268,4 @@ async function saveSession(token, payload, ttlSeconds) {
   await getStoreClient().set(`sobag:session:${token}`, payload, { ex: ttlSeconds });
 }
 
-module.exports = { deleteSession, getCatalog, getContent, getImportBatches, getSession, getStore, saveCatalog, saveContent, saveImportBatches, saveSession, saveStore };
+module.exports = { deleteSession, getCatalog, getContent, getImportBatches, getSession, getStore, saveCatalog, saveContent, saveImportBatches, saveSession, saveStore, storeStatus };

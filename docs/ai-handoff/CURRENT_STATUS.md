@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on `main` before this VPS file-store pass:
-- `09264ce Reduce catalog query page size`
+Latest committed state currently on `main` before this health/UI invariant pass:
+- `eef2fda Add VPS file store provider`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -28,11 +28,17 @@ Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - VPS migration path now has an explicit filesystem store bridge for shared API data, while Vercel remains on Redis/KV fallback;
+- UI invariant: product photos and category/collection/holiday photos should stay square; selected catalog pages should say `В каталог` for the return action;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, and smaller public query page size;
 - SEO/content structured data covers Product/FAQ schema; production-safe public copy and first catalog landing copy slices are committed locally;
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Health/store status and catalog UI invariant slice:
+  - `/api/health` now exposes safe `store.provider/configured` status without paths, URLs, tokens, or credentials;
+  - file-store smoke verifies provider status and AutoFix includes a health store-status smoke;
+  - selected catalog pages use `В каталог` instead of `На главную`/`Категории` for the top/catalog return action;
+  - admin collection/holiday photo previews and public collection/holiday thumbnails are square 1:1; product card/detail/thumb square checks remain covered by UI smoke.
 - VPS file-store bridge slice:
   - `api/_lib/store.js` supports explicit `SOBAG_STORE_PROVIDER=file` and `SOBAG_FILE_STORE_DIR`;
   - the file backend persists shared users, sessions with TTL, orders, saved carts, favorites, reviews, editable content, catalog payload/PIM sidecar, and import batches through the existing store API;
@@ -231,6 +237,20 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current health/store status and catalog UI invariant pass:
+  - `node --check api/_lib/store.js`
+  - `node --check api/health.js`
+  - `node --check app.js`
+  - `node --check tools/autofix.mjs`
+  - `node --check tools/file-store-smoke.mjs`
+  - `node --check tools/health-store-status-smoke.mjs`
+  - `node --check tools/ui-smoke.spec.js`
+  - `node tools/file-store-smoke.mjs`
+  - `node tools/health-store-status-smoke.mjs`
+  - `git diff --check`
+  - `npm.cmd run check`
+  - focused `npm.cmd run ui:smoke -- --grep "admin import page|catalog filters"` after fixing square previews and `В каталог`;
+  - `npm.cmd run ui:smoke`: 11/11 passed after starting `npm.cmd run dev:static`; the exact static-server PID was stopped.
 - Current VPS file-store bridge pass:
   - `node --check api/_lib/store.js`
   - `node --check tools/file-store-smoke.mjs`

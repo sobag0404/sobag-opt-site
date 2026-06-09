@@ -22,6 +22,7 @@ Last updated: 2026-06-09
 - Что это за проект: B2B-сайт Sobag Opt для оптовой продажи текстиля с каталогом, вариантами товаров, корзиной-КП, заявками, аккаунтами, ролями и админ-инструментами.
 - Главная цель сейчас: двигаться по roadmap к удобному оптовому магазину: сохраненные КП 2.1, CRM заказов/клиентов, Import/PIM 2.0, SEO/content, performance, QA/security.
 - Что важно не сломать: каталог, поиск, карточку товара, корзину/КП, авторизацию, заказы, админку, storage-ready production API, текущий черно-белый дневной стиль.
+- UI invariant: фото товаров и фото категорий/подборок/праздников должны отображаться квадратом 1:1; на странице выбранной категории верхняя кнопка возврата должна называться `В каталог`, не `На главную`.
 
 ## Current User Preferences
 - Язык ответов: русский.
@@ -30,6 +31,7 @@ Last updated: 2026-06-09
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-09: added safe store provider status to `/api/health` (`store.provider/configured`) without exposing paths or secrets; added `tools/health-store-status-smoke.mjs` to AutoFix. Also locked the UI invariant requested by the user: product/category/collection/holiday photos stay square where they render as previews, and selected catalog pages show `В каталог` for the return action.
 - Current pass 2026-06-09: added a VPS-ready file store bridge. `api/_lib/store.js` now supports explicit `SOBAG_STORE_PROVIDER=file` with `SOBAG_FILE_STORE_DIR` for shared users/sessions/orders/saved carts/reviews/content/catalog/import batches, keeps Redis/KV as the default Vercel path, ignores local `.sobag-store/`, and covers the adapter with `tools/file-store-smoke.mjs` in AutoFix.
 - Current pass 2026-06-09: reduced public server-query catalog payload size. Frontend now requests `/api/catalog-query` with `pageSize=48` instead of 120, the "show more" label uses the same server page constant, and UI smoke asserts the compact page size on initial and cursor requests.
 - Current pass 2026-06-09: deepened catalog SEO landing copy. Default category descriptions are now fuller, default collection/holiday records carry editable `description`, admin content accepts `name | description | icon` while still preserving old `name | icon` rows, imported missing collections/holidays get editable placeholder descriptions, and UI smoke covers collection/holiday SEO copy.

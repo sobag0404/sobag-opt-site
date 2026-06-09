@@ -220,7 +220,7 @@ const defaultSiteContent = {
   benefitFourTitle: "Прямая связь",
   benefitFourText: "Личный менеджер и общение напрямую с производством по каждому заказу.",
   catalogTitleDefault: "Каталог продукции",
-  catalogBackButton: "категории",
+  catalogBackButton: "В каталог",
   catalogHomeTitle: "Выберите категорию",
   catalogHomeSubtitle: "Сначала раздел, потом товары и фильтры",
   catalogActualTitle: "Актуально",
@@ -702,6 +702,7 @@ function normalizeSiteContent(content = {}) {
     benefitThreeText: ["Штрихкоды, упаковка, комплектация и поставки партиями.", defaultSiteContent.benefitThreeText],
     benefitFourTitle: ["Корзина без оплаты", defaultSiteContent.benefitFourTitle],
     benefitFourText: ["Покупатель собирает корзину, менеджер уточняет наличие и условия.", defaultSiteContent.benefitFourText],
+    catalogBackButton: [["категории", "Категории"], defaultSiteContent.catalogBackButton],
     marketplaceOneText: ["Ссылка будет добавлена после подключения магазина.", defaultSiteContent.marketplaceOneText],
     marketplaceThreeText: ["Позже добавим прямую ссылку на магазин.", defaultSiteContent.marketplaceThreeText],
     businessPageLead: [
@@ -859,10 +860,11 @@ function toggleTheme() {
   applyTheme(nextTheme);
 }
 
-function updateButtonText(button, text) {
+function updateButtonText(button, text, options = {}) {
   if (!button) return;
   const icon = button.querySelector("i")?.outerHTML || "";
-  button.innerHTML = `${icon}${buttonLabel(text)}`;
+  const label = options.preserveCase ? String(text || "").trim() : buttonLabel(text);
+  button.innerHTML = `${icon}${label}`;
 }
 
 function buttonLabel(text) {
@@ -875,8 +877,8 @@ function setText(selector, value) {
   });
 }
 
-function setButtonText(selector, value) {
-  document.querySelectorAll(selector).forEach((button) => updateButtonText(button, value));
+function setButtonText(selector, value, options = {}) {
+  document.querySelectorAll(selector).forEach((button) => updateButtonText(button, value, options));
 }
 
 function phoneHref(value = "") {
@@ -1566,7 +1568,7 @@ function renderSiteContent() {
     benefitCards[index]?.querySelector("strong") && (benefitCards[index].querySelector("strong").textContent = title);
     benefitCards[index]?.querySelector("span") && (benefitCards[index].querySelector("span").textContent = text);
   });
-  setButtonText("[data-back-catalog]", content.catalogBackButton);
+  setButtonText("[data-back-catalog]", content.catalogBackButton, { preserveCase: true });
   setText("#catalogHome .catalog-home__head:not(.catalog-home__head--themes) h3", content.catalogHomeTitle);
   setText("#catalogHome .catalog-home__head:not(.catalog-home__head--themes) span", content.catalogHomeSubtitle);
   const catalogThemeHeads = document.querySelectorAll("#catalogHome .catalog-home__head--themes h3");
@@ -3871,7 +3873,7 @@ function renderCatalogHome() {
     .map(
       (collection, index) => `
         <button class="theme-tile${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-collection="${escapeHtml(collection.name)}">
-          ${collection.image ? `<img class="theme-tile__image" src="${escapeHtml(collection.image)}" alt="" ${imageAttrs(520, 320)} />` : `<i data-lucide="${escapeHtml(collection.icon)}"></i>`}
+          ${collection.image ? `<img class="theme-tile__image" src="${escapeHtml(collection.image)}" alt="" ${imageAttrs(520, 520)} />` : `<i data-lucide="${escapeHtml(collection.icon)}"></i>`}
           <span>${escapeHtml(collection.name)}</span>
         </button>
       `
@@ -3882,7 +3884,7 @@ function renderCatalogHome() {
     .map(
       (holiday, index) => `
         <button class="theme-tile${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
-          ${holiday.image ? `<img class="theme-tile__image" src="${escapeHtml(holiday.image)}" alt="" ${imageAttrs(520, 320)} />` : `<i data-lucide="${escapeHtml(holiday.icon)}"></i>`}
+          ${holiday.image ? `<img class="theme-tile__image" src="${escapeHtml(holiday.image)}" alt="" ${imageAttrs(520, 520)} />` : `<i data-lucide="${escapeHtml(holiday.icon)}"></i>`}
           <span>${escapeHtml(holiday.name)}</span>
         </button>
       `
@@ -6764,10 +6766,13 @@ function adminImageFallback(kind) {
 }
 
 function adminImageUploadHtml(kind, index, image, title, note) {
+  const squareClass = ["catalogCollections", "catalogHolidays"].includes(kind) ? " admin-image-upload--square" : "";
   return `
-    <label class="admin-image-upload admin-image-upload--${kind}">
+    <label class="admin-image-upload admin-image-upload--${kind}${squareClass}">
       <span>${title}</span>
-      <img src="${escapeHtml(image || adminImageFallback(kind))}" alt="${escapeHtml(title)}" ${imageAttrs(520, 320)} />
+      <span class="admin-image-upload__preview">
+        <img src="${escapeHtml(image || adminImageFallback(kind))}" alt="${escapeHtml(title)}" ${imageAttrs(520, 320)} />
+      </span>
       <input type="file" accept="image/*" data-content-image="${kind}" data-content-index="${index}" />
       <small>${note}</small>
     </label>
@@ -7084,8 +7089,8 @@ function adminModalHtml() {
               ${adminListTextarea("catalogCollectionsText", "Подборки", serializeSimpleList(content.catalogCollections), "Одна строка = подборка. Формат: название | описание | иконка. Старый формат название | иконка тоже поддерживается.")}
               ${adminListTextarea("catalogHolidaysText", "Праздники", serializeSimpleList(content.catalogHolidays), "Одна строка = праздник. Формат: название | описание | иконка. Старый формат название | иконка тоже поддерживается.")}
             </div>
-            ${adminCatalogImagesHtml("catalogCollections", content.catalogCollections, "Фото подборок", "Рекомендуем: 900x520 px, JPG/WebP до 1.5 МБ.")}
-            ${adminCatalogImagesHtml("catalogHolidays", content.catalogHolidays, "Фото праздников", "Рекомендуем: 900x520 px, JPG/WebP до 1.5 МБ.")}
+            ${adminCatalogImagesHtml("catalogCollections", content.catalogCollections, "Фото подборок", "Рекомендуем: квадрат 900x900 px, JPG/WebP до 1.5 МБ.")}
+            ${adminCatalogImagesHtml("catalogHolidays", content.catalogHolidays, "Фото праздников", "Рекомендуем: квадрат 900x900 px, JPG/WebP до 1.5 МБ.")}
           </div>
           ${siteTextFieldGroups.slice(3).map((group) => adminTextGroupHtml(group, content)).join("")}
             </div>
