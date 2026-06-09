@@ -551,7 +551,8 @@ let actualSlideIndex = 0;
 let actualSlideTimer = null;
 let lastFocusedElement = null;
 let catalogHomeHasAnimated = false;
-const SERVER_CATALOG_PAGE_SIZE = 48;
+const CATALOG_PAGE_SIZE = 48;
+const SERVER_CATALOG_PAGE_SIZE = CATALOG_PAGE_SIZE;
 const focusableSelector =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -569,7 +570,7 @@ const state = {
   selectedHoliday: "",
   search: "",
   sort: "popular",
-  visibleLimit: 120,
+  visibleLimit: CATALOG_PAGE_SIZE,
   serverCatalog: {
     status: "idle",
     key: "",
@@ -967,7 +968,7 @@ function hasActiveCatalogState() {
 }
 
 function resetVisibleProducts() {
-  state.visibleLimit = 120;
+  state.visibleLimit = CATALOG_PAGE_SIZE;
   resetServerCatalogList();
 }
 
@@ -4402,7 +4403,7 @@ function renderProducts() {
     } else {
       catalogLoadMore.innerHTML =
         list.length > visibleList.length
-          ? `<button class="ghost-button" type="button" data-show-more-products>Показать ещё ${Math.min(120, list.length - visibleList.length)} из ${list.length - visibleList.length}</button>`
+          ? `<button class="ghost-button" type="button" data-show-more-products>Показать ещё ${Math.min(CATALOG_PAGE_SIZE, list.length - visibleList.length)} из ${list.length - visibleList.length}</button>`
           : "";
     }
   }
@@ -8331,7 +8332,7 @@ function boot() {
     }
     if (button.dataset.showMoreProducts !== undefined) {
       if (await loadMoreServerCatalogProducts()) return;
-      state.visibleLimit += 120;
+      state.visibleLimit += CATALOG_PAGE_SIZE;
       renderProducts();
       return;
     }

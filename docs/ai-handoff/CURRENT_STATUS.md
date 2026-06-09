@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on `main` before this VPS preflight pass:
-- `841e1ee Add responsive picture rendering`
+Latest committed state currently on `main` before this local fallback catalog page-size pass:
+- `b1973d6 Add VPS environment preflight`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -31,12 +31,17 @@ Current focus:
 - VPS runtime path now has `server.mjs` for static clean URLs plus existing `/api/*` handlers;
 - VPS env readiness now has a safe local preflight script and offline self-test coverage;
 - UI invariant: product photos and category/collection/holiday photos should stay square; selected catalog pages should say `В каталог` for the return action;
-- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, and smaller public query page size;
+- Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, smaller public query page size, and smaller local fallback pages;
 - Responsive product images now have frontend `<picture>` selection for stored AVIF/WebP variants; real migrated catalog validation is still pending.
 - SEO/content structured data covers Product/FAQ schema; production-safe public copy and first catalog landing copy slices are committed locally;
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Local fallback catalog page-size slice:
+  - introduced shared `CATALOG_PAGE_SIZE=48`;
+  - server-query page size still uses 48;
+  - client fallback visible limit and "show more" increments now use 48 instead of 120 when `/api/catalog-query` is unavailable;
+  - UI smoke covers the unavailable `/api/catalog-query` fallback path and verifies 48/96-card paging.
 - VPS env preflight slice:
   - added `tools/vps-preflight.mjs`;
   - `preflight:vps` checks Node 20+, `server.mjs`, file-store provider/env/writability, bootstrap admin env, and S3-compatible object-storage env;
@@ -262,6 +267,12 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current local fallback catalog page-size pass:
+  - `node --check app.js`
+  - `node --check tools/ui-smoke.spec.js`
+  - focused `npm.cmd run ui:smoke -- --grep "catalog local fallback|catalog filters|catalog list renders server query"`: 3/3 passed after starting `npm.cmd run dev:static`; exact static-server PID `15144` was stopped.
+  - `npm.cmd run check`
+  - `npm.cmd run ui:smoke`: 12/12 passed after starting `npm.cmd run dev:static`; exact static-server PID `20852` was stopped.
 - Current VPS preflight pass:
   - `node --check tools/vps-preflight.mjs`
   - `node --check tools/autofix.mjs`

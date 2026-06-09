@@ -199,6 +199,24 @@ async function largestCategory(page) {
   });
 }
 
+async function largestCategoryInfo(page) {
+  return page.evaluate(async () => {
+    let response = await fetch("/api/catalog");
+    if (!response.ok) response = await fetch("/data/products-live.json");
+    const data = await response.json();
+    const products = Array.isArray(data) ? data : data.products;
+    const counts = new Map();
+    (products || [])
+      .filter((product) => (product.status || "published") === "published" && product.hidden !== true)
+      .forEach((product) => {
+        const values = Array.isArray(product.categories) && product.categories.length ? product.categories : [product.category || product.type || ""];
+        values.filter(Boolean).forEach((name) => counts.set(name, (counts.get(name) || 0) + 1));
+      });
+    const [category, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] || ["", 0];
+    return { category, count };
+  });
+}
+
 async function expectNoHorizontalOverflow(page, label = page.url()) {
   const overflow = await page.evaluate(() => {
     const root = document.documentElement;
@@ -260,6 +278,24 @@ test("catalog navigation and favorite toggles do not reload the same document", 
   await favorite.click();
   await expect(favorite).toHaveAttribute("aria-pressed", "false");
   await expect.poll(() => page.evaluate(() => Number(localStorage.getItem("__sobagQaDocumentLoads") || "0"))).toBe(0);
+});
+
+test("catalog local fallback renders compact product pages", async ({ page }) => {
+  const { category, count } = await largestCategoryInfo(page);
+  test.skip(count <= 48, "largest fixture category is too small for compact fallback pagination");
+  await page.route("**/api/catalog-query?**", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({ error: "qa_server_query_unavailable" }),
+    });
+  });
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page, 0);
+  await expect(page.locator(".product-card")).toHaveCount(48);
+  await expect(page.locator("[data-show-more-products]")).toContainText(`Показать ещё ${Math.min(48, count - 48)} из ${count - 48}`);
+  await page.locator("[data-show-more-products]").click();
+  await expect(page.locator(".product-card")).toHaveCount(Math.min(96, count));
 });
 
 test("account favorites are per-user and orders can be repeated into cart", async ({ page }) => {

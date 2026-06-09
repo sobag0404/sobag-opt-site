@@ -81,6 +81,7 @@ Last updated: 2026-06-09
      - [ ] Validate WebP/AVIF behavior on the real migrated catalog image set.
    - [ ] Catalog virtualization or smaller server pages.
      - [x] Smaller public catalog page payload: frontend now requests `/api/catalog-query` with the server default `pageSize=48` instead of 120, and UI smoke asserts the request size.
+     - [x] Smaller local fallback catalog pages: when `/api/catalog-query` is unavailable, the client renders 48 cards per step instead of 120.
    - [ ] Core Web Vitals audit after real catalog growth.
 
 6. [planned] QA/security/ops:
