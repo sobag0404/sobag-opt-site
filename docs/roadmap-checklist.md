@@ -85,6 +85,7 @@ Last updated: 2026-06-09
 
 6. [planned] QA/security/ops:
    - [x] VPS runtime path: `server.mjs` serves static clean URLs plus existing `/api/*` handlers, with file-store read/write smoke coverage and Vercel fallback preserved.
+   - [x] VPS env preflight: `tools/vps-preflight.mjs` checks Node 20+, file-store readiness, bootstrap admin env, and S3-compatible object-storage env without printing secrets; AutoFix covers the self-test fixture.
    - [x] Stronger mojibake guard in AutoFix.
    - [x] Automated production smoke after deploy.
      - [x] Read-only production smoke script for `/`, `/catalog`, `/cart`, and `/api/health`, with offline self-test in AutoFix.

@@ -31,6 +31,7 @@ Last updated: 2026-06-09
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-09: added VPS environment preflight coverage. `tools/vps-preflight.mjs` checks Node 20+, `server.mjs`, file-store provider/env/writability, bootstrap admin env, and S3-compatible object-storage env without printing secrets. Added npm scripts `preflight:vps` and `preflight:vps:self-test`; AutoFix runs the self-test fixture.
 - Current pass 2026-06-09: added frontend `<picture>` selection for stored responsive product image variants. Product cards, related product cards, product modal main image/gallery thumbnails, and admin product previews now render AVIF sources first and WebP fallback before the original image, while preserving square 1:1 layouts.
 - Current pass 2026-06-09: added VPS API write smoke coverage. `tools/vps-write-smoke.mjs` runs `server.mjs` with a temporary file store and fake smoke credentials, then verifies admin login/content save, buyer registration/session, order creation, buyer comments, admin order status/internal note update, buyer internal-note filtering, and admin order visibility. Added npm script `smoke:vps:write` and AutoFix coverage.
 - Current pass 2026-06-09: added `server.mjs` as the VPS runtime path. It serves static files with clean URLs and dispatches the existing `/api/*` handlers, keeps Vercel fallback unchanged, adds npm scripts `start:vps`/`smoke:vps`, and covers the path with `tools/vps-server-smoke.mjs` in AutoFix.
@@ -82,6 +83,7 @@ Last updated: 2026-06-09
 
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `node`, `npm.cmd`, `python`, and `py` are available in PATH on this device.
+- Current VPS preflight pass verification: `node --check tools/vps-preflight.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `npm.cmd run preflight:vps:self-test`; `npm.cmd run check`.
 - Current AVIF/WebP picture pass verification: `node --check app.js`; `node --check tools/ui-smoke.spec.js`; focused `npm.cmd run ui:smoke -- --grep "product modal hydrates detail|catalog list renders server query|catalog filters"` 3/3 after `npm.cmd run dev:static` with PID `7644` stopped; `npm.cmd run check`; full `npm.cmd run ui:smoke` 11/11 after `npm.cmd run dev:static` with PID `22064` stopped.
 - Current VPS API write-smoke pass verification: `node --check tools/vps-write-smoke.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `npm.cmd run smoke:vps:write`; `git diff --check`; `npm.cmd run check`; `npm.cmd run ui:smoke` 11/11 after `npm.cmd run dev:static`; exact static-server PID `19768` was stopped.
 - Current business FAQ schema pass verification: `node --check app.js`; `node --check tools/ui-smoke.spec.js`; `git diff --check`; `python -m py_compile tools/product_importer.py tools/publish_imported_products.py tools/audit_catalog.py`; `npm.cmd run check`; focused smoke `npm.cmd run ui:smoke -- --grep "business page exposes visible FAQ"`; full `npm.cmd run ui:smoke`.

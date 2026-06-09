@@ -59,10 +59,12 @@ Keep Vercel configured with Redis/KV and Vercel Blob/S3 env as a fallback path. 
 
 ## Runtime
 
-The VPS entrypoint is:
+After configuring the environment above, the VPS entrypoint is:
 
 ```bash
 npm ci
+npm run preflight:vps
+
 SOBAG_STORE_PROVIDER=file \
 SOBAG_FILE_STORE_DIR=/var/lib/sobag-opt/store \
 PORT=3000 \
@@ -76,6 +78,8 @@ npm run start:vps
 npm run smoke:vps
 npm run smoke:vps:write
 ```
+
+`preflight:vps` checks Node 20+, `server.mjs`, file-store provider/env/writability, bootstrap admin env, and S3-compatible object-storage readiness. It writes and deletes only its own `.sobag-preflight-*.tmp` probe file in the configured file-store directory. It prints only safe status/check names and never prints secret values. Use `npm run preflight:vps:self-test` for the offline fixture check covered by AutoFix.
 
 `smoke:vps` checks read-only public/runtime routes. `smoke:vps:write` uses a temporary file-store directory and fake smoke credentials to verify admin login/content save, buyer registration/session, order creation, buyer comments, admin order updates, and internal-note filtering.
 

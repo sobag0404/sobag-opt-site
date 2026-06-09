@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on `main` before this AVIF/WebP picture pass:
-- `3e1df9f Add VPS API write smoke`
+Latest committed state currently on `main` before this VPS preflight pass:
+- `841e1ee Add responsive picture rendering`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -29,6 +29,7 @@ Current focus:
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - VPS migration path now has an explicit filesystem store bridge for shared API data, while Vercel remains on Redis/KV fallback;
 - VPS runtime path now has `server.mjs` for static clean URLs plus existing `/api/*` handlers;
+- VPS env readiness now has a safe local preflight script and offline self-test coverage;
 - UI invariant: product photos and category/collection/holiday photos should stay square; selected catalog pages should say `В каталог` for the return action;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, and smaller public query page size;
 - Responsive product images now have frontend `<picture>` selection for stored AVIF/WebP variants; real migrated catalog validation is still pending.
@@ -36,6 +37,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS env preflight slice:
+  - added `tools/vps-preflight.mjs`;
+  - `preflight:vps` checks Node 20+, `server.mjs`, file-store provider/env/writability, bootstrap admin env, and S3-compatible object-storage env;
+  - output uses only safe status/check names and does not print secret values;
+  - added npm scripts `preflight:vps` and `preflight:vps:self-test`;
+  - AutoFix runs the offline self-test fixture.
 - AVIF/WebP product image rendering slice:
   - product cards, related product cards, product modal main image/gallery thumbnails, and admin product previews now render `<picture>`;
   - stored responsive variants are emitted as AVIF `<source>` first, WebP `<source>` second, and the original image remains the fallback;
@@ -255,6 +262,12 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current VPS preflight pass:
+  - `node --check tools/vps-preflight.mjs`
+  - `node --check tools/autofix.mjs`
+  - package JSON parse
+  - `npm.cmd run preflight:vps:self-test`
+  - `npm.cmd run check`
 - Current AVIF/WebP picture pass:
   - `node --check app.js`
   - `node --check tools/ui-smoke.spec.js`
