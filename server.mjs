@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 const root = resolve(process.cwd());
+const { handleApiRequest } = require("./api-router");
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
@@ -30,28 +31,6 @@ const securityHeaders = {
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
   "X-Frame-Options": "SAMEORIGIN",
 };
-
-const apiRoutes = new Map(
-  [
-    ["/api/catalog", "./api/catalog.js"],
-    ["/api/catalog-query", "./api/catalog-query.js"],
-    ["/api/catalog-detail", "./api/catalog-detail.js"],
-    ["/api/content", "./api/content.js"],
-    ["/api/health", "./api/health.js"],
-    ["/api/orders", "./api/orders.js"],
-    ["/api/auth/login", "./api/auth/login.js"],
-    ["/api/auth/logout", "./api/auth/logout.js"],
-    ["/api/auth/me", "./api/auth/me.js"],
-    ["/api/auth/register", "./api/auth/register.js"],
-    ["/api/admin/catalog", "./api/admin/catalog.js"],
-    ["/api/admin/content", "./api/admin/content.js"],
-    ["/api/admin/import-batches", "./api/admin/import-batches.js"],
-    ["/api/admin/orders", "./api/admin/orders.js"],
-    ["/api/admin/pim", "./api/admin/pim.js"],
-    ["/api/admin/product-images", "./api/admin/product-images.js"],
-    ["/api/admin/users", "./api/admin/users.js"],
-  ].map(([route, file]) => [route, require(file)])
-);
 
 function applySecurityHeaders(response) {
   Object.entries(securityHeaders).forEach(([key, value]) => response.setHeader(key, value));
@@ -84,16 +63,9 @@ function resolveStaticFile(pathname) {
     .find((filePath) => isInsideRoot(filePath) && existsSync(filePath) && statSync(filePath).isFile());
 }
 
-function routeKey(pathname) {
-  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-  return normalized || "/";
-}
-
 async function handleApi(request, response, pathname) {
-  const handler = apiRoutes.get(routeKey(pathname));
-  if (!handler) return false;
   applySecurityHeaders(response);
-  await handler(request, response);
+  await handleApiRequest(request, response, pathname);
   return true;
 }
 

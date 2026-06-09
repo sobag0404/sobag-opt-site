@@ -5,24 +5,24 @@ import { join, relative, sep } from "node:path";
 const root = process.cwd();
 
 const routeMatrix = [
-  { file: "api/catalog.js", route: "/api/catalog", methods: ["GET"], access: "public" },
-  { file: "api/catalog-query.js", route: "/api/catalog-query", methods: ["GET"], access: "public" },
-  { file: "api/catalog-detail.js", route: "/api/catalog-detail", methods: ["GET"], access: "public" },
-  { file: "api/content.js", route: "/api/content", methods: ["GET"], access: "public" },
-  { file: "api/health.js", route: "/api/health", methods: ["GET"], access: "public" },
-  { file: "api/auth/login.js", route: "/api/auth/login", methods: ["POST"], access: "public" },
-  { file: "api/auth/register.js", route: "/api/auth/register", methods: ["POST"], access: "public" },
-  { file: "api/auth/logout.js", route: "/api/auth/logout", methods: ["POST"], access: "optional-session" },
-  { file: "api/auth/me.js", route: "/api/auth/me", methods: ["GET", "PUT"], access: "session-owned", writeMethods: ["PUT"] },
-  { file: "api/orders.js", route: "/api/orders", methods: ["POST", "PATCH"], access: "mixed", writeMethods: ["POST", "PATCH"], ownerMethod: "PATCH" },
-  { file: "api/admin/catalog.js", route: "/api/admin/catalog", methods: ["GET", "PUT"], access: "role", roles: ["admin", "content"] },
-  { file: "api/admin/content.js", route: "/api/admin/content", methods: ["GET", "PATCH", "PUT"], access: "role", roles: ["admin", "content"] },
-  { file: "api/admin/import-batches.js", route: "/api/admin/import-batches", methods: ["GET", "POST"], access: "role", roles: ["admin", "content"] },
-  { file: "api/admin/orders.js", route: "/api/admin/orders", methods: ["GET", "PATCH"], access: "role", roles: ["admin", "manager"] },
-  { file: "api/admin/pim.js", route: "/api/admin/pim", methods: ["GET"], access: "role", roles: ["admin", "content"] },
-  { file: "api/admin/product-images.js", route: "/api/admin/product-images", methods: ["GET", "POST", "DELETE"], access: "role", roles: ["admin", "content"] },
+  { file: "server-routes/catalog.js", route: "/api/catalog", methods: ["GET"], access: "public" },
+  { file: "server-routes/catalog-query.js", route: "/api/catalog-query", methods: ["GET"], access: "public" },
+  { file: "server-routes/catalog-detail.js", route: "/api/catalog-detail", methods: ["GET"], access: "public" },
+  { file: "server-routes/content.js", route: "/api/content", methods: ["GET"], access: "public" },
+  { file: "server-routes/health.js", route: "/api/health", methods: ["GET"], access: "public" },
+  { file: "server-routes/auth/login.js", route: "/api/auth/login", methods: ["POST"], access: "public" },
+  { file: "server-routes/auth/register.js", route: "/api/auth/register", methods: ["POST"], access: "public" },
+  { file: "server-routes/auth/logout.js", route: "/api/auth/logout", methods: ["POST"], access: "optional-session" },
+  { file: "server-routes/auth/me.js", route: "/api/auth/me", methods: ["GET", "PUT"], access: "session-owned", writeMethods: ["PUT"] },
+  { file: "server-routes/orders.js", route: "/api/orders", methods: ["POST", "PATCH"], access: "mixed", writeMethods: ["POST", "PATCH"], ownerMethod: "PATCH" },
+  { file: "server-routes/admin/catalog.js", route: "/api/admin/catalog", methods: ["GET", "PUT"], access: "role", roles: ["admin", "content"] },
+  { file: "server-routes/admin/content.js", route: "/api/admin/content", methods: ["GET", "PATCH", "PUT"], access: "role", roles: ["admin", "content"] },
+  { file: "server-routes/admin/import-batches.js", route: "/api/admin/import-batches", methods: ["GET", "POST"], access: "role", roles: ["admin", "content"] },
+  { file: "server-routes/admin/orders.js", route: "/api/admin/orders", methods: ["GET", "PATCH"], access: "role", roles: ["admin", "manager"] },
+  { file: "server-routes/admin/pim.js", route: "/api/admin/pim", methods: ["GET"], access: "role", roles: ["admin", "content"] },
+  { file: "server-routes/admin/product-images.js", route: "/api/admin/product-images", methods: ["GET", "POST", "DELETE"], access: "role", roles: ["admin", "content"] },
   {
-    file: "api/admin/users.js",
+    file: "server-routes/admin/users.js",
     route: "/api/admin/users",
     methods: ["GET", "PATCH"],
     access: "role",
@@ -45,9 +45,9 @@ function normalizePath(path) {
 }
 
 function apiRouteFiles() {
-  return walk(join(root, "api"))
+  return walk(join(root, "server-routes"))
     .map((file) => normalizePath(relative(root, file)))
-    .filter((file) => !file.startsWith("api/_lib/"))
+    .filter((file) => !file.startsWith("server-routes/_lib/"))
     .sort();
 }
 
@@ -56,7 +56,7 @@ function readRoute(file) {
 }
 
 function routeForFile(file) {
-  return `/${file.replace(/\.js$/, "").replace(/\/index$/, "").replace(/^api\//, "api/")}`;
+  return `/${file.replace(/\.js$/, "").replace(/\/index$/, "").replace(/^server-routes\//, "api/")}`;
 }
 
 function rolesLiteral(roles = []) {

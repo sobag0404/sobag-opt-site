@@ -35,7 +35,7 @@ delete process.env.KV_REST_API_TOKEN;
 delete process.env.UPSTASH_REDIS_REST_URL;
 delete process.env.UPSTASH_REDIS_REST_TOKEN;
 
-const health = require("../api/health.js");
+const health = require("../server-routes/health.js");
 const res = makeResponse();
 await health({ method: "GET" }, res);
 const payload = JSON.parse(res.body || "{}");

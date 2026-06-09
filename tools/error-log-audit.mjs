@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url);
 const root = process.cwd();
 const { handleError } = require("../api/_lib/http.js");
 
-const directErrorRoutes = new Set(["api/health.js"]);
+const directErrorRoutes = new Set(["server-routes/health.js"]);
 
 function walk(dir, found = []) {
   for (const item of readdirSync(dir, { withFileTypes: true })) {
@@ -23,9 +23,9 @@ function normalizePath(path) {
 }
 
 function apiRouteFiles() {
-  return walk(join(root, "api"))
+  return walk(join(root, "server-routes"))
     .map((file) => normalizePath(relative(root, file)))
-    .filter((file) => !file.startsWith("api/_lib/"))
+    .filter((file) => !file.startsWith("server-routes/_lib/"))
     .sort();
 }
 

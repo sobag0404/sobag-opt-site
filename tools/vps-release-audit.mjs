@@ -6,10 +6,13 @@ const root = process.cwd();
 
 const REQUIRED_FILES = [
   "server.mjs",
+  "api-router.js",
+  "api/[...path].js",
   "package.json",
   "vercel.json",
   "api/_lib/store.js",
   "api/_lib/object-storage.js",
+  "server-routes/health.js",
   "tools/vps-preflight.mjs",
   "tools/vps-server-smoke.mjs",
   "tools/vps-write-smoke.mjs",
