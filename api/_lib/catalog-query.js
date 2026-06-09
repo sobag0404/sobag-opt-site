@@ -121,6 +121,33 @@ function hasAny(source, selected = []) {
   return selected.some((item) => values.has(normalize(item)));
 }
 
+function productFilterValues(product) {
+  return {
+    category: productCategories(product),
+    collection: list(product?.collections),
+    holiday: list(product?.holidays),
+    tag: list(product?.tags),
+    type: list(product?.types),
+    size: list(product?.sizes),
+    material: list(product?.materials),
+    stock: list(product?.stock),
+  };
+}
+
+function productFilterIndex(product) {
+  const values = productFilterValues(product);
+  const normalized = Object.fromEntries(
+    Object.entries(values).map(([key, items]) => [key, new Set(items.map(normalize))])
+  );
+  return { values, normalized };
+}
+
+function hasAnyIndexed(index, group, selected = []) {
+  if (!selected.length) return true;
+  const values = index?.normalized?.[group] || new Set();
+  return selected.some((item) => values.has(normalize(item)));
+}
+
 function productMatchesFilters(product, filters) {
   const safeFilters = filters || {};
   if (!hasAny(productCategories(product), safeFilters.category)) return false;
@@ -132,6 +159,11 @@ function productMatchesFilters(product, filters) {
   if (!hasAny(product?.materials, safeFilters.material)) return false;
   if ((safeFilters.stock || []).length && !safeFilters.stock.some((stock) => normalize(stock) === normalize(product?.stock))) return false;
   return true;
+}
+
+function productMatchesFilterIndex(index, filters) {
+  const safeFilters = filters || {};
+  return Object.keys(FACET_BUCKETS).every((group) => hasAnyIndexed(index, group, safeFilters[group]));
 }
 
 function parseValues(params, names) {
@@ -180,17 +212,18 @@ function decodeCursor(value) {
   }
 }
 
-function productCard(product, summary = variantSummary(product)) {
+function productCard(product, summary = variantSummary(product), filterValues = productFilterValues(product)) {
   const image = firstImageMetadata(product);
+  const categories = filterValues.category || productCategories(product);
   return {
     id: text(product?.id || product?.baseSku),
     baseSku: text(product?.baseSku),
     name: text(product?.name),
-    category: productCategories(product)[0] || "",
-    categories: productCategories(product),
-    collections: list(product?.collections),
-    holidays: list(product?.holidays),
-    tags: list(product?.tags),
+    category: categories[0] || "",
+    categories,
+    collections: filterValues.collection || list(product?.collections),
+    holidays: filterValues.holiday || list(product?.holidays),
+    tags: filterValues.tag || list(product?.tags),
     badge: text(product?.badge),
     description: text(product?.description),
     stock: text(product?.stock),
@@ -257,6 +290,36 @@ function facetBuckets(products) {
   );
 }
 
+function facetBucketsFromItems(items) {
+  const buckets = Object.fromEntries(Object.values(FACET_BUCKETS).map((bucket) => [bucket, new Map()]));
+  const add = (bucket, values) => {
+    list(values).forEach((value) => {
+      const key = normalize(value);
+      buckets[bucket].set(key, { value, count: (buckets[bucket].get(key)?.count || 0) + 1 });
+    });
+  };
+  items.forEach((item) => {
+    Object.entries(FACET_BUCKETS).forEach(([group, bucket]) => add(bucket, item.filterValues[group]));
+  });
+  return Object.fromEntries(
+    Object.entries(buckets).map(([key, map]) => [
+      key,
+      [...map.values()].sort((a, b) => a.value.localeCompare(b.value, "ru", { sensitivity: "base", numeric: true })),
+    ])
+  );
+}
+
+function facetBucketForGroup(items, group) {
+  const map = new Map();
+  items.forEach((item) => {
+    list(item.filterValues[group]).forEach((value) => {
+      const key = normalize(value);
+      map.set(key, { value, count: (map.get(key)?.count || 0) + 1 });
+    });
+  });
+  return [...map.values()].sort((a, b) => a.value.localeCompare(b.value, "ru", { sensitivity: "base", numeric: true }));
+}
+
 function filtersWithoutGroup(filters = {}, group) {
   return Object.fromEntries(
     Object.keys(FACET_BUCKETS).map((key) => [key, key === group ? [] : list(filters[key])])
@@ -266,10 +329,9 @@ function filtersWithoutGroup(filters = {}, group) {
 function facetOptionBuckets(scoredItems, filters = {}) {
   return Object.fromEntries(
     Object.entries(FACET_BUCKETS).map(([group, bucket]) => {
-      const products = scoredItems
-        .filter((item) => productMatchesFilters(item.product, filtersWithoutGroup(filters, group)))
-        .map((item) => item.product);
-      return [bucket, facetBuckets(products)[bucket] || []];
+      const groupFilters = filtersWithoutGroup(filters, group);
+      const items = scoredItems.filter((item) => productMatchesFilterIndex(item.filterIndex, groupFilters));
+      return [bucket, facetBucketForGroup(items, group)];
     })
   );
 }
@@ -297,27 +359,34 @@ function queryCatalog(products = [], options = {}) {
     pageSize: Math.min(MAX_PAGE_SIZE, Math.max(1, Number(options.pageSize || DEFAULT_PAGE_SIZE) || DEFAULT_PAGE_SIZE)),
     offset: Math.max(0, Number(options.offset || 0) || 0),
   };
+  const needsVariantSummary =
+    Boolean(query.q) ||
+    Boolean(query.minPrice) ||
+    Boolean(query.maxPrice) ||
+    query.sort === "price_asc" ||
+    query.sort === "price_desc";
   const scored = publicItems
     .map((product) => {
-      const summary = variantSummary(product);
-      const score = scoreProduct(product, query.q, summary.skus);
-      return { product, summary, score };
+      const summary = needsVariantSummary ? variantSummary(product) : null;
+      const score = query.q ? scoreProduct(product, query.q, summary.skus) : 1;
+      const filterIndex = productFilterIndex(product);
+      return { product, summary, score, filterIndex, filterValues: filterIndex.values };
     })
     .filter((item) => (!query.q ? true : item.score > 0))
     .filter((item) => !query.minPrice || item.summary.maxPrice >= query.minPrice)
     .filter((item) => !query.maxPrice || item.summary.minPrice <= query.maxPrice);
 
   const prepared = scored
-    .filter((item) => productMatchesFilters(item.product, query.filters))
+    .filter((item) => productMatchesFilterIndex(item.filterIndex, query.filters))
     .sort((a, b) => compareProducts(a, b, query.sort));
 
   const offset = Math.min(query.offset, prepared.length);
   const pageItems = prepared.slice(offset, offset + query.pageSize);
   const nextOffset = offset + pageItems.length;
   return {
-    items: pageItems.map((item) => productCard(item.product, item.summary)),
+    items: pageItems.map((item) => productCard(item.product, item.summary || variantSummary(item.product), item.filterValues)),
     total: prepared.length,
-    facets: facetBuckets(prepared.map((item) => item.product)),
+    facets: facetBucketsFromItems(prepared),
     facetOptions: facetOptionBuckets(scored, query.filters),
     pageInfo: {
       page: Math.floor(offset / query.pageSize) + 1,

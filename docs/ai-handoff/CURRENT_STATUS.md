@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on local `main`:
-- `cd84b78 Add file store backup helper`
+Latest committed state currently on local `main` before this catalog-query scale pass:
+- `ee3285f Document catalog image UI invariant`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -38,6 +38,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Catalog query scale/performance slice:
+  - added `tools/catalog-query-scale-smoke.mjs` and npm script `smoke:catalog:scale`;
+  - AutoFix now runs the offline synthetic 10k catalog query smoke;
+  - scale smoke verifies published-only filtering, 48-card cursor pages, compact card payloads without full variants/images, exact SKU lookup, and detail hydration;
+  - optimized `api/_lib/catalog-query.js` to reuse prepared filter values/facet buckets and lazily generate variant summaries for list queries that do not need price/search data.
 - VPS file-store backup/restore slice:
   - added `tools/file-store-backup.mjs`;
   - backup mode copies only file-store JSON records into a timestamped backup folder and writes `manifest.json`;
@@ -275,6 +280,15 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current catalog query scale pass:
+  - `node --check api/_lib/catalog-query.js`
+  - `node --check tools/catalog-query-scale-smoke.mjs`
+  - `node --check tools/catalog-query-smoke.mjs`
+  - package JSON parse
+  - `node tools/catalog-query-smoke.mjs`
+  - `npm.cmd run smoke:catalog:scale`: passed for 10000 synthetic products with 48-card pages.
+  - `npm.cmd run check`: passed, includes the new scale smoke.
+  - `npm.cmd run ui:smoke`: 12/12 passed after starting `npm.cmd run dev:static`; exact static-server PID `19524` was stopped.
 - Current VPS file-store backup pass:
   - `node --check tools/file-store-backup.mjs`
   - `node --check tools/autofix.mjs`

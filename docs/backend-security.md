@@ -96,3 +96,4 @@ It also includes the API error-log audit from `tools/error-log-audit.mjs`; see `
 It also includes the VPS runtime smokes from `tools/vps-server-smoke.mjs` and `tools/vps-write-smoke.mjs`.
 It also includes the offline VPS env preflight fixture from `tools/vps-preflight.mjs --self-test`.
 It also includes the offline file-store backup/restore fixture from `tools/file-store-backup.mjs --self-test`.
+It also includes the offline 10k-product catalog query scale smoke from `tools/catalog-query-scale-smoke.mjs`.

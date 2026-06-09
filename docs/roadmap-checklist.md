@@ -76,6 +76,7 @@ Last updated: 2026-06-09
        - [x] Catalog/search list rendering now uses `/api/catalog-query` compact cards and cursor pagination with local fallback.
      - [x] Full server-side facet UI migration beyond the current fallback filter controls: `/api/catalog-query` now returns `facetOptions`, and visible catalog/search filters use them with local fallback.
      - [x] Avoid full `/api/catalog` bootstrap on public server-query listing pages when `/api/catalog-query` succeeds, with full/static fallback when the query endpoint is unavailable.
+     - [x] 10k catalog query scale smoke and helper optimization: AutoFix now covers synthetic 10k published-only pagination, compact card payloads, exact SKU lookup, and detail hydration.
    - [ ] Image storage with responsive WebP/AVIF variants.
      - [x] Frontend `<picture>` rendering uses stored AVIF sources first and WebP fallback for product cards, related cards, product modal/gallery, and admin product previews.
      - [ ] Validate WebP/AVIF behavior on the real migrated catalog image set.

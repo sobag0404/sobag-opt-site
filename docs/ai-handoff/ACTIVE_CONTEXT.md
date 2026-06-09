@@ -31,6 +31,7 @@ Last updated: 2026-06-09
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-09: added offline 10k catalog-query scale smoke and optimized query helper facet/list work. `tools/catalog-query-scale-smoke.mjs` builds a synthetic 10k published catalog from existing fixture shape, verifies 48-card cursor pages, compact list payloads without full variants/images, published-only filtering, exact SKU lookup, and detail hydration. AutoFix and `npm run smoke:catalog:scale` run the smoke.
 - Current pass 2026-06-09: added VPS file-store backup/restore helper. `tools/file-store-backup.mjs` copies only JSON file-store records into timestamped backup folders with a manifest, supports guarded restore with `--force`, ignores local `sobag-store-backups/`, and AutoFix runs the offline self-test fixture.
 - Current pass 2026-06-09: reduced local fallback catalog rendering step to 48 cards. The same `CATALOG_PAGE_SIZE` now drives server query page size and client fallback visible-limit/show-more increments; UI smoke covers the fallback path when `/api/catalog-query` is unavailable.
 - Current pass 2026-06-09: added VPS environment preflight coverage. `tools/vps-preflight.mjs` checks Node 20+, `server.mjs`, file-store provider/env/writability, bootstrap admin env, and S3-compatible object-storage env without printing secrets. Added npm scripts `preflight:vps` and `preflight:vps:self-test`; AutoFix runs the self-test fixture.
@@ -85,6 +86,7 @@ Last updated: 2026-06-09
 
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `node`, `npm.cmd`, `python`, and `py` are available in PATH on this device.
+- Current catalog-query scale pass verification: `node --check api/_lib/catalog-query.js`; `node --check tools/catalog-query-scale-smoke.mjs`; `node --check tools/catalog-query-smoke.mjs`; package JSON parse; `node tools/catalog-query-smoke.mjs`; `npm.cmd run smoke:catalog:scale`; `npm.cmd run check`; `npm.cmd run ui:smoke` 12/12 after `npm.cmd run dev:static`, exact static-server PID `19524` stopped.
 - Current file-store backup pass verification: `node --check tools/file-store-backup.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `npm.cmd run backup:store:self-test`; `npm.cmd run check`.
 - Current local fallback catalog page-size pass verification: `node --check app.js`; `node --check tools/ui-smoke.spec.js`; focused `npm.cmd run ui:smoke -- --grep "catalog local fallback|catalog filters|catalog list renders server query"` 3/3 after `npm.cmd run dev:static` with PID `15144` stopped; `npm.cmd run check`; full `npm.cmd run ui:smoke` 12/12 after `npm.cmd run dev:static` with PID `20852` stopped.
 - Current VPS preflight pass verification: `node --check tools/vps-preflight.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `npm.cmd run preflight:vps:self-test`; `npm.cmd run check`.
