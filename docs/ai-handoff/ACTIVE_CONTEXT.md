@@ -31,6 +31,7 @@ Last updated: 2026-06-09
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-09: added offline VPS release audit. `tools/vps-release-audit.mjs` checks required VPS/Vercel fallback files and scripts, ignore rules for local outputs/raw photos/secrets, and forbidden tracked artifacts. AutoFix runs the audit plus self-test.
 - Current pass 2026-06-09: added offline normalized PIM export for future DB/storage split. `tools/pim-export-normalized.mjs` reads products JSON, builds current PIM sidecar tables, validates product/variant/image/taxonomy references, and can write ignored JSONL files plus manifest under `local-import-output/pim-normalized`; AutoFix runs dry-run and self-test.
 - Current pass 2026-06-09: added offline image metadata audit for future real photo migration. `tools/image-metadata-audit.mjs` checks product `images` metadata shape, providers, dimensions, duplicate keys, and WebP/AVIF variant records; strict mode can require published products to have complete square responsive metadata before VPS publication. AutoFix runs the current catalog audit and self-test fixture.
 - Current pass 2026-06-09: added offline 10k catalog-query scale smoke and optimized query helper facet/list work. `tools/catalog-query-scale-smoke.mjs` builds a synthetic 10k published catalog from existing fixture shape, verifies 48-card cursor pages, compact list payloads without full variants/images, published-only filtering, exact SKU lookup, and detail hydration. AutoFix and `npm run smoke:catalog:scale` run the smoke.
@@ -88,6 +89,7 @@ Last updated: 2026-06-09
 
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `node`, `npm.cmd`, `python`, and `py` are available in PATH on this device.
+- Current VPS release audit pass verification: `node --check tools/vps-release-audit.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `npm.cmd run audit:vps-release`; `node tools/vps-release-audit.mjs --self-test`; `npm.cmd run check`.
 - Current normalized PIM export pass verification: `node --check tools/pim-export-normalized.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `node tools/pim-export-normalized.mjs --dry-run`; `node tools/pim-export-normalized.mjs --self-test`; `npm.cmd run check`.
 - Current image metadata audit pass verification: `node --check tools/image-metadata-audit.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `npm.cmd run audit:images`; `node tools/image-metadata-audit.mjs --self-test`; `npm.cmd run check`.
 - Current catalog-query scale pass verification: `node --check api/_lib/catalog-query.js`; `node --check tools/catalog-query-scale-smoke.mjs`; `node --check tools/catalog-query-smoke.mjs`; package JSON parse; `node tools/catalog-query-smoke.mjs`; `npm.cmd run smoke:catalog:scale`; `npm.cmd run check`; `npm.cmd run ui:smoke` 12/12 after `npm.cmd run dev:static`, exact static-server PID `19524` stopped.

@@ -24,6 +24,7 @@
     "ui:smoke": "playwright test tools/ui-smoke.spec.js",
     "audit:catalog": "python tools/audit_catalog.py",
     "audit:images": "node tools/image-metadata-audit.mjs",
+    "audit:vps-release": "node tools/vps-release-audit.mjs",
     "audit:access": "node tools/access-audit.mjs",
     "audit:errors": "node tools/error-log-audit.mjs"
   },

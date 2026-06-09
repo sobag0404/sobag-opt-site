@@ -4,6 +4,14 @@ Last updated: 2026-06-09
 
 These notes prepare the VPS path without changing production data or Vercel fallback behavior.
 
+Run the local release audit before VPS packaging:
+
+```bash
+npm run audit:vps-release
+```
+
+It is offline. It checks required VPS/Vercel fallback scripts, runtime files, ignore rules, and tracked-file safety for secrets/local output/raw photo folders.
+
 ## Storage
 
 Default Vercel/fallback storage remains Redis/KV via:

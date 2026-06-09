@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on local `main` before this normalized PIM export pass:
-- `dd6b83e Add image metadata audit`
+Latest committed state currently on local `main` before this VPS release audit pass:
+- `2495103 Add normalized PIM export`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -38,6 +38,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS release audit slice:
+  - added `tools/vps-release-audit.mjs` and npm script `audit:vps-release`;
+  - audit checks required VPS runtime files, Vercel fallback scripts, package scripts, `.gitignore` safety rules, and forbidden tracked secret/local-output/raw photo artifacts;
+  - AutoFix now runs the audit and self-test fixture.
 - Normalized PIM export slice:
   - added `tools/pim-export-normalized.mjs` and npm script `export:pim`;
   - exporter reads products JSON, builds current normalized PIM tables, validates IDs/references, and writes JSONL files plus `manifest.json` under ignored `local-import-output/pim-normalized`;
@@ -290,6 +294,13 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current VPS release audit pass:
+  - `node --check tools/vps-release-audit.mjs`
+  - `node --check tools/autofix.mjs`
+  - package JSON parse
+  - `npm.cmd run audit:vps-release`: passed.
+  - `node tools/vps-release-audit.mjs --self-test`: passed.
+  - `npm.cmd run check`: passed, includes VPS release audit and self-test.
 - Current normalized PIM export pass:
   - `node --check tools/pim-export-normalized.mjs`
   - `node --check tools/autofix.mjs`
