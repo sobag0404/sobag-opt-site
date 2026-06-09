@@ -38,6 +38,17 @@ Bootstrap admin is created automatically when these are present:
 
 Do not commit these values to Git and do not paste them into chat.
 
+## VPS File Store Option
+
+For a VPS deployment that should not depend on Vercel KV/Upstash, the same API storage layer can use local JSON files:
+
+- `SOBAG_STORE_PROVIDER=file`
+- `SOBAG_FILE_STORE_DIR=/var/lib/sobag-opt/store`
+
+The directory must be writable by the Node process and backed up regularly. It stores shared users, sessions, orders, saved carts, reviews, editable content, catalog payload, PIM sidecar, and import batches. Keep it outside the Git checkout; local `.sobag-store/` is ignored for development.
+
+Do not enable the file provider on Vercel. Keep Vercel on the Redis/KV variables above so the fallback deployment path remains unchanged.
+
 ## Health Check
 
 After setting environment variables and redeploying:

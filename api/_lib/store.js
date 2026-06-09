@@ -1,10 +1,17 @@
 const { Redis } = require("@upstash/redis");
+const fs = require("node:fs/promises");
+const path = require("node:path");
 const { buildCatalogPim, summarizeImportBatches } = require("./pim");
 
 const STORE_KEY = process.env.SOBAG_STORE_KEY || "sobag:store:v1";
 const CATALOG_KEY = process.env.SOBAG_CATALOG_KEY || "sobag:catalog:v1";
 const CONTENT_KEY = process.env.SOBAG_CONTENT_KEY || "sobag:content:v1";
 const IMPORT_BATCHES_KEY = process.env.SOBAG_IMPORT_BATCHES_KEY || "sobag:import-batches:v1";
+const FILE_STORE_DEFAULT_DIR = ".sobag-store";
+
+function storeProvider() {
+  return String(process.env.SOBAG_STORE_PROVIDER || "redis").trim().toLowerCase();
+}
 
 function redisConfig() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -13,7 +20,7 @@ function redisConfig() {
   return { url, token };
 }
 
-function getRedis() {
+function getRedisClient() {
   const config = redisConfig();
   if (!config) {
     const error = new Error("Backend-хранилище не подключено. Добавьте Upstash Redis/Vercel KV переменные в Vercel.");
@@ -23,6 +30,73 @@ function getRedis() {
     throw error;
   }
   return new Redis(config);
+}
+
+function fileStoreDir() {
+  return path.resolve(process.env.SOBAG_FILE_STORE_DIR || FILE_STORE_DEFAULT_DIR);
+}
+
+function fileNameForKey(key) {
+  return `${Buffer.from(String(key || ""), "utf8").toString("hex")}.json`;
+}
+
+function fileStorePath(key) {
+  return path.join(fileStoreDir(), fileNameForKey(key));
+}
+
+function wrapFileValue(value, options = {}) {
+  const ttlSeconds = Number(options.ex || options.EX || 0) || 0;
+  return {
+    version: 1,
+    expiresAt: ttlSeconds > 0 ? new Date(Date.now() + ttlSeconds * 1000).toISOString() : "",
+    value,
+  };
+}
+
+function unwrapFileValue(record) {
+  if (!record || typeof record !== "object" || Array.isArray(record) || !Object.prototype.hasOwnProperty.call(record, "value")) return record;
+  if (record.expiresAt && Date.parse(record.expiresAt) <= Date.now()) return null;
+  return record.value;
+}
+
+async function readFileStoreValue(key) {
+  try {
+    const record = JSON.parse(await fs.readFile(fileStorePath(key), "utf8"));
+    const value = unwrapFileValue(record);
+    if (value === null) await deleteFileStoreValue(key);
+    return value;
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function writeFileStoreValue(key, value, options = {}) {
+  const dir = fileStoreDir();
+  await fs.mkdir(dir, { recursive: true });
+  const target = fileStorePath(key);
+  const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
+  await fs.writeFile(temp, `${JSON.stringify(wrapFileValue(value, options), null, 2)}\n`, "utf8");
+  await fs.rename(temp, target);
+}
+
+async function deleteFileStoreValue(key) {
+  try {
+    await fs.unlink(fileStorePath(key));
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
+
+function getStoreClient() {
+  if (["file", "filesystem", "fs"].includes(storeProvider())) {
+    return {
+      get: readFileStoreValue,
+      set: writeFileStoreValue,
+      del: deleteFileStoreValue,
+    };
+  }
+  return getRedisClient();
 }
 
 function emptyStore() {
@@ -55,15 +129,15 @@ function normalizeStore(value) {
 }
 
 async function getStore() {
-  const redis = getRedis();
-  return normalizeStore(await redis.get(STORE_KEY));
+  const store = getStoreClient();
+  return normalizeStore(await store.get(STORE_KEY));
 }
 
 async function saveStore(store) {
-  const redis = getRedis();
+  const backend = getStoreClient();
   const prepared = normalizeStore(store);
   prepared.updatedAt = new Date().toISOString();
-  await redis.set(STORE_KEY, prepared);
+  await backend.set(STORE_KEY, prepared);
   return prepared;
 }
 
@@ -96,20 +170,20 @@ function normalizeImportBatches(value) {
 }
 
 async function getCatalog() {
-  const redis = getRedis();
-  return normalizeCatalog(await redis.get(CATALOG_KEY));
+  const store = getStoreClient();
+  return normalizeCatalog(await store.get(CATALOG_KEY));
 }
 
 async function getImportBatches() {
-  const redis = getRedis();
-  return normalizeImportBatches(await redis.get(IMPORT_BATCHES_KEY));
+  const store = getStoreClient();
+  return normalizeImportBatches(await store.get(IMPORT_BATCHES_KEY));
 }
 
 async function saveCatalog(products, updatedBy = "", options = {}) {
-  const redis = getRedis();
+  const store = getStoreClient();
   let importBatches = Array.isArray(options.importBatches) ? options.importBatches : null;
   if (!importBatches) {
-    const current = normalizeCatalog(await redis.get(CATALOG_KEY));
+    const current = normalizeCatalog(await store.get(CATALOG_KEY));
     importBatches = current?.pim?.importBatches || [];
   }
   const updatedAt = options.updatedAt || new Date().toISOString();
@@ -124,14 +198,14 @@ async function saveCatalog(products, updatedBy = "", options = {}) {
       importBatches,
     }),
   };
-  await redis.set(CATALOG_KEY, payload);
+  await store.set(CATALOG_KEY, payload);
   return payload;
 }
 
 async function saveImportBatches(batches) {
-  const redis = getRedis();
+  const store = getStoreClient();
   const prepared = normalizeImportBatches(batches).slice(0, 50);
-  await redis.set(IMPORT_BATCHES_KEY, {
+  await store.set(IMPORT_BATCHES_KEY, {
     batches: prepared,
     updatedAt: new Date().toISOString(),
     version: 1,
@@ -154,34 +228,34 @@ function normalizeContent(value) {
 }
 
 async function getContent() {
-  const redis = getRedis();
-  return normalizeContent(await redis.get(CONTENT_KEY));
+  const store = getStoreClient();
+  return normalizeContent(await store.get(CONTENT_KEY));
 }
 
 async function saveContent(content, updatedBy = "") {
-  const redis = getRedis();
+  const store = getStoreClient();
   const payload = {
     content,
     updatedAt: new Date().toISOString(),
     updatedBy,
     version: 1,
   };
-  await redis.set(CONTENT_KEY, payload);
+  await store.set(CONTENT_KEY, payload);
   return payload;
 }
 
 async function deleteSession(token) {
   if (!token) return;
-  await getRedis().del(`sobag:session:${token}`);
+  await getStoreClient().del(`sobag:session:${token}`);
 }
 
 async function getSession(token) {
   if (!token) return null;
-  return getRedis().get(`sobag:session:${token}`);
+  return getStoreClient().get(`sobag:session:${token}`);
 }
 
 async function saveSession(token, payload, ttlSeconds) {
-  await getRedis().set(`sobag:session:${token}`, payload, { ex: ttlSeconds });
+  await getStoreClient().set(`sobag:session:${token}`, payload, { ex: ttlSeconds });
 }
 
 module.exports = { deleteSession, getCatalog, getContent, getImportBatches, getSession, getStore, saveCatalog, saveContent, saveImportBatches, saveSession, saveStore };

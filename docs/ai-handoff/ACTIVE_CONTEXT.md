@@ -30,6 +30,7 @@ Last updated: 2026-06-09
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-09: added a VPS-ready file store bridge. `api/_lib/store.js` now supports explicit `SOBAG_STORE_PROVIDER=file` with `SOBAG_FILE_STORE_DIR` for shared users/sessions/orders/saved carts/reviews/content/catalog/import batches, keeps Redis/KV as the default Vercel path, ignores local `.sobag-store/`, and covers the adapter with `tools/file-store-smoke.mjs` in AutoFix.
 - Current pass 2026-06-09: reduced public server-query catalog payload size. Frontend now requests `/api/catalog-query` with `pageSize=48` instead of 120, the "show more" label uses the same server page constant, and UI smoke asserts the compact page size on initial and cursor requests.
 - Current pass 2026-06-09: deepened catalog SEO landing copy. Default category descriptions are now fuller, default collection/holiday records carry editable `description`, admin content accepts `name | description | icon` while still preserving old `name | icon` rows, imported missing collections/holidays get editable placeholder descriptions, and UI smoke covers collection/holiday SEO copy.
 - Current pass 2026-06-09: added first SEO/content cleanup slice. Public fallback copy no longer says test/prototype on about, contacts, business, marketplace, footer, cart promo, and terms pages; fake static production address was replaced with manager-confirmed address wording; catalog category/collection/holiday listing pages now render contextual `#catalogSeoCopy` landing copy from current content state. No final Yandex address was configured.
@@ -64,13 +65,13 @@ Last updated: 2026-06-09
 - Current next task: continue SEO/content with final legal/contact/company copy and final Yandex map data only after confirmation, or return to performance items that need real catalog growth. QA/Ops current checklist items are done.
 - SEO next step: real company/legal/contact details only after confirmed facts; Product/FAQ schema and editable catalog landing copy are already covered.
 - Import/PIM next step: later DB/storage split for product, variant, image, taxonomy, and import-batch entities. The current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
-- Deployment next step: when the stable stage is ready, prepare VPS migration notes and deployment path, while keeping Vercel as fallback/parallel reference.
+- Deployment next step: when the stable stage is ready, prepare/run VPS migration with `SOBAG_STORE_PROVIDER=file` plus S3-compatible image storage, while keeping Vercel as Redis/KV fallback.
 - Performance next step: catalog virtualization, real-catalog WebP/AVIF validation, and Core Web Vitals audit after larger catalog growth.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
 ## Useful Files
 - Главные файлы проекта: `app.js`, `cart.js`, `styles.css`, `components/site-shell.js`, `data/products-live.json`.
-- Документация: `docs/roadmap-checklist.md`, `docs/ai-handoff/CURRENT_STATUS.md`, `docs/product-import.md`, `docs/object-storage.md`, `docs/backend-security.md`, `docs/deploy-checklist.md`, `docs/access-audit.md`, `docs/error-log-review.md`.
+- Документация: `docs/roadmap-checklist.md`, `docs/ai-handoff/CURRENT_STATUS.md`, `docs/product-import.md`, `docs/object-storage.md`, `docs/backend-security.md`, `docs/vps-migration-notes.md`, `docs/deploy-checklist.md`, `docs/access-audit.md`, `docs/error-log-review.md`.
 - Проверки: `package.json`, `tools/autofix.mjs`, `tools/ui-smoke.spec.js`, `tools/audit_catalog.py`.
 - API/Backend: `api/_lib/store.js`, `api/_lib/auth.js`, `api/_lib/http.js`, `api/_lib/object-storage.js`, `api/catalog.js`, `api/auth/me.js`, `api/orders.js`, `api/admin/orders.js`, `api/admin/users.js`, `api/admin/catalog.js`, `api/admin/content.js`, `api/admin/product-images.js`.
 
