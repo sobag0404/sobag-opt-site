@@ -168,11 +168,13 @@ function main() {
   parseJson("vercel.json");
   parseJson("data/products-live.json");
   walk(join(root, "api"), (file) => file.endsWith(".js")).forEach((file) => run("node", ["--check", file]));
-  ["app.js", "cart.js", "components/site-shell.js", "server.mjs", "tools/static-server.mjs", "tools/production-smoke.mjs", "tools/access-audit.mjs", "tools/error-log-audit.mjs", "tools/image-metadata-audit.mjs", "tools/bulk-upload-product-photos.mjs", "tools/bulk-upload-product-photos.test.mjs", "tools/object-storage-s3-smoke.mjs", "tools/file-store-smoke.mjs", "tools/file-store-backup.mjs", "tools/health-store-status-smoke.mjs", "tools/vps-server-smoke.mjs", "tools/vps-write-smoke.mjs", "tools/vps-preflight.mjs", "tools/pim-smoke.mjs", "tools/pim-report-smoke.mjs", "tools/catalog-query-smoke.mjs", "tools/catalog-query-scale-smoke.mjs"].forEach((file) => run("node", ["--check", file]));
+  ["app.js", "cart.js", "components/site-shell.js", "server.mjs", "tools/static-server.mjs", "tools/production-smoke.mjs", "tools/access-audit.mjs", "tools/error-log-audit.mjs", "tools/image-metadata-audit.mjs", "tools/bulk-upload-product-photos.mjs", "tools/bulk-upload-product-photos.test.mjs", "tools/object-storage-s3-smoke.mjs", "tools/file-store-smoke.mjs", "tools/file-store-backup.mjs", "tools/health-store-status-smoke.mjs", "tools/vps-server-smoke.mjs", "tools/vps-write-smoke.mjs", "tools/vps-preflight.mjs", "tools/pim-smoke.mjs", "tools/pim-report-smoke.mjs", "tools/pim-export-normalized.mjs", "tools/catalog-query-smoke.mjs", "tools/catalog-query-scale-smoke.mjs"].forEach((file) => run("node", ["--check", file]));
   compilePythonFiles(["tools/product_importer.py", "tools/publish_imported_products.py", "tools/audit_catalog.py"]);
   run("node", ["tools/validate-products.mjs"]);
   run("node", ["tools/pim-smoke.mjs"]);
   run("node", ["tools/pim-report-smoke.mjs"]);
+  run("node", ["tools/pim-export-normalized.mjs", "--dry-run"]);
+  run("node", ["tools/pim-export-normalized.mjs", "--self-test"]);
   run("node", ["tools/catalog-query-smoke.mjs"]);
   run("node", ["tools/catalog-query-scale-smoke.mjs"]);
   run("node", ["tools/image-metadata-audit.mjs"]);

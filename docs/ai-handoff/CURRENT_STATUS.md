@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on local `main` before this image metadata audit pass:
-- `6f2a861 Add catalog query scale smoke`
+Latest committed state currently on local `main` before this normalized PIM export pass:
+- `dd6b83e Add image metadata audit`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -38,6 +38,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Normalized PIM export slice:
+  - added `tools/pim-export-normalized.mjs` and npm script `export:pim`;
+  - exporter reads products JSON, builds current normalized PIM tables, validates IDs/references, and writes JSONL files plus `manifest.json` under ignored `local-import-output/pim-normalized`;
+  - AutoFix runs the current catalog dry-run and temporary self-test fixture;
+  - docs now include the offline export path for future DB/storage split without changing public `/api/catalog`.
 - Image metadata audit slice:
   - added `tools/image-metadata-audit.mjs` and npm script `audit:images`;
   - AutoFix now runs the current catalog metadata audit and the offline self-test fixture;
@@ -285,6 +290,13 @@ Completed most recently:
 - `npm run check` now passes even if Python is absent, while warning that Python importer syntax checks were skipped.
 
 Verification from this handoff pass:
+- Current normalized PIM export pass:
+  - `node --check tools/pim-export-normalized.mjs`
+  - `node --check tools/autofix.mjs`
+  - package JSON parse
+  - `node tools/pim-export-normalized.mjs --dry-run`: passed for current catalog.
+  - `node tools/pim-export-normalized.mjs --self-test`: passed temporary fixture.
+  - `npm.cmd run check`: passed, includes normalized PIM export dry-run and self-test.
 - Current image metadata audit pass:
   - `node --check tools/image-metadata-audit.mjs`
   - `node --check tools/autofix.mjs`

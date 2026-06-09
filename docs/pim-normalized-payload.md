@@ -1,6 +1,6 @@
 # Normalized PIM Payload
 
-Last updated: 2026-06-04
+Last updated: 2026-06-09
 
 ## Goal
 
@@ -97,3 +97,22 @@ The sidecar makes the target model explicit before a bigger migration:
 - import batch metadata and report rows.
 
 Until that migration, the site should keep reading the existing public `/api/catalog` shape.
+
+## Offline Normalized Export
+
+For DB/storage split preparation, use the offline exporter:
+
+```bash
+npm run export:pim -- --products data/products-live.json --out local-import-output/pim-normalized
+```
+
+The export writes ignored local JSONL files:
+
+- `products.jsonl`
+- `variants.jsonl`
+- `images.jsonl`
+- `taxonomies.jsonl`
+- `import-batches.jsonl`
+- `manifest.json`
+
+The exporter reads only the supplied products JSON and does not touch production storage. Use `--dry-run` to validate table shape without writing files. AutoFix runs both the current catalog dry-run and a temporary self-test fixture.

@@ -75,6 +75,14 @@ node tools/image-metadata-audit.mjs --products local-import-output/products-with
 
 The audit is offline and prints no secrets. It checks provider metadata, dimensions, square image metadata, and WebP/AVIF responsive variants.
 
+For future DB-backed PIM migration, prepare normalized JSONL files locally:
+
+```bash
+npm run export:pim -- --products data/products-live.json --out local-import-output/pim-normalized
+```
+
+This export is offline and writes only to ignored local output. It does not change the current public `/api/catalog` compatibility path.
+
 ## Fallback
 
 Keep Vercel configured with Redis/KV and Vercel Blob/S3 env as a fallback path. Do not switch Vercel to the file provider.

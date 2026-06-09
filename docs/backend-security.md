@@ -98,3 +98,4 @@ It also includes the offline VPS env preflight fixture from `tools/vps-preflight
 It also includes the offline file-store backup/restore fixture from `tools/file-store-backup.mjs --self-test`.
 It also includes the offline 10k-product catalog query scale smoke from `tools/catalog-query-scale-smoke.mjs`.
 It also includes the image metadata audit and its offline self-test from `tools/image-metadata-audit.mjs`.
+It also includes the offline normalized PIM export dry-run and self-test from `tools/pim-export-normalized.mjs`.
