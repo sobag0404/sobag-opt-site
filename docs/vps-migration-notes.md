@@ -56,3 +56,24 @@ Do not commit these values.
 ## Fallback
 
 Keep Vercel configured with Redis/KV and Vercel Blob/S3 env as a fallback path. Do not switch Vercel to the file provider.
+
+## Runtime
+
+The VPS entrypoint is:
+
+```bash
+npm ci
+SOBAG_STORE_PROVIDER=file \
+SOBAG_FILE_STORE_DIR=/var/lib/sobag-opt/store \
+PORT=3000 \
+HOST=127.0.0.1 \
+npm run start:vps
+```
+
+`server.mjs` serves the static site with clean URLs and dispatches the existing `/api/*` handlers. It is covered by:
+
+```bash
+npm run smoke:vps
+```
+
+Put Nginx/Caddy in front of the Node process for TLS, compression, request size limits, and access logs. Keep the app process behind localhost unless a separate firewall policy is configured.

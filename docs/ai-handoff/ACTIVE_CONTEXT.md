@@ -31,6 +31,7 @@ Last updated: 2026-06-09
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-09: added `server.mjs` as the VPS runtime path. It serves static files with clean URLs and dispatches the existing `/api/*` handlers, keeps Vercel fallback unchanged, adds npm scripts `start:vps`/`smoke:vps`, and covers the path with `tools/vps-server-smoke.mjs` in AutoFix.
 - Current pass 2026-06-09: added safe store provider status to `/api/health` (`store.provider/configured`) without exposing paths or secrets; added `tools/health-store-status-smoke.mjs` to AutoFix. Also locked the UI invariant requested by the user: product/category/collection/holiday photos stay square where they render as previews, and selected catalog pages show `В каталог` for the return action.
 - Current pass 2026-06-09: added a VPS-ready file store bridge. `api/_lib/store.js` now supports explicit `SOBAG_STORE_PROVIDER=file` with `SOBAG_FILE_STORE_DIR` for shared users/sessions/orders/saved carts/reviews/content/catalog/import batches, keeps Redis/KV as the default Vercel path, ignores local `.sobag-store/`, and covers the adapter with `tools/file-store-smoke.mjs` in AutoFix.
 - Current pass 2026-06-09: reduced public server-query catalog payload size. Frontend now requests `/api/catalog-query` with `pageSize=48` instead of 120, the "show more" label uses the same server page constant, and UI smoke asserts the compact page size on initial and cursor requests.
@@ -67,7 +68,7 @@ Last updated: 2026-06-09
 - Current next task: continue SEO/content with final legal/contact/company copy and final Yandex map data only after confirmation, or return to performance items that need real catalog growth. QA/Ops current checklist items are done.
 - SEO next step: real company/legal/contact details only after confirmed facts; Product/FAQ schema and editable catalog landing copy are already covered.
 - Import/PIM next step: later DB/storage split for product, variant, image, taxonomy, and import-batch entities. The current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
-- Deployment next step: when the stable stage is ready, prepare/run VPS migration with `SOBAG_STORE_PROVIDER=file` plus S3-compatible image storage, while keeping Vercel as Redis/KV fallback.
+- Deployment next step: when the stable stage is ready, run VPS migration with `server.mjs`, `SOBAG_STORE_PROVIDER=file`, and S3-compatible image storage, while keeping Vercel as Redis/KV fallback.
 - Performance next step: catalog virtualization, real-catalog WebP/AVIF validation, and Core Web Vitals audit after larger catalog growth.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 

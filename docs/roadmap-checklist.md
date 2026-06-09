@@ -82,6 +82,7 @@ Last updated: 2026-06-09
    - [ ] Core Web Vitals audit after real catalog growth.
 
 6. [planned] QA/security/ops:
+   - [x] VPS runtime path: `server.mjs` serves static clean URLs plus existing `/api/*` handlers, with file-store smoke coverage and Vercel fallback preserved.
    - [x] Stronger mojibake guard in AutoFix.
    - [x] Automated production smoke after deploy.
      - [x] Read-only production smoke script for `/`, `/catalog`, `/cart`, and `/api/health`, with offline self-test in AutoFix.

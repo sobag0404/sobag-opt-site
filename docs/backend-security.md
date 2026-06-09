@@ -1,6 +1,7 @@
 # Backend and Security Setup
 
 This project now has a Vercel API layer for accounts, roles, sessions, orders, the shared product catalog, and shared editable page content.
+For VPS, `server.mjs` can serve the static files and dispatch the same `/api/*` handlers without Vercel.
 
 ## What Moved Server-Side
 
@@ -92,3 +93,4 @@ npm run check
 The same check runs in GitHub Actions on push, pull request, and every Monday at 06:00 UTC.
 It includes the static access matrix audit from `tools/access-audit.mjs`; see `docs/access-audit.md`.
 It also includes the API error-log audit from `tools/error-log-audit.mjs`; see `docs/error-log-review.md`.
+It also includes the VPS runtime smoke from `tools/vps-server-smoke.mjs`.
