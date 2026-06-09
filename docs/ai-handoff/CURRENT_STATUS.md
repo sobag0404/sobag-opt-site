@@ -2,8 +2,8 @@
 
 Date: 2026-06-09
 
-Latest committed state currently on `main` before this file-store backup pass:
-- `d20c90f Reduce local catalog fallback page size`
+Latest committed state currently on local `main`:
+- `cd84b78 Add file store backup helper`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -31,7 +31,7 @@ Current focus:
 - VPS runtime path now has `server.mjs` for static clean URLs plus existing `/api/*` handlers;
 - VPS env readiness now has a safe local preflight script and offline self-test coverage;
 - VPS file-store backups now have a local helper and offline backup/restore self-test coverage;
-- UI invariant: product photos and category/collection/holiday photos should stay square; selected catalog pages should say `В каталог` for the return action;
+- Goal-mode UI invariant: product photos and category/collection/holiday photos should stay square 1:1; selected catalog pages should say `В каталог`, not `На главную`, for the top return action;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, smaller public query page size, and smaller local fallback pages;
 - Responsive product images now have frontend `<picture>` selection for stored AVIF/WebP variants; real migrated catalog validation is still pending.
 - SEO/content structured data covers Product/FAQ schema; production-safe public copy and first catalog landing copy slices are committed locally;
