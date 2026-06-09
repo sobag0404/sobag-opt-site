@@ -2,7 +2,7 @@ name: production-smoke
 
 on:
   workflow_run:
-    workflows: ["autofix-check"]
+    workflows: ["vps-deploy"]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -22,10 +22,9 @@ jobs:
   smoke:
     if: >-
       ${{
-        github.event_name == 'workflow_dispatch' ||
+          github.event_name == 'workflow_dispatch' ||
         (
           github.event.workflow_run.conclusion == 'success' &&
-          github.event.workflow_run.event == 'push' &&
           github.event.workflow_run.head_branch == 'main'
         )
       }}
@@ -40,5 +39,5 @@ jobs:
           node-version: "22"
       - name: Run read-only production smoke
         env:
-          SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || 'https://sobag-shop.online' }}
+          SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'http://77.239.107.164' }}
         run: node tools/production-smoke.mjs --timeout 15000 --retries 6 --retry-delay 20000
