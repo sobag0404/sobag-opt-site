@@ -168,13 +168,14 @@ function main() {
   parseJson("vercel.json");
   parseJson("data/products-live.json");
   walk(join(root, "api"), (file) => file.endsWith(".js")).forEach((file) => run("node", ["--check", file]));
-  ["app.js", "cart.js", "components/site-shell.js", "tools/static-server.mjs", "tools/production-smoke.mjs", "tools/access-audit.mjs", "tools/error-log-audit.mjs", "tools/bulk-upload-product-photos.mjs", "tools/bulk-upload-product-photos.test.mjs", "tools/pim-smoke.mjs", "tools/pim-report-smoke.mjs", "tools/catalog-query-smoke.mjs"].forEach((file) => run("node", ["--check", file]));
+  ["app.js", "cart.js", "components/site-shell.js", "tools/static-server.mjs", "tools/production-smoke.mjs", "tools/access-audit.mjs", "tools/error-log-audit.mjs", "tools/bulk-upload-product-photos.mjs", "tools/bulk-upload-product-photos.test.mjs", "tools/object-storage-s3-smoke.mjs", "tools/pim-smoke.mjs", "tools/pim-report-smoke.mjs", "tools/catalog-query-smoke.mjs"].forEach((file) => run("node", ["--check", file]));
   compilePythonFiles(["tools/product_importer.py", "tools/publish_imported_products.py", "tools/audit_catalog.py"]);
   run("node", ["tools/validate-products.mjs"]);
   run("node", ["tools/pim-smoke.mjs"]);
   run("node", ["tools/pim-report-smoke.mjs"]);
   run("node", ["tools/catalog-query-smoke.mjs"]);
   run("node", ["tools/bulk-upload-product-photos.test.mjs"]);
+  run("node", ["tools/object-storage-s3-smoke.mjs"]);
   run("node", ["tools/production-smoke.mjs", "--self-test"]);
   run("node", ["tools/access-audit.mjs"]);
   run("node", ["tools/error-log-audit.mjs"]);

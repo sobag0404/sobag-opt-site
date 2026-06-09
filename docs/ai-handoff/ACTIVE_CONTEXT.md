@@ -29,6 +29,7 @@ Last updated: 2026-06-09
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-09: replaced the S3-compatible object-storage placeholder with a real provider-ready adapter in `api/_lib/object-storage.js`. It supports AWS SigV4 PUT/list/delete for VPS/MinIO/R2 style endpoints, safe `objectStorageStatus()`, public URL generation through `SOBAG_S3_PUBLIC_BASE_URL`, bulk CLI provider compatibility, docs, and offline smoke coverage through `tools/object-storage-s3-smoke.mjs`.
 - Current pass 2026-06-09: added a real FAQ block to `business.html` for wholesale order questions, added `syncFaqJsonLd()` in `app.js` to publish `FAQPage` JSON-LD from visible `[data-faq-schema]` content, styled the FAQ in `styles.css`, and added Playwright smoke coverage for the visible FAQ plus schema. Roadmap now marks Product/FAQ schema done.
 - Current pass 2026-06-04: started SEO/schema work with public Product JSON-LD for the product modal/detail state. `app.js` now writes `#sobag-product-jsonld` after `/api/catalog-detail` hydration, includes Product name/description/baseSku/mpn/category/brand/images/RUB AggregateOffer and approved review aggregate data when present, skips admin catalog product previews, and removes stale Product JSON-LD on modal close. `tools/ui-smoke.spec.js` now verifies schema creation from detail endpoint data and cleanup after closing the modal. FAQ schema is now covered by the 2026-06-09 business FAQ pass.
 - Current pass 2026-06-04: added lightweight error monitoring/log review workflow. Shared `api/_lib/http.js` `handleError` now accepts `req`, adds `requestId` to error JSON and `X-Sobag-Request-Id`, and writes structured `api_error` JSON logs for 5xx without production stack traces or query strings. API routes now pass `req` to `handleError`. New `tools/error-log-audit.mjs`, npm script `audit:errors`, AutoFix coverage, and `docs/error-log-review.md` runbook. Roadmap QA/Ops error/log review is now checked.
@@ -57,8 +58,8 @@ Last updated: 2026-06-09
 
 ## Current Next Work
 - Current next task: continue SEO/content with final legal/contact/company copy, category/collection/holiday landing copy, final Yandex map data after confirmation, or return to performance items that need real catalog growth. QA/Ops current checklist items are done.
-- Следующая задача: либо bulk CLI/importer upload path для больших фото-партий в Blob/S3 без JSON body limits, либо явный `updateExisting` режим в UI import batches.
-- Следующий PIM шаг: нормализованный payload product/variant/images/tags/categories/collections/holidays/import batch metadata, публичный `/api/catalog` только для `published`, responsive WebP/AVIF strategy после bulk storage.
+- Import/PIM next step: later DB/storage split for product, variant, image, taxonomy, and import-batch entities. The current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
+- Performance next step: catalog virtualization/smaller server pages, real-catalog WebP/AVIF validation, and Core Web Vitals audit after larger catalog growth.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
 ## Useful Files

@@ -1,23 +1,32 @@
 # Object Storage For Product Photos
 
-Last updated: 2026-06-04
+Last updated: 2026-06-09
 
 ## Goal
 
 Product photos should move out of Git into object storage. The catalog must not depend directly on one provider, so product code talks to `api/_lib/object-storage.js` through a small adapter interface.
 
-Current provider:
+Current providers:
 
 - `SOBAG_OBJECT_STORAGE_PROVIDER=vercel-blob` by default.
 - Vercel Blob SDK package: `@vercel/blob`.
 - Runtime requirement: Node.js 20+.
 - Required secret in deployment env: `BLOB_READ_WRITE_TOKEN`.
+- `SOBAG_OBJECT_STORAGE_PROVIDER=s3-compatible` for VPS/S3/MinIO/R2 style storage.
 - Do not commit `.env`, tokens, raw photo folders, or generated bulk image output.
 
-Future provider:
+S3-compatible env names:
 
-- `SOBAG_OBJECT_STORAGE_PROVIDER=s3-compatible` is reserved for VPS/S3/MinIO/R2 style storage.
-- The placeholder exists now so the catalog payload shape can stay stable during a future migration.
+- `SOBAG_S3_ENDPOINT`: S3 API endpoint, for example a MinIO endpoint or Cloudflare R2 account endpoint.
+- `SOBAG_S3_BUCKET`: bucket name.
+- `SOBAG_S3_REGION`: signing region. Default is `auto`; use `us-east-1` or the provider region when required.
+- `SOBAG_S3_ACCESS_KEY_ID`: access key id.
+- `SOBAG_S3_SECRET_ACCESS_KEY`: secret access key.
+- `SOBAG_S3_SESSION_TOKEN`: optional temporary credentials token.
+- `SOBAG_S3_PUBLIC_BASE_URL`: optional public/CDN base URL used to render product images.
+- `SOBAG_S3_FORCE_PATH_STYLE`: optional boolean. Default `true`, which matches MinIO and R2-style endpoints.
+
+The S3-compatible adapter uses AWS Signature Version 4 directly through Node's `fetch`, so no AWS SDK dependency is required. It supports upload, list by product prefix, hard delete, and mark-unused. Public images still require a bucket policy, public custom domain, or CDN mapping configured outside the repository.
 
 ## Adapter Interface
 
@@ -84,7 +93,8 @@ Useful options:
 - `--variant-quality 82` controls generated variant quality.
 - `--limit <number>` caps processed image files for a small pilot run.
 - `--retries <number>` controls per-file upload retries.
-- `--provider vercel-blob` is the current provider; `s3-compatible` remains reserved for the future VPS/MinIO/R2 implementation.
+- `--provider vercel-blob` uploads to Vercel Blob.
+- `--provider s3-compatible` uploads to the configured S3-compatible endpoint.
 
 The CLI writes:
 

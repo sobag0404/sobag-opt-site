@@ -1,6 +1,6 @@
 const { requireUser } = require("../_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
-const { createObjectStorageAdapter, normalizeImageMetadata, normalizeProvider } = require("../_lib/object-storage");
+const { createObjectStorageAdapter, normalizeImageMetadata, objectStorageStatus } = require("../_lib/object-storage");
 
 const MAX_JSON_IMAGE_BYTES = 8 * 1024 * 1024;
 
@@ -54,14 +54,6 @@ function parseImageBody(data = {}) {
   return { body, mime };
 }
 
-function publicStorageStatus() {
-  const provider = normalizeProvider();
-  return {
-    provider,
-    configured: provider === "vercel-blob" ? Boolean(process.env.BLOB_READ_WRITE_TOKEN) : false,
-  };
-}
-
 module.exports = async function handler(req, res) {
   try {
     await requireUser(req, ["admin", "content"]);
@@ -70,9 +62,9 @@ module.exports = async function handler(req, res) {
     if (req.method === "GET") {
       const url = parseUrl(req);
       const productKey = text(url.searchParams.get("product") || url.searchParams.get("baseSku"));
-      if (!productKey) return sendJson(res, 200, { ...publicStorageStatus(), images: [] });
+      if (!productKey) return sendJson(res, 200, { ...objectStorageStatus(), images: [] });
       const images = await adapter.listByProduct(productKey);
-      return sendJson(res, 200, { ...publicStorageStatus(), productKey, images });
+      return sendJson(res, 200, { ...objectStorageStatus(), productKey, images });
     }
 
     if (req.method === "POST") {

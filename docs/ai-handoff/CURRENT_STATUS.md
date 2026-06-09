@@ -2,7 +2,7 @@
 
 Date: 2026-06-09
 
-Latest committed state after this working update:
+Latest committed state currently on `main` before this uncommitted S3-compatible provider pass:
 - `Add business FAQ structured data`
 
 Repository:
@@ -25,12 +25,18 @@ Production URLs:
 
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
-- Import/PIM 2.0 has sidecar and diagnostics/export slices;
+- Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, and no-full-catalog bootstrap for successful server-query listing pages;
 - SEO/content structured data now covers Product structured data for the public product modal/detail state and FAQ structured data for the business terms FAQ block;
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- S3-compatible object storage provider slice:
+  - replaced the `s3-compatible` placeholder in `api/_lib/object-storage.js` with a real provider-ready adapter for VPS/MinIO/R2 style endpoints;
+  - adapter uses AWS Signature Version 4 over Node `fetch` and supports image upload, list by product prefix, hard delete, mark-unused, and public URL generation through `SOBAG_S3_PUBLIC_BASE_URL`;
+  - added safe shared `objectStorageStatus()` for `/api/health` and `/api/admin/product-images` without exposing endpoint, bucket, or secret values;
+  - added `tools/object-storage-s3-smoke.mjs` and AutoFix coverage with mocked `fetch`, so SigV4/list/delete behavior is tested offline without production env;
+  - updated object storage/import docs and roadmap; real catalog photo migration still requires a separate run with confirmed provider env.
 - Business FAQ structured data slice:
   - `business.html` now has a real visible FAQ block for wholesale order questions;
   - `app.js` publishes `#sobag-faq-jsonld` as schema.org `FAQPage` from visible `[data-faq-schema]` content and removes stale schema when no FAQ section exists;
@@ -157,7 +163,7 @@ Completed most recently:
   - smoke now verifies the photo preview report without requiring Blob env;
 - Object storage first slice for product photos:
   - added `@vercel/blob`;
-  - added `api/_lib/object-storage.js` with provider switch, Vercel Blob implementation, S3-compatible placeholder, upload/list/delete-or-markUnused/getPublicUrl interface;
+  - added `api/_lib/object-storage.js` with provider switch, Vercel Blob implementation, upload/list/delete-or-markUnused/getPublicUrl interface, and later upgraded the S3-compatible branch to a real SigV4 provider;
   - added `/api/admin/product-images` for admin/content image upload, list, delete, and mark-unused actions;
   - `/api/health` now returns safe object storage readiness metadata without exposing env values;
   - product normalization now preserves `images` metadata (`url`, `storageKey`, `provider`, `width`, `height`, `mime`, `uploadedAt`) while keeping legacy `image`/`gallery` rendering compatible;
@@ -374,8 +380,8 @@ Backend/storage state:
 
 Important remaining work:
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
-- Durable image storage: later implement the S3-compatible provider for VPS/MinIO/R2 and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
-- Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, FAQ schema after real FAQ blocks exist, final Yandex map setup.
+- Durable image storage: choose/configure the real provider env for the next photo migration run and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
+- Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, final Yandex map setup.
 - Performance for 10k+ products: catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
 - QA/Ops current checklist is done; next work is performance/SEO/remaining Import-PIM larger items.
 
