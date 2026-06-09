@@ -9,6 +9,7 @@ Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
 - branch: `main`
 - repo visibility: private
+- Deployment direction: after the next stable local stage, prepare VPS deployment/migration; keep the Vercel deployment/version context as a maintained fallback/reference path.
 
 Production URLs:
 - Main: `https://sobag-shop.online/`
@@ -379,6 +380,7 @@ Backend/storage state:
 - Do not expose env values in chat/docs/repo.
 
 Important remaining work:
+- Deployment: prepare VPS migration notes/deploy path when the stable stage is ready, while preserving Vercel fallback context.
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: choose/configure the real provider env for the next photo migration run and consider a `<picture>` AVIF/WebP frontend pass after real catalog image tests.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, final Yandex map setup.

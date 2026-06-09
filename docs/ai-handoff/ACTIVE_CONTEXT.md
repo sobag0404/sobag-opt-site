@@ -13,6 +13,7 @@ Last updated: 2026-06-09
 - Основная ветка: `main`
 - Production/preview URL: `https://sobag-shop.online`, fallback `https://sobag-opt-site.vercel.app`
 - Основной стек: static HTML/CSS/JS, Vercel API routes, Upstash Redis / Vercel KV-compatible storage.
+- Deployment direction: finish the next stable stage locally, then prepare VPS deployment/migration. Keep the Vercel version and `https://sobag-opt-site.vercel.app` context as a maintained fallback path.
 - Где лежит основной код: `app.js`, `cart.js`, HTML pages in repo root, shared shell in `components/site-shell.js`, API in `api/`.
 - Где лежат тесты/проверки: `tools/autofix.mjs`, `tools/ui-smoke.spec.js`, `tools/audit_catalog.py`.
 - Локальный запуск: `npm run dev:static` для легкой верстки без API; `npm run dev:vercel` только для Vercel Functions/env проверок.
@@ -59,6 +60,7 @@ Last updated: 2026-06-09
 ## Current Next Work
 - Current next task: continue SEO/content with final legal/contact/company copy, category/collection/holiday landing copy, final Yandex map data after confirmation, or return to performance items that need real catalog growth. QA/Ops current checklist items are done.
 - Import/PIM next step: later DB/storage split for product, variant, image, taxonomy, and import-batch entities. The current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
+- Deployment next step: when the stable stage is ready, prepare VPS migration notes and deployment path, while keeping Vercel as fallback/parallel reference.
 - Performance next step: catalog virtualization/smaller server pages, real-catalog WebP/AVIF validation, and Core Web Vitals audit after larger catalog growth.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
