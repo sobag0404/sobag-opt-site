@@ -109,6 +109,14 @@ Use `npm run audit:images` after preparing or migrating product images. The audi
 node tools/image-metadata-audit.mjs --products local-import-output/products-with-object-images.json --published-only --require-metadata --require-responsive --require-square
 ```
 
+Use `npm run audit:photo-migration` before any real photo migration or VPS publication. It is an offline readiness report: it does not upload, delete, read secrets, or print env values. It checks provider status as safe booleans, raw/bulk photo ignore rules, current image metadata coverage, square dimensions, and WebP/AVIF variant readiness.
+
+For a migrated catalog candidate, run:
+
+```bash
+node tools/photo-migration-readiness.mjs --products local-import-output/products-with-object-images.json --strict
+```
+
 ## Product Image Metadata
 
 Products may keep the legacy public fields:

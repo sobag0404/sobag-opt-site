@@ -60,6 +60,7 @@ Last updated: 2026-06-10
        - [x] Bulk CLI upload/report path: `tools/bulk-upload-product-photos.mjs` scans product photo folders, supports dry-run, uploads through the object-storage adapter, writes CSV report, and outputs products JSON with image metadata without using JSON upload bodies.
        - [x] Responsive WebP/AVIF variants for large catalogs: bulk CLI supports `--responsive`, dry-run variant planning, optional Sharp-based generation/upload, image metadata `variants`, and WebP `srcset` rendering in product UI.
        - [x] S3-compatible provider for VPS/MinIO/R2: real SigV4 upload/list/delete adapter, safe readiness status, bulk CLI provider support, and offline smoke coverage.
+       - [x] Photo migration readiness audit: `tools/photo-migration-readiness.mjs` reports provider readiness, ignored raw/bulk folders, image metadata coverage, square image readiness, and WebP/AVIF readiness without uploading, deleting, or printing secrets.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
      - [x] First compatible sidecar payload in the current catalog storage shape: normalized products, variants, images, taxonomies, counts, and safe import batch summaries.
      - [x] Admin diagnostics/export endpoint for the PIM sidecar: summary/full/table views and CSV exports for products, variants, images, taxonomies, and import batches.
@@ -95,6 +96,7 @@ Last updated: 2026-06-10
    - [ ] Image storage with responsive WebP/AVIF variants.
      - [x] Frontend `<picture>` rendering uses stored AVIF sources first and WebP fallback for product cards, related cards, product modal/gallery, and admin product previews.
      - [x] Offline image metadata audit for migrated catalogs: provider metadata, square dimensions, and WebP/AVIF variant records can be checked before publication.
+     - [x] Offline photo migration readiness report summarizes whether the current or candidate catalog is ready for real object-storage images.
      - [ ] Validate WebP/AVIF behavior on the real migrated catalog image set.
    - [x] Catalog virtualization or smaller server pages.
      - [x] Smaller public catalog page payload: frontend now requests `/api/catalog-query` with the server default `pageSize=48` instead of 120, and UI smoke asserts the request size.

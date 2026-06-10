@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Photo migration readiness:
+  - added `tools/photo-migration-readiness.mjs` and `npm run audit:photo-migration`;
+  - the report is offline and safe: no uploads, no deletes, no secret/env values printed;
+  - it checks object-storage provider readiness as booleans, ignored raw/bulk photo folders, current/candidate image metadata coverage, square dimensions, and WebP/AVIF variant readiness;
+  - AutoFix now runs the readiness report and self-test;
+  - current live catalog still has legacy-only images, so real migrated photo set validation remains pending until the actual provider/photo migration is run.
 - SEO landing taxonomy coverage:
   - default catalog landing content now covers the current `data/products-live.json` taxonomy: 8 categories, 37 collections, and 8 holidays;
   - `tools/content-seo-audit.mjs` reads the live product JSON and fails if a current product category, collection, or holiday has no default SEO entry;
