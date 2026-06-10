@@ -90,6 +90,7 @@ Last updated: 2026-06-10
      - [x] PostgreSQL migration bundle audit: `tools/pim-postgres-migration-bundle-audit.mjs` validates generated schema/seed/manifest hashes, counts, relative paths, and secret-free SQL before a future cutover review.
      - [x] PostgreSQL write statement prep: `api/_lib/catalog-db-write.js` builds parameterized upsert-only statements for future product, variant, image, image-variant, taxonomy, product-taxonomy, import-batch, and import-batch-row writes without deleting products or changing current runtime storage.
      - [x] PostgreSQL write transaction prep: future catalog write statements can run through a transaction wrapper that defaults to rollback/dry-run, commits only with explicit `dryRun: false`, and rolls back on errors; fake-client smoke covers begin/commit/rollback behavior.
+     - [x] PostgreSQL write plan audit: `tools/catalog-db-write-plan-audit.mjs` validates the full current catalog can build upsert-only parameterized write statements with exact table/count coverage and no local path params, without connecting to PostgreSQL or touching production data.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:

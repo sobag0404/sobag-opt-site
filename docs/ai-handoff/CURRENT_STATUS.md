@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL write plan audit:
+  - added `tools/catalog-db-write-plan-audit.mjs` and `npm run audit:catalog:db-write-plan`;
+  - the audit validates current live catalog write-statement coverage by table/count, placeholder/param matching, upsert-only SQL, and no local path params;
+  - AutoFix runs the live-catalog audit and self-test without connecting to PostgreSQL or touching production data.
 - PostgreSQL write transaction prep:
   - `api/_lib/catalog-db-write.js` now includes a future transaction wrapper for catalog DB writes;
   - default mode is rollback/dry-run, commit requires explicit `dryRun: false`, and errors force rollback;
