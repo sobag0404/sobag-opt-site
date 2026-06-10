@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Photo storage cutover runbook/audit:
+  - added `docs/photo-storage-cutover-runbook.md`, `tools/photo-storage-cutover-audit.mjs`, and `npm run audit:photo-cutover`;
+  - the runbook fixes the approved sequence for real photo migration: manifest plan, manifest audit, offline pilot, small pilot upload, candidate audit, production readiness check, apply rules, and rollback;
+  - audit coverage keeps the runbook from dropping key guardrails: no secrets/raw photos in Git, no product deletion, square previews, S3-compatible env names only, and explicit `--require-object-storage` for approved cutover.
 - Production storage readiness smoke:
   - added `tools/production-storage-readiness.mjs` and `npm run smoke:prod:storage`;
   - the live command reads only `/api/health` and reports object-storage/catalog-DB cutover readiness;
