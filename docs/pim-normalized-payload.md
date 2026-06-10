@@ -100,6 +100,22 @@ The sidecar makes the target model explicit before a bigger migration:
 
 Until that migration, the site should keep reading the existing public `/api/catalog` shape.
 
+The PostgreSQL contract draft lives in `docs/pim-postgres-schema.sql`. It is not applied by the current runtime; it is a reviewed target schema for the later DB split. It covers:
+
+- `products`
+- `variants`
+- `images`
+- `image_variants`
+- `taxonomies`
+- `product_taxonomies`
+- `import_batches`
+
+Check the schema contract without touching production data:
+
+```bash
+npm run audit:pim-schema
+```
+
 ## Offline Normalized Export
 
 For DB/storage split preparation, use the offline exporter:

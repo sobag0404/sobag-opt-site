@@ -93,6 +93,14 @@ npm run export:pim -- --products data/products-live.json --out local-import-outp
 
 This export is offline and writes only to ignored local output. It does not change the current public `/api/catalog` compatibility path.
 
+The PostgreSQL target schema draft is tracked as `docs/pim-postgres-schema.sql` and checked by:
+
+```bash
+npm run audit:pim-schema
+```
+
+Do not apply it to production until the real DB split is explicitly approved and backed up.
+
 ## Fallback
 
 Keep Vercel configured with Redis/KV and Vercel Blob/S3 env as a fallback path. Do not switch Vercel to the file provider.

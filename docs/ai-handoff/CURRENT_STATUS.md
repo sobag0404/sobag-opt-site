@@ -41,6 +41,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Import/PIM PostgreSQL schema contract:
+  - added `docs/pim-postgres-schema.sql` as the future PostgreSQL target schema for `products`, `variants`, `images`, `image_variants`, `taxonomies`, `product_taxonomies`, and `import_batches`;
+  - added `tools/pim-postgres-schema-audit.mjs` and `npm run audit:pim-schema`;
+  - AutoFix now checks the schema contract and self-test fixture;
+  - no runtime storage switch, production data change, or DB apply was performed.
 - Performance/Core Web Vitals readiness:
   - added `tools/core-web-vitals-readiness.mjs` and `npm run audit:cwv`;
   - AutoFix now checks bundle budgets, deferred scripts on key pages, static image hints, public cache headers for catalog data, bounded browser cache for public catalog query/detail responses, skeleton loading, 48-card query pages, append-only cursor rendering, product-card containment, lazy XLSX loading, and image migration readiness;
