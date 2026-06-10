@@ -41,6 +41,9 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Vercel fallback API router fix:
+  - `api-router.js` now statically imports every `server-routes/*` handler instead of requiring them through dynamic strings;
+  - this keeps VPS and Vercel on the same handler map while letting Vercel trace and bundle the catch-all API route correctly.
 - Catalog listing UI cleanup:
   - catalog home has a single top return button labeled `На главную`;
   - selected category/collection/holiday pages reuse the same top button as `В каталог`;

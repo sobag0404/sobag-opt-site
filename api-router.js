@@ -1,25 +1,42 @@
 const { methodNotAllowed, sendJson } = require("./api/_lib/http");
+const catalog = require("./server-routes/catalog.js");
+const catalogQuery = require("./server-routes/catalog-query.js");
+const catalogDetail = require("./server-routes/catalog-detail.js");
+const content = require("./server-routes/content.js");
+const health = require("./server-routes/health.js");
+const orders = require("./server-routes/orders.js");
+const authLogin = require("./server-routes/auth/login.js");
+const authLogout = require("./server-routes/auth/logout.js");
+const authMe = require("./server-routes/auth/me.js");
+const authRegister = require("./server-routes/auth/register.js");
+const adminCatalog = require("./server-routes/admin/catalog.js");
+const adminContent = require("./server-routes/admin/content.js");
+const adminImportBatches = require("./server-routes/admin/import-batches.js");
+const adminOrders = require("./server-routes/admin/orders.js");
+const adminPim = require("./server-routes/admin/pim.js");
+const adminProductImages = require("./server-routes/admin/product-images.js");
+const adminUsers = require("./server-routes/admin/users.js");
 
 const apiRoutes = new Map(
   [
-    ["/api/catalog", "./server-routes/catalog.js"],
-    ["/api/catalog-query", "./server-routes/catalog-query.js"],
-    ["/api/catalog-detail", "./server-routes/catalog-detail.js"],
-    ["/api/content", "./server-routes/content.js"],
-    ["/api/health", "./server-routes/health.js"],
-    ["/api/orders", "./server-routes/orders.js"],
-    ["/api/auth/login", "./server-routes/auth/login.js"],
-    ["/api/auth/logout", "./server-routes/auth/logout.js"],
-    ["/api/auth/me", "./server-routes/auth/me.js"],
-    ["/api/auth/register", "./server-routes/auth/register.js"],
-    ["/api/admin/catalog", "./server-routes/admin/catalog.js"],
-    ["/api/admin/content", "./server-routes/admin/content.js"],
-    ["/api/admin/import-batches", "./server-routes/admin/import-batches.js"],
-    ["/api/admin/orders", "./server-routes/admin/orders.js"],
-    ["/api/admin/pim", "./server-routes/admin/pim.js"],
-    ["/api/admin/product-images", "./server-routes/admin/product-images.js"],
-    ["/api/admin/users", "./server-routes/admin/users.js"],
-  ].map(([route, file]) => [route, require(file)])
+    ["/api/catalog", catalog],
+    ["/api/catalog-query", catalogQuery],
+    ["/api/catalog-detail", catalogDetail],
+    ["/api/content", content],
+    ["/api/health", health],
+    ["/api/orders", orders],
+    ["/api/auth/login", authLogin],
+    ["/api/auth/logout", authLogout],
+    ["/api/auth/me", authMe],
+    ["/api/auth/register", authRegister],
+    ["/api/admin/catalog", adminCatalog],
+    ["/api/admin/content", adminContent],
+    ["/api/admin/import-batches", adminImportBatches],
+    ["/api/admin/orders", adminOrders],
+    ["/api/admin/pim", adminPim],
+    ["/api/admin/product-images", adminProductImages],
+    ["/api/admin/users", adminUsers],
+  ]
 );
 
 function routeKey(pathname) {
