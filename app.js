@@ -677,6 +677,9 @@ const STORAGE = {
   orders: "sobag.orders.v1",
   recentProducts: "sobag.recentProducts.v1",
 };
+const PUBLIC_API_CACHE_PREFIX = "sobag.publicApiCache.v1.";
+const PUBLIC_API_CACHE_TTL_MS = 30 * 60 * 1000;
+const PUBLIC_API_CACHE_MAX_ENTRIES = 80;
 
 let products = loadProducts();
 let actualSlideIndex = 0;
@@ -1289,6 +1292,51 @@ function currentServerCatalogResult() {
   return state.serverCatalog;
 }
 
+function applyServerCatalogResponse(data, { append, key, requestId }) {
+  if (requestId !== state.serverCatalog.requestId) return false;
+  const incoming = (Array.isArray(data.items) ? data.items : []).map(serverCatalogProduct).filter((product) => product.id && product.name);
+  const merged = append ? [...state.serverCatalog.items, ...incoming] : incoming;
+  const seen = new Set();
+  const items = merged.filter((product) => {
+    const keyValue = productKey(product);
+    if (!keyValue || seen.has(keyValue)) return false;
+    seen.add(keyValue);
+    return true;
+  });
+  rememberServerCatalogCards(items);
+  state.serverCatalog.status = "ready";
+  state.serverCatalog.key = key;
+  state.serverCatalog.items = items;
+  state.serverCatalog.total = Number(data.total || items.length) || items.length;
+  state.serverCatalog.facets = data.facets && typeof data.facets === "object" ? data.facets : {};
+  state.serverCatalog.facetOptions = data.facetOptions && typeof data.facetOptions === "object" ? data.facetOptions : {};
+  state.serverCatalog.nextCursor = String(data.pageInfo?.nextCursor || "");
+  state.serverCatalog.hasMore = Boolean(data.pageInfo?.hasMore);
+  state.serverCatalog.source = String(data.source || "");
+  state.serverCatalog.loadingMore = false;
+  return true;
+}
+
+async function fetchAndApplyServerCatalog(path, { append, key, requestId, background = false }) {
+  try {
+    const data = await apiRequest(path);
+    const updated = applyServerCatalogResponse(data, { append, key, requestId });
+    if (updated && background) {
+      renderFilters();
+      renderProducts();
+    }
+    return updated;
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
+    if (requestId === state.serverCatalog.requestId) {
+      if (state.serverCatalog.status !== "ready") state.serverCatalog.status = "fallback";
+      state.serverCatalog.key = key;
+      state.serverCatalog.loadingMore = false;
+    }
+    return false;
+  }
+}
+
 async function refreshServerCatalogList(options = {}) {
   if (!shouldUseServerCatalogList()) {
     resetServerCatalogList();
@@ -1309,40 +1357,16 @@ async function refreshServerCatalogList(options = {}) {
   }
   const requestId = state.serverCatalog.requestId + 1;
   state.serverCatalog.requestId = requestId;
-  try {
-    const params = serverCatalogParams({ cursor: append ? state.serverCatalog.nextCursor : "" });
-    const data = await apiRequest(`/api/catalog-query?${params.toString()}`);
-    if (requestId !== state.serverCatalog.requestId) return false;
-    const incoming = (Array.isArray(data.items) ? data.items : []).map(serverCatalogProduct).filter((product) => product.id && product.name);
-    const merged = append ? [...state.serverCatalog.items, ...incoming] : incoming;
-    const seen = new Set();
-    const items = merged.filter((product) => {
-      const keyValue = productKey(product);
-      if (!keyValue || seen.has(keyValue)) return false;
-      seen.add(keyValue);
+  const params = serverCatalogParams({ cursor: append ? state.serverCatalog.nextCursor : "" });
+  const path = `/api/catalog-query?${params.toString()}`;
+  if (!append) {
+    const cached = getPublicApiCache(path);
+    if (cached && applyServerCatalogResponse(cached, { append: false, key, requestId })) {
+      fetchAndApplyServerCatalog(path, { append: false, key, requestId, background: true });
       return true;
-    });
-    rememberServerCatalogCards(items);
-    state.serverCatalog.status = "ready";
-    state.serverCatalog.key = key;
-    state.serverCatalog.items = items;
-    state.serverCatalog.total = Number(data.total || items.length) || items.length;
-    state.serverCatalog.facets = data.facets && typeof data.facets === "object" ? data.facets : {};
-    state.serverCatalog.facetOptions = data.facetOptions && typeof data.facetOptions === "object" ? data.facetOptions : {};
-    state.serverCatalog.nextCursor = String(data.pageInfo?.nextCursor || "");
-    state.serverCatalog.hasMore = Boolean(data.pageInfo?.hasMore);
-    state.serverCatalog.source = String(data.source || "");
-    state.serverCatalog.loadingMore = false;
-    return true;
-  } catch (error) {
-    if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
-    if (requestId === state.serverCatalog.requestId) {
-      state.serverCatalog.status = "fallback";
-      state.serverCatalog.key = key;
-      state.serverCatalog.loadingMore = false;
     }
-    return false;
   }
+  return fetchAndApplyServerCatalog(path, { append, key, requestId });
 }
 
 function queueServerCatalogRefresh() {
@@ -1583,11 +1607,58 @@ async function apiRequest(path, options = {}) {
     error.code = data.error;
     throw error;
   }
+  rememberPublicApiCache(path, options, data);
   return data;
 }
 
 function isBackendUnavailable(error) {
   return error?.status === 503 || error?.code === "storage_not_configured" || error instanceof TypeError;
+}
+
+function isPublicApiCacheable(path, options = {}) {
+  if ((options.method || "GET").toUpperCase() !== "GET" || options.body) return false;
+  return /^\/api\/catalog-(query|detail)\?/.test(String(path || ""));
+}
+
+function publicApiCacheKey(path) {
+  return `${PUBLIC_API_CACHE_PREFIX}${path}`;
+}
+
+function getPublicApiCache(path) {
+  if (!isPublicApiCacheable(path)) return null;
+  try {
+    const cached = JSON.parse(localStorage.getItem(publicApiCacheKey(path)) || "null");
+    if (!cached || typeof cached !== "object") return null;
+    if (Date.now() - Number(cached.savedAt || 0) > PUBLIC_API_CACHE_TTL_MS) return null;
+    return cached.data || null;
+  } catch {
+    return null;
+  }
+}
+
+function trimPublicApiCache() {
+  try {
+    const entries = Object.keys(localStorage)
+      .filter((key) => key.startsWith(PUBLIC_API_CACHE_PREFIX))
+      .map((key) => {
+        const savedAt = Number(JSON.parse(localStorage.getItem(key) || "{}").savedAt || 0);
+        return { key, savedAt };
+      })
+      .sort((left, right) => right.savedAt - left.savedAt);
+    entries.slice(PUBLIC_API_CACHE_MAX_ENTRIES).forEach((entry) => localStorage.removeItem(entry.key));
+  } catch {
+    // Cache cleanup must never affect catalog rendering.
+  }
+}
+
+function rememberPublicApiCache(path, options = {}, data) {
+  if (!isPublicApiCacheable(path, options) || !data) return;
+  try {
+    localStorage.setItem(publicApiCacheKey(path), JSON.stringify({ savedAt: Date.now(), data }));
+    trimPublicApiCache();
+  } catch {
+    // Browser storage can be full or disabled; the network path remains authoritative.
+  }
 }
 
 function serverSaveErrorMessage(error, fallback) {
@@ -2374,13 +2445,30 @@ function replaceLoadedProduct(product) {
   return normalized;
 }
 
+function refreshCachedProductDetail(path) {
+  apiRequest(path)
+    .then((data) => {
+      if (data.product) replaceLoadedProduct(data.product);
+    })
+    .catch((error) => {
+      if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
+    });
+}
+
 async function loadProductDetailForModal(product) {
   if (!product || shouldLoadAdminCatalog()) return product;
   try {
     const params = new URLSearchParams();
     if (product.id) params.set("id", product.id);
     else if (product.baseSku) params.set("baseSku", product.baseSku);
-    const data = await apiRequest(`/api/catalog-detail?${params.toString()}`);
+    const path = `/api/catalog-detail?${params.toString()}`;
+    const cached = getPublicApiCache(path);
+    if (cached?.product) {
+      const normalized = replaceLoadedProduct(cached.product);
+      refreshCachedProductDetail(path);
+      return normalized;
+    }
+    const data = await apiRequest(path);
     return data.product ? replaceLoadedProduct(data.product) : product;
   } catch (error) {
     if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);

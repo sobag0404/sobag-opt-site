@@ -13,6 +13,7 @@ The current production architecture keeps the public catalog fast by default:
 - cursor pagination appends new cards and keeps already-rendered nodes stable;
 - product cards use rendering containment;
 - public catalog query/detail JSON can be browser-cached briefly;
+- public catalog query/detail responses are also cached in bounded localStorage for faster repeat navigation;
 - account, order, admin, and auth APIs stay `no-store`.
 
 ## Offline Checks
@@ -35,7 +36,8 @@ npm.cmd run audit:cwv
 - append-only cursor rendering;
 - product-card `content-visibility` containment;
 - public cache headers for `/api/catalog-query`, `/api/catalog-detail`, and `data/products-live.json`;
-- current image migration readiness status.
+- bounded browser cache for public catalog query/detail responses;
+- current image migration readiness status;
 - no static XLSX CDN load during first render; SheetJS is lazy-loaded only when a user imports/exports XLSX.
 
 ## When To Run Real CWV

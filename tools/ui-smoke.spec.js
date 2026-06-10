@@ -841,6 +841,69 @@ test("catalog list renders server query cards and cursor pages", async ({ page }
   expect(fullCatalogRequested).toBe(false);
 });
 
+test("catalog query cache renders repeat navigation while API refreshes", async ({ page }) => {
+  const cachedCard = {
+    id: "qa-cache-card-1",
+    baseSku: "QA-CACHE-001",
+    name: "QA Cached Catalog Card",
+    category: "QA Cache",
+    categories: ["QA Cache"],
+    collections: [],
+    holidays: [],
+    tags: [],
+    image: "assets/production-workshop-1.png",
+    minPrice: 321,
+    maxPrice: 321,
+    variantCount: 1,
+  };
+  let queryRequests = 0;
+  let fullCatalogRequested = false;
+  let failApiAfterCache = false;
+
+  await page.route("**/api/catalog", async (route) => {
+    fullCatalogRequested = true;
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({ error: "unexpected_full_catalog_bootstrap" }),
+    });
+  });
+
+  await page.route("**/api/catalog-query?**", async (route) => {
+    queryRequests += 1;
+    if (failApiAfterCache) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json; charset=utf-8",
+        body: JSON.stringify({ error: "temporary_unavailable" }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        items: [cachedCard],
+        total: 1,
+        facets: { categories: [{ value: "QA Cache", count: 1 }], collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        facetOptions: { categories: [{ value: "QA Cache", count: 1 }], collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        pageInfo: { page: 1, pageSize: 48, offset: 0, total: 1, totalPages: 1, hasMore: false, nextCursor: "" },
+        source: "qa-cache",
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent("QA Cache")}`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".product-card__sku").first()).toHaveText("QA-CACHE-001");
+  await expect.poll(() => page.evaluate(() => Object.keys(localStorage).some((key) => key.startsWith("sobag.publicApiCache.v1./api/catalog-query?")))).toBe(true);
+
+  failApiAfterCache = true;
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator(".product-card__sku").first()).toHaveText("QA-CACHE-001");
+  expect(queryRequests).toBeGreaterThan(1);
+  expect(fullCatalogRequested).toBe(false);
+});
+
 test("catalog server query keeps 10k pages bounded in DOM", async ({ page }) => {
   const pageSize = 48;
   const total = 10000;

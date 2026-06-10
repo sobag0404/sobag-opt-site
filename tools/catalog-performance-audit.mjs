@@ -43,6 +43,7 @@ function auditCatalogPerformance() {
   assert(page.items.every((item) => forbiddenCardFields.every((field) => !(field in item))), "catalog card payload includes detail/gallery fields");
   assert(app.includes("const CATALOG_PAGE_SIZE = 48;"), "frontend catalog page size should stay 48");
   assert(app.includes("const SERVER_CATALOG_PAGE_SIZE = CATALOG_PAGE_SIZE;"), "server catalog page size should follow CATALOG_PAGE_SIZE");
+  assert(app.includes("PUBLIC_API_CACHE_PREFIX") && app.includes("getPublicApiCache(path)"), "public catalog query/detail responses should use a bounded browser cache");
   assert(app.includes('insertAdjacentHTML("beforeend"'), "server cursor pagination should append new cards");
   assert(app.includes("dataset.renderKey") && app.includes("dataset.renderedCount"), "product grid render state should guard append-only rendering");
   assert(css.includes("content-visibility: auto;"), "product cards should use content-visibility for long lists");
