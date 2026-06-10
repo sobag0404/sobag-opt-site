@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Final content packet validator:
+  - added `docs/final-content-packet.md`, `tools/final-content-packet-audit.mjs`, and `npm run audit:final-content-packet`;
+  - expected real data lives in ignored `local-import-output/final-content-packet.json`;
+  - the validator rejects fake/old contacts, pending address wording, non-international phone format, and non-Yandex map URLs before final publication.
 - Goal readiness report:
   - added `tools/goal-readiness-report.mjs` and `npm run audit:goal-readiness`;
   - the report aggregates SEO/content, photo migration, DB split readiness, and Core Web Vitals readiness;
