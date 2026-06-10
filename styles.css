@@ -2077,8 +2077,12 @@ select[aria-invalid="true"] {
 }
 
 .account-tab {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
   min-height: 40px;
-  padding: 0 18px;
+  padding: 0 12px 0 18px;
   color: var(--on-dark);
   background: var(--surface-card);
   border: 1px solid var(--hairline);
@@ -2089,10 +2093,29 @@ select[aria-invalid="true"] {
   cursor: pointer;
 }
 
+.account-tab__count {
+  display: inline-flex;
+  min-width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  color: var(--canvas);
+  background: var(--on-dark);
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1;
+}
+
 .account-tab.is-active {
   color: var(--canvas);
   background: var(--on-dark);
   border-color: var(--on-dark);
+}
+
+.account-tab.is-active .account-tab__count {
+  color: var(--on-dark);
+  background: var(--canvas);
 }
 
 .account-tab-panel {
@@ -5377,6 +5400,16 @@ body.theme-night .account-tab.is-active {
   color: #160b04;
   background: var(--amber);
   border-color: rgba(255, 138, 31, 0.82);
+}
+
+body.theme-night .account-tab__count {
+  color: #160b04;
+  background: var(--amber);
+}
+
+body.theme-night .account-tab.is-active .account-tab__count {
+  color: var(--amber);
+  background: #160b04;
 }
 
 body.theme-night .product-card,

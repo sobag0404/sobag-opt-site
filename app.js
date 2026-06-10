@@ -6958,9 +6958,14 @@ function buyerOrdersHtml(user) {
   `;
 }
 
-function accountTabButton(id, label, activeTab) {
+function accountTabButton(id, label, activeTab, count = 0) {
   const active = id === activeTab;
-  return `<button class="account-tab${active ? " is-active" : ""}" type="button" role="tab" aria-selected="${active ? "true" : "false"}" data-account-tab="${id}">${label}</button>`;
+  return `
+    <button class="account-tab${active ? " is-active" : ""}" type="button" role="tab" aria-selected="${active ? "true" : "false"}" data-account-tab="${id}">
+      <span class="account-tab__label">${escapeHtml(label)}</span>
+      ${count ? `<span class="account-tab__count" aria-label="${count}">${count}</span>` : ""}
+    </button>
+  `;
 }
 
 function accountTabPanel(id, activeTab, html) {
@@ -6974,7 +6979,7 @@ function buyerAccountTabsHtml(user) {
   return `
     <div class="account-tabs" role="tablist" aria-label="Разделы личного кабинета">
       ${accountTabButton("profile", "Профиль", activeTab)}
-      ${accountTabButton("orders", `Заказы${orders.length ? ` ${orders.length}` : ""}`, activeTab)}
+      ${accountTabButton("orders", "Заказы", activeTab, orders.length)}
       ${accountTabButton("quotes", "КП", activeTab)}
     </div>
     <div class="account-tab-panels">

@@ -41,6 +41,9 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Account tab counter polish:
+  - `Заказы` tab count now renders as a separate badge instead of merged text like `Заказы 2`;
+  - day/night theme styles cover the badge.
 - Buyer account order tab and admin order refresh:
   - ordinary buyer accounts now show a dedicated `Заказы` tab with history, statuses, customer-visible CRM messages, buyer replies, and repeat-order actions;
   - account order history is loaded from the server by matching both `userEmail` and `customer.email`;
