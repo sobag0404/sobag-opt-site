@@ -16,6 +16,11 @@ const REQUIRED_TABLES = {
   import_batch_rows: ["id", "batch_id", "row_number", "base_sku", "status", "action", "reason", "warnings", "variant_count", "payload"],
 };
 
+const REQUIRED_VIEWS = {
+  public_catalog_products: ["id", "base_sku", "name", "status", "min_price", "max_price", "variant_count", "categories", "collections", "holidays", "tags"],
+  public_catalog_cards: ["id", "base_sku", "name", "description", "stock", "popular", "min_price", "max_price", "variant_count", "category", "image", "image_meta"],
+};
+
 function normalizeSql(sql) {
   return String(sql || "")
     .replace(/--.*$/gm, "")
@@ -26,6 +31,11 @@ function normalizeSql(sql) {
 
 function tableBody(sql, table) {
   const pattern = new RegExp(`create\\s+table\\s+if\\s+not\\s+exists\\s+${table}\\s*\\((.*?)\\);`, "is");
+  return sql.match(pattern)?.[1] || "";
+}
+
+function viewBody(sql, view) {
+  const pattern = new RegExp(`create\\s+or\\s+replace\\s+view\\s+${view}\\s+as\\s+(.*?)(?=create\\s+or\\s+replace\\s+view|$)`, "is");
   return sql.match(pattern)?.[1] || "";
 }
 
@@ -45,6 +55,17 @@ function auditPimPostgresSchema(sqlText = readFileSync(schemaPath, "utf8")) {
     });
   });
 
+  Object.entries(REQUIRED_VIEWS).forEach(([view, columns]) => {
+    const body = viewBody(sql, view);
+    if (!body) {
+      errors.push(`missing view: ${view}`);
+      return;
+    }
+    columns.forEach((column) => {
+      if (!new RegExp(`\\b${column}\\b`).test(body)) errors.push(`${view} missing field ${column}`);
+    });
+  });
+
   [
     "references products (id) on delete restrict",
     "references images (id) on delete cascade",
@@ -53,6 +74,8 @@ function auditPimPostgresSchema(sqlText = readFileSync(schemaPath, "utf8")) {
     "check (status in ('draft', 'published', 'hidden', 'archive'))",
     "check (type in ('category', 'collection', 'holiday', 'tag'))",
     "check (format in ('webp', 'avif', 'jpg', 'png'))",
+    "where p.status = 'published' and p.hidden = false",
+    "from public_catalog_products p",
   ].forEach((fragment) => {
     if (!sql.includes(fragment)) errors.push(`missing constraint: ${fragment}`);
   });
@@ -66,13 +89,14 @@ function auditPimPostgresSchema(sqlText = readFileSync(schemaPath, "utf8")) {
     errors,
     warnings,
     tables: Object.keys(REQUIRED_TABLES),
+    views: Object.keys(REQUIRED_VIEWS),
     contractVersion: 1,
   };
 }
 
 function selfTest() {
   const report = auditPimPostgresSchema();
-  if (!report.ok || report.tables.length !== Object.keys(REQUIRED_TABLES).length) throw new Error("PIM PostgreSQL schema audit self-test failed");
+  if (!report.ok || report.tables.length !== Object.keys(REQUIRED_TABLES).length || report.views.length !== Object.keys(REQUIRED_VIEWS).length) throw new Error("PIM PostgreSQL schema audit self-test failed");
 }
 
 function main() {
@@ -85,7 +109,7 @@ function main() {
   const report = auditPimPostgresSchema();
   if (json) console.log(JSON.stringify(report, null, 2));
   else {
-    console.log(`PIM PostgreSQL schema audit ${report.ok ? "passed" : "failed"}: ${report.tables.length} tables`);
+    console.log(`PIM PostgreSQL schema audit ${report.ok ? "passed" : "failed"}: ${report.tables.length} tables, ${report.views.length} views`);
     if (report.warnings.length) console.log(`Warnings: ${report.warnings.join("; ")}`);
     if (report.errors.length) console.log(`Errors: ${report.errors.join("; ")}`);
   }

@@ -33,6 +33,8 @@ assert(pim.version === 1, "PIM version must be 1");
 assert(pim.products.length === products.length, "PIM product count must match catalog product count");
 assert(pim.variants.length > products.length, "PIM must include generated variants");
 assert(pim.images.length >= products.length, "PIM must include product images");
+assert(pim.products.every((product) => Number.isFinite(product.minPrice) && Number.isFinite(product.maxPrice)), "PIM products must include min/max prices for DB-backed catalog cards");
+assert(pim.products.every((product) => Number.isFinite(product.popular)), "PIM products must include popular score for DB-backed sorting");
 assert(pim.taxonomies.categories.length > 0, "PIM must include categories taxonomy");
 assert(pim.taxonomyAssignments.length > 0, "PIM must include product-taxonomy assignments");
 assert(pim.counts.products === pim.products.length, "PIM product count metadata is wrong");

@@ -171,6 +171,8 @@ function productRecord(product, index = 0) {
   const images = imageRecordsForProduct(product, index);
   const variants = variantRecordsForProduct(product, index);
   const status = productStatus(product);
+  const prices = variants.map((variant) => Number(variant.price || 0)).filter((price) => Number.isFinite(price) && price > 0);
+  const basePrice = Number(product?.basePrice || 0) || 0;
   return {
     id,
     baseSku: text(product?.baseSku || id),
@@ -182,7 +184,12 @@ function productRecord(product, index = 0) {
     collections: list(product?.collections),
     holidays: list(product?.holidays),
     tags: list(product?.tags),
-    basePrice: Number(product?.basePrice || 0) || 0,
+    description: text(product?.description),
+    detailDescription: text(product?.detailDescription),
+    basePrice,
+    minPrice: prices.length ? Math.min(...prices) : basePrice,
+    maxPrice: prices.length ? Math.max(...prices) : basePrice,
+    popular: Math.max(0, Number(product?.popular || 0) || 0),
     stock: text(product?.stock),
     photoFolder: text(product?.photoFolder),
     imageCount: images.length,

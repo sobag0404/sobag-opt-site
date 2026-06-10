@@ -144,3 +144,89 @@ create table if not exists import_batch_rows (
 
 create index if not exists import_batch_rows_batch_id_idx on import_batch_rows (batch_id);
 create index if not exists import_batch_rows_action_idx on import_batch_rows (action);
+
+create or replace view public_catalog_products as
+select
+  p.id,
+  p.base_sku,
+  p.name,
+  p.status,
+  p.description,
+  p.detail_description,
+  p.stock,
+  p.popular,
+  p.min_price,
+  p.max_price,
+  p.variant_count,
+  coalesce(
+    (
+      select jsonb_agg(t.name order by t.name)
+      from product_taxonomies pt
+      join taxonomies t on t.id = pt.taxonomy_id
+      where pt.product_id = p.id and pt.type = 'category'
+    ),
+    '[]'::jsonb
+  ) as categories,
+  coalesce(
+    (
+      select jsonb_agg(t.name order by t.name)
+      from product_taxonomies pt
+      join taxonomies t on t.id = pt.taxonomy_id
+      where pt.product_id = p.id and pt.type = 'collection'
+    ),
+    '[]'::jsonb
+  ) as collections,
+  coalesce(
+    (
+      select jsonb_agg(t.name order by t.name)
+      from product_taxonomies pt
+      join taxonomies t on t.id = pt.taxonomy_id
+      where pt.product_id = p.id and pt.type = 'holiday'
+    ),
+    '[]'::jsonb
+  ) as holidays,
+  coalesce(
+    (
+      select jsonb_agg(t.name order by t.name)
+      from product_taxonomies pt
+      join taxonomies t on t.id = pt.taxonomy_id
+      where pt.product_id = p.id and pt.type = 'tag'
+    ),
+    '[]'::jsonb
+  ) as tags
+from products p
+where p.status = 'published' and p.hidden = false;
+
+create or replace view public_catalog_cards as
+select
+  p.id,
+  p.base_sku,
+  p.name,
+  p.description,
+  p.stock,
+  p.popular,
+  p.min_price,
+  p.max_price,
+  p.variant_count,
+  p.categories,
+  p.collections,
+  p.holidays,
+  p.tags,
+  coalesce(p.categories ->> 0, '') as category,
+  i.url as image,
+  jsonb_build_object(
+    'url', i.url,
+    'storageKey', i.storage_key,
+    'provider', i.provider,
+    'width', i.width,
+    'height', i.height,
+    'mime', i.mime
+  ) as image_meta
+from public_catalog_products p
+left join lateral (
+  select *
+  from images
+  where product_id = p.id
+  order by is_primary desc, sort_order asc, id asc
+  limit 1
+) i on true;

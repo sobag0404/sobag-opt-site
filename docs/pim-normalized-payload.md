@@ -71,7 +71,7 @@ Diagnostics compare stored sidecar counts with a freshly rebuilt PIM view and re
 
 ## Included Records
 
-- `products`: one normalized record per catalog product, including `id`, `baseSku`, `name`, publication status, taxonomy arrays, base price, stock, image count, and variant count.
+- `products`: one normalized record per catalog product, including `id`, `baseSku`, `name`, publication status, taxonomy arrays, descriptions, base/min/max price, stock, popular score, image count, and variant count.
 - `variants`: generated variant records from `types * sizes * materials`, using the same SKU pattern as the frontend.
 - `images`: metadata records from `images`, `image`, and `gallery`, including object storage fields and responsive `variants` when present.
 - `imageVariants`: offline export rows for responsive image variants, equivalent to `image_variants` in PostgreSQL.
@@ -113,6 +113,7 @@ The PostgreSQL contract draft lives in `docs/pim-postgres-schema.sql`. It is not
 - `product_taxonomies`
 - `import_batches`
 - `import_batch_rows`
+- `public_catalog_products` and `public_catalog_cards` read views for the future DB-backed public catalog API
 
 Check the schema contract without touching production data:
 

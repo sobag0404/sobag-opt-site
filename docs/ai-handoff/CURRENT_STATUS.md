@@ -41,6 +41,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PIM public catalog read contract:
+  - normalized product records now include description, min/max price, and popular score for future DB-backed catalog cards;
+  - PostgreSQL schema now defines `public_catalog_products` and `public_catalog_cards` read views;
+  - the views are guarded to expose only `published` non-hidden products, preserving the public API invariant for a later DB split;
+  - schema audit now checks both views without applying schema changes or touching production data.
 - PIM image variant export:
   - normalized PIM export now writes `image-variants.jsonl` for responsive image metadata;
   - the export validates that every image variant references an exported parent image;
