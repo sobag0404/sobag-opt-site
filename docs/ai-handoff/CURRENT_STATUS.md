@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Prompt handoff rule:
+  - detailed future goal prompts should be saved under `docs/ai-handoff/` and pushed to GitHub;
+  - chat responses with prompts should stay under 4000 characters;
+  - current detailed prompt is saved in `docs/ai-handoff/NEXT_GOAL_PROMPT.md`.
 - Catalog/header/content/contact UX fixes:
   - catalog active filter chips now include `Снять все фильтры`;
   - guests see `Вход / регистрация` in the top header;
