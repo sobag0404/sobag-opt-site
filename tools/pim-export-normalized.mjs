@@ -47,11 +47,23 @@ function flattenTaxonomies(taxonomies = {}) {
   );
 }
 
+function flattenImageVariants(images = []) {
+  return images.flatMap((image) =>
+    (Array.isArray(image.variants) ? image.variants : []).map((variant, index) => ({
+      ...variant,
+      id: String(variant.id || `${image.id}::variant-${index + 1}`).trim(),
+      imageId: String(variant.parentImageId || image.id || "").trim(),
+      parentImageId: undefined,
+    }))
+  );
+}
+
 function pimTables(pim) {
   return {
     products: pim.products || [],
     variants: pim.variants || [],
     images: pim.images || [],
+    imageVariants: flattenImageVariants(pim.images || []),
     taxonomies: flattenTaxonomies(pim.taxonomies),
     taxonomyAssignments: pim.taxonomyAssignments || [],
     importBatches: pim.importBatches || [],
@@ -73,6 +85,7 @@ function validateTables(tables) {
   assertUnique(tables.products, "id", "products");
   assertUnique(tables.variants, "id", "variants");
   assertUnique(tables.images, "id", "images");
+  assertUnique(tables.imageVariants, "id", "imageVariants");
   assertUnique(tables.taxonomies, "id", "taxonomies");
   assertUnique(tables.taxonomyAssignments, "id", "taxonomyAssignments");
   assertUnique(tables.importBatchRows, "id", "importBatchRows");
@@ -81,6 +94,9 @@ function validateTables(tables) {
   });
   tables.images.forEach((image) => {
     if (!tables.products.some((product) => product.id === image.productId)) throw new Error(`image ${image.id} references missing product ${image.productId}`);
+  });
+  tables.imageVariants.forEach((variant) => {
+    if (!tables.images.some((image) => image.id === variant.imageId)) throw new Error(`image variant ${variant.id} references missing image ${variant.imageId}`);
   });
   tables.taxonomyAssignments.forEach((assignment) => {
     if (!tables.products.some((product) => product.id === assignment.productId)) throw new Error(`taxonomy assignment ${assignment.id} references missing product ${assignment.productId}`);
@@ -101,6 +117,7 @@ function manifestFor(pim, tables, args) {
       products: "products.jsonl",
       variants: "variants.jsonl",
       images: "images.jsonl",
+      imageVariants: "image-variants.jsonl",
       taxonomies: "taxonomies.jsonl",
       taxonomyAssignments: "taxonomy-assignments.jsonl",
       importBatches: "import-batches.jsonl",
@@ -110,11 +127,11 @@ function manifestFor(pim, tables, args) {
       products: tables.products.length,
       variants: tables.variants.length,
       images: tables.images.length,
+      imageVariants: tables.imageVariants.length,
       taxonomies: tables.taxonomies.length,
       taxonomyAssignments: tables.taxonomyAssignments.length,
       importBatches: tables.importBatches.length,
       importBatchRows: tables.importBatchRows.length,
-      imageVariants: pim.counts?.imageVariants || 0,
       statuses: pim.counts?.statuses || {},
     },
   };
@@ -138,6 +155,7 @@ async function exportPim(args) {
     await writeJsonl(join(args.out, "products.jsonl"), tables.products);
     await writeJsonl(join(args.out, "variants.jsonl"), tables.variants);
     await writeJsonl(join(args.out, "images.jsonl"), tables.images);
+    await writeJsonl(join(args.out, "image-variants.jsonl"), tables.imageVariants);
     await writeJsonl(join(args.out, "taxonomies.jsonl"), tables.taxonomies);
     await writeJsonl(join(args.out, "taxonomy-assignments.jsonl"), tables.taxonomyAssignments);
     await writeJsonl(join(args.out, "import-batches.jsonl"), tables.importBatches);
@@ -166,7 +184,28 @@ async function selfTest() {
         sizes: ["40x40"],
         materials: ["Велюр"],
         basePrice: 100,
-        image: "assets/production-workshop-1.png",
+        images: [
+          {
+            url: "https://cdn.example/products/pim-export-1/1.jpg",
+            storageKey: "products/pim-export-1/1.jpg",
+            provider: "s3-compatible",
+            width: 1200,
+            height: 1200,
+            mime: "image/jpeg",
+            uploadedAt: "2026-06-10T00:00:00.000Z",
+            variants: [
+              {
+                url: "https://cdn.example/products/pim-export-1/1.webp",
+                storageKey: "products/pim-export-1/1.webp",
+                provider: "s3-compatible",
+                width: 960,
+                height: 960,
+                mime: "image/webp",
+                format: "webp",
+              },
+            ],
+          },
+        ],
       },
       {
         id: "pim-export-2",
@@ -185,8 +224,8 @@ async function selfTest() {
     await writeFile(productsPath, `${JSON.stringify(products, null, 2)}\n`, "utf8");
     const result = await exportPim({ products: productsPath, out, source: "pim-export-self-test", dryRun: false });
     const manifest = JSON.parse(await readFile(join(out, "manifest.json"), "utf8"));
-    if (!existsSync(join(out, "products.jsonl")) || !existsSync(join(out, "variants.jsonl")) || !existsSync(join(out, "taxonomy-assignments.jsonl"))) throw new Error("PIM export self-test missing JSONL files");
-    if (manifest.counts.products !== 2 || manifest.counts.variants !== 2 || result.manifest.counts.images !== 2) {
+    if (!existsSync(join(out, "products.jsonl")) || !existsSync(join(out, "variants.jsonl")) || !existsSync(join(out, "image-variants.jsonl")) || !existsSync(join(out, "taxonomy-assignments.jsonl"))) throw new Error("PIM export self-test missing JSONL files");
+    if (manifest.counts.products !== 2 || manifest.counts.variants !== 2 || result.manifest.counts.images !== 2 || result.manifest.counts.imageVariants !== 1) {
       throw new Error("PIM export self-test counts mismatch");
     }
     if (manifest.counts.taxonomyAssignments < 2) throw new Error("PIM export self-test taxonomy assignments mismatch");
@@ -205,7 +244,7 @@ export async function runPimExport(argv = process.argv.slice(2)) {
   const result = await exportPim(args);
   const mode = result.dryRun ? "dry-run" : result.out;
   console.log(
-    `PIM normalized export passed (${mode}): ${result.manifest.counts.products} products, ${result.manifest.counts.variants} variants, ${result.manifest.counts.images} images, ${result.manifest.counts.taxonomies} taxonomies, ${result.manifest.counts.taxonomyAssignments} taxonomy assignments, ${result.manifest.counts.importBatchRows} import batch rows`
+    `PIM normalized export passed (${mode}): ${result.manifest.counts.products} products, ${result.manifest.counts.variants} variants, ${result.manifest.counts.images} images, ${result.manifest.counts.imageVariants} image variants, ${result.manifest.counts.taxonomies} taxonomies, ${result.manifest.counts.taxonomyAssignments} taxonomy assignments, ${result.manifest.counts.importBatchRows} import batch rows`
   );
   return result;
 }

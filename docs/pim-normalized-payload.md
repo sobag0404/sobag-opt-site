@@ -74,6 +74,7 @@ Diagnostics compare stored sidecar counts with a freshly rebuilt PIM view and re
 - `products`: one normalized record per catalog product, including `id`, `baseSku`, `name`, publication status, taxonomy arrays, base price, stock, image count, and variant count.
 - `variants`: generated variant records from `types * sizes * materials`, using the same SKU pattern as the frontend.
 - `images`: metadata records from `images`, `image`, and `gallery`, including object storage fields and responsive `variants` when present.
+- `imageVariants`: offline export rows for responsive image variants, equivalent to `image_variants` in PostgreSQL.
 - `taxonomies`: category, collection, holiday, and tag indexes with product counts.
 - `taxonomyAssignments`: one row per product-taxonomy link. This is the bridge table for the future DB split, equivalent to `product_taxonomies` in PostgreSQL.
 - `importBatches`: safe import batch summaries only. Large `products`, row reports, and rollback `snapshot` payloads are not copied into the PIM sidecar.
@@ -132,6 +133,7 @@ The export writes ignored local JSONL files:
 - `products.jsonl`
 - `variants.jsonl`
 - `images.jsonl`
+- `image-variants.jsonl`
 - `taxonomies.jsonl`
 - `taxonomy-assignments.jsonl`
 - `import-batches.jsonl`

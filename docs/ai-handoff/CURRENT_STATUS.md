@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PIM image variant export:
+  - normalized PIM export now writes `image-variants.jsonl` for responsive image metadata;
+  - the export validates that every image variant references an exported parent image;
+  - self-test fixture covers the future PostgreSQL `image_variants` path.
 - Import batch row DB contract:
   - added future `import_batch_rows` coverage to `docs/pim-postgres-schema.sql`, schema audit, normalized export, seed exporter, and PIM smoke;
   - row-report records are included only when offline tooling explicitly requests them;

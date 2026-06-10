@@ -67,6 +67,7 @@ Last updated: 2026-06-10
      - [x] Admin diagnostics/export endpoint for the PIM sidecar: summary/full/table views and CSV exports for products, variants, images, taxonomies, and import batches.
      - [x] VPS storage bridge: explicit `SOBAG_STORE_PROVIDER=file` backend for shared data, catalog, content, import batches, and sessions, while Vercel stays on Redis/KV.
      - [x] Offline normalized PIM export for future DB import: products, variants, images, taxonomies, import-batches JSONL, and manifest.
+     - [x] Offline image-variant export: normalized PIM export now writes `image-variants.jsonl` for the future PostgreSQL `image_variants` table when responsive image metadata exists.
      - [x] DB split contract bridge: PIM sidecar/export now includes product-taxonomy assignment rows and `tools/pim-db-contract-audit.mjs` validates the future product/variant/image/taxonomy/import-batch table contract offline.
      - [x] PostgreSQL target schema contract draft: `docs/pim-postgres-schema.sql` defines products, variants, images, image variants, taxonomies, product-taxonomies, and import batches; `tools/pim-postgres-schema-audit.mjs` guards it in AutoFix.
      - [x] PostgreSQL seed export rehearsal: `tools/pim-postgres-seed.mjs` generates an ignored SQL upsert seed for the future schema from the current normalized PIM bridge without connecting to DB or touching production data; AutoFix validates the current catalog seed shape in dry-run mode.
