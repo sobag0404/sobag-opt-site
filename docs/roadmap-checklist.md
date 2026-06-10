@@ -85,6 +85,7 @@ Last updated: 2026-06-10
      - [x] PostgreSQL rollback rehearsal: `tools/pim-postgres-rehearsal.mjs` builds the schema + live catalog seed SQL and can execute it inside one transaction that always rolls back, requiring explicit env-based DB config and remote-test confirmation.
      - [x] PostgreSQL public view compatibility fix: future `public_catalog_products` taxonomy fields are `text[]` arrays, matching the catalog query builder's `&& text[]` filters, and search indexes now cover `base_sku`, `name`, and `description`.
      - [x] PostgreSQL facet query prep: future DB source now has SQL-backed facet/facetOptions buckets for category, collection, holiday, tag, type, size, material, and stock, while keeping current public `/api/catalog-query` shape.
+     - [x] PostgreSQL variant SKU search prep: future public catalog views expose `variant_skus`, and DB search SQL matches base SKU, variant SKU, name, and description without changing current runtime storage.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:

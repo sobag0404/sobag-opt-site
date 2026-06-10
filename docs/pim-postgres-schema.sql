@@ -187,8 +187,7 @@ select
     join taxonomies t on t.id = pt.taxonomy_id
     where pt.product_id = p.id and pt.type = 'tag'
     order by t.name
-  )::text[] as tags
-  ,
+  )::text[] as tags,
   array(
     select distinct v.type
     from variants v
@@ -206,7 +205,13 @@ select
     from variants v
     where v.product_id = p.id and btrim(v.material) <> ''
     order by v.material
-  )::text[] as materials
+  )::text[] as materials,
+  array(
+    select v.sku
+    from variants v
+    where v.product_id = p.id and btrim(v.sku) <> ''
+    order by v.sku
+  )::text[] as variant_skus
 from products p
 where p.status = 'published' and p.hidden = false;
 
@@ -228,6 +233,7 @@ select
   p.types,
   p.sizes,
   p.materials,
+  p.variant_skus,
   coalesce(p.categories[1], '') as category,
   i.url as image,
   jsonb_build_object(

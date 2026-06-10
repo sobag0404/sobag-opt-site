@@ -17,8 +17,8 @@ const REQUIRED_TABLES = {
 };
 
 const REQUIRED_VIEWS = {
-  public_catalog_products: ["id", "base_sku", "name", "status", "min_price", "max_price", "variant_count", "categories", "collections", "holidays", "tags", "types", "sizes", "materials"],
-  public_catalog_cards: ["id", "base_sku", "name", "description", "stock", "popular", "min_price", "max_price", "variant_count", "category", "categories", "collections", "holidays", "tags", "types", "sizes", "materials", "image", "image_meta"],
+  public_catalog_products: ["id", "base_sku", "name", "status", "min_price", "max_price", "variant_count", "categories", "collections", "holidays", "tags", "types", "sizes", "materials", "variant_skus"],
+  public_catalog_cards: ["id", "base_sku", "name", "description", "stock", "popular", "min_price", "max_price", "variant_count", "category", "categories", "collections", "holidays", "tags", "types", "sizes", "materials", "variant_skus", "image", "image_meta"],
 };
 
 function normalizeSql(sql) {
@@ -88,6 +88,7 @@ function auditPimPostgresSchema(sqlText = readFileSync(schemaPath, "utf8")) {
     ")::text[] as types",
     ")::text[] as sizes",
     ")::text[] as materials",
+    ")::text[] as variant_skus",
     "coalesce(p.categories[1], '') as category",
   ].forEach((fragment) => {
     if (!sql.includes(fragment)) errors.push(`missing constraint: ${fragment}`);

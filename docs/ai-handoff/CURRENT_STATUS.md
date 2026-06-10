@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL variant SKU search prep:
+  - future public catalog views now expose `variant_skus`;
+  - DB search SQL matches base SKU, variant SKU, name, and description;
+  - query and schema audits cover the shape without connecting to PostgreSQL.
 - PostgreSQL facet query prep:
   - `api/_lib/catalog-db-query.js` now builds future facet bucket SQL;
   - `api/_lib/catalog-db-source.js` returns SQL-backed `facets` and `facetOptions`;

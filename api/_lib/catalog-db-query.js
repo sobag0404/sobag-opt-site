@@ -63,7 +63,7 @@ function buildWhere(query = {}, params = [], options = {}) {
   const q = text(query.q);
   if (q) {
     const param = addParam(params, `%${q}%`);
-    where.push(`(base_sku ILIKE ${param} OR name ILIKE ${param} OR description ILIKE ${param})`);
+    where.push(`(base_sku ILIKE ${param} OR name ILIKE ${param} OR description ILIKE ${param} OR EXISTS (SELECT 1 FROM unnest(variant_skus) variant_sku WHERE variant_sku ILIKE ${param}))`);
   }
 
   const filters = filtersForQuery(query, options);

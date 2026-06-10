@@ -22,6 +22,7 @@ function smokeCards() {
   });
   assert.ok(query.sql.includes("FROM public_catalog_cards"));
   assert.ok(query.sql.includes("ILIKE $1"));
+  assert.ok(query.sql.includes("unnest(variant_skus)"));
   assert.ok(query.sql.includes("categories && $2::text[]"));
   assert.ok(query.sql.includes("collections && $3::text[]"));
   assert.ok(query.sql.includes("ORDER BY min_price ASC, name ASC"));
