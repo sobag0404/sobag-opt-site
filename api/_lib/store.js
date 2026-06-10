@@ -117,6 +117,7 @@ function emptyStore() {
     savedCarts: {},
     favorites: {},
     reviews: [],
+    briefs: [],
     audit: [],
     version: 1,
   };
@@ -134,6 +135,7 @@ function normalizeStore(value) {
     savedCarts: parsed.savedCarts && typeof parsed.savedCarts === "object" && !Array.isArray(parsed.savedCarts) ? parsed.savedCarts : {},
     favorites: parsed.favorites && typeof parsed.favorites === "object" && !Array.isArray(parsed.favorites) ? parsed.favorites : {},
     reviews: Array.isArray(parsed.reviews) ? parsed.reviews : [],
+    briefs: Array.isArray(parsed.briefs) ? parsed.briefs : [],
     audit: Array.isArray(parsed.audit) ? parsed.audit : [],
   };
 }

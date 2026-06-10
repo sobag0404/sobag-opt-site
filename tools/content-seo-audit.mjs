@@ -15,10 +15,11 @@ const PUBLIC_PAGES = [
   "marketplaces.html",
   "cart.html",
   "terms.html",
+  "privacy.html",
   "assets/legal/personal-data-consent.html",
 ];
 
-const REQUIRED_PAGES = ["catalog.html", "business.html", "about.html", "contacts.html", "marketplaces.html", "terms.html"];
+const REQUIRED_PAGES = ["catalog.html", "business.html", "about.html", "contacts.html", "marketplaces.html", "terms.html", "privacy.html"];
 
 const FORBIDDEN_COPY = [
   { pattern: /\btilda\b/iu, label: "old Tilda reference" },

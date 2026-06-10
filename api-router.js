@@ -5,6 +5,7 @@ const catalogDetail = require("./server-routes/catalog-detail.js");
 const content = require("./server-routes/content.js");
 const health = require("./server-routes/health.js");
 const orders = require("./server-routes/orders.js");
+const briefs = require("./server-routes/briefs.js");
 const authLogin = require("./server-routes/auth/login.js");
 const authLogout = require("./server-routes/auth/logout.js");
 const authMe = require("./server-routes/auth/me.js");
@@ -25,6 +26,7 @@ const apiRoutes = new Map(
     ["/api/content", content],
     ["/api/health", health],
     ["/api/orders", orders],
+    ["/api/briefs", briefs],
     ["/api/auth/login", authLogin],
     ["/api/auth/logout", authLogout],
     ["/api/auth/me", authMe],

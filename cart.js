@@ -47,10 +47,8 @@ const basketDiscountTiers = [
   { amount: 300000, discount: 18 },
 ];
 
-const promoCodes = {
-  SOBAG5: 5,
-  OPT10: 10,
-};
+const promoCodes = {};
+const promoUnavailableText = "Промокод согласует менеджер при подтверждении заказа.";
 
 const CART_CONTENT_KEY = "sobag.siteContent.v1";
 const defaultCartContent = {
@@ -71,7 +69,7 @@ const defaultCartContent = {
   footerEmail: "opt@sobag-shop.online",
   footerPhone: "+7 900 123-45-67",
   footerCompanyTitle: "Компания",
-  footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Пользовательское соглашение",
+  footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Согласие на обработку персональных данных|Пользовательское соглашение",
   footerClientsTitle: "Клиентам",
   footerClientsLinks: "Как оформить заказ|Доставка товара|Оплата товара|Возврат товара|Изделия с вашим принтом",
   footerPartnersTitle: "Партнерам",
@@ -120,6 +118,20 @@ const nodes = {
 let lastFocusedElement = null;
 const focusableSelector =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function syncPromoAvailability() {
+  const hasPromoCodes = Object.keys(promoCodes).length > 0;
+  if (nodes.promoInput) {
+    nodes.promoInput.disabled = !hasPromoCodes;
+    if (!hasPromoCodes) nodes.promoInput.value = "";
+  }
+  const promoButton = document.querySelector("#promoForm button");
+  if (promoButton) promoButton.disabled = !hasPromoCodes;
+  if (!hasPromoCodes) {
+    state.promo = "";
+    if (nodes.promoHint) nodes.promoHint.textContent = promoUnavailableText;
+  }
+}
 
 function formatMoney(value) {
   return new Intl.NumberFormat("ru-RU", {
@@ -380,7 +392,14 @@ function footerLinkUrl(label = "") {
   if (prepared.includes("маркетплейс")) return "marketplaces.html";
   if (prepared.includes("свой") || prepared.includes("принт")) return "custom.html";
   if (prepared.includes("услов")) return "business.html";
-  if (prepared.includes("политик") || prepared.includes("персональ")) return "assets/legal/personal-data-consent.pdf";
+  if (prepared.includes("как оформить") || prepared.includes("оформить заказ")) return "how-to-order.html";
+  if (prepared.includes("достав")) return "delivery.html";
+  if (prepared.includes("оплат")) return "payment.html";
+  if (prepared.includes("возврат")) return "returns.html";
+  if (prepared.includes("поддерж") || prepared.includes("селлер")) return "seller-support.html";
+  if (prepared.includes("оптов") || prepared.includes("парт")) return "wholesale.html";
+  if (prepared.includes("соглас") || (prepared.includes("персональ") && !prepared.includes("политик"))) return "assets/legal/personal-data-consent.pdf";
+  if (prepared.includes("политик") || prepared.includes("конфиденц")) return "privacy.html";
   if (prepared.includes("соглаш")) return "terms.html";
   return "#";
 }
@@ -393,7 +412,7 @@ function renderFooterLinks(selector, value) {
       .filter(Boolean)
       .map((item) => {
         const href = footerLinkUrl(item);
-        const externalAttrs = href.endsWith(".pdf") || href === "terms.html" ? ' target="_blank" rel="noopener"' : "";
+        const externalAttrs = href.endsWith(".pdf") ? ' target="_blank" rel="noopener"' : "";
         return `<a href="${href}"${externalAttrs}>${escapeHtml(item)}</a>`;
       })
       .join("");
@@ -457,6 +476,7 @@ function renderCartContent() {
   setButtonText("#checkoutButton", content.cartCheckoutButton);
   setText("#checkoutTitle", content.checkoutTitle);
   setButtonText(".checkout-form .primary-button", content.checkoutSubmitButton);
+  syncPromoAvailability();
   const footer = document.querySelector(".footer");
   if (footer) {
     setText("[data-footer-brand]", content.footerBrand);
@@ -830,6 +850,7 @@ function renderCart() {
   setTextWithPop(nodes.grandTotal, formatMoney(totals.total));
   nodes.checkoutButton.disabled = !totals.lines.length || totals.total < MIN_CART_TOTAL;
   setButtonText("#checkoutButton", getSiteContent().cartCheckoutButton);
+  syncPromoAvailability();
   nodes.minHint.textContent =
     totals.total >= MIN_CART_TOTAL
       ? "Минимальная сумма набрана, можно оформлять заказ."
@@ -969,6 +990,12 @@ document.addEventListener("keydown", (event) => {
 
 document.querySelector("#promoForm").addEventListener("submit", (event) => {
   event.preventDefault();
+  if (!Object.keys(promoCodes).length) {
+    state.promo = "";
+    nodes.promoHint.textContent = promoUnavailableText;
+    renderCart();
+    return;
+  }
   const code = nodes.promoInput.value.trim().toUpperCase();
   if (!code) {
     state.promo = "";
@@ -991,6 +1018,10 @@ document.querySelector("#checkoutForm").addEventListener("submit", async (event)
   event.preventDefault();
   clearFormErrors(event.target);
   const totals = getTotals();
+  if (totals.total < MIN_CART_TOTAL) {
+    showToast(`Минимальная сумма заказа ${formatMoney(MIN_CART_TOTAL)}. Осталось ${formatMoney(MIN_CART_TOTAL - totals.total)}.`);
+    return;
+  }
   const data = Object.fromEntries(new FormData(event.target).entries());
   if (!String(data.name || "").trim()) {
     setFieldError(event.target, "name", "Укажите имя.");

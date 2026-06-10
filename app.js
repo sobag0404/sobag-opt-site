@@ -325,7 +325,7 @@ const defaultSiteContent = {
   footerEmail: "opt@sobag-shop.online",
   footerPhone: "+7 900 123-45-67",
   footerCompanyTitle: "Компания",
-  footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Пользовательское соглашение",
+  footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Согласие на обработку персональных данных|Пользовательское соглашение",
   footerClientsTitle: "Клиентам",
   footerClientsLinks: "Как оформить заказ|Доставка товара|Оплата товара|Возврат товара|Изделия с вашим принтом",
   footerPartnersTitle: "Партнерам",
@@ -698,6 +698,7 @@ const state = {
   },
   accountTab: "",
   authMode: "login",
+  showAllCollections: false,
   importPhotoFiles: [],
   importPhotoReport: [],
   importPhotoUploading: false,
@@ -1044,7 +1045,8 @@ function footerLinkUrl(label = "") {
   if (prepared.includes("возврат")) return "returns.html";
   if (prepared.includes("поддерж") || prepared.includes("селлер")) return "seller-support.html";
   if (prepared.includes("оптов") || prepared.includes("парт")) return "wholesale.html";
-  if (prepared.includes("политик") || prepared.includes("персональ")) return "assets/legal/personal-data-consent.pdf";
+  if (prepared.includes("соглас") || (prepared.includes("персональ") && !prepared.includes("политик"))) return "assets/legal/personal-data-consent.pdf";
+  if (prepared.includes("политик") || prepared.includes("конфиденц")) return "privacy.html";
   if (prepared.includes("соглаш")) return "terms.html";
   return "#";
 }
@@ -1057,7 +1059,7 @@ function renderFooterLinks(selector, value) {
       .filter(Boolean)
       .map((item) => {
         const href = footerLinkUrl(item);
-        const externalAttrs = href.endsWith(".pdf") || href === "terms.html" ? ' target="_blank" rel="noopener"' : "";
+        const externalAttrs = href.endsWith(".pdf") ? ' target="_blank" rel="noopener"' : "";
         return `<a href="${href}"${externalAttrs}>${escapeHtml(item)}</a>`;
       })
       .join("");
@@ -1371,14 +1373,34 @@ function navigateWithinSite(url) {
   window.location.href = targetUrl.href;
 }
 
+function hasConfirmedMapAddress(address) {
+  const prepared = String(address || "").trim().toLocaleLowerCase("ru-RU");
+  if (prepared.length < 12) return false;
+  return !/(соглас|указан|подтвержд|менеджер|реквизит)/iu.test(prepared);
+}
+
 function updateYandexMap(address, target = "") {
-  const prepared = String(address || "").trim() || defaultSiteContent.contactsProductionAddress || defaultSiteContent.contactsAddress;
-  const encoded = encodeURIComponent(prepared);
+  const prepared = String(address || "").trim();
   const suffix = target ? `-${target}` : "";
   const frame = document.querySelector(`#yandexMapFrame${suffix}`);
   const link = document.querySelector(`#yandexMapLink${suffix}`);
+  const panel = frame?.closest(".map-panel") || link?.closest(".map-panel");
+  const available = hasConfirmedMapAddress(prepared);
+  panel?.classList.toggle("is-map-unavailable", !available);
+  if (!available) {
+    if (frame) frame.removeAttribute("src");
+    if (link) {
+      link.hidden = true;
+      link.removeAttribute("href");
+    }
+    return;
+  }
+  const encoded = encodeURIComponent(prepared);
   if (frame) frame.src = `https://yandex.ru/map-widget/v1/?text=${encoded}&z=16`;
-  if (link) link.href = `https://yandex.ru/maps/?text=${encoded}`;
+  if (link) {
+    link.hidden = false;
+    link.href = `https://yandex.ru/maps/?text=${encoded}`;
+  }
 }
 
 function pluralRu(count, one, few, many) {
@@ -3159,9 +3181,13 @@ async function sendSavedCartToManager(cartId) {
     showToast("Заполните компанию и телефон в профиле перед отправкой КП менеджеру.");
     return;
   }
-  if (!window.confirm(`Отправить менеджеру КП "${draft.title}" на сумму ${formatMoney(draft.total)}?`)) return;
   const items = cleanCartEntries(draft.items).map(([, line]) => line);
   const totals = totalsFromCartEntries(draft.items);
+  if (totals.total < MIN_CART_TOTAL) {
+    showToast(`Минимальная сумма заказа ${formatMoney(MIN_CART_TOTAL)}. Осталось ${formatMoney(MIN_CART_TOTAL - totals.total)}.`);
+    return;
+  }
+  if (!window.confirm(`Отправить менеджеру КП "${draft.title}" на сумму ${formatMoney(draft.total)}?`)) return;
   let order = null;
   try {
     const result = await apiRequest("/api/orders", {
@@ -3670,6 +3696,43 @@ function updateCustomCalculator() {
     hintNode.textContent = nextTier
       ? `${Math.max(nextTier.qty - qty, 0)} шт. до скидки ${nextTier.discount}%. Расчет ориентировочный, финальную цену подтвердит менеджер после проверки макета.`
       : "Применена максимальная скидка по тиражу. Финальную цену подтвердит менеджер после проверки макета.";
+  }
+}
+
+async function submitCustomBrief(form) {
+  const data = Object.fromEntries(new FormData(form).entries());
+  const quantity = Math.round(Number(data.quantity || 0));
+  if (!String(data.product || "").trim()) {
+    showToast("Выберите изделие для расчета.");
+    return;
+  }
+  if (quantity < 1) {
+    showToast("Укажите тираж.");
+    return;
+  }
+  if (!String(data.contact || data.email || "").trim()) {
+    showToast("Укажите телефон, Telegram или email.");
+    return;
+  }
+  try {
+    const result = await apiRequest("/api/briefs", {
+      method: "POST",
+      body: {
+        product: data.product,
+        quantity,
+        name: data.name,
+        contact: data.contact,
+        email: data.email,
+        layoutReference: data.layoutReference,
+        comment: data.comment,
+      },
+    });
+    if (result.order) mirrorServerOrder(result.order, result.order.userEmail || result.order.customer?.email || "");
+    form.reset();
+    updateCustomCalculator();
+    showToast(`Заявка ${result.brief?.id || ""} сохранена на сервере. Менеджер увидит ее в админке.`);
+  } catch (error) {
+    showToast(serverSaveErrorMessage(error, "Не удалось сохранить заявку на сервере. Попробуйте еще раз."));
   }
 }
 
@@ -4257,7 +4320,10 @@ function renderCatalogHome() {
     )
     .join("");
 
-  collectionTiles.innerHTML = content.catalogCollections
+  const collectionLimit = 12;
+  const visibleCollections = state.showAllCollections ? content.catalogCollections : content.catalogCollections.slice(0, collectionLimit);
+  collectionTiles.innerHTML = [
+    ...visibleCollections
     .map(
       (collection, index) => `
         <button class="theme-tile${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-collection="${escapeHtml(collection.name)}">
@@ -4265,8 +4331,11 @@ function renderCatalogHome() {
           <span>${escapeHtml(collection.name)}</span>
         </button>
       `
-    )
-    .join("");
+    ),
+    content.catalogCollections.length > collectionLimit
+      ? `<button class="theme-tile theme-tile--more" type="button" data-toggle-collections>${state.showAllCollections ? "Скрыть подборки" : `Показать еще ${content.catalogCollections.length - collectionLimit}`}</button>`
+      : "",
+  ].join("");
 
   holidayTiles.innerHTML = content.catalogHolidays
     .map(
@@ -5160,7 +5229,7 @@ async function openProduct(productId) {
     type: product.types[0],
     size: product.sizes.includes("40x40") ? "40x40" : product.sizes[0],
     material: product.materials[0],
-    qty: 0,
+    qty: 1,
   };
   document.body.insertAdjacentHTML("beforeend", productModalHtml(product));
   syncProductJsonLd(product);
@@ -5191,6 +5260,8 @@ function refreshProductModal() {
   document.querySelector("#detailPrice").textContent = formatMoney(unitPrice);
   document.querySelector("#detailDiscount").textContent = basketDiscountHint;
   document.querySelector("#detailTotal").textContent = formatMoney(unitPrice * qty);
+  const addButton = modal.querySelector("[data-add-variant]");
+  if (addButton) addButton.disabled = qty <= 0;
   modal.querySelectorAll(".variant-option").forEach((button) => {
     button.classList.toggle("is-active", state.activeVariant[button.dataset.variantKey] === button.dataset.variantValue);
   });
@@ -5368,29 +5439,51 @@ function orderManagerMessageForm(order) {
   `;
 }
 
+function orderTypeLabel(order) {
+  return order?.requestType === "custom_print" || order?.source === "custom_brief" ? "Заявка: свой принт" : "";
+}
+
+function customBriefHtml(order) {
+  const brief = order?.customBrief;
+  if (!brief) return "";
+  return `
+    <div class="order-card__brief">
+      <b>Изделие: ${escapeHtml(brief.product || "")}</b>
+      <span>Тираж: ${Number(brief.quantity || 0)} шт.</span>
+      ${brief.contact ? `<span>Контакт: ${escapeHtml(brief.contact)}</span>` : ""}
+      ${brief.layoutReference ? `<span>Макет/референс: ${escapeHtml(brief.layoutReference)}</span>` : ""}
+      ${brief.comment ? `<p>${escapeHtml(brief.comment)}</p>` : ""}
+    </div>
+  `;
+}
+
 function orderCardHtml(order, managerMode = false) {
   const items = order.items || [];
   const customer = order.customer || {};
   const managerEmail = order.managerEmail || "";
   const managerName = order.managerName || managerEmail || "";
   const customerEmail = customer.email || order.userEmail || "";
+  const typeLabel = orderTypeLabel(order);
+  const canMessageAsBuyer = !managerMode && (items.length || order.requestType === "custom_print");
   return `
     <article class="order-card">
       <div class="order-card__head">
         <strong>${escapeHtml(order.id || "")}</strong>
         <span class="order-status order-status--${escapeHtml(order.status || "new")}">${escapeHtml(orderStatusLabel(order.status))}</span>
       </div>
+      ${typeLabel ? `<span class="order-card__type">${escapeHtml(typeLabel)}</span>` : ""}
       <span>${escapeHtml(order.date || "")}</span>
       <span>${items.length} ${productWord(items.length)} · ${formatMoney(order.total || 0)}</span>
       <span>${escapeHtml(customer.name || customer.company || order.userEmail || "Покупатель")} · ${escapeHtml(customer.phone || customer.email || "")}</span>
       ${managerName ? `<span>Менеджер: ${escapeHtml(managerName)}</span>` : ""}
       ${order.managerNote ? `<p class="order-card__note">${escapeHtml(order.managerNote)}</p>` : ""}
+      ${customBriefHtml(order)}
       ${orderItemsPreview(items)}
       ${managerMode ? orderHistoryHtml(order) : ""}
       ${orderThreadHtml(order, managerMode)}
       ${
-        !managerMode && items.length
-          ? `<div class="order-actions"><button class="ghost-button" type="button" data-repeat-order="${escapeHtml(order.id || "")}">Повторить заказ</button></div>${orderCustomerMessageForm(order)}`
+        canMessageAsBuyer
+          ? `<div class="order-actions">${items.length ? `<button class="ghost-button" type="button" data-repeat-order="${escapeHtml(order.id || "")}">Повторить заказ</button>` : ""}</div>${orderCustomerMessageForm(order)}`
           : ""
       }
       ${
@@ -5461,6 +5554,8 @@ function orderSearchText(order) {
     .join(" ");
   return [
     order.id,
+    order.source,
+    order.requestType,
     order.status,
     order.date,
     order.managerName,
@@ -5476,6 +5571,11 @@ function orderSearchText(order) {
     customer.packaging,
     customer.layoutFileName,
     customer.comment,
+    order.customBrief?.product,
+    order.customBrief?.quantity,
+    order.customBrief?.contact,
+    order.customBrief?.layoutReference,
+    order.customBrief?.comment,
     itemText,
   ]
     .filter(Boolean)
@@ -8887,6 +8987,11 @@ function boot() {
       renderProducts();
       return;
     }
+    if (button.dataset.toggleCollections !== undefined) {
+      state.showAllCollections = !state.showAllCollections;
+      renderCatalogHome();
+      return;
+    }
     if (button.dataset.copySku) {
       copyText(button.dataset.copySku);
       return;
@@ -9315,8 +9420,7 @@ function boot() {
     }
     if (event.target.id === "briefForm") {
       event.preventDefault();
-      event.target.reset();
-      showToast("Бриф принят. В следующей версии добавим загрузку макета.");
+      await submitCustomBrief(event.target);
     }
     if (event.target.id === "mapAddressForm") {
       event.preventDefault();

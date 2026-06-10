@@ -15,6 +15,7 @@ const routeMatrix = [
   { file: "server-routes/auth/logout.js", route: "/api/auth/logout", methods: ["POST"], access: "optional-session" },
   { file: "server-routes/auth/me.js", route: "/api/auth/me", methods: ["GET", "PUT"], access: "session-owned", writeMethods: ["PUT"] },
   { file: "server-routes/orders.js", route: "/api/orders", methods: ["POST", "PATCH"], access: "mixed", writeMethods: ["POST", "PATCH"], ownerMethod: "PATCH" },
+  { file: "server-routes/briefs.js", route: "/api/briefs", methods: ["POST"], access: "public" },
   { file: "server-routes/admin/catalog.js", route: "/api/admin/catalog", methods: ["GET", "PUT"], access: "role", roles: ["admin", "content"] },
   { file: "server-routes/admin/content.js", route: "/api/admin/content", methods: ["GET", "PATCH", "PUT"], access: "role", roles: ["admin", "content"] },
   { file: "server-routes/admin/import-batches.js", route: "/api/admin/import-batches", methods: ["GET", "POST"], access: "role", roles: ["admin", "content"] },

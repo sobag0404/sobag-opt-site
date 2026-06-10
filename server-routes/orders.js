@@ -2,6 +2,8 @@ const { currentUser, normalizePhone } = require("./_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("./_lib/http");
 const { saveStore } = require("./_lib/store");
 
+const MIN_ORDER_TOTAL = 30000;
+
 function sanitizeLine(line) {
   return {
     key: String(line.key || ""),
@@ -72,6 +74,12 @@ module.exports = async function handler(req, res) {
     const customer = data.customer || {};
 
     if (!items.length) return sendJson(res, 400, { error: "empty_order", message: "В заказе нет товаров." });
+    if (!Number.isFinite(total) || total < MIN_ORDER_TOTAL) {
+      return sendJson(res, 400, {
+        error: "minimum_total",
+        message: `Минимальная сумма заказа ${MIN_ORDER_TOTAL.toLocaleString("ru-RU")} ₽.`,
+      });
+    }
     const customerPhone = normalizePhone(customer.phone || user?.phone || "");
     if (!customerPhone) return sendJson(res, 400, { error: "missing_phone", message: "Укажите телефон." });
 

@@ -41,6 +41,14 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- P0/P1 commercial readiness slice:
+  - `custom.html` brief form now posts to `/api/briefs`; the new server route saves the request, stores it in `store.briefs`, mirrors it into `store.orders` as `source: custom_brief`, and admin/manager order screens show it as `Заявка: свой принт`;
+  - `/api/orders` now rejects totals below 30 000 ₽; cart checkout submit and saved-quote send-to-manager use the same minimum guard;
+  - cart promo code input is disabled and explains that a manager agrees promo conditions, avoiding fake discount behavior;
+  - `privacy.html` was added as a separate privacy policy page; footer mapping, `components/site-shell.js`, `sitemap.xml`, and SEO audit now separate privacy from the personal-data consent PDF;
+  - contacts maps are hidden by default and only render when admin content has concrete legal/production addresses, so Yandex maps are not built from placeholder wording;
+  - mobile header is shorter, product modal opens with quantity `1` while preserving editable `0`, and catalog collections are collapsed with a `Показать еще` control;
+  - verification: `npm.cmd run smoke:vps:write`, `npm.cmd run check`, and `npm.cmd run ui:smoke` passed.
 - Prompt handoff rule:
   - detailed future goal prompts should be saved under `docs/ai-handoff/` and pushed to GitHub;
   - chat responses with prompts should stay under 4000 characters;

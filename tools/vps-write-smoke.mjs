@@ -121,13 +121,16 @@ try {
   const detail = await request(baseUrl, `/api/catalog-detail?baseSku=${encodeURIComponent(card.baseSku)}`);
   const variant = detail.payload.product?.variants?.[0];
   assert(variant?.sku, "catalog-detail should return a generated variant");
+  const unitPrice = Number(variant.price || 100);
+  const orderQty = Math.max(1, Math.ceil(30000 / unitPrice));
+  const orderTotal = unitPrice * orderQty;
 
   const orderCreate = await request(baseUrl, "/api/orders", {
     method: "POST",
     cookie: buyerRegister.cookie,
     body: {
       source: "vps-write-smoke",
-      total: Number(variant.price || 100),
+      total: orderTotal,
       customer: {
         name: "VPS Smoke Buyer",
         company: "VPS Smoke LLC",
@@ -140,7 +143,7 @@ try {
           key: variant.sku,
           productId: detail.payload.product.id,
           productName: detail.payload.product.name,
-          qty: 1,
+          qty: orderQty,
           variant,
         },
       ],
@@ -176,7 +179,7 @@ try {
     method: "POST",
     body: {
       source: "guest-vps-write-smoke",
-      total: Number(variant.price || 100),
+      total: orderTotal,
       customer: {
         name: "Guest VPS Smoke",
         phone: "+79990000002",
@@ -188,7 +191,7 @@ try {
           key: `${variant.sku}-guest`,
           productId: detail.payload.product.id,
           productName: detail.payload.product.name,
-          qty: 1,
+          qty: orderQty,
           variant,
         },
       ],
@@ -199,6 +202,23 @@ try {
 
   const adminGuestOrders = await request(baseUrl, "/api/admin/orders", { cookie: adminLogin.cookie });
   assert(adminGuestOrders.payload.orders?.some((order) => order.id === guestOrderId), "admin orders should include guest order");
+
+  const customBrief = await request(baseUrl, "/api/briefs", {
+    method: "POST",
+    body: {
+      product: "Подушки",
+      quantity: 80,
+      name: "Brief VPS Smoke",
+      contact: "+79990000003",
+      email: "brief-vps-smoke@example.com",
+      layoutReference: "https://example.com/layout",
+      comment: "Brief smoke comment",
+    },
+  });
+  const briefId = customBrief.payload.brief?.id;
+  assert(briefId, "custom brief should be created");
+  const adminBriefOrders = await request(baseUrl, "/api/admin/orders", { cookie: adminLogin.cookie });
+  assert(adminBriefOrders.payload.orders?.some((order) => order.id === briefId && order.source === "custom_brief"), "admin orders should include custom brief");
 
   console.log(`vps-write smoke passed: ${baseUrl}`);
 } finally {

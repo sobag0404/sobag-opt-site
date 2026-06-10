@@ -109,7 +109,11 @@
                 <option>Шопперы</option>
               </select>
               <input name="quantity" type="number" min="50" placeholder="Тираж, шт." required />
+              <input name="name" type="text" placeholder="Имя или компания" autocomplete="name" />
               <input name="contact" type="text" placeholder="Телефон или Telegram" required />
+              <input name="email" type="email" placeholder="Email для истории заявки" autocomplete="email" />
+              <input name="layoutReference" type="text" placeholder="Ссылка на макет или референс" />
+              <textarea name="comment" rows="3" placeholder="Комментарий: изделие, материал, сроки, упаковка"></textarea>
               <button class="primary-button" type="submit">
                 <i data-lucide="calculator"></i>
                 Получить расчет

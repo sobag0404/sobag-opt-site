@@ -364,7 +364,7 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
       id: "SO-QA-REPEAT",
       status: "done",
       date: "02.06.2026",
-      total: 2000,
+      total: 40000,
       userEmail: "buyer@example.com",
       customer: { email: "buyer@example.com", name: "Buyer", phone: "+79990000001", address: "Test address" },
       items: [
@@ -373,7 +373,7 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
           productId: seedData.productId,
           productName: seedData.name,
           productImage: seedData.image,
-          qty: 2,
+          qty: 40,
           variant: { sku: seedData.sku, name: seedData.name, type: "QA", size: "QA", material: "QA", price: 1000 },
         },
       ],
@@ -600,7 +600,7 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await firstCard.locator("[data-open-product]").first().click();
 
   await expect(page.locator("#productModal")).toBeVisible();
-  await expect(page.locator("#detailQty")).toHaveValue("0");
+  await expect(page.locator("#detailQty")).toHaveValue("1");
   await page.locator("#detailQty").fill("100");
   await expect(page.locator("#detailQty")).toHaveValue("100");
   await page.locator("#detailQty").fill("0");
