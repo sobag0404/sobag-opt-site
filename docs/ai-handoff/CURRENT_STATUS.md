@@ -46,7 +46,8 @@ Completed most recently:
   - scale smoke now guards compact list payloads against detail/gallery fields;
   - server cursor pages append only newly loaded cards instead of replacing existing first-page DOM;
   - product cards use browser rendering containment for long lists;
-  - focused UI smoke verifies the first server page DOM node remains stable after cursor pagination.
+  - focused UI smoke verifies the first server page DOM node remains stable after cursor pagination;
+  - `tools/catalog-performance-audit.mjs` and npm script `audit:performance` now guard 48-card pages, compact payload, append-only render hooks, card containment, and current real-catalog image migration readiness.
 - VPS DNS/SSL cutover:
   - authoritative REG.RU DNS for `sobag-shop.online` and `www.sobag-shop.online` returns `77.239.107.164`;
   - `certbot --nginx` issued and deployed the Let's Encrypt certificate for both names;

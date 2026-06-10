@@ -106,3 +106,5 @@ The public catalog/search list now progressively uses `/api/catalog-query` for c
 The frontend requests the server default `pageSize=48` for public listing pages, so the initial list and cursor pages do not force the previous 120-card payload. Cursor-page rendering appends new product cards instead of replacing the existing first-page DOM, and product cards use browser rendering containment (`content-visibility`) to reduce layout/paint work on long lists.
 
 `npm run check` also runs an offline 10k-product synthetic scale smoke (`tools/catalog-query-scale-smoke.mjs`). It verifies published-only filtering, 48-card cursor pages, compact card payloads without full variants/images/detail/gallery fields, exact SKU lookup, and full detail hydration through the same query helpers.
+
+`npm run audit:performance` runs `tools/catalog-performance-audit.mjs`. It checks the current catalog performance invariants: 48-card server pages, compact list payloads, append-only cursor rendering hooks, product-card rendering containment, and current real-catalog image migration readiness.

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const PRODUCT_STATUSES = new Set(["draft", "published", "hidden", "archive"]);
 const IMAGE_PROVIDERS = new Set(["vercel-blob", "s3-compatible"]);
@@ -245,11 +246,13 @@ function main() {
   );
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(error.message);
-  process.exit(1);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    main();
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
 }
 
 export { auditProducts };
