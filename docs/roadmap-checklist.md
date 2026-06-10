@@ -98,6 +98,7 @@ Last updated: 2026-06-10
      - [x] PostgreSQL write transaction rehearsal: `tools/catalog-db-write-rehearsal.mjs` runs the full current catalog through the future write transaction interface with a fake client and verifies rollback-only behavior, without connecting to PostgreSQL or touching production data.
      - [x] PostgreSQL catalog DB cutover runbook/audit: `docs/catalog-db-cutover-runbook.md` and `tools/catalog-db-cutover-audit.mjs` document and enforce the safe future switch sequence, including offline gates, rollback-only test DB rehearsal, runtime toggle, production readiness smoke, rollback, published-only reads, no product deletion, and no secrets in Git.
      - [x] PostgreSQL env packet validator: `docs/catalog-db-env-packet.md` and `tools/catalog-db-env-packet-audit.mjs` define an ignored no-secret test/staging DB readiness packet before rollback rehearsal or future runtime toggle.
+     - [x] PostgreSQL apply plan: `docs/catalog-db-apply-plan.md` and `tools/catalog-db-apply-plan.mjs` build an ignored no-secret rehearsal/cutover plan from the strict DB packet without connecting to PostgreSQL or touching production env.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:

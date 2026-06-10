@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Catalog DB apply plan:
+  - added `docs/catalog-db-apply-plan.md`, `tools/catalog-db-apply-plan.mjs`, and `npm run plan:catalog-db`;
+  - the tool reads a strict-ready `local-import-output/catalog-db-env-packet.json` and writes an ignored no-secret PostgreSQL rehearsal/cutover plan;
+  - it does not connect to PostgreSQL, read env secrets, or change VPS/Vercel env.
 - Object storage apply plan:
   - added `docs/object-storage-apply-plan.md`, `tools/object-storage-apply-plan.mjs`, and `npm run plan:object-storage`;
   - the tool reads a strict-ready `local-import-output/object-storage-env-packet.json` and writes an ignored no-secret provider/cutover plan;

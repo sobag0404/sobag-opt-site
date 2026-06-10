@@ -33,6 +33,7 @@ Last updated: 2026-06-10
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-10: added `docs/catalog-db-apply-plan.md`, `tools/catalog-db-apply-plan.mjs`, and `npm run plan:catalog-db`; after a strict catalog DB packet is available, it creates an ignored no-secret PostgreSQL rehearsal/cutover plan without connecting to DB or touching production env.
 - Current pass 2026-06-10: added `docs/object-storage-apply-plan.md`, `tools/object-storage-apply-plan.mjs`, and `npm run plan:object-storage`; after a strict object-storage packet is available, it creates an ignored no-secret provider/cutover plan without touching production env.
 - Current pass 2026-06-10: added `docs/final-content-apply-plan.md`, `tools/final-content-apply-plan.mjs`, and `npm run plan:final-content`; after a strict final content packet is available, it creates an ignored dry-run content patch for review without calling production APIs or changing server content.
 - Current pass 2026-06-10: added `tools/goal-inputs-packet-template.mjs` and `npm run prepare:goal-inputs`, which create ignored local starter packet files for the remaining real external inputs without secrets and without overwriting existing local packets by default.
