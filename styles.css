@@ -2067,6 +2067,42 @@ select[aria-invalid="true"] {
   gap: 10px;
 }
 
+.account-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.account-tab {
+  min-height: 40px;
+  padding: 0 18px;
+  color: var(--on-dark);
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.account-tab.is-active {
+  color: var(--canvas);
+  background: var(--on-dark);
+  border-color: var(--on-dark);
+}
+
+.account-tab-panel {
+  display: none;
+}
+
+.account-tab-panel.is-active {
+  display: block;
+}
+
 .orders-list,
 .admin-preview {
   display: grid;
@@ -5308,6 +5344,7 @@ body.theme-night .add-button:hover {
 }
 
 body.theme-night .ghost-button,
+body.theme-night .account-tab,
 body.theme-night .theme-toggle,
 body.theme-night .icon-button,
 body.theme-night .favorite-button,
@@ -5334,6 +5371,12 @@ body.theme-night .detail-price small {
 
 body.theme-night .accent-stripe {
   background: var(--amber);
+}
+
+body.theme-night .account-tab.is-active {
+  color: #160b04;
+  background: var(--amber);
+  border-color: rgba(255, 138, 31, 0.82);
 }
 
 body.theme-night .product-card,

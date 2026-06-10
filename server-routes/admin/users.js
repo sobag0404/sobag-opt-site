@@ -12,7 +12,9 @@ module.exports = async function handler(req, res) {
       const email = String(url.searchParams.get("email") || "").trim().toLowerCase();
       if (email) {
         const found = store.users[email];
-        const orders = store.orders.filter((order) => order.userEmail === email || order.customer?.email === email);
+        const orders = store.orders.filter(
+          (order) => String(order.userEmail || "").toLowerCase() === email || String(order.customer?.email || "").toLowerCase() === email
+        );
         if (!found && !orders.length) return sendJson(res, 404, { error: "not_found", message: "Пользователь не найден." });
         if (!found) {
           const latestCustomer = orders[0]?.customer || {};

@@ -234,7 +234,10 @@ module.exports = async function handler(req, res) {
     }
 
     const freshUser = store.users[user.email] || user;
-    const orders = store.orders.filter((order) => order.userEmail === freshUser.email).map(publicOrder);
+    const email = String(freshUser.email || "").toLowerCase();
+    const orders = store.orders
+      .filter((order) => String(order.userEmail || "").toLowerCase() === email || String(order.customer?.email || "").toLowerCase() === email)
+      .map(publicOrder);
     const reviews = (store.reviews || []).filter((review) => review.userEmail === freshUser.email);
     const savedCarts = sanitizeSavedCarts(store.savedCarts[freshUser.email]?.items || [], {
       includeInternal: canUseInternalSavedCartFields(freshUser),

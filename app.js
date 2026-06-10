@@ -603,6 +603,7 @@ const state = {
     available: false,
     user: null,
   },
+  accountTab: "",
   importPhotoFiles: [],
   importPhotoReport: [],
   importPhotoUploading: false,
@@ -1491,9 +1492,8 @@ async function loadBackendAccountData(options = {}) {
     }
     saveServerUserProfile(session.user);
     if (["admin", "manager"].includes(session.user.role)) {
+      await refreshAdminOrdersFromBackend();
       try {
-        const ordersData = await apiRequest("/api/admin/orders");
-        if (Array.isArray(ordersData.orders)) saveOrders(ordersData.orders);
         const usersData = await apiRequest("/api/admin/users");
         if (Array.isArray(usersData.users)) {
           const users = getUsers();
@@ -1514,6 +1514,23 @@ async function loadBackendAccountData(options = {}) {
       user: null,
     };
     if (!isBackendUnavailable(error)) console.warn(error);
+    return false;
+  }
+}
+
+async function refreshAdminOrdersFromBackend(options = {}) {
+  try {
+    const ordersData = await apiRequest("/api/admin/orders");
+    if (Array.isArray(ordersData.orders)) saveOrders(ordersData.orders);
+    if (options.rerender) {
+      renderManagementPages();
+      rerenderAccountModal();
+    }
+    if (options.notify) showToast("Заказы обновлены с сервера.");
+    return true;
+  } catch (error) {
+    if (options.notify) showToast(serverSaveErrorMessage(error, "Не удалось обновить заказы с сервера."));
+    else if (!isBackendUnavailable(error)) console.warn(error);
     return false;
   }
 }
@@ -3308,6 +3325,20 @@ function rerenderAccountModal() {
   document.body.insertAdjacentHTML("beforeend", accountModalHtml());
   activateModal(document.querySelector("#accountModal"));
   if (window.lucide) window.lucide.createIcons();
+}
+
+function switchAccountTab(tab) {
+  const modal = document.querySelector("#accountModal");
+  if (!modal) return;
+  state.accountTab = tab;
+  modal.querySelectorAll("[data-account-tab]").forEach((button) => {
+    const active = button.dataset.accountTab === tab;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  modal.querySelectorAll("[data-account-tab-panel]").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.dataset.accountTabPanel === tab);
+  });
 }
 
 function syncCartToBackend() {
@@ -5214,6 +5245,7 @@ function managementOrdersHtml(user) {
         <h3>Заказы покупателей</h3>
         <div class="order-actions">
           <a class="ghost-button" href="admin-orders.html" target="_blank" rel="noopener">Открыть все заказы</a>
+          <button class="ghost-button" type="button" data-refresh-admin-orders>Обновить заказы</button>
           <button class="ghost-button" type="button" data-export-orders>Экспорт заказов CSV</button>
         </div>
       </div>
@@ -5366,6 +5398,7 @@ function adminOrdersPageHtml() {
         </label>
         <button class="primary-button" type="submit">Найти</button>
         <a class="ghost-button" href="admin-orders.html">Сбросить</a>
+        <button class="ghost-button" type="button" data-refresh-admin-orders>Обновить заказы</button>
         <button class="ghost-button" type="button" data-export-orders>Экспорт CSV</button>
       </form>
       <div class="admin-orders-summary" aria-label="Сводка по заказам">
@@ -6868,6 +6901,66 @@ function savedCartsHtml() {
   `;
 }
 
+function savedAddressesHtml(user) {
+  if (!(user?.addresses || []).length) return "";
+  return `
+    <div class="account-section account-section--compact">
+      <h3>Сохраненные адреса</h3>
+      <div class="admin-detail-list">
+        ${user.addresses.map((address) => `<span>${escapeHtml(address)}</span>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function buyerOrdersHtml(user) {
+  const orders = user?.orders || [];
+  return `
+    <div class="account-section">
+      <div class="account-section__head">
+        <div>
+          <h3>Заказы</h3>
+          <span>История, статусы, комментарии и сообщения по заказам</span>
+        </div>
+      </div>
+      <div class="orders-list">
+        ${
+          orders.length
+            ? orders.map((order) => orderCardHtml(order)).join("")
+            : "<p>Заказов пока нет. После отправки заявки они появятся здесь.</p>"
+        }
+      </div>
+    </div>
+  `;
+}
+
+function accountTabButton(id, label, activeTab) {
+  const active = id === activeTab;
+  return `<button class="account-tab${active ? " is-active" : ""}" type="button" role="tab" aria-selected="${active ? "true" : "false"}" data-account-tab="${id}">${label}</button>`;
+}
+
+function accountTabPanel(id, activeTab, html) {
+  return `<div class="account-tab-panel${id === activeTab ? " is-active" : ""}" role="tabpanel" data-account-tab-panel="${id}">${html}</div>`;
+}
+
+function buyerAccountTabsHtml(user) {
+  const orders = user?.orders || [];
+  const allowedTabs = new Set(["profile", "orders", "quotes"]);
+  const activeTab = allowedTabs.has(state.accountTab) ? state.accountTab : orders.length ? "orders" : "profile";
+  return `
+    <div class="account-tabs" role="tablist" aria-label="Разделы личного кабинета">
+      ${accountTabButton("profile", "Профиль", activeTab)}
+      ${accountTabButton("orders", `Заказы${orders.length ? ` ${orders.length}` : ""}`, activeTab)}
+      ${accountTabButton("quotes", "КП", activeTab)}
+    </div>
+    <div class="account-tab-panels">
+      ${accountTabPanel("profile", activeTab, `${savedAddressesHtml(user)}${buyerProfileHtml(user)}`)}
+      ${accountTabPanel("orders", activeTab, buyerOrdersHtml(user))}
+      ${accountTabPanel("quotes", activeTab, savedCartsHtml())}
+    </div>
+  `;
+}
+
 function savedQuotesPageHtml() {
   const user = getUsers()[state.currentUser];
   const savedCarts = getSavedCarts();
@@ -6916,7 +7009,6 @@ function refreshSavedCartViews() {
 function accountModalHtml() {
   const users = getUsers();
   const user = users[state.currentUser];
-  const orders = user?.orders || [];
   return `
     <div class="modal is-visible" id="accountModal" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
       <div class="modal__backdrop" data-close-modal></div>
@@ -6936,13 +7028,6 @@ function accountModalHtml() {
                 ${user.address ? `<span>${user.address}</span>` : ""}
                 <span>${roleLabel(user.role, user)}</span>
               </div>
-              ${
-                (user.addresses || []).length
-                  ? `<div class="account-section account-section--compact"><h3>Сохраненные адреса</h3><div class="admin-detail-list">${user.addresses
-                      .map((address) => `<span>${escapeHtml(address)}</span>`)
-                      .join("")}</div></div>`
-                  : ""
-              }
               <div class="account-actions">
                 ${canManageContent(user) ? '<button class="primary-button" type="button" data-open-admin><i data-lucide="settings"></i> Админка</button>' : ""}
                 ${canManageContent(user) ? '<a class="ghost-button" href="admin-products.html" target="_blank" rel="noopener">Товары</a>' : ""}
@@ -6951,18 +7036,7 @@ function accountModalHtml() {
                 ${canManageOrders(user) ? '<a class="ghost-button" href="admin-orders.html" target="_blank" rel="noopener">Заказы</a>' : ""}
                 <button class="ghost-button" type="button" data-logout>Выйти</button>
               </div>
-              ${buyerProfileHtml(user)}
-              ${savedCartsHtml()}
-              <h3>История заказов</h3>
-              <div class="orders-list">
-                ${
-                  orders.length
-                    ? orders
-                        .map((order) => orderCardHtml(order))
-                        .join("")
-                    : "<p>Заказов пока нет. После отправки заявки они появятся здесь.</p>"
-                }
-              </div>
+              ${buyerAccountTabsHtml(user)}
               ${managementOrdersHtml(user)}
               ${userManagementHtml(user)}
             `
@@ -8573,6 +8647,10 @@ function boot() {
     }
     if (button.id === "accountButton" || button.dataset.openAccount !== undefined) openAccount();
     if (button.dataset.closeModal !== undefined) closeModal();
+    if (button.dataset.accountTab) {
+      switchAccountTab(button.dataset.accountTab);
+      return;
+    }
     if (button.dataset.openProduct) {
       const currentModal = activeModal();
       if (currentModal) currentModal.remove();
@@ -8817,6 +8895,10 @@ function boot() {
     if (button.dataset.exportFilteredProducts !== undefined) downloadProductsCsv(getFilteredProducts(), "sobag-products-filtered.csv");
     if (button.dataset.exportVariantPrices !== undefined) downloadVariantPricesCsv(products, "sobag-variant-prices-all.csv");
     if (button.dataset.exportFilteredVariantPrices !== undefined) downloadVariantPricesCsv(getFilteredProducts(), "sobag-variant-prices-filtered.csv");
+    if (button.dataset.refreshAdminOrders !== undefined) {
+      await refreshAdminOrdersFromBackend({ notify: true, rerender: true });
+      return;
+    }
     if (button.dataset.exportOrders !== undefined) downloadOrdersCsv();
     if (button.dataset.exportOrder) downloadOrderCsv(button.dataset.exportOrder);
     if (button.dataset.exportOrderXlsx) downloadOrderXlsx(button.dataset.exportOrderXlsx);

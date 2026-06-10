@@ -13,7 +13,7 @@ Last updated: 2026-06-10
 - [x] Related products in product modal.
 - [x] Product variant matrix: type, size, material, SKU, price, quick quantity.
 - [x] Cart as commercial proposal: save draft, restore, rename, XLSX/CSV export, print/PDF, send to manager.
-- [x] Buyer account basics: profile, companies/requisites, addresses, order history, favorites, saved carts.
+- [x] Buyer account basics: profile, companies/requisites, addresses, dedicated order tab with statuses/messages, favorites, saved carts.
 - [x] Admin/manager order pages with statuses, manager notes, customer profile links, and status history.
 - [x] Server-backed auth/orders/catalog/content through existing Vercel Functions and KV/Redis-compatible storage.
 - [x] Admin catalog tools: products, prices, import, content, users/roles, employees/manager access by email.
@@ -37,6 +37,7 @@ Last updated: 2026-06-10
    - [x] Admin can open order detail, customer profile, export order CSV/XLSX, and print/PDF order.
    - [x] Internal manager comments timeline beyond the current single manager note.
    - [x] Customer-visible comments/status messages.
+   - [x] Buyer account `Заказы` tab with order history, statuses, customer/admin messages, and repeat-order action.
    - [x] Export order detail to XLSX from admin.
    - [x] Better customer list and segmentation.
    - [x] Server-only order persistence guard: buyer/cart/saved-quote submissions and CRM order actions no longer report success from local-only fallback; guest order visibility is covered by VPS write smoke.

@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Buyer account order tab and admin order refresh:
+  - ordinary buyer accounts now show a dedicated `Заказы` tab with history, statuses, customer-visible CRM messages, buyer replies, and repeat-order actions;
+  - account order history is loaded from the server by matching both `userEmail` and `customer.email`;
+  - admin/manager order blocks have an explicit `Обновить заказы` action that reloads `/api/admin/orders` from the server.
 - Admin access/headings fix:
   - valid server admin/manager sessions are no longer discarded when secondary admin data refresh fails;
   - local admin/manager login can retry server login automatically when a local password is available;

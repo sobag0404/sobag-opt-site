@@ -460,7 +460,9 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
   await page.locator("#accountButton").click();
+  await page.locator('[data-account-tab="quotes"]').click();
   await expect(page.locator("#accountModal")).toContainText("QA saved cart");
+  await page.locator('[data-account-tab="profile"]').click();
   await page.locator('[data-profile-form] input[name="phone"]').fill("+79990000002");
   await page.locator('[data-profile-form] input[name="company"]').fill("QA Company");
   await page.locator('[data-profile-form] input[name="inn"]').fill("1234567890");
@@ -487,6 +489,7 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
     .toBe("QA default order comment");
 
   page.once("dialog", (dialog) => dialog.accept("QA renamed cart"));
+  await page.locator('[data-account-tab="quotes"]').click();
   await page.locator("[data-rename-saved-cart]").first().click();
   await expect
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.savedCarts.buyer@example.com") || "[]")[0]?.title))
