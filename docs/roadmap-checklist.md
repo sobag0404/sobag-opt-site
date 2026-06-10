@@ -147,6 +147,7 @@ Last updated: 2026-06-10
    - [x] Goal external-input packet audit: `docs/goal-inputs-packet.md` and `tools/goal-inputs-packet-audit.mjs` aggregate the four ignored local packets for final content facts, object storage readiness, PostgreSQL test DB readiness, and final CWV field measurements.
    - [x] Goal input packet templates: `tools/goal-inputs-packet-template.mjs` and `npm run prepare:goal-inputs` create ignored starter JSON packets for the remaining external inputs without secrets and without overwriting existing local packets by default.
    - [x] CWV field audit packet validator: `docs/cwv-field-audit-packet.md` and `tools/cwv-field-audit-packet.mjs` define the ignored final audit packet for real 10k+ catalog/photo data, required pages, WebP/AVIF usage, and LCP/CLS/INP/TBT/payload thresholds.
+   - [x] CWV field apply plan: `docs/cwv-field-apply-plan.md` and `tools/cwv-field-apply-plan.mjs` build an ignored final performance verification plan from the strict field packet without calling production APIs or changing server state.
    - [x] VPS static revalidation: `server.mjs` returns ETag/Last-Modified for static assets and supports conditional 304 responses so repeat page loads do not redownload unchanged JS/CSS/assets.
    - [ ] Core Web Vitals audit after real catalog growth.
 

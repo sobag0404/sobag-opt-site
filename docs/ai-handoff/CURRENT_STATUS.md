@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- CWV field apply plan:
+  - added `docs/cwv-field-apply-plan.md`, `tools/cwv-field-apply-plan.mjs`, and `npm run plan:cwv-field`;
+  - the tool reads a strict-ready `local-import-output/cwv-field-audit-packet.json` and writes an ignored final performance verification plan;
+  - it does not call production APIs or change server state.
 - Catalog DB apply plan:
   - added `docs/catalog-db-apply-plan.md`, `tools/catalog-db-apply-plan.mjs`, and `npm run plan:catalog-db`;
   - the tool reads a strict-ready `local-import-output/catalog-db-env-packet.json` and writes an ignored no-secret PostgreSQL rehearsal/cutover plan;

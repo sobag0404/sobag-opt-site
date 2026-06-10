@@ -47,6 +47,7 @@
     "audit:performance": "node tools/catalog-performance-audit.mjs",
     "audit:cwv": "node tools/core-web-vitals-readiness.mjs",
     "audit:cwv-field": "node tools/cwv-field-audit-packet.mjs",
+    "plan:cwv-field": "node tools/cwv-field-apply-plan.mjs",
     "audit:goal-readiness": "node tools/goal-readiness-report.mjs",
     "audit:goal-inputs": "node tools/goal-inputs-packet-audit.mjs",
     "prepare:goal-inputs": "node tools/goal-inputs-packet-template.mjs",
