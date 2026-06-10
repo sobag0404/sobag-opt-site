@@ -44,6 +44,7 @@
     "audit:catalog": "python tools/audit_catalog.py",
     "audit:performance": "node tools/catalog-performance-audit.mjs",
     "audit:cwv": "node tools/core-web-vitals-readiness.mjs",
+    "audit:goal-readiness": "node tools/goal-readiness-report.mjs",
     "audit:content": "node tools/content-seo-audit.mjs",
     "audit:content-readiness": "node tools/content-readiness-report.mjs",
     "audit:images": "node tools/image-metadata-audit.mjs",

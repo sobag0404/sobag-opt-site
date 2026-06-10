@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Goal readiness report:
+  - added `tools/goal-readiness-report.mjs` and `npm run audit:goal-readiness`;
+  - the report aggregates SEO/content, photo migration, DB split readiness, and Core Web Vitals readiness;
+  - current goal state remains pending until real contacts/addresses, real object-storage image migration, approved PostgreSQL test DB/env, and final CWV after real catalog/photo growth are completed.
 - Post-deploy production readiness workflow:
   - `.github/workflows/production-smoke.yml` now runs basic production smoke, production performance smoke, and non-strict storage readiness after successful VPS deploy;
   - added `tools/production-workflow-audit.mjs` and `npm run audit:production-workflow`;
