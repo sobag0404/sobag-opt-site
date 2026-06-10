@@ -80,11 +80,25 @@ function countDescriptions(blockName, appText) {
   return (appText.slice(start, end).match(/description:\s*"/g) || []).length;
 }
 
+function extractNamedItems(blockName, appText) {
+  const start = appText.indexOf(`const ${blockName} = [`);
+  const end = appText.indexOf("];", start);
+  if (start < 0 || end < 0) return new Set();
+  const block = appText.slice(start, end);
+  return new Set([...block.matchAll(/name:\s*"([^"]+)"/g)].map((match) => match[1].trim()).filter(Boolean));
+}
+
+function taxonomyValues(products, key) {
+  return [...new Set((Array.isArray(products) ? products : []).flatMap((product) => product?.[key] || []).filter(Boolean))].sort((left, right) =>
+    left.localeCompare(right, "ru")
+  );
+}
+
 function assertIncludes(text, needle, label, errors) {
   if (!text.includes(needle)) errors.push(`${label} must include ${needle}`);
 }
 
-function auditContent(files, appText) {
+function auditContent(files, appText, productRows = []) {
   const errors = [];
 
   REQUIRED_PAGES.forEach((file) => {
@@ -114,6 +128,16 @@ function auditContent(files, appText) {
     if (count < minimum) errors.push(`app.js ${block} needs at least ${minimum} SEO descriptions`);
   });
 
+  [
+    ["categories", "catalogCategories"],
+    ["collections", "catalogCollections"],
+    ["holidays", "catalogHolidays"],
+  ].forEach(([productKey, block]) => {
+    const configured = extractNamedItems(block, appText);
+    const missing = taxonomyValues(productRows, productKey).filter((name) => !configured.has(name));
+    if (missing.length) errors.push(`app.js ${block} missing SEO entries for current catalog: ${missing.join(", ")}`);
+  });
+
   if (errors.length) throw new Error(`SEO content audit failed:\n${errors.join("\n")}`);
 
   return {
@@ -127,14 +151,15 @@ function auditContent(files, appText) {
 function selfTest() {
   const appText = `
 const catalogCategories = [{ name: "Подушки", description: "Оптовые подушки" }, { name: "Пледы", description: "Оптовые пледы" }, { name: "Наволочки", description: "Оптовые наволочки" }, { name: "Мешки", description: "Оптовые мешки" }, { name: "Чехлы", description: "Оптовые чехлы" }, { name: "Шопперы", description: "Оптовые шопперы" }];
-const catalogCollections = [{ description: "1" }, { description: "2" }, { description: "3" }, { description: "4" }, { description: "5" }, { description: "6" }, { description: "7" }, { description: "8" }, { description: "9" }, { description: "10" }];
-const catalogHolidays = [{ description: "1" }, { description: "2" }, { description: "3" }, { description: "4" }, { description: "5" }, { description: "6" }];
+const catalogCollections = [{ name: "Аниме", description: "1" }, { name: "Мемы", description: "2" }, { name: "Животные", description: "3" }, { name: "Паттерны", description: "4" }, { name: "Игры", description: "5" }, { name: "Космос", description: "6" }, { name: "Военные", description: "7" }, { name: "Бренд", description: "8" }, { name: "Подарки", description: "9" }, { name: "Именные", description: "10" }];
+const catalogHolidays = [{ name: "14 февраля", description: "1" }, { name: "23 февраля", description: "2" }, { name: "8 марта", description: "3" }, { name: "Новый год", description: "4" }, { name: "День рождения", description: "5" }, { name: "День учителя", description: "6" }];
 const defaultSiteContent = {
   catalogBackButton: "В каталог",
   businessProductionText: "Срок запуска партии подтверждается менеджером.",
 };
 const siteTextFields = [];
 `;
+  const productRows = [{ categories: ["Подушки"], collections: ["Аниме"], holidays: ["14 февраля"] }];
   const files = Object.fromEntries(
     REQUIRED_PAGES.map((file) => [
       file,
@@ -144,12 +169,12 @@ const siteTextFields = [];
   files["catalog.html"] = '<!doctype html><html><head><meta name="description" content="Sobag Opt" /></head><body><section id="catalogSeoCopy"></section></body></html>';
   files["business.html"] = '<!doctype html><html><head><meta name="description" content="Sobag Opt" /></head><body><section data-faq-schema>FAQ</section></body></html>';
 
-  const good = auditContent(files, appText);
+  const good = auditContent(files, appText, productRows);
   if (good.pages !== REQUIRED_PAGES.length) throw new Error("self-test page count mismatch");
 
   let rejected = false;
   try {
-    auditContent({ ...files, "about.html": files["about.html"].replace("Контент", "Тестовая витрина") }, appText);
+    auditContent({ ...files, "about.html": files["about.html"].replace("Контент", "Тестовая витрина") }, appText, productRows);
   } catch (error) {
     rejected = /test copy/.test(error.message);
   }
@@ -166,7 +191,8 @@ function main() {
   const files = Object.fromEntries(
     PUBLIC_PAGES.filter((file) => existsSync(join(root, file))).map((file) => [file, readProjectFile(file)])
   );
-  const summary = auditContent(files, readProjectFile("app.js"));
+  const productRows = existsSync(join(root, "data/products-live.json")) ? JSON.parse(readProjectFile("data/products-live.json")) : [];
+  const summary = auditContent(files, readProjectFile("app.js"), productRows);
   console.log(
     `SEO content audit passed: ${summary.pages} pages, ${summary.categoryDescriptions} categories, ${summary.collectionDescriptions} collections, ${summary.holidayDescriptions} holidays`
   );

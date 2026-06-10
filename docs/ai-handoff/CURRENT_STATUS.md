@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- SEO landing taxonomy coverage:
+  - default catalog landing content now covers the current `data/products-live.json` taxonomy: 8 categories, 37 collections, and 8 holidays;
+  - `tools/content-seo-audit.mjs` reads the live product JSON and fails if a current product category, collection, or holiday has no default SEO entry;
+  - this keeps editable admin content compatible while preventing future imports from silently creating visible taxonomy pages with generic placeholder copy.
 - SEO/content fallback contact cleanup:
   - the remaining fake public fallback phone (`+7 900 123-45-67`) was removed from `defaultSiteContent`, static `contacts.html`, and the shared footer shell;
   - non-dialable phone text now links to contacts instead of a fake `tel:` URL;

@@ -79,6 +79,7 @@ Last updated: 2026-06-10
    - [ ] SEO landing copy for important categories, collections, and holidays.
      - [x] First catalog landing copy slice: selected category/collection/holiday SEO descriptions are kept in the current content/admin state; the former visible catalog plaque was later hidden per UX feedback.
      - [x] Editable SEO descriptions for default collections and holidays: admin content supports `name | description | icon`, with backward compatibility for old `name | icon` rows.
+     - [x] Current live catalog taxonomy coverage: default SEO entries now cover the actual `products-live.json` categories, collections, and holidays, and the content audit fails if a current catalog taxonomy is missing from default SEO content.
    - [ ] Yandex map final address setup.
      - Current public contacts layout supports separate legal and production addresses, each with its own Yandex map; final real values still require confirmation.
 
