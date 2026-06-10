@@ -1,4 +1,6 @@
 const { findProductDetail } = require("./_lib/catalog-query");
+const { getCatalogDbClient } = require("./_lib/catalog-db-client");
+const { findProductDetailFromDb } = require("./_lib/catalog-db-source");
 const { loadCatalogProducts } = require("./_lib/catalog-source");
 const { handleError, methodNotAllowed, sendJson } = require("./_lib/http");
 
@@ -21,6 +23,17 @@ module.exports = async function handler(req, res) {
     };
     if (!lookup.id && !lookup.baseSku && !lookup.sku) {
       return sendJson(res, 400, { error: "missing_product_lookup", message: "Provide id, baseSku, or sku." });
+    }
+
+    const dbClient = getCatalogDbClient();
+    if (dbClient) {
+      const product = await findProductDetailFromDb(dbClient, lookup);
+      if (!product) return sendJson(res, 404, { error: "product_not_found", message: "Product not found." });
+      return sendJson(res, 200, {
+        product,
+        updatedAt: null,
+        source: "postgres",
+      }, { "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" });
     }
 
     const catalog = await loadCatalogProducts();

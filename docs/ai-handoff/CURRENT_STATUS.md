@@ -41,6 +41,14 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL runtime toggle prep:
+  - added `api/_lib/catalog-db-client.js`, `server-routes/_lib/catalog-db-client.js`, and `tools/catalog-db-client-smoke.mjs`;
+  - installed runtime dependency `pg` for the future DB source path;
+  - `/api/catalog-query` and `/api/catalog-detail` can use the DB source only when `SOBAG_CATALOG_SOURCE=postgres` and a PostgreSQL URL is configured;
+  - default production remains on the existing store/static source;
+  - `/api/health` reports safe `catalogDb.enabled/configured` booleans without printing secrets;
+  - added `docs/catalog-postgres-source.md` with env names and guardrails;
+  - verification passed: `npm.cmd run smoke:catalog:db-client`, `npm.cmd run smoke:catalog:db-source`, `node tools/health-store-status-smoke.mjs`, and `npm.cmd run check`.
 - PostgreSQL source adapter prep:
   - added `api/_lib/catalog-db-source.js`, `server-routes/_lib/catalog-db-source.js`, and `tools/catalog-db-source-smoke.mjs`;
   - the adapter composes the SQL builder and DB row adapter behind a `query(sql, params)` client interface;

@@ -27,6 +27,7 @@
     "smoke:catalog:db-rows": "node tools/catalog-db-rows-smoke.mjs",
     "smoke:catalog:db-query": "node tools/catalog-db-query-smoke.mjs",
     "smoke:catalog:db-source": "node tools/catalog-db-source-smoke.mjs",
+    "smoke:catalog:db-client": "node tools/catalog-db-client-smoke.mjs",
     "smoke:catalog:scale": "node tools/catalog-query-scale-smoke.mjs",
     "check": "node tools/autofix.mjs --check",
     "autofix": "node tools/autofix.mjs --write",
@@ -45,7 +46,8 @@
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0",
-    "@vercel/blob": "^2.4.0"
+    "@vercel/blob": "^2.4.0",
+    "pg": "^8.21.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0"
