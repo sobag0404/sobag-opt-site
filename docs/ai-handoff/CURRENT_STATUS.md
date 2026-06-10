@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Goal input packet templates:
+  - added `tools/goal-inputs-packet-template.mjs` and `npm run prepare:goal-inputs`;
+  - the command creates ignored starter JSON packets under `local-import-output/` for final content facts, object storage readiness, PostgreSQL test DB readiness, and final CWV measurements;
+  - it does not overwrite existing local packets unless run with `-- --force`.
 - Goal external-input packet audit:
   - added `docs/goal-inputs-packet.md`, `tools/goal-inputs-packet-audit.mjs`, and `npm run audit:goal-inputs`;
   - the combined guard reports pending/ready state for the four ignored local packets: final content facts, object storage readiness, PostgreSQL test DB readiness, and final CWV field measurements;

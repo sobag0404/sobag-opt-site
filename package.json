@@ -48,6 +48,7 @@
     "audit:cwv-field": "node tools/cwv-field-audit-packet.mjs",
     "audit:goal-readiness": "node tools/goal-readiness-report.mjs",
     "audit:goal-inputs": "node tools/goal-inputs-packet-audit.mjs",
+    "prepare:goal-inputs": "node tools/goal-inputs-packet-template.mjs",
     "audit:final-content-packet": "node tools/final-content-packet-audit.mjs",
     "audit:content": "node tools/content-seo-audit.mjs",
     "audit:content-readiness": "node tools/content-readiness-report.mjs",

@@ -17,6 +17,14 @@ Run the combined non-strict status check:
 npm.cmd run audit:goal-inputs
 ```
 
+Create local starter templates when you are ready to fill the real values:
+
+```powershell
+npm.cmd run prepare:goal-inputs
+```
+
+The command writes only ignored local files and does not overwrite existing packets unless run with `-- --force`.
+
 Run the strict gate only when all local packets are created:
 
 ```powershell
