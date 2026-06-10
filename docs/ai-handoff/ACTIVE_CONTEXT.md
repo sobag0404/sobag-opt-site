@@ -31,6 +31,7 @@ Last updated: 2026-06-10
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-10: added Vercel fallback deploy throttling. VPS still deploys on every green push to `main`; Vercel Git auto-build is gated by `tools/vercel-daily-deploy-gate.mjs` through `vercel.json` `ignoreCommand`, so it builds the first push per Moscow day by default or any commit whose message includes `[vercel]`, `[fallback]`, or `[force-vercel]`.
 - Current pass 2026-06-10: fixed Vercel fallback API bundling after the catch-all route split. `api-router.js` now uses static `require(...)` imports for `server-routes/*` so Vercel can trace and include handlers; VPS `server.mjs` still uses the same router.
 - Current pass 2026-06-10: cleaned up catalog listing UI per user screenshots. `catalog.html` now has one top return button: `На главную` on catalog home and `В каталог` on selected category/collection/holiday pages. The duplicate section return button was removed, the selected-listing top spacing was tightened, and the visible `#catalogSeoCopy` promo/SEO plaque under filters was disabled while keeping metadata/content checks intact. UI smoke now guards the home/category button labels and hidden plaque.
 - Current pass 2026-06-10: added a 10k+ catalog runtime performance slice. Public `/api/catalog-query` card payload no longer includes unused `galleryCount`; `tools/catalog-query-scale-smoke.mjs` now guards against detail/gallery fields in list payloads; public server-query cursor pages append only newly loaded cards instead of replacing the existing first-page DOM; product cards use `content-visibility` containment for long lists; Playwright smoke now verifies cursor pagination keeps the first-page card node stable.
@@ -85,7 +86,7 @@ Last updated: 2026-06-10
 - Current next task: continue remaining roadmap upgrades after the catalog UI cleanup: final SEO/content once real company facts are confirmed, later PIM DB/storage split, and real photo migration/WebP/AVIF validation.
 - SEO next step: real company/legal/contact details only after confirmed facts; Product/FAQ schema, editable catalog landing copy, and offline SEO/content audit are already covered.
 - Import/PIM next step: later DB/storage split for product, variant, image, taxonomy, and import-batch entities. The current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
-- Deployment next step: VPS primary is live via HTTPS; after future pushes, verify `autofix-check`, `vps-deploy`, `production-smoke`, and keep Vercel as fallback.
+- Deployment next step: VPS primary is live via HTTPS; after future pushes, verify `autofix-check`, `vps-deploy`, `production-smoke`; Vercel fallback is throttled to first push per Moscow day unless forced by commit message marker.
 - Performance next step: real-catalog WebP/AVIF validation and Core Web Vitals audit after larger catalog growth.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 

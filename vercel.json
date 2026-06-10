@@ -1,6 +1,7 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "ignoreCommand": "node tools/vercel-daily-deploy-gate.mjs",
   "headers": [
     {
       "source": "/(.*)",

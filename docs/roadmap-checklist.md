@@ -102,6 +102,7 @@ Last updated: 2026-06-10
    - [x] Automated production smoke after deploy.
      - [x] Read-only production smoke script for `/`, `/catalog`, `/cart`, and `/api/health`, with offline self-test in AutoFix.
      - [x] Wire the live smoke into the post-deploy routine after push/deploy: GitHub Actions runs it after successful `autofix-check` on `main`, with manual fallback/preview dispatch support.
+   - [x] Vercel fallback deploy throttle: VPS deploys every green push; Vercel Git builds are gated to the first push per Moscow day unless forced with `[vercel]`, `[fallback]`, or `[force-vercel]`.
    - [x] Error monitoring/log review workflow.
      - [x] Structured server-side `api_error` logs in the shared API error handler with request ids.
      - [x] `tools/error-log-audit.mjs`, npm script `audit:errors`, AutoFix coverage, and `docs/error-log-review.md` runbook.
