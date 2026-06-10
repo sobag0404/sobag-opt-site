@@ -714,8 +714,26 @@ function downloadCsv(fileName, rows) {
   URL.revokeObjectURL(link.href);
 }
 
-function downloadRowsXlsx(rows, fileName, sheetName = "КП") {
-  if (!window.XLSX) return false;
+const XLSX_CDN_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+let xlsxLoadPromise = null;
+
+function ensureXlsxLibrary() {
+  if (window.XLSX) return Promise.resolve(true);
+  if (!xlsxLoadPromise) {
+    xlsxLoadPromise = new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = XLSX_CDN_URL;
+      script.defer = true;
+      script.onload = () => resolve(Boolean(window.XLSX));
+      script.onerror = () => resolve(false);
+      document.head.appendChild(script);
+    });
+  }
+  return xlsxLoadPromise;
+}
+
+async function downloadRowsXlsx(rows, fileName, sheetName = "КП") {
+  if (!(await ensureXlsxLibrary())) return false;
   const workbook = XLSX.utils.book_new();
   const sheet = XLSX.utils.aoa_to_sheet(rows);
   sheet["!cols"] = [{ wch: 28 }, { wch: 34 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
@@ -752,13 +770,13 @@ function cartQuoteRows() {
   ];
 }
 
-function downloadCartQuote() {
+async function downloadCartQuote() {
   if (!state.cart.size) {
     showToast("Корзина пока пустая.");
     return;
   }
   const rows = cartQuoteRows();
-  if (downloadRowsXlsx(rows, `sobag-quote-${Date.now()}.xlsx`, "КП")) {
+  if (await downloadRowsXlsx(rows, `sobag-quote-${Date.now()}.xlsx`, "КП")) {
     showToast("КП скачано в XLSX.");
     return;
   }
@@ -933,7 +951,7 @@ function closeCheckout() {
   window.setTimeout(finish, 220);
 }
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", async (event) => {
   const button = event.target.closest("button");
   if (!button) return;
 
@@ -949,7 +967,7 @@ document.addEventListener("click", (event) => {
     const title = window.prompt("Название черновика корзины", `Корзина от ${new Date().toLocaleDateString("ru-RU")}`) || "";
     saveCurrentCartDraft(title.trim());
   }
-  if (button.id === "downloadCartQuoteButton") downloadCartQuote();
+  if (button.id === "downloadCartQuoteButton") await downloadCartQuote();
   if (button.id === "printCartQuoteButton") printCartQuote();
   if (button.id === "useProfileButton") fillCheckoutFromProfile();
   if (button.dataset.closeCheckout !== undefined) closeCheckout();

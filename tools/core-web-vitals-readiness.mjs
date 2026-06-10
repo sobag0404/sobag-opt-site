@@ -67,6 +67,7 @@ function auditCoreWebVitalsReadiness() {
 
   REQUIRED_PAGES.forEach((pageFile) => {
     const html = read(pageFile);
+    assert(!html.includes("xlsx.full.min.js"), `${pageFile} should not load XLSX CDN during initial page render`, errors);
     scriptTags(html).forEach((tag) => {
       assert(/\bdefer\b/i.test(tag) || /\btype=["']module["']/i.test(tag), `${pageFile} has render-blocking script tag: ${tag}`, errors);
     });
@@ -78,6 +79,7 @@ function auditCoreWebVitalsReadiness() {
   });
 
   assert(!/Date\.now\(\)/.test(app.match(/fetchCatalogData[\s\S]{0,1200}/)?.[0] || ""), "catalog fetch path must not disable browser cache with Date.now()", errors);
+  assert(app.includes("ensureXlsxLibrary") && app.includes("XLSX_CDN_URL"), "app XLSX support should lazy-load only on demand", errors);
   assert(app.includes("const CATALOG_PAGE_SIZE = 48;"), "frontend public catalog page size must stay 48", errors);
   assert(app.includes("const SERVER_CATALOG_PAGE_SIZE = CATALOG_PAGE_SIZE;"), "server query page size must follow shared page size", errors);
   assert(app.includes("productCardSkeletonHtml") && app.includes("renderProductsLoading"), "catalog/search initial loading should keep skeleton state", errors);

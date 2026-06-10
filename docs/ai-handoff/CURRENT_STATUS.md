@@ -43,8 +43,8 @@ Current focus:
 Completed most recently:
 - Performance/Core Web Vitals readiness:
   - added `tools/core-web-vitals-readiness.mjs` and `npm run audit:cwv`;
-  - AutoFix now checks bundle budgets, deferred scripts on key pages, static image hints, public cache headers for catalog data, skeleton loading, 48-card query pages, append-only cursor rendering, product-card containment, and image migration readiness;
-  - all HTML script tags now use `defer`, reducing render-blocking script work while preserving execution order;
+  - AutoFix now checks bundle budgets, deferred scripts on key pages, static image hints, public cache headers for catalog data, skeleton loading, 48-card query pages, append-only cursor rendering, product-card containment, lazy XLSX loading, and image migration readiness;
+  - all HTML script tags now use `defer`, and SheetJS/XLSX is lazy-loaded only when import/export actions need it;
   - added `docs/performance-cwv.md` with the rule that final CWV must be measured only after real object-storage images and larger catalog data exist;
   - current audit passes but warns that real WebP/AVIF image validation is still pending.
 - Import/PIM DB split contract:

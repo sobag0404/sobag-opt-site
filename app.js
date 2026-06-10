@@ -3137,8 +3137,26 @@ function savedCartQuoteRows(cart, options = {}) {
   ];
 }
 
-function downloadRowsXlsx(rows, fileName, sheetName = "КП") {
-  if (!window.XLSX) return false;
+const XLSX_CDN_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+let xlsxLoadPromise = null;
+
+function ensureXlsxLibrary() {
+  if (window.XLSX) return Promise.resolve(true);
+  if (!xlsxLoadPromise) {
+    xlsxLoadPromise = new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = XLSX_CDN_URL;
+      script.defer = true;
+      script.onload = () => resolve(Boolean(window.XLSX));
+      script.onerror = () => resolve(false);
+      document.head.appendChild(script);
+    });
+  }
+  return xlsxLoadPromise;
+}
+
+async function downloadRowsXlsx(rows, fileName, sheetName = "КП") {
+  if (!(await ensureXlsxLibrary())) return false;
   const workbook = XLSX.utils.book_new();
   const sheet = XLSX.utils.aoa_to_sheet(rows);
   sheet["!cols"] = [{ wch: 28 }, { wch: 34 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
@@ -3147,14 +3165,14 @@ function downloadRowsXlsx(rows, fileName, sheetName = "КП") {
   return true;
 }
 
-function downloadSavedCartQuote(cartId) {
+async function downloadSavedCartQuote(cartId) {
   const draft = getSavedCarts().find((item) => item.id === cartId);
   if (!draft) {
     showToast("Черновик корзины не найден.");
     return;
   }
   const rows = savedCartQuoteRows(draft, { includeInternal: canViewSavedCartInternal() });
-  if (downloadRowsXlsx(rows, savedCartFileName(draft, "xlsx"), "КП")) {
+  if (await downloadRowsXlsx(rows, savedCartFileName(draft, "xlsx"), "КП")) {
     showToast("КП скачано в XLSX.");
     return;
   }
@@ -7991,8 +8009,12 @@ function parseDelimitedText(text) {
 }
 
 async function readProductRowsFromFile(file) {
-  if (/\.csv$/i.test(file.name) || !window.XLSX) {
+  if (/\.csv$/i.test(file.name)) {
     return parseDelimitedText(await file.text());
+  }
+  if (!(await ensureXlsxLibrary())) {
+    showToast("XLSX библиотека недоступна. Загрузите CSV или повторите позже.");
+    return [];
   }
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer);
@@ -8335,8 +8357,8 @@ function downloadAdminPriceRowsCsv(rows, fileName = "sobag-admin-prices.csv") {
   showToast(`Скачано строк цен: ${preparedRows.length}.`);
 }
 
-function downloadAdminPriceRowsXlsx(rows, fileName = "sobag-admin-prices.xlsx") {
-  if (!window.XLSX) {
+async function downloadAdminPriceRowsXlsx(rows, fileName = "sobag-admin-prices.xlsx") {
+  if (!(await ensureXlsxLibrary())) {
     downloadAdminPriceRowsCsv(rows, fileName.replace(/\.xlsx$/i, ".csv"));
     return;
   }
@@ -8438,14 +8460,14 @@ function downloadOrderCsv(orderId) {
   downloadCsv(`sobag-order-${order.id || "order"}.csv`, orderCsvRows(order));
 }
 
-function downloadOrderXlsx(orderId) {
+async function downloadOrderXlsx(orderId) {
   const order = getOrders().find((item) => item.id === orderId);
   if (!order) {
     showToast("Заказ не найден.");
     return;
   }
   const rows = orderCsvRows(order);
-  if (downloadRowsXlsx(rows, `sobag-order-${order.id || "order"}.xlsx`, "Заказ")) {
+  if (await downloadRowsXlsx(rows, `sobag-order-${order.id || "order"}.xlsx`, "Заказ")) {
     showToast("Заказ скачан в XLSX.");
     return;
   }
@@ -8657,6 +8679,10 @@ async function importPriceFile(file) {
       Object.fromEntries(line.split(delimiter).map((cell, index) => [headers[index] || `col${index}`, cell.replace(/^"|"$/g, "").replaceAll('""', '"').trim()]))
     );
   } else {
+    if (!(await ensureXlsxLibrary())) {
+      showToast("XLSX библиотека недоступна. Загрузите CSV или повторите позже.");
+      return;
+    }
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer);
     rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
@@ -9105,7 +9131,7 @@ function boot() {
       return;
     }
     if (button.dataset.downloadSavedCart) {
-      downloadSavedCartQuote(button.dataset.downloadSavedCart);
+      await downloadSavedCartQuote(button.dataset.downloadSavedCart);
       return;
     }
     if (button.dataset.printSavedCart) {
@@ -9298,7 +9324,7 @@ function boot() {
     }
     if (button.dataset.exportOrders !== undefined) downloadOrdersCsv();
     if (button.dataset.exportOrder) downloadOrderCsv(button.dataset.exportOrder);
-    if (button.dataset.exportOrderXlsx) downloadOrderXlsx(button.dataset.exportOrderXlsx);
+    if (button.dataset.exportOrderXlsx) await downloadOrderXlsx(button.dataset.exportOrderXlsx);
     if (button.dataset.printOrder) printOrder(button.dataset.printOrder);
     if (button.dataset.adminSyncCatalog !== undefined) {
       syncCatalogNow();
@@ -9307,7 +9333,7 @@ function boot() {
     if (button.dataset.adminExportProducts !== undefined) downloadProductsCsv(selectedAdminProducts(), "sobag-admin-products-selected.csv");
     if (button.dataset.adminExportVariants !== undefined) downloadVariantPricesCsv(selectedAdminProducts(), "sobag-admin-variant-prices-selected.csv");
     if (button.dataset.adminExportPriceRows !== undefined) downloadAdminPriceRowsCsv(selectedAdminPriceRows(), "sobag-admin-prices-selected.csv");
-    if (button.dataset.adminExportPriceXlsx !== undefined) downloadAdminPriceRowsXlsx(selectedAdminPriceRows(), "sobag-admin-prices-selected.xlsx");
+    if (button.dataset.adminExportPriceXlsx !== undefined) await downloadAdminPriceRowsXlsx(selectedAdminPriceRows(), "sobag-admin-prices-selected.xlsx");
     if (button.dataset.adminExportPriceProducts !== undefined) {
       const productIds = new Set(selectedAdminPriceRows().map(({ product }) => product.id));
       downloadVariantPricesCsv(products.filter((product) => productIds.has(product.id)), "sobag-admin-product-variant-prices.csv");

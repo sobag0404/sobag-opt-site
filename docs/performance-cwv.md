@@ -36,6 +36,7 @@ npm.cmd run audit:cwv
 - product-card `content-visibility` containment;
 - public cache headers for `/api/catalog-query`, `/api/catalog-detail`, and `data/products-live.json`;
 - current image migration readiness status.
+- no static XLSX CDN load during first render; SheetJS is lazy-loaded only when a user imports/exports XLSX.
 
 ## When To Run Real CWV
 
