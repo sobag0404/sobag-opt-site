@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PIM PostgreSQL query contract:
+  - added `tools/pim-postgres-query-contract.mjs` and `npm run audit:pim-query`;
+  - the audit builds future public product/card/detail rows from the normalized PIM bridge and compares compact card payload parity against the current public API shape;
+  - it guards published-only visibility, image metadata shape, and detail hydration without connecting to PostgreSQL, applying schema, or touching production data;
+  - AutoFix runs the live-catalog audit and self-test;
+  - verification passed: `npm.cmd run audit:pim-query`, `npm.cmd run check`, and `npm.cmd run ui:smoke` 15/15.
 - Production performance smoke:
   - added `tools/production-performance-smoke.mjs` and `npm run smoke:prod:performance`;
   - it verifies live VPS compact catalog-query payloads, 48-card page size, no full detail fields in list cards, public cache headers, bounded catalog-detail payload, and static JS/CSS response-size/time budgets;

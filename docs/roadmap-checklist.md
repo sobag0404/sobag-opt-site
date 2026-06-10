@@ -74,6 +74,7 @@ Last updated: 2026-06-10
      - [x] PostgreSQL seed export rehearsal: `tools/pim-postgres-seed.mjs` generates an ignored SQL upsert seed for the future schema from the current normalized PIM bridge without connecting to DB or touching production data; AutoFix validates the current catalog seed shape in dry-run mode.
      - [x] Import batch row contract: future PostgreSQL schema, normalized export, and seed exporter now include safe `import_batch_rows` records while the runtime sidecar stays compact unless row export is explicitly requested.
      - [x] DB-backed public catalog read contract: normalized product records include description/min/max price/popular fields, and PostgreSQL schema now defines guarded `public_catalog_products` / `public_catalog_cards` views that expose only `published` non-hidden products for the future `/api/catalog-query` path.
+     - [x] DB-backed query compatibility guard: `tools/pim-postgres-query-contract.mjs` builds future public product/card/detail rows from the normalized PIM bridge and checks compact card payload parity, published-only visibility, image metadata shape, and detail hydration without connecting to PostgreSQL or touching production data.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:
