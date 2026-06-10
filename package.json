@@ -30,6 +30,7 @@
     "audit:content": "node tools/content-seo-audit.mjs",
     "audit:images": "node tools/image-metadata-audit.mjs",
     "audit:photo-migration": "node tools/photo-migration-readiness.mjs",
+    "plan:photos": "node tools/photo-migration-manifest.mjs",
     "audit:vps-release": "node tools/vps-release-audit.mjs",
     "audit:access": "node tools/access-audit.mjs",
     "audit:errors": "node tools/error-log-audit.mjs"

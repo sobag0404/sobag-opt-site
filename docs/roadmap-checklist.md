@@ -61,6 +61,7 @@ Last updated: 2026-06-10
        - [x] Responsive WebP/AVIF variants for large catalogs: bulk CLI supports `--responsive`, dry-run variant planning, optional Sharp-based generation/upload, image metadata `variants`, and WebP `srcset` rendering in product UI.
        - [x] S3-compatible provider for VPS/MinIO/R2: real SigV4 upload/list/delete adapter, safe readiness status, bulk CLI provider support, and offline smoke coverage.
        - [x] Photo migration readiness audit: `tools/photo-migration-readiness.mjs` reports provider readiness, ignored raw/bulk folders, image metadata coverage, square image readiness, and WebP/AVIF readiness without uploading, deleting, or printing secrets.
+       - [x] Photo migration manifest planner: `tools/photo-migration-manifest.mjs` matches local photo folders to products and writes a safe upload/variant manifest before real storage migration.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
      - [x] First compatible sidecar payload in the current catalog storage shape: normalized products, variants, images, taxonomies, counts, and safe import batch summaries.
      - [x] Admin diagnostics/export endpoint for the PIM sidecar: summary/full/table views and CSV exports for products, variants, images, taxonomies, and import batches.

@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Photo migration manifest planner:
+  - added `tools/photo-migration-manifest.mjs` and `npm run plan:photos`;
+  - it matches local product photo folders to products, records missing products, and plans object-storage prefixes plus optional WebP/AVIF variants;
+  - default output is ignored `local-import-output/photo-migration-manifest.json`;
+  - it does not upload, delete, read secrets, or mutate products;
+  - AutoFix now runs the planner self-test.
 - Import/PIM PostgreSQL schema contract:
   - added `docs/pim-postgres-schema.sql` as the future PostgreSQL target schema for `products`, `variants`, `images`, `image_variants`, `taxonomies`, `product_taxonomies`, and `import_batches`;
   - added `tools/pim-postgres-schema-audit.mjs` and `npm run audit:pim-schema`;

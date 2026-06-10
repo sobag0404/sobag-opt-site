@@ -103,6 +103,22 @@ The CLI writes:
 
 `npm run check` runs a dry-run fixture test for this CLI, including responsive variant planning, so the matching/report path stays covered without needing a real Blob token.
 
+## Photo Migration Manifest
+
+Before any real upload, build a local manifest that matches product rows to local photo folders and plans object-storage keys plus optional responsive variants. This command does not upload, delete, read secrets, or change product data.
+
+```powershell
+npm.cmd run plan:photos -- --products data/products.import.json --photos "C:\Path\Photos" --provider s3-compatible --responsive
+```
+
+Default output:
+
+```text
+local-import-output/photo-migration-manifest.json
+```
+
+Use `--limit-products 20` for a small pilot manifest. Use `--json` when another script should consume the manifest from stdout instead of writing a file. The manifest records matched/missing products, source file names, planned provider, planned storage prefixes, and planned WebP/AVIF variant file names; raw photo folders and generated outputs stay ignored by Git.
+
 Use `npm run audit:images` after preparing or migrating product images. The audit checks image metadata shape, providers, dimensions, responsive WebP/AVIF variant records, and duplicate image keys. For the real migrated catalog, run the stricter mode:
 
 ```bash
