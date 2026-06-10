@@ -1,4 +1,4 @@
-const { currentUser } = require("./_lib/auth");
+const { currentUser, normalizePhone } = require("./_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("./_lib/http");
 const { saveStore } = require("./_lib/store");
 
@@ -72,7 +72,8 @@ module.exports = async function handler(req, res) {
     const customer = data.customer || {};
 
     if (!items.length) return sendJson(res, 400, { error: "empty_order", message: "В заказе нет товаров." });
-    if (!customer.phone && !user?.phone) return sendJson(res, 400, { error: "missing_phone", message: "Укажите телефон." });
+    const customerPhone = normalizePhone(customer.phone || user?.phone || "");
+    if (!customerPhone) return sendJson(res, 400, { error: "missing_phone", message: "Укажите телефон." });
 
     const record = {
       id: `SO-${Date.now().toString().slice(-6)}`,
@@ -85,7 +86,7 @@ module.exports = async function handler(req, res) {
         company: String(customer.company || ""),
         inn: String(customer.inn || ""),
         kpp: String(customer.kpp || ""),
-        phone: String(customer.phone || user?.phone || ""),
+        phone: customerPhone,
         email: String(customer.email || user?.email || ""),
         city: String(customer.city || ""),
         address: String(customer.address || user?.address || ""),

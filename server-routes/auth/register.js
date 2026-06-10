@@ -1,4 +1,4 @@
-const { createSession, hashPassword, isValidEmail, normalizeEmail, publicUser } = require("../_lib/auth");
+const { createSession, hashPassword, isValidEmail, normalizeEmail, normalizePhone, publicUser } = require("../_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { getStore, saveStore } = require("../_lib/store");
 
@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
     const email = normalizeEmail(data.email);
     const password = String(data.password || "");
     const name = String(data.name || "").trim();
-    const phone = String(data.phone || "").trim();
+    const phone = normalizePhone(data.phone);
 
     if (!isValidEmail(email)) return sendJson(res, 400, { error: "invalid_email", message: "Проверьте email." });
     if (!password || password.length < 4) return sendJson(res, 400, { error: "weak_password", message: "Укажите пароль." });
@@ -19,16 +19,18 @@ module.exports = async function handler(req, res) {
     }
 
     const store = await getStore();
-    if (store.users[email]) {
+    if (store.users[email]?.passwordHash) {
       return sendJson(res, 409, { error: "email_exists", message: "Этот email уже зарегистрирован в системе." });
     }
 
     store.users[email] = {
+      ...(store.users[email] || {}),
       email,
       name,
       phone,
-      role: "buyer",
-      createdAt: new Date().toISOString(),
+      role: store.users[email]?.role || "buyer",
+      createdAt: store.users[email]?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       personalDataConsent: true,
       consentAt: new Date().toISOString(),
       consentTextVersion: "personal-data-consent-2026-05-29",

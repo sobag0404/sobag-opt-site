@@ -896,6 +896,28 @@ function phoneHref(value = "") {
   return prepared ? `tel:${prepared}` : "#";
 }
 
+function formatPhoneNumber(value = "") {
+  const raw = String(value || "").trim();
+  let digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("8") && digits.length === 11) digits = `7${digits.slice(1)}`;
+  if (digits.startsWith("7")) {
+    const main = digits.slice(1, 11);
+    let formatted = "+7";
+    if (main.length) formatted += ` ${main.slice(0, 3)}`;
+    if (main.length > 3) formatted += ` ${main.slice(3, 6)}`;
+    if (main.length > 6) formatted += `-${main.slice(6, 8)}`;
+    if (main.length > 8) formatted += `-${main.slice(8, 10)}`;
+    if (main.length > 10) formatted += ` ${main.slice(10)}`;
+    return formatted;
+  }
+  if (!raw.startsWith("+") && digits.length < 10) return raw;
+  const countryLength = ["1", "7"].includes(digits[0]) ? 1 : digits.length > 11 ? 3 : digits.length > 10 ? 2 : 1;
+  const country = digits.slice(0, countryLength);
+  const groups = digits.slice(countryLength).match(/\d{1,3}/g) || [];
+  return [`+${country}`, ...groups].join(" ");
+}
+
 function footerLinkUrl(label = "") {
   const prepared = String(label).trim().toLocaleLowerCase("ru-RU");
   if (prepared.includes("о компании")) return "about.html";
@@ -1170,7 +1192,10 @@ function queueServerCatalogRefresh() {
     return;
   }
   refreshServerCatalogList().then((loaded) => {
-    if (!loaded) return;
+    if (!loaded) {
+      renderProducts();
+      return;
+    }
     renderFilters();
     renderProducts();
   });
@@ -1485,7 +1510,17 @@ function initFormEnhancements(root = document) {
   root.querySelectorAll('input[name="name"]').forEach((field) => field.setAttribute("autocomplete", "name"));
   root.querySelectorAll('input[name="company"]').forEach((field) => field.setAttribute("autocomplete", "organization"));
   root.querySelectorAll('input[name="email"]').forEach((field) => field.setAttribute("autocomplete", "email"));
-  root.querySelectorAll('input[name="phone"]').forEach((field) => field.setAttribute("autocomplete", "tel"));
+  root.querySelectorAll('input[name="phone"], input[type="tel"]').forEach((field) => {
+    field.setAttribute("autocomplete", "tel");
+    field.setAttribute("inputmode", "tel");
+    if (!field.placeholder) field.placeholder = "+7 999 999-99-99";
+    if (field.value) field.value = formatPhoneNumber(field.value);
+    if (field.dataset.phoneFormatted === "true") return;
+    field.dataset.phoneFormatted = "true";
+    field.addEventListener("blur", () => {
+      field.value = formatPhoneNumber(field.value);
+    });
+  });
   root.querySelectorAll('input[name="address"]').forEach((field) => field.setAttribute("autocomplete", "street-address"));
   root.querySelectorAll('input[name="password"]').forEach((field) => field.setAttribute("autocomplete", "current-password"));
 }
@@ -2246,8 +2281,9 @@ function seedUsers() {
     email: "admin@sobag",
     password: "admin",
     name: currentAdmin?.name || legacyAdmin?.name || "\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440",
-    phone: currentAdmin?.phone || legacyAdmin?.phone || "+7 900 000-00-00",
+    phone: formatPhoneNumber(currentAdmin?.phone || legacyAdmin?.phone || "+7 900 000-00-00"),
     role: "admin",
+    owner: true,
     orders: adminOrders,
   };
 
@@ -2277,7 +2313,12 @@ function saveOrders(orders) {
   localStorage.setItem(STORAGE.orders, JSON.stringify(orders));
 }
 
-function roleLabel(role) {
+function isOwnerAccount(user) {
+  return Boolean(user?.owner || String(user?.email || "").toLowerCase() === "admin@sobag");
+}
+
+function roleLabel(role, user = null) {
+  if (isOwnerAccount(user)) return "Владелец";
   if (role === "admin") return "Администратор";
   if (role === "manager") return "Менеджер";
   if (role === "content") return "Контент-менеджер";
@@ -3142,7 +3183,7 @@ async function saveProfileForm(form) {
   const orderComments = uniqueTextList([orderComment, ...textAreaLines(data.orderComments, 10, 500), ...(currentUserData.orderComments || [])], 10, 500);
   const profile = {
     name: String(data.name || "").trim(),
-    phone: String(data.phone || "").trim(),
+    phone: formatPhoneNumber(data.phone),
     company: String(data.company || "").trim(),
     inn: String(data.inn || "").replace(/\D/g, ""),
     kpp: String(data.kpp || "").replace(/\D/g, ""),
@@ -3181,7 +3222,7 @@ async function saveProfileForm(form) {
   saveUsers(users);
   try {
     const result = await apiRequest("/api/auth/me", { method: "PUT", body: { profile } });
-    if (result.user) saveServerUserProfile({ ...result.user, savedCarts: getSavedCarts() });
+    if (result.user) saveServerUserProfile({ ...result.user, ...profile, savedCarts: getSavedCarts() });
   } catch (error) {
     if (!isBackendUnavailable(error) && error.status !== 404) {
       showToast(error.message || "Не удалось сохранить профиль на сервере.");
@@ -3190,6 +3231,52 @@ async function saveProfileForm(form) {
   }
   showToast("Профиль сохранен.");
   rerenderAccountModal();
+}
+
+async function addManagerEmployee(form) {
+  clearFormErrors(form);
+  const data = Object.fromEntries(new FormData(form).entries());
+  const email = String(data.email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setFieldError(form, "email", "Проверьте email сотрудника.");
+    return;
+  }
+  try {
+    const result = await apiRequest("/api/admin/users", {
+      method: "POST",
+      body: {
+        email,
+        name: String(data.name || "").trim(),
+        phone: formatPhoneNumber(data.phone),
+      },
+    });
+    if (result.user) {
+      const users = getUsers();
+      users[result.user.email] = { ...(users[result.user.email] || {}), ...result.user, password: users[result.user.email]?.password || "__server__" };
+      saveUsers(users);
+    }
+    showToast("Менеджер добавлен на сервере.");
+    rerenderAccountModal();
+  } catch (error) {
+    showToast(error.message || "Не удалось добавить менеджера.");
+  }
+}
+
+async function removeManagerEmployee(email) {
+  const targetEmail = String(email || "").trim().toLowerCase();
+  if (!targetEmail) return;
+  try {
+    const result = await apiRequest("/api/admin/users", { method: "DELETE", body: { email: targetEmail } });
+    if (result.user) {
+      const users = getUsers();
+      users[result.user.email] = { ...(users[result.user.email] || {}), ...result.user, password: users[result.user.email]?.password || "__server__" };
+      saveUsers(users);
+    }
+    showToast("Менеджер удален из сотрудников.");
+    rerenderAccountModal();
+  } catch (error) {
+    showToast(error.message || "Не удалось удалить менеджера.");
+  }
 }
 
 function rerenderAccountModal() {
@@ -4373,7 +4460,35 @@ function resetProductGridRenderState() {
   delete productGrid.dataset.renderedCount;
 }
 
+function isServerCatalogInitialLoading() {
+  if (!shouldUseServerCatalogList()) return false;
+  return state.serverCatalog.status === "loading" && state.serverCatalog.key === serverCatalogKey() && !state.serverCatalog.items.length;
+}
+
+function productCardSkeletonHtml() {
+  return `
+        <article class="product-card product-card--skeleton" aria-hidden="true">
+          <div class="product-card__image"></div>
+          <div class="product-card__body">
+            <span class="skeleton-line skeleton-line--sku"></span>
+            <span class="skeleton-line skeleton-line--title"></span>
+            <span class="skeleton-line skeleton-line--title-short"></span>
+            <span class="skeleton-line skeleton-line--button"></span>
+          </div>
+        </article>
+      `;
+}
+
+function renderProductsLoading() {
+  if (!productGrid) return;
+  productGrid.setAttribute("aria-busy", "true");
+  productGrid.innerHTML = Array.from({ length: 8 }, productCardSkeletonHtml).join("");
+  if (catalogLoadMore) catalogLoadMore.innerHTML = "";
+  resetProductGridRenderState();
+}
+
 function renderProductGridCards(visibleList, renderKey = "") {
+  productGrid.removeAttribute("aria-busy");
   const renderedKey = productGrid.dataset.renderKey || "";
   const renderedCount = Number(productGrid.dataset.renderedCount || 0) || 0;
   const canAppend =
@@ -4398,6 +4513,16 @@ function renderProductGridCards(visibleList, renderKey = "") {
 function renderProducts() {
   if (!productGrid || !productCount) return;
   queueServerCatalogRefresh();
+  if (isServerCatalogInitialLoading()) {
+    renderSearchSuggestions();
+    renderSearchResultsPanel([], 0);
+    renderActiveFilterChips();
+    productCount.textContent = "загрузка";
+    renderCatalogSeoCopy(0);
+    renderProductsLoading();
+    return;
+  }
+  productGrid.removeAttribute("aria-busy");
   const localList = getFilteredProducts();
   const serverResult = currentServerCatalogResult();
   const list = serverResult ? serverResult.items : localList;
@@ -4892,7 +5017,7 @@ function orderManagerOptions(selectedEmail = "") {
   const options = ['<option value="">Не назначен</option>'];
   managers.forEach((user) => {
     const email = user.email || "";
-    options.push(`<option value="${escapeHtml(email)}"${email === selectedEmail ? " selected" : ""}>${escapeHtml(user.name || email)} · ${escapeHtml(roleLabel(user.role))}</option>`);
+    options.push(`<option value="${escapeHtml(email)}"${email === selectedEmail ? " selected" : ""}>${escapeHtml(user.name || email)} · ${escapeHtml(roleLabel(user.role, user))}</option>`);
   });
   return options.join("");
 }
@@ -5536,7 +5661,7 @@ function customerDetailHtml(customer) {
           <span>ИНН: <b>${escapeHtml(customer.inn || customer.lastCustomer?.inn || "Не указан")}</b></span>
           <span>КПП: <b>${escapeHtml(customer.kpp || customer.lastCustomer?.kpp || "Не указан")}</b></span>
           <span>Телефон: <b>${escapeHtml(customer.phone || customer.lastCustomer?.phone || "Не указан")}</b></span>
-          <span>Роль: <b>${escapeHtml(roleLabel(customer.role))}</b></span>
+          <span>Роль: <b>${escapeHtml(roleLabel(customer.role, customer))}</b></span>
           <span>Город: <b>${escapeHtml(customer.city || customer.lastCustomer?.city || "Не указан")}</b></span>
           <span>Адрес: <b>${escapeHtml(customer.address || customer.lastCustomer?.address || "Не указан")}</b></span>
           <span>Юр. адрес: <b>${escapeHtml(customer.legalAddress || customer.lastCustomer?.legalAddress || "Не указан")}</b></span>
@@ -6458,7 +6583,47 @@ function renderAdminImportPage() {
 function userManagementHtml(user) {
   if (user?.role !== "admin") return "";
   const users = getUsers();
+  const managers = Object.entries(users).filter(([, item]) => item.role === "manager" || item.employee);
   return `
+    <div class="account-section">
+      <h3>Сотрудники</h3>
+      <form class="employee-form account-profile-grid" data-employee-form>
+        <label>
+          Email менеджера
+          <input name="email" type="email" placeholder="manager@example.com" autocomplete="email" required />
+        </label>
+        <label>
+          Имя
+          <input name="name" type="text" placeholder="Имя сотрудника" autocomplete="name" />
+        </label>
+        <label>
+          Телефон
+          <input name="phone" type="tel" placeholder="+7 999 999-99-99" autocomplete="tel" />
+        </label>
+        <button class="ghost-button" type="submit">Добавить менеджера</button>
+      </form>
+      <div class="orders-list">
+        ${
+          managers.length
+            ? managers
+                .map(
+                  ([email, item]) => `
+                    <article>
+                      <strong>${escapeHtml(item.name || email)}</strong>
+                      <span>${escapeHtml(email)}</span>
+                      ${item.phone ? `<span>${escapeHtml(item.phone)}</span>` : ""}
+                      <span>${escapeHtml(roleLabel(item.role, item))}</span>
+                      <div class="order-actions">
+                        <button class="ghost-button" type="button" data-remove-manager="${escapeHtml(email)}">Удалить менеджера</button>
+                      </div>
+                    </article>
+                  `
+                )
+                .join("")
+            : "<p>Менеджеров пока нет.</p>"
+        }
+      </div>
+    </div>
     <div class="account-section">
       <h3>Пользователи</h3>
       <div class="orders-list">
@@ -6472,7 +6637,7 @@ function userManagementHtml(user) {
                 <strong>${item.name || email}</strong>
                 <span>${email}</span>
                 ${item.phone ? `<span>${item.phone}</span>` : ""}
-                <span>${roleLabel(item.role)}</span>
+                <span>${roleLabel(item.role, item)}</span>
                 ${
                   isAdmin
                     ? ""
@@ -6747,7 +6912,7 @@ function accountModalHtml() {
                 <span>${user.email}</span>
                 ${user.phone ? `<span>${user.phone}</span>` : ""}
                 ${user.address ? `<span>${user.address}</span>` : ""}
-                <span>${roleLabel(user.role)}</span>
+                <span>${roleLabel(user.role, user)}</span>
               </div>
               ${
                 (user.addresses || []).length
@@ -8186,7 +8351,8 @@ async function submitOrder(form) {
     return;
   }
   const data = Object.fromEntries(new FormData(form).entries());
-  if (!String(data.phone || "").trim()) {
+  const customerPhone = formatPhoneNumber(data.phone || user?.phone || "");
+  if (!customerPhone) {
     setFieldError(form, "phone", "Укажите телефон для связи.");
     return;
   }
@@ -8210,7 +8376,7 @@ async function submitOrder(form) {
     company: data.company || "",
     inn,
     kpp,
-    phone: data.phone || user?.phone || "",
+    phone: customerPhone,
     email: data.email || user?.email || "",
     city: data.city || "",
     address: data.address || user?.address || "",
@@ -8539,6 +8705,10 @@ function boot() {
       showToast(updated ? "Роль пользователя обновлена." : "Роль пользователя не изменена.");
       return;
     }
+    if (button.dataset.removeManager) {
+      await removeManagerEmployee(button.dataset.removeManager);
+      return;
+    }
     if (button.dataset.openAdmin !== undefined) openAdmin();
     if (button.dataset.refreshReviews !== undefined) {
       await loadAdminReviews();
@@ -8805,6 +8975,11 @@ function boot() {
       await saveProfileForm(event.target);
       return;
     }
+    if (event.target.dataset.employeeForm !== undefined) {
+      event.preventDefault();
+      await addManagerEmployee(event.target);
+      return;
+    }
     if (event.target.dataset.reviewForm) {
       event.preventDefault();
       await submitProductReview(event.target);
@@ -8824,7 +8999,7 @@ function boot() {
       const email = String(data.email || "").trim().toLowerCase();
       const password = String(data.password || "");
       const name = String(data.name || "").trim();
-      const phone = String(data.phone || "").trim();
+      const phone = formatPhoneNumber(data.phone);
       const existingEmailKey = Object.keys(users).find((key) => key.toLowerCase() === email);
       if (!email) {
         setFieldError(event.target, "email", "Укажите email.");
@@ -8850,7 +9025,7 @@ function boot() {
           showToast("Для регистрации подтвердите согласие на обработку персональных данных.");
           return;
         }
-        if (existingEmailKey) {
+        if (existingEmailKey && users[existingEmailKey]?.password !== "__server__") {
           setFieldError(event.target, "email", "Этот email уже зарегистрирован в системе.");
           showToast("Этот email уже зарегистрирован в системе.");
           return;
@@ -8885,11 +9060,12 @@ function boot() {
           }
         }
         users[email] = {
+          ...(users[email] || {}),
           email,
           password,
           name: name || email,
           phone,
-          role: "buyer",
+          role: users[email]?.role || "buyer",
           orders: [],
           personalDataConsent: true,
           consentAt: new Date().toISOString(),

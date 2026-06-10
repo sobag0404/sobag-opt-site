@@ -16,7 +16,7 @@ Last updated: 2026-06-10
 - [x] Buyer account basics: profile, companies/requisites, addresses, order history, favorites, saved carts.
 - [x] Admin/manager order pages with statuses, manager notes, customer profile links, and status history.
 - [x] Server-backed auth/orders/catalog/content through existing Vercel Functions and KV/Redis-compatible storage.
-- [x] Admin catalog tools: products, prices, import, content, users/roles.
+- [x] Admin catalog tools: products, prices, import, content, users/roles, employees/manager access by email.
 - [x] Product import workflow and local importer.
 - [x] Basic SEO pages, sitemap, robots, Organization/CollectionPage/BreadcrumbList JSON-LD.
 - [x] Smoke tests and autofix checks.

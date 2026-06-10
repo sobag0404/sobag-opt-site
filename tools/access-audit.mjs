@@ -24,10 +24,14 @@ const routeMatrix = [
   {
     file: "server-routes/admin/users.js",
     route: "/api/admin/users",
-    methods: ["GET", "PATCH"],
+    methods: ["GET", "POST", "PATCH", "DELETE"],
     access: "role",
     roles: ["admin", "manager"],
-    methodGuards: [{ method: "PATCH", pattern: /user\.role\s*!==\s*["']admin["']/, description: "role changes require admin" }],
+    methodGuards: [
+      { method: "POST", pattern: /user\.role\s*!==\s*["']admin["']/, description: "employee creation requires admin" },
+      { method: "PATCH", pattern: /user\.role\s*!==\s*["']admin["']/, description: "role changes require admin" },
+      { method: "DELETE", pattern: /user\.role\s*!==\s*["']admin["']/, description: "employee deletion requires admin" },
+    ],
   },
 ];
 

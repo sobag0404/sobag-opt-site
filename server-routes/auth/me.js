@@ -1,4 +1,4 @@
-const { currentUser, publicUser } = require("../_lib/auth");
+const { currentUser, normalizePhone, publicUser } = require("../_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { saveStore } = require("../_lib/store");
 
@@ -90,7 +90,7 @@ function sanitizeProfile(profile = {}, existing = {}) {
     .filter(Boolean);
   return {
     name: text(profile.name || existing.name, 120),
-    phone: text(profile.phone || existing.phone, 80),
+    phone: normalizePhone(profile.phone || existing.phone).slice(0, 80),
     company: text(profile.company || existing.company, 180),
     inn: text(String(profile.inn || existing.inn || "").replace(/\D/g, ""), 12),
     kpp: text(String(profile.kpp || existing.kpp || "").replace(/\D/g, ""), 9),

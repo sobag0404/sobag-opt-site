@@ -1,4 +1,4 @@
-const { publicUser, requireUser } = require("../_lib/auth");
+const { isValidEmail, normalizeEmail, normalizePhone, publicUser, requireUser } = require("../_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { saveStore } = require("../_lib/store");
 
@@ -33,6 +33,45 @@ module.exports = async function handler(req, res) {
       }
       return sendJson(res, 200, { users: Object.values(store.users).map(publicUser) });
     }
+    if (req.method === "POST") {
+      if (user.role !== "admin") return sendJson(res, 403, { error: "forbidden", message: "Сотрудников может добавлять только администратор." });
+      const data = await readJson(req);
+      const email = normalizeEmail(data.email);
+      if (!isValidEmail(email) || email === "admin@sobag") return sendJson(res, 400, { error: "invalid_email", message: "Проверьте email сотрудника." });
+      const existing = store.users[email] || {};
+      if (existing.role === "admin") return sendJson(res, 403, { error: "admin_locked", message: "Администратора нельзя изменить здесь." });
+      store.users[email] = {
+        ...existing,
+        email,
+        name: String(data.name || existing.name || email).trim().slice(0, 120),
+        phone: normalizePhone(data.phone || existing.phone || ""),
+        role: "manager",
+        employee: true,
+        invitedAt: existing.invitedAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await saveStore(store);
+      return sendJson(res, 201, { user: publicUser(store.users[email]) });
+    }
+
+    if (req.method === "DELETE") {
+      if (user.role !== "admin") return sendJson(res, 403, { error: "forbidden", message: "Сотрудников может удалять только администратор." });
+      const data = await readJson(req);
+      const email = normalizeEmail(data.email);
+      const existing = store.users[email];
+      if (!existing) return sendJson(res, 404, { error: "not_found", message: "Пользователь не найден." });
+      if (existing.role === "admin") return sendJson(res, 403, { error: "admin_locked", message: "Администратора нельзя удалить здесь." });
+      store.users[email] = {
+        ...existing,
+        role: "buyer",
+        employee: false,
+        managerRemovedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await saveStore(store);
+      return sendJson(res, 200, { user: publicUser(store.users[email]) });
+    }
+
     if (req.method !== "PATCH") return methodNotAllowed(res);
     if (user.role !== "admin") return sendJson(res, 403, { error: "forbidden", message: "Роли может менять только администратор." });
 

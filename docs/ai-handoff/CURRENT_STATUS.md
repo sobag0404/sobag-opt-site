@@ -41,6 +41,15 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Latest catalog/account/admin UI slice:
+  - catalog/favorites side cart panel is removed entirely; buyers add items from catalog and finish only on `/cart`;
+  - selected catalog grid now uses the freed width for larger cards; card borders are slightly stronger in day and night themes;
+  - catalog initial server-query load shows skeleton product cards instead of a temporary false empty state;
+  - `/cart` now uses the full sticky commerce header with search;
+  - registration consent checkbox layout is fixed;
+  - phone inputs are formatted to international style, with Russian numbers shown as `+7 999 999-99-99`;
+  - `admin@sobag` is server-bootstrapped as an owner admin and displayed as `Владелец`;
+  - admin account now has `Сотрудники` for adding/removing manager access by email while preserving user/order/action history.
 - Catalog side-cart simplification:
   - removed the order form from catalog/favorites side panels;
   - buyer checkout/contact/company fields now live only on `/cart`;

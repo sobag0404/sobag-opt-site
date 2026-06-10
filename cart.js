@@ -98,7 +98,9 @@ const state = {
 let cartServerReady = !localStorage.getItem(CURRENT_USER_KEY);
 
 const nodes = {
-  count: document.querySelector("#cartPageCount"),
+  count: document.querySelector("#cartPageCount") || document.querySelector("#cartCount"),
+  headerTotal: document.querySelector("#cartHeaderTotal"),
+  headerDiscount: document.querySelector("#cartHeaderDiscount"),
   empty: document.querySelector("#cartPageEmpty"),
   items: document.querySelector("#cartPageItems"),
   scale: document.querySelector("#cartDiscountScale"),
@@ -815,8 +817,12 @@ function renderCart() {
     .join("");
 
   setTextWithPop(nodes.count, totals.qty);
-  nodes.count.closest(".cart-page__header-note")?.classList.toggle("is-empty", totals.qty === 0);
-  nodes.count.hidden = totals.qty === 0;
+  nodes.count?.closest(".cart-page__header-note")?.classList.toggle("is-empty", totals.qty === 0);
+  if (nodes.count) nodes.count.hidden = totals.qty === 0;
+  const headerCartButton = nodes.count?.closest(".cart-button");
+  headerCartButton?.classList.toggle("is-empty", totals.qty === 0);
+  if (nodes.headerTotal) setTextWithPop(nodes.headerTotal, formatMoney(totals.total));
+  if (nodes.headerDiscount) setTextWithPop(nodes.headerDiscount, totals.qtyDiscount ? `скидка ${totals.qtyDiscount}%` : getBasketDiscountHint(totals.subtotal));
   setTextWithPop(nodes.subtotal, formatMoney(totals.subtotal));
   nodes.qtyDiscount.textContent = getBasketDiscountHint(totals.subtotal);
   if (nodes.qtyDiscount.previousElementSibling) nodes.qtyDiscount.previousElementSibling.hidden = true;
