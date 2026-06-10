@@ -87,6 +87,7 @@ Last updated: 2026-06-10
      - [x] Smaller public catalog page payload: frontend now requests `/api/catalog-query` with the server default `pageSize=48` instead of 120, and UI smoke asserts the request size.
      - [x] Smaller local fallback catalog pages: when `/api/catalog-query` is unavailable, the client renders 48 cards per step instead of 120.
      - [x] Runtime list rendering optimization: server cursor pages append only new cards instead of replacing existing first-page DOM, and product cards use browser rendering containment for long lists.
+     - [x] Browser 10k pagination smoke: Playwright simulates a 10k server-query catalog, verifies 48-card cursor pages, bounded DOM growth after repeated "show more", stable first-page DOM, and no full `/api/catalog` bootstrap.
    - [x] Current performance guard: `tools/catalog-performance-audit.mjs` verifies compact 48-card list payloads, append-only cursor rendering hooks, card rendering containment, and reports current real-catalog image migration readiness.
    - [ ] Core Web Vitals audit after real catalog growth.
 

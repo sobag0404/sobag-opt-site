@@ -47,7 +47,8 @@ Completed most recently:
   - server cursor pages append only newly loaded cards instead of replacing existing first-page DOM;
   - product cards use browser rendering containment for long lists;
   - focused UI smoke verifies the first server page DOM node remains stable after cursor pagination;
-  - `tools/catalog-performance-audit.mjs` and npm script `audit:performance` now guard 48-card pages, compact payload, append-only render hooks, card containment, and current real-catalog image migration readiness.
+  - `tools/catalog-performance-audit.mjs` and npm script `audit:performance` now guard 48-card pages, compact payload, append-only render hooks, card containment, and current real-catalog image migration readiness;
+  - Playwright now simulates a 10k server-query catalog and verifies bounded DOM growth, stable first-page DOM, 48-card cursor pages, and no full `/api/catalog` bootstrap.
 - VPS DNS/SSL cutover:
   - authoritative REG.RU DNS for `sobag-shop.online` and `www.sobag-shop.online` returns `77.239.107.164`;
   - `certbot --nginx` issued and deployed the Let's Encrypt certificate for both names;

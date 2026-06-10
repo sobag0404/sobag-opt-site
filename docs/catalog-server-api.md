@@ -108,3 +108,5 @@ The frontend requests the server default `pageSize=48` for public listing pages,
 `npm run check` also runs an offline 10k-product synthetic scale smoke (`tools/catalog-query-scale-smoke.mjs`). It verifies published-only filtering, 48-card cursor pages, compact card payloads without full variants/images/detail/gallery fields, exact SKU lookup, and full detail hydration through the same query helpers.
 
 `npm run audit:performance` runs `tools/catalog-performance-audit.mjs`. It checks the current catalog performance invariants: 48-card server pages, compact list payloads, append-only cursor rendering hooks, product-card rendering containment, and current real-catalog image migration readiness.
+
+The Playwright UI smoke includes a synthetic 10k server-query catalog case. It verifies bounded DOM growth after repeated cursor pages, a stable first-page card node, 48-card requests, and no full `/api/catalog` bootstrap while `/api/catalog-query` succeeds.

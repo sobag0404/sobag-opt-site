@@ -747,6 +747,79 @@ test("catalog list renders server query cards and cursor pages", async ({ page }
   expect(fullCatalogRequested).toBe(false);
 });
 
+test("catalog server query keeps 10k pages bounded in DOM", async ({ page }) => {
+  const pageSize = 48;
+  const total = 10000;
+  const requestedUrls = [];
+  let fullCatalogRequested = false;
+  const cardAt = (index) => ({
+    id: `qa-scale-card-${String(index + 1).padStart(5, "0")}`,
+    baseSku: `QA-SCALE-${String(index + 1).padStart(5, "0")}`,
+    name: `QA Scale Card ${String(index + 1).padStart(5, "0")}`,
+    category: "QA Scale",
+    categories: ["QA Scale"],
+    collections: [],
+    holidays: [],
+    tags: [],
+    image: "assets/production-workshop-1.png",
+    minPrice: 100 + index,
+    maxPrice: 100 + index,
+    variantCount: 1,
+  });
+
+  await page.route("**/api/catalog", async (route) => {
+    fullCatalogRequested = true;
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({ error: "unexpected_full_catalog_bootstrap" }),
+    });
+  });
+
+  await page.route("**/api/catalog-query?**", async (route) => {
+    const url = new URL(route.request().url());
+    requestedUrls.push(url);
+    const offset = Number(url.searchParams.get("cursor") || 0) || 0;
+    const items = Array.from({ length: pageSize }, (_, index) => cardAt(offset + index));
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        items,
+        total,
+        facets: { categories: [{ value: "QA Scale", count: total }], collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        facetOptions: { categories: [{ value: "QA Scale", count: total }], collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        pageInfo: {
+          page: Math.floor(offset / pageSize) + 1,
+          pageSize,
+          offset,
+          total,
+          totalPages: Math.ceil(total / pageSize),
+          hasMore: offset + pageSize < total,
+          nextCursor: String(offset + pageSize),
+        },
+        source: "qa-scale-query",
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent("QA Scale")}`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".product-card")).toHaveCount(pageSize);
+  await expect(page.locator("#productCount")).toContainText("10000");
+  await page.locator(".product-card").first().evaluate((card) => card.setAttribute("data-qa-stable-node", "scale-first-page"));
+
+  for (const expectedCount of [96, 144, 192]) {
+    await page.locator("[data-show-more-products]").click();
+    await expect(page.locator(".product-card")).toHaveCount(expectedCount);
+  }
+
+  await expect(page.locator('.product-card[data-qa-stable-node="scale-first-page"]')).toHaveCount(1);
+  expect(requestedUrls.every((url) => url.searchParams.get("pageSize") === "48")).toBe(true);
+  expect(requestedUrls.length).toBeLessThanOrEqual(5);
+  expect([...new Set(requestedUrls.map((url) => url.searchParams.get("cursor") || "0"))]).toEqual(["0", "48", "96", "144"]);
+  expect(fullCatalogRequested).toBe(false);
+});
+
 test("search prioritizes exact sku and keeps suggestions for fuzzy queries", async ({ page }) => {
   await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
