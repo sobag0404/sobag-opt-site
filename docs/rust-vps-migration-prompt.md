@@ -51,9 +51,10 @@ Workflow:
 3. Design DB schema, Rust module boundaries, API contracts, SSR URL model, roles, SEO, import/media/search strategy, and rollback.
 4. Build infrastructure skeleton: Rust app, PostgreSQL, Redis, Meilisearch, MinIO/S3, worker, Docker Compose, health checks, logging.
 5. Migrate in completed numbered slices: commercial readiness fixes, catalog/search, SSR storefront, cart/orders, users/auth, admin/CRM, imports/media, deploy/monitoring.
-6. Run checks only after a full slice/item is complete, not after every small edit. For legacy code run `npm.cmd run check`; for new stack run Rust/backend/admin tests.
-7. Before push run the relevant final checks for the completed slice, including UI smoke only where applicable.
-8. Commit only green completed slices, update handoff docs, and keep rollback available.
+6. Run a VPS capacity gate before production cutover.
+7. Run checks only after a full slice/item is complete, not after every small edit. For legacy code run `npm.cmd run check`; for new stack run Rust/backend/admin tests.
+8. Before push run the relevant final checks for the completed slice, including UI smoke only where applicable.
+9. Commit only green completed slices, update handoff docs, and keep rollback available.
 ```
 
 ## Detailed action plan
@@ -132,3 +133,25 @@ Workflow:
 - Run automated checks, UI smoke, Rust tests, admin tests, migration dry-run, production smoke against staging, and load tests.
 - Prepare DNS/proxy cutover, backup, rollback, and old URL redirect validation.
 - Update `docs/ai-handoff/ACTIVE_CONTEXT.md`, `docs/ai-handoff/CURRENT_STATUS.md`, `docs/roadmap-checklist.md`, and `project-ai-handoff-latest.zip` during real implementation slices.
+
+### 10. VPS capacity gate
+
+- Current repo docs confirm the VPS path and production IP, but do not record CPU, RAM, disk type, or free disk. Treat server capacity as unknown until measured on the real VPS.
+- Rust itself should reduce app CPU/RAM compared with the current Node-heavy path, but the new platform adds heavier services: PostgreSQL, Redis, Meilisearch/OpenSearch, object storage or media proxying, workers, backups, and monitoring.
+- Minimum for a local/staging all-in-one stack: 2 vCPU, 4 GB RAM, 40-80 GB SSD/NVMe. This is not enough for confident production growth.
+- Practical production MVP on one VPS: 4 vCPU, 8-16 GB RAM, 100-200 GB NVMe, external S3-compatible media storage, daily DB/file backups, swap enabled, and monitoring.
+- Safer growth tier: 8 vCPU, 16-32 GB RAM, 300+ GB NVMe, with PostgreSQL and search either tuned carefully or moved to separate managed/dedicated services.
+- Large-store target: do not keep everything on one VPS. Split app nodes, PostgreSQL, Redis, search, object storage/CDN, workers, and monitoring/backups.
+- Avoid OpenSearch on a small VPS. Use Meilisearch first; move to OpenSearch only when there is enough RAM or a separate search host.
+- Before production cutover, run on the VPS and record results in handoff docs:
+
+```bash
+nproc
+free -h
+df -h /
+df -h /var/lib/sobag-opt || true
+lsblk
+uptime
+```
+
+- Decision rule: if the current VPS is under 4 vCPU or under 8 GB RAM, it can host only the early MVP/staging version. For real production with PostgreSQL, Redis, Meilisearch, workers, and admin/CRM, upgrade first or split services.
