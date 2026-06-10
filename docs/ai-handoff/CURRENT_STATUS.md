@@ -41,6 +41,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Production performance smoke:
+  - added `tools/production-performance-smoke.mjs` and `npm run smoke:prod:performance`;
+  - it verifies live VPS compact catalog-query payloads, 48-card page size, no full detail fields in list cards, public cache headers, bounded catalog-detail payload, and static JS/CSS response-size/time budgets;
+  - AutoFix runs only its offline self-test, while the live command is for post-deploy verification;
+  - latest live check against `https://sobag-shop.online` passed.
 - Photo migration manifest audit:
   - added `tools/photo-migration-manifest-audit.mjs` and `npm run audit:photo-manifest`;
   - the audit validates local photo migration manifests before real upload: counts, provider label, portable relative paths, `products/` storage prefixes, image extensions, and strict WebP/AVIF variant planning;

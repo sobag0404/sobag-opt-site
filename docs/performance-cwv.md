@@ -40,6 +40,16 @@ npm.cmd run audit:cwv
 - current image migration readiness status;
 - no static XLSX CDN load during first render; SheetJS is lazy-loaded only when a user imports/exports XLSX.
 
+## Production Performance Smoke
+
+After deploy, use the read-only production performance smoke to verify current payload and cache invariants on the live VPS:
+
+```powershell
+npm.cmd run smoke:prod:performance -- --base-url https://sobag-shop.online
+```
+
+It checks that `/api/catalog-query?pageSize=48` stays compact, does not include full variants/gallery/detail fields, has public cache headers, and that `/api/catalog-detail`, `app.js`, and `styles.css` stay within bounded response-size and response-time budgets. AutoFix runs only the offline self-test; the live command is for post-deploy verification.
+
 ## When To Run Real CWV
 
 Run a real Core Web Vitals audit only after:
