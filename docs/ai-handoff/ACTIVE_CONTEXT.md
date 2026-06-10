@@ -1,6 +1,6 @@
 # Active Context
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Token-Saving Rule
 - Читать этот файл первым.
@@ -33,6 +33,7 @@ Last updated: 2026-06-10
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-11: added `docs/goal-completion-audit.md`, `tools/goal-completion-audit.mjs`, and `npm run audit:goal-completion`; it combines readiness, external packets, and apply-plan coverage as the final strict gate before claiming the four-upgrade goal complete.
 - Current pass 2026-06-10: added `docs/cwv-field-apply-plan.md`, `tools/cwv-field-apply-plan.mjs`, and `npm run plan:cwv-field`; after a strict real CWV field packet is available, it creates an ignored final performance verification plan without calling production APIs or changing server state.
 - Current pass 2026-06-10: added `docs/catalog-db-apply-plan.md`, `tools/catalog-db-apply-plan.mjs`, and `npm run plan:catalog-db`; after a strict catalog DB packet is available, it creates an ignored no-secret PostgreSQL rehearsal/cutover plan without connecting to DB or touching production env.
 - Current pass 2026-06-10: added `docs/object-storage-apply-plan.md`, `tools/object-storage-apply-plan.mjs`, and `npm run plan:object-storage`; after a strict object-storage packet is available, it creates an ignored no-secret provider/cutover plan without touching production env.

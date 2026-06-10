@@ -1,6 +1,6 @@
 # Current Status Snapshot
 
-Date: 2026-06-10
+Date: 2026-06-11
 
 Current deployed VPS release before this performance pass:
 - `20260610T065427Z-f4a472a`
@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Goal completion audit:
+  - added `docs/goal-completion-audit.md`, `tools/goal-completion-audit.mjs`, and `npm run audit:goal-completion`;
+  - it combines goal readiness, external input packets, and apply-plan coverage;
+  - strict mode remains pending until all real external packets are ready.
 - CWV field apply plan:
   - added `docs/cwv-field-apply-plan.md`, `tools/cwv-field-apply-plan.mjs`, and `npm run plan:cwv-field`;
   - the tool reads a strict-ready `local-import-output/cwv-field-audit-packet.json` and writes an ignored final performance verification plan;
