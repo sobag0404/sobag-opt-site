@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Admin access/headings fix:
+  - valid server admin/manager sessions are no longer discarded when secondary admin data refresh fails;
+  - local admin/manager login can retry server login automatically when a local password is available;
+  - dashboard/service headings such as `Все заказы` are capped at normal working UI size.
 - Latest catalog/account/admin UI slice:
   - catalog/favorites side cart panel is removed entirely; buyers add items from catalog and finish only on `/cart`;
   - selected catalog grid now uses the freed width for larger cards; card borders are slightly stronger in day and night themes;

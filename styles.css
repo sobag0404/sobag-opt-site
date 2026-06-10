@@ -5018,6 +5018,16 @@ body.theme-night .copy-sku-button:hover {
   overflow-wrap: anywhere;
 }
 
+.content-page .section-head h1 {
+  max-width: 760px;
+  font-size: clamp(30px, 4vw, 52px);
+  line-height: 1;
+}
+
+.content-page .section-head p {
+  max-width: 980px;
+}
+
 .catalog-button,
 .primary-button,
 .cart-button,

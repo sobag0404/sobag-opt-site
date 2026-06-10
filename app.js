@@ -1459,11 +1459,31 @@ function mirrorServerOrder(order, userEmail = state.currentUser) {
   }
 }
 
-async function loadBackendAccountData() {
+async function promoteLocalManagerLoginToBackend() {
+  const localUser = getUsers()[state.currentUser];
+  const password = localUser?.password;
+  if (!canManageOrders(localUser) || !password || password === "__server__") return false;
+  try {
+    const result = await apiRequest("/api/auth/login", { method: "POST", body: { email: localUser.email || state.currentUser, password } });
+    if (result.user) {
+      saveServerUserProfile(result.user);
+      return true;
+    }
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 401) console.warn(error);
+  }
+  return false;
+}
+
+async function loadBackendAccountData(options = {}) {
+  const attemptPromotion = options.attemptPromotion !== false;
   try {
     const session = await apiRequest("/api/auth/me");
     state.backendSession = { checked: true, available: true, user: session.user || null };
-    if (!session.user) return false;
+    if (!session.user) {
+      if (attemptPromotion && (await promoteLocalManagerLoginToBackend())) return loadBackendAccountData({ attemptPromotion: false });
+      return false;
+    }
     if (Array.isArray(session.savedCarts)) {
       const mergedSavedCarts = mergeSavedCarts(session.savedCarts, getSavedCarts(session.user.email));
       localStorage.setItem(getSavedCartsKey(session.user.email), JSON.stringify(mergedSavedCarts));
@@ -1471,17 +1491,19 @@ async function loadBackendAccountData() {
     }
     saveServerUserProfile(session.user);
     if (["admin", "manager"].includes(session.user.role)) {
-      const ordersData = await apiRequest("/api/admin/orders");
-      if (Array.isArray(ordersData.orders)) saveOrders(ordersData.orders);
-    }
-    if (["admin", "manager"].includes(session.user.role)) {
-      const usersData = await apiRequest("/api/admin/users");
-      if (Array.isArray(usersData.users)) {
-        const users = getUsers();
-        usersData.users.forEach((user) => {
-          users[user.email] = { ...(users[user.email] || {}), ...user, password: users[user.email]?.password || "__server__" };
-        });
-        saveUsers(users);
+      try {
+        const ordersData = await apiRequest("/api/admin/orders");
+        if (Array.isArray(ordersData.orders)) saveOrders(ordersData.orders);
+        const usersData = await apiRequest("/api/admin/users");
+        if (Array.isArray(usersData.users)) {
+          const users = getUsers();
+          usersData.users.forEach((user) => {
+            users[user.email] = { ...(users[user.email] || {}), ...user, password: users[user.email]?.password || "__server__" };
+          });
+          saveUsers(users);
+        }
+      } catch (error) {
+        console.warn(error);
       }
     }
     return true;
