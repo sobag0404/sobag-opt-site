@@ -21,7 +21,7 @@ npm.cmd run ui:smoke
 ## После Deploy
 
 GitHub Actions workflow `.github/workflows/production-smoke.yml` запускается после успешного `vps-deploy` для push в `main`.
-VPS деплоится после каждого зеленого push в `main`. Vercel fallback через Git integration ограничен `ignoreCommand`: по умолчанию строится первый push за день по МСК; срочный fallback deploy можно принудить commit message с `[vercel]`, `[fallback]` или `[force-vercel]`.
+VPS деплоится после каждого зеленого push в `main`. Vercel fallback через Git integration ограничен `ignoreCommand`: обычные push пропускаются, а дневной/срочный fallback deploy делается commit message с `[vercel]`, `[fallback]` или `[force-vercel]`.
 
 Этот же workflow можно запустить вручную через `workflow_dispatch` и передать fallback/preview URL.
 

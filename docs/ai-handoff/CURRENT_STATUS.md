@@ -44,7 +44,7 @@ Completed most recently:
 - Vercel fallback deploy throttling:
   - VPS remains the always-on deploy target after each green push to `main`;
   - `vercel.json` now uses `ignoreCommand` with `tools/vercel-daily-deploy-gate.mjs`;
-  - Vercel builds the first push per Moscow day by default, or any commit with `[vercel]`, `[fallback]`, or `[force-vercel]` in the message.
+  - Vercel skips normal pushes by default and builds fallback only when commit message includes `[vercel]`, `[fallback]`, or `[force-vercel]`.
 - Vercel fallback API router fix:
   - `api-router.js` now statically imports every `server-routes/*` handler instead of requiring them through dynamic strings;
   - this keeps VPS and Vercel on the same handler map while letting Vercel trace and bundle the catch-all API route correctly.
