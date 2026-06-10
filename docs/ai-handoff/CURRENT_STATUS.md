@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL migration bundle audit:
+  - added `tools/pim-postgres-migration-bundle-audit.mjs` and `npm run audit:pim:postgres-bundle`;
+  - the audit checks generated schema/seed/manifest hashes, byte counts, row counts, relative paths, transaction markers, and secret-like values;
+  - AutoFix runs dry-run/self-test only, with no PostgreSQL connection and no production data touch.
 - PostgreSQL migration bundle prep:
   - added `tools/pim-postgres-migration-bundle.mjs` and `npm run bundle:pim:postgres`;
   - the tool builds an ignored local bundle with `00-schema.sql`, generated `01-seed.sql`, and `manifest.json`;

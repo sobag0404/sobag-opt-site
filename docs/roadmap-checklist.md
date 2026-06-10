@@ -87,6 +87,7 @@ Last updated: 2026-06-10
      - [x] PostgreSQL facet query prep: future DB source now has SQL-backed facet/facetOptions buckets for category, collection, holiday, tag, type, size, material, and stock, while keeping current public `/api/catalog-query` shape.
      - [x] PostgreSQL variant SKU search prep: future public catalog views expose `variant_skus`, and DB search SQL matches base SKU, variant SKU, name, and description without changing current runtime storage.
      - [x] PostgreSQL migration bundle prep: `tools/pim-postgres-migration-bundle.mjs` packages schema SQL, generated seed SQL, hashes, counts, and guardrails under ignored `local-import-output/` for future reviewed DB cutover.
+     - [x] PostgreSQL migration bundle audit: `tools/pim-postgres-migration-bundle-audit.mjs` validates generated schema/seed/manifest hashes, counts, relative paths, and secret-free SQL before a future cutover review.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:
