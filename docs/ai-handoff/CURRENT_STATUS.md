@@ -41,6 +41,9 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Next goal prompt update:
+  - `docs/ai-handoff/NEXT_GOAL_PROMPT.md` now focuses the next run on four ordered upgrades: SEO/content, photo storage/images, Import/PIM DB split preparation, and performance/Core Web Vitals;
+  - it explicitly instructs the next run to remind the user after those four items about the future point 5 migration without Node.js on VPS: Rust Axum, HTMX/templates, PostgreSQL, Redis, Meilisearch, MinIO/S3-compatible storage, and Docker/systemd behind Nginx.
 - P0/P1 commercial readiness slice:
   - `custom.html` brief form now posts to `/api/briefs`; the new server route saves the request, stores it in `store.briefs`, mirrors it into `store.orders` as `source: custom_brief`, and admin/manager order screens show it as `Заявка: свой принт`;
   - `/api/orders` now rejects totals below 30 000 ₽; cart checkout submit and saved-quote send-to-manager use the same minimum guard;
