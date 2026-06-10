@@ -1460,10 +1460,10 @@ function mirrorServerOrder(order, userEmail = state.currentUser) {
   }
 }
 
-async function promoteLocalManagerLoginToBackend() {
+async function promoteLocalLoginToBackend() {
   const localUser = getUsers()[state.currentUser];
   const password = localUser?.password;
-  if (!canManageOrders(localUser) || !password || password === "__server__") return false;
+  if (!localUser?.email || !password || password === "__server__") return false;
   try {
     const result = await apiRequest("/api/auth/login", { method: "POST", body: { email: localUser.email || state.currentUser, password } });
     if (result.user) {
@@ -1474,6 +1474,12 @@ async function promoteLocalManagerLoginToBackend() {
     if (!isBackendUnavailable(error) && error.status !== 401) console.warn(error);
   }
   return false;
+}
+
+async function promoteLocalManagerLoginToBackend() {
+  const localUser = getUsers()[state.currentUser];
+  if (!canManageOrders(localUser)) return false;
+  return promoteLocalLoginToBackend();
 }
 
 async function loadBackendAccountData(options = {}) {
@@ -3253,22 +3259,40 @@ async function saveProfileForm(form) {
   const users = getUsers();
   const user = users[state.currentUser];
   if (!user) return;
-  users[state.currentUser] = {
-    ...user,
-    ...profile,
-    updatedAt: new Date().toISOString(),
-  };
-  saveUsers(users);
+  let savedOnServer = false;
   try {
     const result = await apiRequest("/api/auth/me", { method: "PUT", body: { profile } });
-    if (result.user) saveServerUserProfile({ ...result.user, ...profile, savedCarts: getSavedCarts() });
+    if (result.user) {
+      saveServerUserProfile({ ...result.user, ...profile, savedCarts: getSavedCarts() });
+      savedOnServer = true;
+    }
   } catch (error) {
     if (!isBackendUnavailable(error) && error.status !== 404) {
+      if (error.status === 401 && (await promoteLocalLoginToBackend())) {
+        await saveProfileForm(form);
+        return;
+      }
+      if (error.status === 401) {
+        state.backendSession = { checked: true, available: true, user: null };
+        showToast("Войдите заново, чтобы сохранить профиль на сервере.");
+        return;
+      }
       showToast(error.message || "Не удалось сохранить профиль на сервере.");
       return;
     }
   }
-  showToast("Профиль сохранен.");
+  if (!savedOnServer) {
+    const currentUsers = getUsers();
+    const currentUser = currentUsers[state.currentUser];
+    if (!currentUser) return;
+    currentUsers[state.currentUser] = {
+      ...currentUser,
+      ...profile,
+      updatedAt: new Date().toISOString(),
+    };
+    saveUsers(currentUsers);
+  }
+  showToast(savedOnServer ? "Профиль сохранен на сервере." : "Профиль сохранен.");
   rerenderAccountModal();
 }
 

@@ -44,7 +44,8 @@ Completed most recently:
 - Buyer account order tab and admin order refresh:
   - ordinary buyer accounts now show a dedicated `Заказы` tab with history, statuses, customer-visible CRM messages, buyer replies, and repeat-order actions;
   - account order history is loaded from the server by matching both `userEmail` and `customer.email`;
-  - admin/manager order blocks have an explicit `Обновить заказы` action that reloads `/api/admin/orders` from the server.
+  - admin/manager order blocks have an explicit `Обновить заказы` action that reloads `/api/admin/orders` from the server;
+  - profile save now uses server `/api/auth/me` when backend is available, retries local-password login if possible, and requires fresh login instead of local-only success when the server session is missing.
 - Admin access/headings fix:
   - valid server admin/manager sessions are no longer discarded when secondary admin data refresh fails;
   - local admin/manager login can retry server login automatically when a local password is available;

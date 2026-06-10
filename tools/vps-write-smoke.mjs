@@ -91,6 +91,23 @@ try {
   assert(buyerRegister.payload.user?.role === "buyer", "buyer registration should create buyer");
   assert(buyerRegister.cookie, "buyer registration should set session cookie");
 
+  const profileSave = await request(baseUrl, "/api/auth/me", {
+    method: "PUT",
+    cookie: buyerRegister.cookie,
+    body: {
+      profile: {
+        phone: "+79990000001",
+        company: "VPS Smoke Updated Company",
+        inn: "1234567890",
+        kpp: "123456789",
+        city: "Moscow",
+        address: "VPS Smoke Address",
+      },
+    },
+  });
+  assert(profileSave.payload.user?.company === "VPS Smoke Updated Company", "buyer profile should save on server");
+  assert(profileSave.payload.user?.phone === "+7 999 000-00-01", "buyer profile phone should normalize on server");
+
   const query = await request(baseUrl, "/api/catalog-query?pageSize=1");
   const card = query.payload.items?.[0];
   assert(card?.baseSku, "catalog-query should return a product card");
