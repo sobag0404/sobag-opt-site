@@ -67,6 +67,7 @@ Last updated: 2026-06-10
        - [x] Photo migration pilot smoke: `tools/photo-migration-pilot-smoke.mjs` runs an offline end-to-end pilot over manifest planning, manifest audit, bulk CLI dry-run, and candidate metadata audit without uploads, deletes, secrets, or production data changes.
        - [x] Production storage readiness smoke: `tools/production-storage-readiness.mjs` reads live `/api/health` and reports object-storage/future DB cutover readiness without failing on pending env unless explicit `--require-*` cutover flags are used.
        - [x] Photo storage cutover runbook/audit: `docs/photo-storage-cutover-runbook.md` and `tools/photo-storage-cutover-audit.mjs` document and enforce the safe sequence for real provider setup, manifest planning, pilot upload, candidate audit, production readiness, and rollback without secrets or raw photos in Git.
+       - [x] Object storage env packet validator: `docs/object-storage-env-packet.md` and `tools/object-storage-env-packet-audit.mjs` define an ignored no-secret provider readiness packet for S3-compatible/Vercel Blob settings before real photo migration.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
      - [x] First compatible sidecar payload in the current catalog storage shape: normalized products, variants, images, taxonomies, counts, and safe import batch summaries.
      - [x] Admin diagnostics/export endpoint for the PIM sidecar: summary/full/table views and CSV exports for products, variants, images, taxonomies, and import batches.

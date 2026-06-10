@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Object storage env packet validator:
+  - added `docs/object-storage-env-packet.md`, `tools/object-storage-env-packet-audit.mjs`, and `npm run audit:object-storage-packet`;
+  - expected provider confirmation lives in ignored `local-import-output/object-storage-env-packet.json`;
+  - the validator rejects secret-like keys and checks S3-compatible/Vercel Blob readiness fields before real photo migration.
 - Final content packet validator:
   - added `docs/final-content-packet.md`, `tools/final-content-packet-audit.mjs`, and `npm run audit:final-content-packet`;
   - expected real data lives in ignored `local-import-output/final-content-packet.json`;
