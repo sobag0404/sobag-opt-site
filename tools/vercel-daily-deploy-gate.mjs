@@ -26,8 +26,12 @@ function currentSha() {
   return process.env.VERCEL_GIT_COMMIT_SHA || git(["rev-parse", "HEAD"]);
 }
 
+function commitDate(sha) {
+  return git(["show", "-s", "--format=%cI", sha]);
+}
+
 function commitMessage(sha) {
-  return git(["log", "-1", "--format=%B", sha]).toLowerCase();
+  return (process.env.VERCEL_GIT_COMMIT_MESSAGE || git(["log", "-1", "--format=%B", sha])).toLowerCase();
 }
 
 function commitHistory() {
@@ -48,6 +52,19 @@ function shouldBuild() {
   const message = commitMessage(sha);
   if (SKIP_MARKERS.some((marker) => message.includes(marker))) return { build: false, reason: "commit message requested Vercel skip" };
   if (FORCE_MARKERS.some((marker) => message.includes(marker))) return { build: true, reason: "commit message requested Vercel deploy" };
+
+  const previousSha = process.env.VERCEL_GIT_PREVIOUS_SHA || "";
+  const currentDay = moscowDayKey(commitDate(sha));
+  if (previousSha) {
+    try {
+      const previousDay = moscowDayKey(commitDate(previousSha));
+      return previousDay === currentDay
+        ? { build: false, reason: `Vercel already deployed on ${currentDay} MSK` }
+        : { build: true, reason: `first Vercel deploy after ${previousDay} MSK` };
+    } catch (error) {
+      console.log(`Vercel daily deploy gate: could not inspect previous deploy ${previousSha}: ${error.message}`);
+    }
+  }
 
   const commits = commitHistory();
   const current = commits.find((entry) => entry.sha === sha) || commits[0];
