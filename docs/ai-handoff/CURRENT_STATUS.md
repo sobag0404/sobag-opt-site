@@ -41,6 +41,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL facet query prep:
+  - `api/_lib/catalog-db-query.js` now builds future facet bucket SQL;
+  - `api/_lib/catalog-db-source.js` returns SQL-backed `facets` and `facetOptions`;
+  - future schema exposes variant-derived `types`, `sizes`, and `materials` arrays for DB filters;
+  - smoke covers category/type/stock facet behavior without connecting to PostgreSQL.
 - PostgreSQL public view compatibility:
   - `public_catalog_products` taxonomy fields now use `text[]` arrays instead of JSONB aggregation;
   - this matches the future DB query builder's `categories/collections/holidays/tags && $n::text[]` filters;

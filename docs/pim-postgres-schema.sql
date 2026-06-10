@@ -188,6 +188,25 @@ select
     where pt.product_id = p.id and pt.type = 'tag'
     order by t.name
   )::text[] as tags
+  ,
+  array(
+    select distinct v.type
+    from variants v
+    where v.product_id = p.id and btrim(v.type) <> ''
+    order by v.type
+  )::text[] as types,
+  array(
+    select distinct v.size
+    from variants v
+    where v.product_id = p.id and btrim(v.size) <> ''
+    order by v.size
+  )::text[] as sizes,
+  array(
+    select distinct v.material
+    from variants v
+    where v.product_id = p.id and btrim(v.material) <> ''
+    order by v.material
+  )::text[] as materials
 from products p
 where p.status = 'published' and p.hidden = false;
 
@@ -206,7 +225,10 @@ select
   p.collections,
   p.holidays,
   p.tags,
-  coalesce(p.categories ->> 0, '') as category,
+  p.types,
+  p.sizes,
+  p.materials,
+  coalesce(p.categories[1], '') as category,
   i.url as image,
   jsonb_build_object(
     'url', i.url,

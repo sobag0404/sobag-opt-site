@@ -1,4 +1,4 @@
-const { buildCatalogCardsSql, buildCatalogCountSql, buildCatalogDetailSql } = require("./catalog-db-query");
+const { buildCatalogCardsSql, buildCatalogCountSql, buildCatalogDetailSql, buildCatalogFacetSql, FACET_BUCKETS } = require("./catalog-db-query");
 const { cardFromDbRow, detailFromDbRows } = require("./catalog-db-rows");
 const { encodeCursor, MAX_PAGE_SIZE, DEFAULT_PAGE_SIZE } = require("./catalog-query");
 
@@ -21,6 +21,27 @@ function emptyFacetBuckets() {
   return Object.fromEntries(FACET_BUCKET_KEYS.map((key) => [key, []]));
 }
 
+function facetRowsToBuckets(results = []) {
+  const buckets = emptyFacetBuckets();
+  results.forEach(({ bucket, rows }) => {
+    buckets[bucket] = (Array.isArray(rows) ? rows : [])
+      .map((row) => ({ value: String(row.value || "").trim(), count: number(row.count) }))
+      .filter((row) => row.value)
+      .sort((left, right) => left.value.localeCompare(right.value, "ru", { sensitivity: "base", numeric: true }));
+  });
+  return buckets;
+}
+
+async function queryFacetBuckets(client, query, options = {}) {
+  const results = await Promise.all(
+    Object.keys(FACET_BUCKETS).map(async (group) => {
+      const statement = buildCatalogFacetSql(query, group, options);
+      return { bucket: statement.bucket, rows: await runQuery(client, statement) };
+    })
+  );
+  return facetRowsToBuckets(results);
+}
+
 async function runQuery(client, statement) {
   if (!client || typeof client.query !== "function") throw new Error("PostgreSQL catalog source needs a query(sql, params) client");
   const result = await client.query(statement.sql, statement.params);
@@ -33,9 +54,11 @@ async function queryCatalogFromDb(client, options = {}) {
     pageSize: clampPageSize(options.pageSize),
     offset: offsetValue(options.offset),
   };
-  const [cardRows, countRows] = await Promise.all([
+  const [cardRows, countRows, facets, facetOptions] = await Promise.all([
     runQuery(client, buildCatalogCardsSql(query)),
     runQuery(client, buildCatalogCountSql(query)),
+    queryFacetBuckets(client, query),
+    queryFacetBuckets(client, query, { omitFilterGroup: true }),
   ]);
   const total = number(countRows[0]?.total);
   const items = cardRows.map(cardFromDbRow).filter((item) => item.id && item.baseSku);
@@ -43,8 +66,8 @@ async function queryCatalogFromDb(client, options = {}) {
   return {
     items,
     total,
-    facets: emptyFacetBuckets(),
-    facetOptions: emptyFacetBuckets(),
+    facets,
+    facetOptions,
     pageInfo: {
       page: Math.floor(query.offset / query.pageSize) + 1,
       pageSize: query.pageSize,
@@ -80,6 +103,8 @@ async function findProductDetailFromDb(client, lookup = {}) {
 
 module.exports = {
   emptyFacetBuckets,
+  facetRowsToBuckets,
   findProductDetailFromDb,
   queryCatalogFromDb,
+  queryFacetBuckets,
 };

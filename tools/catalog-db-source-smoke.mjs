@@ -15,6 +15,7 @@ function fakeClient() {
     calls,
     async query(sql, params) {
       calls.push({ sql, params });
+      if (sql.includes("facet_values")) return { rows: [{ value: "Pillows", count: 51 }] };
       if (sql.includes("COUNT(*)")) return { rows: [{ total: 51 }] };
       if (sql.includes("FROM public_catalog_cards")) {
         return {
@@ -23,8 +24,10 @@ function fakeClient() {
               id: "p1",
               base_sku: "OPT_1",
               name: "Catalog item",
-              categories: JSON.stringify(["Pillows"]),
-              collections: JSON.stringify(["Basic"]),
+              categories: ["Pillows"],
+              collections: ["Basic"],
+              types: ["Pillow"],
+              stock: "В наличии",
               min_price: 220,
               max_price: 260,
               variant_count: 2,
@@ -34,7 +37,7 @@ function fakeClient() {
         };
       }
       if (sql.includes("FROM public_catalog_products")) {
-        return { rows: [{ id: "p1", base_sku: "OPT_1", name: "Catalog item", status: "published", categories: JSON.stringify(["Pillows"]) }] };
+        return { rows: [{ id: "p1", base_sku: "OPT_1", name: "Catalog item", status: "published", categories: ["Pillows"], types: ["Pillow"] }] };
       }
       if (sql.includes("FROM variants")) {
         return { rows: [{ id: "v1", product_id: "p1", base_sku: "OPT_1", sku: "OPT_1_A", type: "Pillow", price: 220 }] };
@@ -63,9 +66,12 @@ async function smokeQuery() {
   assert.equal(result.pageInfo.pageSize, 120);
   assert.equal(result.pageInfo.hasMore, true);
   assert.equal(decodeCursor(result.pageInfo.nextCursor), 49);
-  assert.equal(client.calls.length, 2);
+  assert.equal(result.facets.categories[0].value, "Pillows");
+  assert.equal(result.facetOptions.types[0].count, 51);
+  assert.equal(client.calls.length, 18);
   assert.ok(client.calls[0].sql.includes("LIMIT"));
   assert.ok(client.calls[1].sql.includes("COUNT(*)"));
+  assert.ok(client.calls.some((call) => call.sql.includes("facet_values")));
 }
 
 async function smokeDetail() {

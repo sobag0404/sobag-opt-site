@@ -12,10 +12,23 @@ const FILTER_COLUMNS = {
   collection: "collections",
   holiday: "holidays",
   tag: "tags",
+  type: "types",
+  size: "sizes",
+  material: "materials",
 };
 
 const MAX_PAGE_SIZE = 120;
 const DEFAULT_PAGE_SIZE = 48;
+const FACET_BUCKETS = {
+  category: { bucket: "categories", column: "categories", array: true },
+  collection: { bucket: "collections", column: "collections", array: true },
+  holiday: { bucket: "holidays", column: "holidays", array: true },
+  tag: { bucket: "tags", column: "tags", array: true },
+  type: { bucket: "types", column: "types", array: true },
+  size: { bucket: "sizes", column: "sizes", array: true },
+  material: { bucket: "materials", column: "materials", array: true },
+  stock: { bucket: "stock", column: "stock", array: false },
+};
 
 function text(value) {
   return String(value || "").trim();
@@ -39,7 +52,13 @@ function offsetValue(value) {
   return Math.max(0, Number(value || 0) || 0);
 }
 
-function buildWhere(query = {}, params = []) {
+function filtersForQuery(query = {}, options = {}) {
+  const filters = { ...(query.filters || {}) };
+  if (options.omitFilterGroup) filters[options.omitFilterGroup] = [];
+  return filters;
+}
+
+function buildWhere(query = {}, params = [], options = {}) {
   const where = [];
   const q = text(query.q);
   if (q) {
@@ -47,11 +66,14 @@ function buildWhere(query = {}, params = []) {
     where.push(`(base_sku ILIKE ${param} OR name ILIKE ${param} OR description ILIKE ${param})`);
   }
 
+  const filters = filtersForQuery(query, options);
   Object.entries(FILTER_COLUMNS).forEach(([key, column]) => {
-    const values = list(query.filters?.[key]);
+    const values = list(filters?.[key]);
     if (!values.length) return;
     where.push(`${column} && ${addParam(params, values)}::text[]`);
   });
+  const stockValues = list(filters?.stock);
+  if (stockValues.length) where.push(`stock = ANY(${addParam(params, stockValues)}::text[])`);
 
   const minPrice = Number(query.minPrice || 0) || 0;
   const maxPrice = Number(query.maxPrice || 0) || 0;
@@ -59,6 +81,11 @@ function buildWhere(query = {}, params = []) {
   if (maxPrice > 0) where.push(`min_price <= ${addParam(params, maxPrice)}`);
 
   return where.length ? `WHERE ${where.join(" AND ")}` : "";
+}
+
+function facetValueSql(config) {
+  if (config.array) return `unnest(${config.column})`;
+  return config.column;
 }
 
 function buildCatalogCardsSql(query = {}) {
@@ -123,9 +150,37 @@ function buildCatalogDetailSql(lookup = {}) {
   };
 }
 
+function buildCatalogFacetSql(query = {}, group, options = {}) {
+  const config = FACET_BUCKETS[text(group)];
+  if (!config) {
+    const error = new Error(`Unknown facet group: ${group}`);
+    error.code = "unknown_facet_group";
+    throw error;
+  }
+  const params = [];
+  const where = buildWhere(query, params, { omitFilterGroup: options.omitFilterGroup ? group : "" });
+  const valueSql = facetValueSql(config);
+  return {
+    bucket: config.bucket,
+    sql: [
+      `SELECT value, COUNT(*)::int AS count FROM (SELECT ${valueSql} AS value FROM public_catalog_cards`,
+      where,
+      ") facet_values",
+      "WHERE value IS NOT NULL AND btrim(value) <> ''",
+      "GROUP BY value",
+      "ORDER BY value ASC",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    params,
+  };
+}
+
 module.exports = {
   buildCatalogCardsSql,
   buildCatalogCountSql,
   buildCatalogDetailSql,
+  buildCatalogFacetSql,
+  FACET_BUCKETS,
   pageSize,
 };

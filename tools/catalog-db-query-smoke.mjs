@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { buildCatalogCardsSql, buildCatalogCountSql, buildCatalogDetailSql, pageSize } = require("../api/_lib/catalog-db-query.js");
+const { buildCatalogCardsSql, buildCatalogCountSql, buildCatalogDetailSql, buildCatalogFacetSql, pageSize } = require("../api/_lib/catalog-db-query.js");
 
 function assertParameterized(query) {
   assert.equal(/'[^']*\$\d+[^']*'/.test(query.sql), false, "placeholder must not be quoted as a literal");
@@ -54,6 +54,24 @@ function smokeDetailBySku() {
   assert.deepEqual(query.product.params, ["OPT_1_RED"]);
 }
 
+function smokeFacets() {
+  const query = buildCatalogFacetSql(
+    {
+      q: "pillow",
+      filters: { category: ["Pillows"], type: ["Pillow"], stock: ["В наличии"] },
+      minPrice: 200,
+    },
+    "category",
+    { omitFilterGroup: true }
+  );
+  assert.equal(query.bucket, "categories");
+  assert.ok(query.sql.includes("unnest(categories) AS value"));
+  assert.ok(query.sql.includes("types && $"));
+  assert.ok(query.sql.includes("stock = ANY($"));
+  assert.equal(query.sql.includes("categories &&"), false);
+  assertParameterized(query);
+}
+
 function main() {
   assert.equal(pageSize(0), 48);
   assert.equal(pageSize(999), 120);
@@ -61,6 +79,7 @@ function main() {
   smokeCount();
   smokeDetail();
   smokeDetailBySku();
+  smokeFacets();
   console.log("catalog DB query builder smoke passed");
 }
 
