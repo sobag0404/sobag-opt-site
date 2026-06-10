@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Compact selected catalog header:
+  - selected category/collection/holiday catalog pages now use one compact row with `В каталог`, title, product count, and sorting;
+  - the old large heading/upper `КАТАЛОГ` area is hidden on listing pages;
+  - product cards start much closer to the header while catalog home still keeps `На главную`.
 - Vercel fallback deploy throttling:
   - VPS remains the always-on deploy target after each green push to `main`;
   - `vercel.json` now uses `ignoreCommand` with `tools/vercel-daily-deploy-gate.mjs`;

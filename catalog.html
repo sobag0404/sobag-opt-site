@@ -65,6 +65,22 @@
         </div>
 
         <div class="container catalog-layout" id="catalogListing">
+          <div class="catalog-listing-head">
+            <button class="ghost-button catalog-listing-back" id="catalogListingBack" type="button" data-back-catalog>
+              <i data-lucide="arrow-left"></i>
+              В каталог
+            </button>
+            <div class="catalog-listing-title">
+              <h2 id="catalogCompactTitle">Каталог</h2>
+              <span id="productCount">0 товаров</span>
+            </div>
+            <select id="sortSelect" aria-label="Сортировка">
+              <option value="popular">Сначала популярные</option>
+              <option value="priceAsc">Цена: ниже</option>
+              <option value="priceDesc">Цена: выше</option>
+              <option value="minQty">Минимальная партия</option>
+            </select>
+          </div>
           <button class="filter-toggle is-hidden" id="filterToggle" type="button" data-toggle-filters>
             <i data-lucide="sliders-horizontal"></i>
             Открыть фильтры
@@ -81,15 +97,6 @@
           </aside>
 
           <div class="catalog-main">
-            <div class="catalog-toolbar">
-              <span id="productCount">0 товаров</span>
-              <select id="sortSelect" aria-label="Сортировка">
-                <option value="popular">Сначала популярные</option>
-                <option value="priceAsc">Цена: ниже</option>
-                <option value="priceDesc">Цена: выше</option>
-                <option value="minQty">Минимальная партия</option>
-              </select>
-            </div>
             <div class="active-filter-chips" id="activeFilterChips" aria-live="polite"></div>
             <section class="catalog-seo-copy is-hidden" id="catalogSeoCopy" aria-live="polite"></section>
             <div id="productGrid" class="product-grid"></div>

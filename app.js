@@ -624,7 +624,9 @@ const catalogHome = document.querySelector("#catalogHome");
 const catalogListing = document.querySelector("#catalogListing");
 const catalogTools = document.querySelector("#catalogTools");
 const catalogTitle = document.querySelector("#catalogTitle");
+const catalogCompactTitle = document.querySelector("#catalogCompactTitle");
 const catalogPageBack = document.querySelector("#catalogPageBack");
+const catalogListingBack = document.querySelector("#catalogListingBack");
 const filterToggle = document.querySelector("#filterToggle");
 const searchInput = document.querySelector("#searchInput");
 const sortSelect = document.querySelector("#sortSelect");
@@ -3812,8 +3814,18 @@ function updateCatalogPageBack(isHome) {
     catalogPageBack.dataset.nav = "index.html";
     return;
   }
+  if (catalogListingBack) {
+    delete catalogPageBack.dataset.backCatalog;
+    delete catalogPageBack.dataset.nav;
+    return;
+  }
   delete catalogPageBack.dataset.nav;
   catalogPageBack.dataset.backCatalog = "";
+}
+
+function setCatalogPageTitle(value) {
+  if (catalogTitle) catalogTitle.textContent = value;
+  if (catalogCompactTitle) catalogCompactTitle.textContent = value;
 }
 
 function miniProductCard(product) {
@@ -3961,6 +3973,7 @@ function renderCatalogHome() {
 function renderCatalogShell() {
   if (!catalogHome || !catalogListing || !catalogTools || !catalogTitle) return;
   const isHome = !isSearchPage && !isFavoritesPage && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
+  document.body.classList.toggle("catalog-listing-active", document.body.classList.contains("catalog-page") && !isHome);
   catalogHome.classList.toggle("is-hidden", !isHome);
   catalogListing.classList.toggle("is-hidden", isHome);
   catalogTools.classList.toggle("is-hidden", isHome || isFavoritesPage);
@@ -3969,7 +3982,7 @@ function renderCatalogShell() {
   updateFilterToggle();
 
   if (isFavoritesPage) {
-    catalogTitle.textContent = "Избранное";
+    setCatalogPageTitle("Избранное");
     filterToggle?.classList.remove("is-hidden");
     updateFilterToggle();
     updateCatalogSeo();
@@ -3977,7 +3990,7 @@ function renderCatalogShell() {
   }
 
   if (isSearchPage) {
-    catalogTitle.textContent = state.search.trim() ? `Результаты поиска: ${state.search.trim()}` : "Поиск по каталогу";
+    setCatalogPageTitle(state.search.trim() ? `Результаты поиска: ${state.search.trim()}` : "Поиск по каталогу");
     filterToggle?.classList.remove("is-hidden");
     updateFilterToggle();
     updateCatalogSeo();
@@ -3985,7 +3998,7 @@ function renderCatalogShell() {
   }
 
   if (isHome) {
-    catalogTitle.textContent = getSiteContent().catalogTitleDefault;
+    setCatalogPageTitle(getSiteContent().catalogTitleDefault);
     filterToggle?.classList.add("is-hidden");
     updateCatalogSeo();
     return;
@@ -3996,7 +4009,7 @@ function renderCatalogShell() {
   if (state.selectedCollection) titleParts.push(state.selectedCollection);
   if (state.selectedHoliday) titleParts.push(state.selectedHoliday);
   if (!titleParts.length && state.search.trim()) titleParts.push("Результаты поиска");
-  catalogTitle.textContent = titleParts.join(" · ");
+  setCatalogPageTitle(titleParts.join(" · "));
   filterToggle?.classList.remove("is-hidden");
   updateFilterToggle();
   updateCatalogSeo();

@@ -23,6 +23,7 @@ Last updated: 2026-06-10
 - [x] Separate search results page: `/search?q=...`, result count, suggestions, quick filters, exact SKU priority, production check.
 - [x] Product reviews: authorized buyer form, rating/text, approved reviews in product modal, admin moderation and persistence through existing storage/API.
 - [x] Goal-mode UI invariant: product photos and category/collection/holiday photos render as square 1:1 previews; catalog home uses `На главную`, while selected catalog pages use `В каталог` for the top return action.
+- [x] Compact selected catalog header: category pages use one dense row with back button, title, count, and sorting, without the old large white heading area.
 
 ## Remaining Checklist
 

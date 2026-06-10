@@ -482,8 +482,9 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await waitForLiveProducts(page);
 
   await expect(page.locator("#catalogTitle")).toContainText(category);
-  await expect(page.locator("[data-back-catalog]")).toContainText("В каталог");
-  await expect(page.locator(".page-back .ghost-button")).toContainText("В каталог");
+  await expect(page.locator("#catalogCompactTitle")).toContainText(category);
+  await expect(page.locator("#catalogListingBack")).toContainText("В каталог");
+  await expect(page.locator(".page-back")).toBeHidden();
   await expect(page.locator("#catalogSeoCopy")).toBeHidden();
 
   await page.goto(`${BASE_URL}/catalog?collection=${encodeURIComponent("Паттерны")}`, { waitUntil: "domcontentloaded" });

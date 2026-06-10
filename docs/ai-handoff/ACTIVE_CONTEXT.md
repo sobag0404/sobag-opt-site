@@ -31,6 +31,7 @@ Last updated: 2026-06-10
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-10: compacted selected catalog/category header after user screenshot. Category pages now hide the old `page-back`/large section heading and use one compact listing row with `В каталог`, category title, product count, and sort select. Product grid starts higher; Playwright visual check saved `test-results/catalog-compact-head-final.png`.
 - Current pass 2026-06-10: added Vercel fallback deploy throttling. VPS still deploys on every green push to `main`; Vercel Git auto-build is gated by `tools/vercel-daily-deploy-gate.mjs` through `vercel.json` `ignoreCommand`, skips normal pushes by default, and builds fallback only when commit message includes `[vercel]`, `[fallback]`, or `[force-vercel]`.
 - Current pass 2026-06-10: fixed Vercel fallback API bundling after the catch-all route split. `api-router.js` now uses static `require(...)` imports for `server-routes/*` so Vercel can trace and include handlers; VPS `server.mjs` still uses the same router.
 - Current pass 2026-06-10: cleaned up catalog listing UI per user screenshots. `catalog.html` now has one top return button: `На главную` on catalog home and `В каталог` on selected category/collection/holiday pages. The duplicate section return button was removed, the selected-listing top spacing was tightened, and the visible `#catalogSeoCopy` promo/SEO plaque under filters was disabled while keeping metadata/content checks intact. UI smoke now guards the home/category button labels and hidden plaque.
@@ -98,6 +99,7 @@ Last updated: 2026-06-10
 
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `node`, `npm.cmd`, `python`, and `py` are available in PATH on this device.
+- Current compact catalog header verification: `node --check app.js`; `node --check tools/ui-smoke.spec.js`; `npm.cmd run check`; full `npm.cmd run ui:smoke` 13/13 after `dev:static`; visual check confirmed compact row and product grid top near 230px.
 - Current VPS DNS/SSL cutover verification: authoritative REG.RU DNS returns `77.239.107.164` for `sobag-shop.online` and `www.sobag-shop.online`; certbot installed the Nginx certificate; `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` passed 4/4; GitHub `production-smoke` run `27258638138` passed with `PRODUCTION_BASE_URL=https://sobag-shop.online`.
 - Current Vercel fallback router fix verification: `node --check api-router.js`; `npm.cmd run check`; full `npm.cmd run ui:smoke` 13/13 after `dev:static`; post-deploy fallback smoke should be rerun against `https://sobag-opt-site.vercel.app`.
 - Current catalog UI cleanup verification: `node --check app.js`; `node --check tools/ui-smoke.spec.js`; `npm.cmd run check`; full `npm.cmd run ui:smoke` 13/13 after `dev:static`; Playwright visual position check saved `test-results/catalog-category-ui-check.png` and confirmed `В каталог`, hidden `#catalogSeoCopy`, and product grid moved up.
