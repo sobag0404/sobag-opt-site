@@ -76,6 +76,7 @@ Last updated: 2026-06-10
      - [x] DB-backed public catalog read contract: normalized product records include description/min/max price/popular fields, and PostgreSQL schema now defines guarded `public_catalog_products` / `public_catalog_cards` views that expose only `published` non-hidden products for the future `/api/catalog-query` path.
      - [x] DB-backed query compatibility guard: `tools/pim-postgres-query-contract.mjs` builds future public product/card/detail rows from the normalized PIM bridge and checks compact card payload parity, published-only visibility, image metadata shape, and detail hydration without connecting to PostgreSQL or touching production data.
      - [x] Public catalog source seam: `api/_lib/catalog-source.js` centralizes public catalog/review loading for `/api/catalog`, `/api/catalog-query`, and `/api/catalog-detail`, so a later PostgreSQL source can replace store/static loading without changing the public route contracts.
+     - [x] PostgreSQL row adapter prep: `api/_lib/catalog-db-rows.js` maps future snake_case `public_catalog_*`, variant, and image rows into current public card/detail payloads; `tools/catalog-db-rows-smoke.mjs` guards compact-card and detail hydration shape.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:
