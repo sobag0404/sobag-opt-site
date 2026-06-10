@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Production storage readiness smoke:
+  - added `tools/production-storage-readiness.mjs` and `npm run smoke:prod:storage`;
+  - the live command reads only `/api/health` and reports object-storage/catalog-DB cutover readiness;
+  - default mode warns on pending object storage/DB env instead of failing, while `--require-object-storage` and `--require-catalog-db` are reserved for approved cutovers.
 - Content readiness guard:
   - added `tools/content-readiness-report.mjs` and `npm run audit:content-readiness`;
   - the report rejects fake/old public contact data and reports final contact/address readiness without inventing legal facts;

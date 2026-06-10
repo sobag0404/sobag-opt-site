@@ -65,6 +65,7 @@ Last updated: 2026-06-10
        - [x] Photo migration manifest audit: `tools/photo-migration-manifest-audit.mjs` validates pilot/full manifests before real upload, including counts, portable relative paths, provider label, `products/` storage prefixes, image extensions, and WebP/AVIF variant planning.
        - [x] Photo migration candidate audit: `tools/photo-migration-candidate-audit.mjs` verifies a candidate products JSON before publication, ensuring products are not removed, protected catalog fields stay unchanged, image metadata is complete/square/provider-safe, and optional WebP/AVIF variants exist.
        - [x] Photo migration pilot smoke: `tools/photo-migration-pilot-smoke.mjs` runs an offline end-to-end pilot over manifest planning, manifest audit, bulk CLI dry-run, and candidate metadata audit without uploads, deletes, secrets, or production data changes.
+       - [x] Production storage readiness smoke: `tools/production-storage-readiness.mjs` reads live `/api/health` and reports object-storage/future DB cutover readiness without failing on pending env unless explicit `--require-*` cutover flags are used.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
      - [x] First compatible sidecar payload in the current catalog storage shape: normalized products, variants, images, taxonomies, counts, and safe import batch summaries.
      - [x] Admin diagnostics/export endpoint for the PIM sidecar: summary/full/table views and CSV exports for products, variants, images, taxonomies, and import batches.

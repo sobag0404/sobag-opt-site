@@ -25,6 +25,7 @@
     "upload:photos": "node tools/bulk-upload-product-photos.mjs",
     "smoke:prod": "node tools/production-smoke.mjs",
     "smoke:prod:performance": "node tools/production-performance-smoke.mjs",
+    "smoke:prod:storage": "node tools/production-storage-readiness.mjs",
     "smoke:prod:self-test": "node tools/production-smoke.mjs --self-test",
     "smoke:catalog:source": "node tools/catalog-source-smoke.mjs",
     "smoke:catalog:db-rows": "node tools/catalog-db-rows-smoke.mjs",
