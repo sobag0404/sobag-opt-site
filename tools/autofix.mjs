@@ -175,6 +175,7 @@ function main() {
   run("node", ["tools/pim-report-smoke.mjs"]);
   run("node", ["tools/pim-export-normalized.mjs", "--dry-run"]);
   run("node", ["tools/pim-export-normalized.mjs", "--self-test"]);
+  run("node", ["tools/pim-postgres-seed.mjs", "--dry-run"]);
   run("node", ["tools/pim-postgres-seed.mjs", "--self-test"]);
   run("node", ["tools/pim-db-contract-audit.mjs"]);
   run("node", ["tools/pim-db-contract-audit.mjs", "--self-test"]);

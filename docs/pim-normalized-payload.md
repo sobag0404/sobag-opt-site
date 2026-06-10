@@ -154,7 +154,7 @@ The seed file targets `docs/pim-postgres-schema.sql` and writes upsert statement
 - `product_taxonomies`
 - `import_batches`
 
-This command is offline: it reads the supplied products JSON, writes only under `local-import-output` by default, does not connect to PostgreSQL, does not apply schema changes, and does not touch production data. Review the SQL before applying it to any database. AutoFix runs only the temporary self-test fixture.
+This command is offline: it reads the supplied products JSON, writes only under `local-import-output` by default, does not connect to PostgreSQL, does not apply schema changes, and does not touch production data. Use `--dry-run` to validate the current catalog seed shape without writing SQL. Review generated SQL before applying it to any database. AutoFix runs the current catalog dry-run plus a temporary self-test fixture.
 
 ## DB Contract Audit
 

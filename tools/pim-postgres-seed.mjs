@@ -21,6 +21,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     products: join(root, "data", "products-live.json"),
     out: join(root, DEFAULT_OUT),
     source: "pim-postgres-seed",
+    dryRun: false,
     selfTest: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -28,6 +29,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     if (token === "--products") args.products = resolve(root, argv[++index] || "");
     else if (token === "--out") args.out = resolve(root, argv[++index] || "");
     else if (token === "--source") args.source = argv[++index] || args.source;
+    else if (token === "--dry-run") args.dryRun = true;
     else if (token === "--self-test") args.selfTest = true;
     else if (token === "--help") {
       console.log(`Usage:
@@ -35,6 +37,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
 Options:
   --source <name>  Source label in the generated manifest comments.
+  --dry-run        Build and validate SQL without writing a file.
   --self-test      Run a temporary fixture export.`);
       process.exit(0);
     } else {
@@ -283,8 +286,10 @@ async function writeSeed(args) {
   const products = JSON.parse(readFileSync(args.products, "utf8"));
   if (!Array.isArray(products) || !products.length) throw new Error("Products JSON must contain a non-empty array.");
   const result = buildSeedSql(products, args);
-  await mkdir(dirname(args.out), { recursive: true });
-  await writeFile(args.out, result.sql, "utf8");
+  if (!args.dryRun) {
+    await mkdir(dirname(args.out), { recursive: true });
+    await writeFile(args.out, result.sql, "utf8");
+  }
   return result;
 }
 
@@ -330,7 +335,7 @@ async function main() {
     return;
   }
   const result = await writeSeed(args);
-  console.log(`PIM PostgreSQL seed written: ${args.out}`);
+  console.log(args.dryRun ? "PIM PostgreSQL seed dry-run passed" : `PIM PostgreSQL seed written: ${args.out}`);
   console.log(
     `Rows: ${result.counts.products} products, ${result.counts.variants} variants, ${result.counts.images} images, ${result.counts.imageVariants} image variants, ${result.counts.taxonomies} taxonomies, ${result.counts.taxonomyAssignments} product-taxonomy links`
   );

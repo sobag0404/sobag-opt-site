@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PIM PostgreSQL seed dry-run guard:
+  - `tools/pim-postgres-seed.mjs` now supports `--dry-run`;
+  - AutoFix validates the current live catalog can build the future PostgreSQL seed SQL shape without writing files;
+  - this still does not connect to DB, apply schema changes, or touch production data.
 - PIM PostgreSQL seed export:
   - added `tools/pim-postgres-seed.mjs` and `npm run export:pim:postgres`;
   - it generates an ignored SQL upsert seed for `docs/pim-postgres-schema.sql` from the current normalized PIM bridge;
