@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Public catalog source layer:
+  - added `api/_lib/catalog-source.js`, `server-routes/_lib/catalog-source.js`, and `tools/catalog-source-smoke.mjs`;
+  - `/api/catalog`, `/api/catalog-query`, and `/api/catalog-detail` now share one store/static catalog loading path and one public review filter;
+  - this keeps the current public API behavior but creates a narrow future replacement point for PostgreSQL-backed reads;
+  - AutoFix runs the new source smoke;
+  - verification passed: `npm.cmd run smoke:catalog:source`, `npm.cmd run check`, and `npm.cmd run ui:smoke` 15/15.
 - PIM PostgreSQL query contract:
   - added `tools/pim-postgres-query-contract.mjs` and `npm run audit:pim-query`;
   - the audit builds future public product/card/detail rows from the normalized PIM bridge and compares compact card payload parity against the current public API shape;

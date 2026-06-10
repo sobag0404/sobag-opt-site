@@ -23,6 +23,7 @@
     "smoke:prod": "node tools/production-smoke.mjs",
     "smoke:prod:performance": "node tools/production-performance-smoke.mjs",
     "smoke:prod:self-test": "node tools/production-smoke.mjs --self-test",
+    "smoke:catalog:source": "node tools/catalog-source-smoke.mjs",
     "smoke:catalog:scale": "node tools/catalog-query-scale-smoke.mjs",
     "check": "node tools/autofix.mjs --check",
     "autofix": "node tools/autofix.mjs --write",
