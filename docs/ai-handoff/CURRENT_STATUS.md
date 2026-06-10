@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Goal external-input packet audit:
+  - added `docs/goal-inputs-packet.md`, `tools/goal-inputs-packet-audit.mjs`, and `npm run audit:goal-inputs`;
+  - the combined guard reports pending/ready state for the four ignored local packets: final content facts, object storage readiness, PostgreSQL test DB readiness, and final CWV field measurements;
+  - `--strict` is the future gate before claiming the active four-upgrade goal is ready.
 - Live static revalidation performance smoke:
   - strengthened `tools/production-performance-smoke.mjs` so post-deploy live checks verify `app.js` and `styles.css` validator headers, conditional `304` responses, and `HEAD` without a body;
   - `tools/core-web-vitals-readiness.mjs` now guards that the production performance smoke keeps this coverage.
