@@ -94,6 +94,7 @@ Last updated: 2026-06-10
      - [x] PostgreSQL write transaction prep: future catalog write statements can run through a transaction wrapper that defaults to rollback/dry-run, commits only with explicit `dryRun: false`, and rolls back on errors; fake-client smoke covers begin/commit/rollback behavior.
      - [x] PostgreSQL write plan audit: `tools/catalog-db-write-plan-audit.mjs` validates the full current catalog can build upsert-only parameterized write statements with exact table/count coverage and no local path params, without connecting to PostgreSQL or touching production data.
      - [x] PostgreSQL write transaction rehearsal: `tools/catalog-db-write-rehearsal.mjs` runs the full current catalog through the future write transaction interface with a fake client and verifies rollback-only behavior, without connecting to PostgreSQL or touching production data.
+     - [x] PostgreSQL catalog DB cutover runbook/audit: `docs/catalog-db-cutover-runbook.md` and `tools/catalog-db-cutover-audit.mjs` document and enforce the safe future switch sequence, including offline gates, rollback-only test DB rehearsal, runtime toggle, production readiness smoke, rollback, published-only reads, no product deletion, and no secrets in Git.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:

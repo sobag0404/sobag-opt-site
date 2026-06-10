@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL catalog DB cutover runbook/audit:
+  - added `docs/catalog-db-cutover-runbook.md`, `tools/catalog-db-cutover-audit.mjs`, and `npm run audit:catalog:db-cutover`;
+  - the runbook fixes the future safe switch sequence: offline catalog/PIM gates, rollback-only test DB rehearsal, disabled-by-default runtime toggle, production readiness smoke, and rollback;
+  - audit coverage keeps the cutover guardrails explicit: published-only public reads, no product deletion, explicit update mode, no production data/env without approval, and no DB secrets in Git.
 - Photo storage cutover runbook/audit:
   - added `docs/photo-storage-cutover-runbook.md`, `tools/photo-storage-cutover-audit.mjs`, and `npm run audit:photo-cutover`;
   - the runbook fixes the approved sequence for real photo migration: manifest plan, manifest audit, offline pilot, small pilot upload, candidate audit, production readiness check, apply rules, and rollback;

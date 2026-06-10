@@ -34,6 +34,7 @@
     "smoke:catalog:db-client": "node tools/catalog-db-client-smoke.mjs",
     "smoke:catalog:db-write": "node tools/catalog-db-write-smoke.mjs",
     "audit:catalog:db-write-plan": "node tools/catalog-db-write-plan-audit.mjs",
+    "audit:catalog:db-cutover": "node tools/catalog-db-cutover-audit.mjs",
     "rehearse:catalog:db-write": "node tools/catalog-db-write-rehearsal.mjs",
     "smoke:catalog:scale": "node tools/catalog-query-scale-smoke.mjs",
     "check": "node tools/autofix.mjs --check",
