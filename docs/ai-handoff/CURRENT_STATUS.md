@@ -1,15 +1,15 @@
 # Current Status Snapshot
 
-Date: 2026-06-09
+Date: 2026-06-10
 
-Latest committed state currently on local `main` before this VPS launch runbook pass:
-- `b1dbfbe Add SEO content audit`
+Current deployed VPS release before this docs pass:
+- `20260609T115150Z-59a3858`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
 - branch: `main`
 - repo visibility: private
-- Deployment direction: after the next stable local stage, prepare VPS deployment/migration; keep the Vercel deployment/version context as a maintained fallback/reference path.
+- Deployment state: primary domain is on the VPS with HTTPS; keep the Vercel deployment/version context as a maintained fallback/reference path.
 
 Production URLs:
 - Main: `https://sobag-shop.online/`
@@ -26,6 +26,7 @@ Production URLs:
 
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
+- VPS primary domain cutover is complete: `sobag-shop.online` and `www.sobag-shop.online` resolve to `77.239.107.164`, HTTPS is enabled by certbot/Nginx, and production smoke now targets `https://sobag-shop.online`;
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - VPS migration path now has an explicit filesystem store bridge for shared API data, while Vercel remains on Redis/KV fallback;
 - VPS runtime path now has `server.mjs` for static clean URLs plus existing `/api/*` handlers;
@@ -40,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS DNS/SSL cutover:
+  - authoritative REG.RU DNS for `sobag-shop.online` and `www.sobag-shop.online` returns `77.239.107.164`;
+  - `certbot --nginx` issued and deployed the Let's Encrypt certificate for both names;
+  - `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` passed 4/4;
+  - GitHub repo variable `PRODUCTION_BASE_URL` is set to `https://sobag-shop.online`;
+  - manual GitHub Actions `production-smoke` run `27258638138` passed.
 - VPS launch runbook slice:
   - added `docs/vps-launch-runbook.md`;
   - runbook covers local gates, VPS setup, env variable names without values, preflight, runtime start, VPS URL smoke, DNS cutover, rollback, backup restore, migrated photo audit, and Vercel fallback checks;
@@ -602,7 +609,7 @@ Backend/storage state:
 - Do not expose env values in chat/docs/repo.
 
 Important remaining work:
-- Deployment: prepare VPS migration notes/deploy path when the stable stage is ready, while preserving Vercel fallback context.
+- Deployment: after future pushes, verify `autofix-check`, `vps-deploy`, and `production-smoke`; keep Vercel fallback healthy.
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: choose/configure the real provider env for the next photo migration run and validate AVIF/WebP behavior on the real migrated catalog image set.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, final Yandex map setup.

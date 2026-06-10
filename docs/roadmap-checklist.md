@@ -1,6 +1,6 @@
 # Sobag Opt Roadmap Checklist
 
-Last updated: 2026-06-09
+Last updated: 2026-06-10
 
 ## Already Mostly Done
 
@@ -91,6 +91,7 @@ Last updated: 2026-06-09
 6. [planned] QA/security/ops:
    - [x] VPS runtime path: `server.mjs` serves static clean URLs plus existing `/api/*` handlers, with file-store read/write smoke coverage and Vercel fallback preserved.
    - [x] VPS launch runbook: step-by-step preflight, launch, smoke, DNS cutover, rollback, backup, and fallback checks without touching production env/cache/user data.
+   - [x] VPS DNS/SSL cutover: `sobag-shop.online` and `www.sobag-shop.online` resolve to `77.239.107.164`, certbot/Nginx HTTPS is active, `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` passes, and repo variable `PRODUCTION_BASE_URL` targets the domain.
    - [x] VPS release audit: offline check for required runtime files/scripts, Vercel fallback scripts, ignore rules, and forbidden tracked secret/local-output artifacts.
    - [x] VPS env preflight: `tools/vps-preflight.mjs` checks Node 20+, file-store readiness, bootstrap admin env, and S3-compatible object-storage env without printing secrets; AutoFix covers the self-test fixture.
    - [x] VPS file-store backup/restore fixture: `tools/file-store-backup.mjs` copies only JSON store records with a manifest, supports guarded restore, and AutoFix covers the self-test.

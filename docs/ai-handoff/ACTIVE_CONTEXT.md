@@ -1,6 +1,6 @@
 # Active Context
 
-Last updated: 2026-06-09
+Last updated: 2026-06-10
 
 ## Token-Saving Rule
 - Читать этот файл первым.
@@ -13,7 +13,7 @@ Last updated: 2026-06-09
 - Основная ветка: `main`
 - Production/preview URL: `https://sobag-shop.online`, fallback `https://sobag-opt-site.vercel.app`
 - Основной стек: static HTML/CSS/JS, Vercel API routes, Upstash Redis / Vercel KV-compatible storage.
-- Deployment direction: finish the next stable stage locally, then prepare VPS deployment/migration. Keep the Vercel version and `https://sobag-opt-site.vercel.app` context as a maintained fallback path.
+- Deployment state: primary domain is on the VPS with HTTPS; keep Vercel as the Redis/KV fallback path.
 - Где лежит основной код: `app.js`, `cart.js`, HTML pages in repo root, shared shell in `components/site-shell.js`, API in `api/`.
 - Где лежат тесты/проверки: `tools/autofix.mjs`, `tools/ui-smoke.spec.js`, `tools/audit_catalog.py`.
 - Локальный запуск: `npm run dev:static` для легкой верстки без API; `npm run dev:vercel` только для Vercel Functions/env проверок.
@@ -31,6 +31,7 @@ Last updated: 2026-06-09
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-10: completed VPS DNS/SSL cutover. `sobag-shop.online` and `www.sobag-shop.online` now resolve to `77.239.107.164`; `certbot --nginx` issued and installed the certificate for both names; `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` passed 4/4; GitHub repo variable `PRODUCTION_BASE_URL` is set to `https://sobag-shop.online`; manual `production-smoke` workflow run `27258638138` passed.
 - Current pass 2026-06-09: added VPS launch runbook. `docs/vps-launch-runbook.md` documents local gates, VPS setup, env names without values, preflight, runtime start, VPS URL smoke, DNS cutover, rollback, backup restore, photo/catalog guardrails, and Vercel fallback checks. `tools/vps-release-audit.mjs` now requires the runbook file.
 - Current pass 2026-06-09: added offline SEO/content audit. `tools/content-seo-audit.mjs` checks public pages and current default content for stale test/prototype/Tilda/placeholder copy, fake contacts, required meta descriptions, catalog SEO copy, FAQ schema surface, `В каталог`, and editable category/collection/holiday descriptions. AutoFix runs the audit plus self-test. Also removed the remaining public "Для теста" wording from `business.html` and replaced the public personal-data consent draft note with production-safe wording that avoids fake реквизиты/address.
 - Current pass 2026-06-09: added offline VPS release audit. `tools/vps-release-audit.mjs` checks required VPS/Vercel fallback files and scripts, ignore rules for local outputs/raw photos/secrets, and forbidden tracked artifacts. AutoFix runs the audit plus self-test.
@@ -76,10 +77,10 @@ Last updated: 2026-06-09
 - Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
-- Current next task: continue SEO/content with final legal/contact/company copy and final Yandex map data only after confirmation, or return to performance items that need real catalog growth. QA/Ops current checklist items are done.
+- Current next task: continue remaining roadmap upgrades after the VPS cutover: final SEO/content once real company facts are confirmed, later PIM DB/storage split, real photo migration/validation, and performance work for larger catalog data.
 - SEO next step: real company/legal/contact details only after confirmed facts; Product/FAQ schema, editable catalog landing copy, and offline SEO/content audit are already covered.
 - Import/PIM next step: later DB/storage split for product, variant, image, taxonomy, and import-batch entities. The current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
-- Deployment next step: when approved, follow `docs/vps-launch-runbook.md` to run VPS migration with `server.mjs`, `SOBAG_STORE_PROVIDER=file`, and S3-compatible image storage, while keeping Vercel as Redis/KV fallback.
+- Deployment next step: VPS primary is live via HTTPS; after future pushes, verify `autofix-check`, `vps-deploy`, `production-smoke`, and keep Vercel as fallback.
 - Performance next step: catalog virtualization, real-catalog WebP/AVIF validation, and Core Web Vitals audit after larger catalog growth.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
@@ -91,6 +92,7 @@ Last updated: 2026-06-09
 
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `node`, `npm.cmd`, `python`, and `py` are available in PATH on this device.
+- Current VPS DNS/SSL cutover verification: authoritative REG.RU DNS returns `77.239.107.164` for `sobag-shop.online` and `www.sobag-shop.online`; certbot installed the Nginx certificate; `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` passed 4/4; GitHub `production-smoke` run `27258638138` passed with `PRODUCTION_BASE_URL=https://sobag-shop.online`.
 - Current VPS launch runbook pass verification: `node --check tools/vps-release-audit.mjs`; `npm.cmd run audit:vps-release`; `npm.cmd run check`.
 - Current SEO/content audit pass verification: `node --check tools/content-seo-audit.mjs`; package JSON parse; `node tools/content-seo-audit.mjs`; `node tools/content-seo-audit.mjs --self-test`; `node --check tools/autofix.mjs`; `node --check tools/vps-release-audit.mjs`; `npm.cmd run audit:vps-release`; `npm.cmd run check`.
 - Current VPS release audit pass verification: `node --check tools/vps-release-audit.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `npm.cmd run audit:vps-release`; `node tools/vps-release-audit.mjs --self-test`; `npm.cmd run check`.
