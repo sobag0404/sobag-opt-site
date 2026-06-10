@@ -47,7 +47,7 @@ Completed most recently:
   - cart promo code input is disabled and explains that a manager agrees promo conditions, avoiding fake discount behavior;
   - `privacy.html` was added as a separate privacy policy page; footer mapping, `components/site-shell.js`, `sitemap.xml`, and SEO audit now separate privacy from the personal-data consent PDF;
   - contacts maps are hidden by default and only render when admin content has concrete legal/production addresses, so Yandex maps are not built from placeholder wording;
-  - mobile header is shorter, product modal opens with quantity `1` while preserving editable `0`, and catalog collections are collapsed with a `Показать еще` control;
+  - mobile header is shorter, product modal opens with quantity `1` while preserving editable `0`, hero H1 uses balanced responsive wrapping, and catalog collections are collapsed with a `Показать еще` control;
   - verification: `npm.cmd run smoke:vps:write`, `npm.cmd run check`, and `npm.cmd run ui:smoke` passed.
 - Prompt handoff rule:
   - detailed future goal prompts should be saved under `docs/ai-handoff/` and pushed to GitHub;

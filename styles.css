@@ -3832,6 +3832,12 @@ h3,
   color: #ffffff;
 }
 
+.hero h1 {
+  max-width: 760px;
+  text-wrap: balance;
+  overflow-wrap: normal;
+}
+
 h1 {
   max-width: 920px;
   font-size: clamp(54px, 8vw, 108px);
@@ -4250,6 +4256,12 @@ h3 {
     margin-bottom: 16px;
     font-size: 42px;
     line-height: 0.94;
+  }
+
+  .hero h1 {
+    max-width: 330px;
+    font-size: 38px;
+    line-height: 1;
   }
 
   .hero__lead {

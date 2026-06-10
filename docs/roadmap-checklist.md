@@ -24,7 +24,7 @@ Last updated: 2026-06-10
 - [x] Privacy/legal split: `privacy.html` is separate from the personal-data consent PDF, and footer/sitemap/content audit include the new privacy page.
 - [x] Cart minimum is enforced consistently: UI blocks checkout below 30 000 ₽, saved quote sending checks the same minimum, and `/api/orders` rejects below-minimum order totals.
 - [x] Contacts maps do not render for unconfirmed address text; legal/production maps appear only after admin content contains a concrete address.
-- [x] P1 commercial UX polish: compact mobile header, product modal quantity starts at 1 while still allowing 0, inactive promo field with honest manager note, and compact catalog collection list with show-more.
+- [x] P1 commercial UX polish: compact mobile header, balanced responsive hero H1, product modal quantity starts at 1 while still allowing 0, inactive promo field with honest manager note, and compact catalog collection list with show-more.
 - [x] Smoke tests and autofix checks.
 - [x] Separate search results page: `/search?q=...`, result count, suggestions, quick filters, exact SKU priority, production check.
 - [x] Product reviews: authorized buyer form, rating/text, approved reviews in product modal, admin moderation and persistence through existing storage/API.
