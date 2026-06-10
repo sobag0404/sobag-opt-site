@@ -41,6 +41,13 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Photo migration candidate audit:
+  - added `tools/photo-migration-candidate-audit.mjs` and `npm run audit:photo-candidate`;
+  - the audit compares current products JSON with a candidate migration output before publication;
+  - it fails if products are removed or protected catalog fields change;
+  - it validates complete square image metadata, provider label, no local paths, and optional WebP/AVIF variants;
+  - AutoFix runs only the self-test fixture, no real photo upload/delete or production data touch;
+  - verification passed: `node tools/photo-migration-candidate-audit.mjs --self-test`.
 - PostgreSQL rollback rehearsal:
   - added `tools/pim-postgres-rehearsal.mjs` and `npm run rehearse:pim:postgres`;
   - default mode builds schema + current catalog seed SQL without connecting to any DB;

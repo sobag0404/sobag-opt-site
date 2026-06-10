@@ -63,6 +63,7 @@ Last updated: 2026-06-10
        - [x] Photo migration readiness audit: `tools/photo-migration-readiness.mjs` reports provider readiness, ignored raw/bulk folders, image metadata coverage, square image readiness, and WebP/AVIF readiness without uploading, deleting, or printing secrets.
        - [x] Photo migration manifest planner: `tools/photo-migration-manifest.mjs` matches local photo folders to products and writes a safe upload/variant manifest before real storage migration.
        - [x] Photo migration manifest audit: `tools/photo-migration-manifest-audit.mjs` validates pilot/full manifests before real upload, including counts, portable relative paths, provider label, `products/` storage prefixes, image extensions, and WebP/AVIF variant planning.
+       - [x] Photo migration candidate audit: `tools/photo-migration-candidate-audit.mjs` verifies a candidate products JSON before publication, ensuring products are not removed, protected catalog fields stay unchanged, image metadata is complete/square/provider-safe, and optional WebP/AVIF variants exist.
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
      - [x] First compatible sidecar payload in the current catalog storage shape: normalized products, variants, images, taxonomies, counts, and safe import batch summaries.
      - [x] Admin diagnostics/export endpoint for the PIM sidecar: summary/full/table views and CSV exports for products, variants, images, taxonomies, and import batches.
