@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Auth, quantity, search, and browser cache polish:
+  - login and registration are separate auth modal modes; login uses only `Почта или телефон` plus password, registration uses name/email/phone/password/consent and shows a small `не менее 6 символов` password hint;
+  - server login can resolve users by phone as well as email;
+  - product modal quantity accepts `0` and `100+`; cart quantity accepts `0` as remove;
+  - search suggestions are case-insensitive, no longer disappear for exact names like `подушка`, and include product thumbnails;
+  - VPS/static cache headers now cache JS/CSS/static product JSON and public catalog/content API responses while leaving private/account/order/admin API paths uncached.
 - Account tab counter polish:
   - `Заказы` tab count now renders as a separate badge instead of merged text like `Заказы 2`;
   - day/night theme styles cover the badge.

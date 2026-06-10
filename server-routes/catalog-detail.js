@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
       product,
       updatedAt: catalog.updatedAt,
       source: catalog.source,
-    });
+    }, { "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" });
   } catch (error) {
     return handleError(res, error, req);
   }

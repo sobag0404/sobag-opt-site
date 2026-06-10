@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
     const phone = normalizePhone(data.phone);
 
     if (!isValidEmail(email)) return sendJson(res, 400, { error: "invalid_email", message: "Проверьте email." });
-    if (!password || password.length < 4) return sendJson(res, 400, { error: "weak_password", message: "Укажите пароль." });
+    if (!password || password.length < 6) return sendJson(res, 400, { error: "weak_password", message: "Пароль должен быть не короче 6 символов." });
     if (!name || !phone) return sendJson(res, 400, { error: "missing_profile", message: "Укажите имя и телефон." });
     if (!data.personalDataConsent) {
       return sendJson(res, 400, { error: "missing_consent", message: "Подтвердите согласие на обработку персональных данных." });

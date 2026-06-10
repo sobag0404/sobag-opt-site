@@ -1,4 +1,4 @@
-const { createSession, ensureBootstrapAdmin, normalizeEmail, publicUser, verifyPassword } = require("../_lib/auth");
+const { createSession, ensureBootstrapAdmin, normalizeEmail, normalizePhone, publicUser, verifyPassword } = require("../_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { getStore } = require("../_lib/store");
 
@@ -6,13 +6,23 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return methodNotAllowed(res);
   try {
     const data = await readJson(req);
-    const email = normalizeEmail(data.email);
+    const login = String(data.login || data.email || "").trim();
+    let email = normalizeEmail(login);
     const password = String(data.password || "");
     const store = await ensureBootstrapAdmin(await getStore());
-    const user = store.users[email];
+    let user = store.users[email];
+
+    if (!user) {
+      const phone = normalizePhone(login);
+      const found = Object.entries(store.users).find(([, item]) => normalizePhone(item.phone) === phone);
+      if (found) {
+        email = found[0];
+        user = found[1];
+      }
+    }
 
     if (!user || !verifyPassword(password, user)) {
-      return sendJson(res, 401, { error: "invalid_credentials", message: "Проверьте email и пароль." });
+      return sendJson(res, 401, { error: "invalid_credentials", message: "Проверьте логин и пароль." });
     }
 
     await createSession(res, email);

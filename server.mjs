@@ -38,8 +38,11 @@ function applySecurityHeaders(response) {
 
 function cacheControlFor(pathname) {
   if (pathname.startsWith("/assets/")) return "public, max-age=86400, stale-while-revalidate=604800";
-  if (pathname === "/data/products-live.json") return "public, max-age=0, must-revalidate";
+  if (pathname === "/data/products-live.json") return "public, max-age=300, stale-while-revalidate=3600";
   if (pathname.startsWith("/api/")) return "no-store";
+  if ([".css", ".js", ".json", ".svg", ".png", ".jpg", ".jpeg", ".webp"].includes(extname(pathname).toLowerCase())) {
+    return "public, max-age=3600, stale-while-revalidate=86400";
+  }
   return "public, max-age=0, must-revalidate";
 }
 

@@ -604,6 +604,7 @@ const state = {
     user: null,
   },
   accountTab: "",
+  authMode: "login",
   importPhotoFiles: [],
   importPhotoReport: [],
   importPhotoUploading: false,
@@ -917,6 +918,24 @@ function formatPhoneNumber(value = "") {
   const country = digits.slice(0, countryLength);
   const groups = digits.slice(countryLength).match(/\d{1,3}/g) || [];
   return [`+${country}`, ...groups].join(" ");
+}
+
+function phoneDigits(value = "") {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function findUserKeyByLogin(users, login) {
+  const prepared = String(login || "").trim();
+  const email = prepared.toLowerCase();
+  const byEmail = Object.keys(users).find((key) => key.toLowerCase() === email);
+  if (byEmail) return byEmail;
+  const formattedPhone = formatPhoneNumber(prepared);
+  const digits = phoneDigits(formattedPhone || prepared);
+  if (!digits) return "";
+  return Object.keys(users).find((key) => {
+    const userPhone = users[key]?.phone || users[key]?.lastCustomer?.phone || "";
+    return formatPhoneNumber(userPhone) === formattedPhone || phoneDigits(userPhone) === digits;
+  }) || "";
 }
 
 function footerLinkUrl(label = "") {
@@ -1567,7 +1586,9 @@ function initFormEnhancements(root = document) {
     });
   });
   root.querySelectorAll('input[name="address"]').forEach((field) => field.setAttribute("autocomplete", "street-address"));
-  root.querySelectorAll('input[name="password"]').forEach((field) => field.setAttribute("autocomplete", "current-password"));
+  root.querySelectorAll('input[name="password"]').forEach((field) => {
+    field.setAttribute("autocomplete", field.closest("#authForm")?.dataset.authMode === "register" ? "new-password" : "current-password");
+  });
 }
 
 function activeModal() {
@@ -3748,7 +3769,6 @@ function searchScore(product, rawQuery = state.search) {
 function getSearchSuggestions() {
   const query = state.search.trim();
   if (normalizeSearchText(query).length < 2) return [];
-  if (products.some((product) => !product.hidden && productHasExactSearchMatch(product, query))) return [];
   return products
     .filter((product) => !product.hidden)
     .map((product) => ({ product, score: searchScore(product, query) }))
@@ -3807,7 +3827,15 @@ function renderSearchResultsPanel(list, total = list.length) {
         ? `<div class="search-results-panel__suggestions">
             <span>Возможно, вы искали</span>
             <div>${suggestions
-              .map((product) => `<button type="button" data-open-product="${escapeHtml(product.id)}"><b>${escapeHtml(product.baseSku)}</b><span>${escapeHtml(product.name)}</span></button>`)
+              .map(
+                (product) => `
+                  <button type="button" data-open-product="${escapeHtml(product.id)}">
+                    <img src="${escapeHtml(product.image || "assets/production-workshop-1.png")}" alt="" loading="lazy" />
+                    <b>${escapeHtml(product.baseSku)}</b>
+                    <span>${escapeHtml(product.name)}</span>
+                  </button>
+                `
+              )
               .join("")}</div>
           </div>`
         : ""
@@ -3851,8 +3879,11 @@ function renderSearchSuggestions() {
       .map(
         (product) => `
           <button type="button" data-open-product="${escapeHtml(product.id)}">
-            <strong>${escapeHtml(product.baseSku)}</strong>
-            <em>${escapeHtml(product.name)}</em>
+            <img src="${escapeHtml(product.image || "assets/production-workshop-1.png")}" alt="" loading="lazy" ${imageAttrs(56, 56)} />
+            <span>
+              <strong>${escapeHtml(product.baseSku)}</strong>
+              <em>${escapeHtml(product.name)}</em>
+            </span>
           </button>
         `
       )
@@ -5004,10 +5035,11 @@ function refreshProductModal() {
   if (!modal) return;
   const product = products.find((item) => item.id === state.activeProductId);
   const variant = findVariant(product);
-  const qty = Math.max(0, Number(document.querySelector("#detailQty")?.value || state.activeVariant.qty || 0));
-  state.activeVariant.qty = qty;
   const detailQtyInput = document.querySelector("#detailQty");
-  if (detailQtyInput) detailQtyInput.value = qty;
+  const rawQty = detailQtyInput?.value ?? state.activeVariant.qty;
+  const qty = Math.max(0, Math.round(Number(rawQty === "" ? 0 : rawQty || 0)));
+  state.activeVariant.qty = qty;
+  if (detailQtyInput && (document.activeElement !== detailQtyInput || detailQtyInput.value !== "")) detailQtyInput.value = qty;
   const discount = getBasketDiscount(getCartTotals().subtotal + variant.price * qty);
   const unitPrice = discountedUnitPrice(variant.price, discount);
   const basketDiscountHint = getBasketDiscountHint(getCartTotals().subtotal + variant.price * qty);
@@ -7035,6 +7067,52 @@ function refreshSavedCartViews() {
   rerenderAccountModal();
 }
 
+function authModeButton(mode, label) {
+  const active = state.authMode === mode;
+  return `<button class="auth-mode-button${active ? " is-active" : ""}" type="button" aria-pressed="${active ? "true" : "false"}" data-auth-mode-switch="${mode}">${label}</button>`;
+}
+
+function authFormHtml() {
+  const isRegister = state.authMode === "register";
+  return `
+    <div class="auth-mode-switch" aria-label="Режим аккаунта">
+      ${authModeButton("login", "Вход")}
+      ${authModeButton("register", "Регистрация")}
+    </div>
+    <form class="auth-form" id="authForm" data-auth-mode="${isRegister ? "register" : "login"}" novalidate>
+      ${
+        isRegister
+          ? `
+            <input name="name" type="text" placeholder="Имя или компания" autocomplete="name" required />
+            <input name="email" type="email" placeholder="Email" autocomplete="email" required />
+            <input name="phone" type="tel" placeholder="Телефон" autocomplete="tel" required />
+            <input name="password" type="password" placeholder="Пароль" autocomplete="new-password" required />
+            <small class="auth-password-hint">Пароль: не менее 6 символов.</small>
+            <label class="consent-check auth-consent">
+              <input name="personalDataConsent" type="checkbox" />
+              <span>
+                Согласен на
+                <a href="assets/legal/personal-data-consent.pdf" target="_blank" rel="noopener">
+                  обработку персональных данных
+                </a>
+              </span>
+            </label>
+            <div class="auth-actions">
+              <button class="primary-button" type="submit">Зарегистрироваться</button>
+            </div>
+          `
+          : `
+            <input name="login" type="text" placeholder="Почта или телефон" autocomplete="username" required />
+            <input name="password" type="password" placeholder="Пароль" autocomplete="current-password" required />
+            <div class="auth-actions">
+              <button class="primary-button" type="submit">Войти</button>
+            </div>
+          `
+      }
+    </form>
+  `;
+}
+
 function accountModalHtml() {
   const users = getUsers();
   const user = users[state.currentUser];
@@ -7045,7 +7123,7 @@ function accountModalHtml() {
         <button class="modal__close" type="button" data-close-modal><i data-lucide="x"></i></button>
         <div>
           <p class="eyebrow">Account</p>
-          <h2 id="accountModalTitle">${user ? "Личный кабинет" : "Вход и регистрация"}</h2>
+          <h2 id="accountModalTitle">${user ? "Личный кабинет" : state.authMode === "register" ? "Регистрация" : "Вход"}</h2>
         </div>
         ${
           user
@@ -7069,27 +7147,7 @@ function accountModalHtml() {
               ${managementOrdersHtml(user)}
               ${userManagementHtml(user)}
             `
-            : `
-              <form class="auth-form" id="authForm" novalidate>
-                <input name="name" type="text" placeholder="Имя или компания" autocomplete="name" />
-                <input name="email" type="email" placeholder="Email" autocomplete="email" required />
-                <input name="phone" type="tel" placeholder="Телефон" autocomplete="tel" />
-                <input name="password" type="password" placeholder="Пароль" autocomplete="current-password" required />
-                <label class="consent-check auth-consent">
-                  <input name="personalDataConsent" type="checkbox" />
-                  <span>
-                    Согласен на
-                    <a href="assets/legal/personal-data-consent.pdf" target="_blank" rel="noopener">
-                      обработку персональных данных
-                    </a>
-                  </span>
-                </label>
-                <div class="auth-actions">
-                  <button class="primary-button" type="submit" data-auth-mode="login">Войти</button>
-                  <button class="ghost-button" type="submit" data-auth-mode="register">Зарегистрироваться</button>
-                </div>
-              </form>
-            `
+            : authFormHtml()
         }
       </section>
     </div>
@@ -8676,6 +8734,11 @@ function boot() {
     }
     if (button.id === "accountButton" || button.dataset.openAccount !== undefined) openAccount();
     if (button.dataset.closeModal !== undefined) closeModal();
+    if (button.dataset.authModeSwitch) {
+      state.authMode = button.dataset.authModeSwitch === "register" ? "register" : "login";
+      rerenderAccountModal();
+      return;
+    }
     if (button.dataset.accountTab) {
       switchAccountTab(button.dataset.accountTab);
       return;
@@ -9126,27 +9189,33 @@ function boot() {
     if (event.target.id === "authForm") {
       event.preventDefault();
       clearFormErrors(event.target);
-      const submitter = event.submitter;
       const data = Object.fromEntries(new FormData(event.target).entries());
+      const mode = event.target.dataset.authMode === "register" ? "register" : "login";
       const users = getUsers();
+      const login = String(data.login || "").trim();
       const email = String(data.email || "").trim().toLowerCase();
       const password = String(data.password || "");
       const name = String(data.name || "").trim();
       const phone = formatPhoneNumber(data.phone);
       const existingEmailKey = Object.keys(users).find((key) => key.toLowerCase() === email);
-      if (!email) {
-        setFieldError(event.target, "email", "Укажите email.");
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email !== "admin@sobag") {
-        setFieldError(event.target, "email", "Проверьте формат email.");
-        return;
-      }
       if (!password) {
         setFieldError(event.target, "password", "Укажите пароль.");
         return;
       }
-      if (submitter.dataset.authMode === "register") {
+      if (mode === "register") {
+        if (!email) {
+          setFieldError(event.target, "email", "Укажите email.");
+          return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email !== "admin@sobag") {
+          setFieldError(event.target, "email", "Проверьте формат email.");
+          return;
+        }
+        if (password.length < 6) {
+          setFieldError(event.target, "password", "Пароль должен быть не короче 6 символов.");
+          showToast("Пароль должен быть не короче 6 символов.");
+          return;
+        }
         if (!name || !phone) {
           if (!name) setFieldError(event.target, "name", "Для регистрации укажите имя или компанию.");
           else setFieldError(event.target, "phone", "Для регистрации укажите телефон.");
@@ -9205,10 +9274,15 @@ function boot() {
           consentTextVersion: "personal-data-consent-2026-05-29",
         };
         saveUsers(users);
-      }
-      if (submitter.dataset.authMode !== "register") {
+        state.currentUser = email;
+        localStorage.setItem(STORAGE.user, email);
+      } else {
+        if (!login) {
+          setFieldError(event.target, "login", "Укажите почту или телефон.");
+          return;
+        }
         try {
-          const result = await apiRequest("/api/auth/login", { method: "POST", body: { email, password } });
+          const result = await apiRequest("/api/auth/login", { method: "POST", body: { login, password } });
           saveServerUserProfile(result.user);
           await loadBackendAccountData();
           loadCart();
@@ -9227,15 +9301,15 @@ function boot() {
             return;
           }
         }
+        const userKey = findUserKeyByLogin(users, login);
+        if (!userKey || !users[userKey] || users[userKey].password !== password) {
+          setFieldError(event.target, "password", "Проверьте логин и пароль.");
+          showToast("Проверьте логин и пароль.");
+          return;
+        }
+        state.currentUser = userKey;
+        localStorage.setItem(STORAGE.user, userKey);
       }
-      const userKey = existingEmailKey || email;
-      if (!users[userKey] || users[userKey].password !== password) {
-        setFieldError(event.target, "password", "Проверьте email и пароль.");
-        showToast("Проверьте email и пароль.");
-        return;
-      }
-      state.currentUser = userKey;
-      localStorage.setItem(STORAGE.user, userKey);
       loadCart();
       loadFavorites();
       await loadServerPersonalState();

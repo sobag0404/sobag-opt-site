@@ -47,6 +47,9 @@ try {
   assert(home.text.includes("Sobag"), "home page should include Sobag marker");
   assert(home.response.headers.get("x-content-type-options") === "nosniff", "security headers should be set");
 
+  const appJs = await readText(baseUrl, "/app.js");
+  assert((appJs.response.headers.get("cache-control") || "").includes("max-age=3600"), "static JS should be browser-cacheable");
+
   const catalogPage = await readText(baseUrl, "/catalog");
   assert(catalogPage.text.includes("Каталог"), "clean catalog URL should resolve to catalog.html");
 
@@ -58,6 +61,8 @@ try {
   const query = await readJson(baseUrl, "/api/catalog-query?pageSize=2");
   assert(query.items?.length === 2, "catalog-query should return compact cards");
   assert(!("variants" in query.items[0]), "catalog-query cards should not include full variants");
+  const queryResponse = await fetch(new URL("/api/catalog-query?pageSize=1", baseUrl));
+  assert((queryResponse.headers.get("cache-control") || "").includes("max-age=300"), "catalog-query should be browser-cacheable");
 
   const detail = await readJson(baseUrl, `/api/catalog-detail?baseSku=${encodeURIComponent(query.items[0].baseSku)}`);
   assert(detail.product?.baseSku === query.items[0].baseSku, "catalog-detail should resolve from baseSku");

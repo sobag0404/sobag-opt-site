@@ -799,7 +799,7 @@ function renderCart() {
             <button type="button" data-qty-minus="${line.key}" aria-label="Уменьшить количество">
               <i data-lucide="minus"></i>
             </button>
-            <input type="number" min="1" step="1" value="${line.qty}" data-qty-input="${line.key}" aria-label="Количество" />
+            <input type="number" min="0" step="1" value="${line.qty}" data-qty-input="${line.key}" aria-label="Количество" />
             <button type="button" data-qty-plus="${line.key}" aria-label="Увеличить количество">
               <i data-lucide="plus"></i>
             </button>
@@ -843,8 +843,12 @@ function renderCart() {
 function changeQty(key, qty) {
   const line = state.cart.get(key);
   if (!line) return;
-  line.qty = Math.max(1, qty);
-  state.cart.set(key, line);
+  const nextQty = Math.max(0, Math.round(Number(qty || 0)));
+  if (nextQty === 0) state.cart.delete(key);
+  else {
+    line.qty = nextQty;
+    state.cart.set(key, line);
+  }
   renderCart();
 }
 
@@ -950,7 +954,7 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("input", (event) => {
-  if (event.target.dataset.qtyInput) changeQty(event.target.dataset.qtyInput, Number(event.target.value || 1));
+  if (event.target.dataset.qtyInput) changeQty(event.target.dataset.qtyInput, Number(event.target.value === "" ? 0 : event.target.value));
 });
 
 document.addEventListener("keydown", (event) => {

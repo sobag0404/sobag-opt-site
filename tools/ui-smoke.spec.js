@@ -215,6 +215,20 @@ test("business page exposes visible FAQ and FAQ schema", async ({ page }) => {
   expect(schema.mainEntity[0].acceptedAnswer.text).toContain("оптовая заявка");
 });
 
+test("account auth modal separates login and registration fields", async ({ page }) => {
+  await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
+  await page.locator("#accountButton").click();
+  await expect(page.locator("#accountModalTitle")).toHaveText("Вход");
+  await expect(page.locator('#authForm input[name="login"]')).toBeVisible();
+  await expect(page.locator('#authForm input[name="email"]')).toHaveCount(0);
+  await page.locator('[data-auth-mode-switch="register"]').click();
+  await expect(page.locator("#accountModalTitle")).toHaveText("Регистрация");
+  await expect(page.locator('#authForm input[name="name"]')).toBeVisible();
+  await expect(page.locator('#authForm input[name="email"]')).toBeVisible();
+  await expect(page.locator('#authForm input[name="phone"]')).toBeVisible();
+  await expect(page.locator(".auth-password-hint")).toContainText("не менее 6");
+});
+
 async function waitForLiveProducts(page, minCount = 10) {
   await page.waitForFunction((min) => document.querySelectorAll(".product-card").length > min, minCount);
 }
@@ -587,6 +601,10 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
 
   await expect(page.locator("#productModal")).toBeVisible();
   await expect(page.locator("#detailQty")).toHaveValue("0");
+  await page.locator("#detailQty").fill("100");
+  await expect(page.locator("#detailQty")).toHaveValue("100");
+  await page.locator("#detailQty").fill("0");
+  await expect(page.locator("#detailQty")).toHaveValue("0");
   await expect(page.locator(".variant-matrix__row")).toHaveCount(await page.locator(".variant-matrix__row").count());
   await expect(page.locator(".variant-matrix__row").first()).toBeVisible();
   await expect(page.locator(".related-products .mini-product-card")).toHaveCount(await page.locator(".related-products .mini-product-card").count());
@@ -896,7 +914,7 @@ test("catalog server query keeps 10k pages bounded in DOM", async ({ page }) => 
   expect(fullCatalogRequested).toBe(false);
 });
 
-test("search prioritizes exact sku and keeps suggestions for fuzzy queries", async ({ page }) => {
+test("search prioritizes exact sku and shows case-insensitive image suggestions", async ({ page }) => {
   await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
 
@@ -907,10 +925,11 @@ test("search prioritizes exact sku and keeps suggestions for fuzzy queries", asy
   await waitForLiveProducts(page, 0);
   await expect(page.locator(".product-card").first().locator(".product-card__sku")).toHaveText(sku.trim());
   await expect(page.locator("#searchResultsPanel")).toBeVisible();
-  await expect(page.locator(".search-suggestions")).toBeHidden();
 
-  await page.locator("#searchInput").fill("подуш патер");
+  await page.locator("#searchInput").fill("ПодУШКа");
   await expect(page.locator(".search-suggestions")).toBeVisible();
+  await expect(page.locator(".search-suggestions img").first()).toBeVisible();
+  await expect(page.locator(".search-suggestions em").first()).toContainText(/подушка/i);
   await expect(page.locator(".search-results-panel__quick button").first()).toBeVisible();
 });
 

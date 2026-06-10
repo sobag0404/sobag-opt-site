@@ -108,6 +108,12 @@ try {
   assert(profileSave.payload.user?.company === "VPS Smoke Updated Company", "buyer profile should save on server");
   assert(profileSave.payload.user?.phone === "+7 999 000-00-01", "buyer profile phone should normalize on server");
 
+  const buyerPhoneLogin = await request(baseUrl, "/api/auth/login", {
+    method: "POST",
+    body: { login: "+7 999 000-00-01", password: "buyer-pass" },
+  });
+  assert(buyerPhoneLogin.payload.user?.email === "buyer-vps-smoke@example.com", "buyer should login by phone");
+
   const query = await request(baseUrl, "/api/catalog-query?pageSize=1");
   const card = query.payload.items?.[0];
   assert(card?.baseSku, "catalog-query should return a product card");

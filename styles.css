@@ -260,10 +260,10 @@ a {
 
 .search-suggestions button {
   display: grid;
-  grid-template-columns: minmax(82px, auto) 1fr;
+  grid-template-columns: 44px 1fr;
   gap: 10px;
   align-items: center;
-  min-height: 34px;
+  min-height: 54px;
   padding: 6px;
   color: var(--on-dark);
   text-align: left;
@@ -272,8 +272,24 @@ a {
   border-radius: 8px;
 }
 
+.search-suggestions img,
+.search-results-panel__suggestions img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+}
+
 .search-suggestions button:hover {
   border-color: var(--on-dark);
+}
+
+.search-suggestions button > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
 }
 
 .search-suggestions strong,
@@ -732,6 +748,15 @@ h3 {
   border: 1px solid var(--hairline-strong);
   border-radius: var(--control-radius);
   font-weight: 800;
+}
+
+.search-results-panel__suggestions button {
+  padding-left: 7px;
+}
+
+.search-results-panel__suggestions img {
+  width: 34px;
+  height: 34px;
 }
 
 .search-results-panel__suggestions button:hover,
@@ -2057,6 +2082,41 @@ select[aria-invalid="true"] {
   display: grid;
   gap: 12px;
   margin-top: 24px;
+}
+
+.auth-mode-switch {
+  display: inline-flex;
+  width: fit-content;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 4px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+}
+
+.auth-mode-button {
+  min-height: 38px;
+  padding: 0 16px;
+  color: var(--on-dark);
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--control-radius) - 2px);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.auth-mode-button.is-active {
+  color: var(--canvas);
+  background: var(--on-dark);
+}
+
+.auth-password-hint {
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .auth-actions,
@@ -5368,6 +5428,7 @@ body.theme-night .add-button:hover {
 
 body.theme-night .ghost-button,
 body.theme-night .account-tab,
+body.theme-night .auth-mode-button,
 body.theme-night .theme-toggle,
 body.theme-night .icon-button,
 body.theme-night .favorite-button,
@@ -5400,6 +5461,11 @@ body.theme-night .account-tab.is-active {
   color: #160b04;
   background: var(--amber);
   border-color: rgba(255, 138, 31, 0.82);
+}
+
+body.theme-night .auth-mode-button.is-active {
+  color: #160b04;
+  background: var(--amber);
 }
 
 body.theme-night .account-tab__count {
