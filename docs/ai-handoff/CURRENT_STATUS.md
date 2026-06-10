@@ -41,6 +41,13 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL query builder prep:
+  - added `api/_lib/catalog-db-query.js` and `tools/catalog-db-query-smoke.mjs`;
+  - the builder creates parameterized future `public_catalog_cards` list/count SQL and `public_catalog_products` detail SQL;
+  - it guards sort/filter/page-size mapping and keeps compact public catalog reads aligned with the current API contract;
+  - this does not connect to DB, change runtime storage, or touch production data;
+  - AutoFix runs the query-builder smoke;
+  - verification passed: `npm.cmd run smoke:catalog:db-query` and `npm.cmd run check`.
 - PostgreSQL row adapter prep:
   - added `api/_lib/catalog-db-rows.js` and `tools/catalog-db-rows-smoke.mjs`;
   - the adapter maps future snake_case public catalog/card/product/variant/image rows into the current public card/detail payload shape;
