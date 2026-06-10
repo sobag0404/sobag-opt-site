@@ -41,6 +41,15 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Catalog/header/content/contact UX fixes:
+  - catalog active filter chips now include `Снять все фильтры`;
+  - guests see `Вход / регистрация` in the top header;
+  - opening a selected category/collection/holiday now uses browser history, so Back returns to the previous catalog state instead of jumping away;
+  - custom-print page no longer uses the home hero image;
+  - night theme is applied immediately after `<body>` on every HTML page to prevent a light-theme flash;
+  - footer informational links now have real pages: `how-to-order.html`, `delivery.html`, `payment.html`, `returns.html`, `seller-support.html`, `wholesale.html`;
+  - admin content editor can edit the new footer-page text fields;
+  - contacts now show legal address + map and production address + map, with both addresses editable from admin content.
 - Auth, quantity, search, and browser cache polish:
   - login and registration are separate auth modal modes; login uses only `Почта или телефон` plus password, registration uses name/email/phone/password/consent and shows a small `не менее 6 символов` password hint;
   - server login can resolve users by phone as well as email;

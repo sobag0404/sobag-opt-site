@@ -318,6 +318,28 @@ a {
   align-items: center;
 }
 
+.account-login-button {
+  width: auto;
+  min-width: 0;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: var(--control-radius);
+  white-space: nowrap;
+}
+
+.icon-button.account-login-button span {
+  position: static;
+  display: inline;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border-radius: 0;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .icon-button,
 .favorite-button {
   position: relative;
@@ -336,7 +358,7 @@ a {
   border-color: var(--on-dark);
 }
 
-.icon-button span {
+.icon-button:not(.account-login-button) span {
   position: absolute;
   top: -5px;
   right: -5px;
@@ -3483,7 +3505,7 @@ textarea:focus-visible {
 
   .cart-button span,
   .cart-button small,
-  .header__actions .icon-button:first-child {
+  .header__actions .icon-button:not(.account-login-button):first-child {
     display: none;
   }
 
@@ -6401,7 +6423,25 @@ body.theme-night .modal__close {
 
 .map-panel {
   display: grid;
+  grid-template-columns: minmax(220px, 0.45fr) minmax(0, 1fr);
   gap: 16px;
+  align-items: stretch;
+}
+
+.contacts-maps {
+  display: grid;
+  gap: 24px;
+}
+
+.map-panel__text {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.map-panel h2 {
+  margin: 0;
+  font-size: 24px;
 }
 
 .map-search {
@@ -6430,6 +6470,7 @@ body.theme-night .modal__close {
   border-radius: var(--control-radius);
 }
 
+.map-panel iframe,
 #yandexMapFrame {
   width: 100%;
   min-height: 420px;
@@ -6640,6 +6681,12 @@ body.theme-night .theme-toggle__track::after {
   border: 1px solid var(--hairline-strong);
   font-size: 12px;
   font-weight: 800;
+}
+
+.active-filter-chips__reset {
+  color: var(--canvas) !important;
+  background: var(--on-dark) !important;
+  border-color: var(--on-dark) !important;
 }
 
 .active-filter-chips svg {
@@ -7177,6 +7224,7 @@ body.theme-night .theme-toggle__track::after {
   .business-conditions,
   .contacts-layout,
   .faq-section__head,
+  .map-panel,
   .map-search > div {
     grid-template-columns: 1fr;
   }
@@ -7189,6 +7237,7 @@ body.theme-night .theme-toggle__track::after {
     gap: 24px;
   }
 
+  .map-panel iframe,
   #yandexMapFrame {
     min-height: 320px;
   }

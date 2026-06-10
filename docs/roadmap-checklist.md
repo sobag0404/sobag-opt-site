@@ -19,6 +19,7 @@ Last updated: 2026-06-10
 - [x] Admin catalog tools: products, prices, import, content, users/roles, employees/manager access by email.
 - [x] Product import workflow and local importer.
 - [x] Basic SEO pages, sitemap, robots, Organization/CollectionPage/BreadcrumbList JSON-LD.
+- [x] Footer informational pages exist for order flow, delivery, payment, returns, seller support, and wholesale lots, with editable admin content fields.
 - [x] Smoke tests and autofix checks.
 - [x] Separate search results page: `/search?q=...`, result count, suggestions, quick filters, exact SKU priority, production check.
 - [x] Product reviews: authorized buyer form, rating/text, approved reviews in product modal, admin moderation and persistence through existing storage/API.
@@ -64,6 +65,7 @@ Last updated: 2026-06-10
 4. [planned] SEO/content:
    - [ ] Fill final legal/company/contact copy.
      - [x] First production-safe public copy pass: removed test/prototype wording from about, contacts, business, marketplace, footer, cart promo, and terms fallbacks without inventing final legal реквизиты or address.
+     - [x] Footer informational page skeletons: `how-to-order.html`, `delivery.html`, `payment.html`, `returns.html`, `seller-support.html`, and `wholesale.html` now have production-safe placeholder copy editable from admin content.
      - [x] Offline SEO/content audit: public pages and current default content are checked for stale test/prototype/Tilda/placeholder copy, fake contacts, required meta descriptions, catalog SEO copy, FAQ schema surface, `В каталог`, and editable category/collection/holiday descriptions.
    - [x] Add Product/FAQ schema where appropriate.
      - [x] Product schema for public product modal/detail state, including offers, images, and approved review aggregate data.
@@ -72,6 +74,7 @@ Last updated: 2026-06-10
      - [x] First catalog landing copy slice: selected category/collection/holiday SEO descriptions are kept in the current content/admin state; the former visible catalog plaque was later hidden per UX feedback.
      - [x] Editable SEO descriptions for default collections and holidays: admin content supports `name | description | icon`, with backward compatibility for old `name | icon` rows.
    - [ ] Yandex map final address setup.
+     - Current public contacts layout supports separate legal and production addresses, each with its own Yandex map; final real values still require confirmation.
 
 5. [planned] Performance:
    - [ ] Server-side search/pagination for 10k+ products.

@@ -17,9 +17,10 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Crect x='6' y='6' width='52' height='52' fill='%23fff'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial,sans-serif' font-size='34' font-weight='900' fill='%23000'%3ES%3C/text%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="styles.css?v=20260604-saved-quotes" />
+    <link rel="stylesheet" href="styles.css?v=20260610-footer-ui" />
   </head>
   <body class="contacts-page">
+    <script>try{if(localStorage.getItem("sobag.theme.v1")==="night")document.body.classList.add("theme-night")}catch(e){}</script>
     <div data-site-topline></div>
 
     <div data-site-header="commerce"></div>
@@ -35,17 +36,26 @@
             <span data-footer-sales-label>Отдел опта</span>
             <a href="mailto:opt@sobag-shop.online" data-footer-email>opt@sobag-shop.online</a>
             <a href="tel:+79001234567" data-footer-phone>+7 900 123-45-67</a>
-            <p><b>Адрес:</b> <span data-contacts-address>Адрес производства и самовывоза согласуется с менеджером</span></p>
             <p><b>График:</b> <span data-contacts-schedule>Пн-Пт, 10:00-18:00 по Москве</span></p>
           </article>
-          <article class="info-page__panel map-panel">
-            <form class="map-search" id="mapAddressForm">
-              <label for="mapAddressInput">Адрес на Яндекс Картах</label>
-              <div><input id="mapAddressInput" name="mapAddress" type="text" value="Адрес производства и самовывоза согласуется с менеджером" /><button class="primary-button" type="submit" data-contacts-map-button>Показать на карте</button></div>
-            </form>
-            <iframe id="yandexMapFrame" title="Sobag на Яндекс Картах" src="https://yandex.ru/map-widget/v1/?text=%D0%90%D0%B4%D1%80%D0%B5%D1%81%20%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%B0%20%D0%B8%20%D1%81%D0%B0%D0%BC%D0%BE%D0%B2%D1%8B%D0%B2%D0%BE%D0%B7%D0%B0%20%D1%81%D0%BE%D0%B3%D0%BB%D0%B0%D1%81%D1%83%D0%B5%D1%82%D1%81%D1%8F%20%D1%81%20%D0%BC%D0%B5%D0%BD%D0%B5%D0%B4%D0%B6%D0%B5%D1%80%D0%BE%D0%BC&z=16" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-            <a class="map-link" id="yandexMapLink" href="https://yandex.ru/maps/?text=%D0%90%D0%B4%D1%80%D0%B5%D1%81%20%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%B0%20%D0%B8%20%D1%81%D0%B0%D0%BC%D0%BE%D0%B2%D1%8B%D0%B2%D0%BE%D0%B7%D0%B0%20%D1%81%D0%BE%D0%B3%D0%BB%D0%B0%D1%81%D1%83%D0%B5%D1%82%D1%81%D1%8F%20%D1%81%20%D0%BC%D0%B5%D0%BD%D0%B5%D0%B4%D0%B6%D0%B5%D1%80%D0%BE%D0%BC" target="_blank" rel="noopener">Открыть в Яндекс Картах</a>
-          </article>
+          <div class="contacts-maps">
+            <article class="info-page__panel map-panel">
+              <div class="map-panel__text">
+                <h2>Юридический адрес</h2>
+                <p data-contacts-legal-address>Юридический адрес будет указан после подтверждения реквизитов</p>
+                <a class="map-link" id="yandexMapLink-legal" href="https://yandex.ru/maps/?text=%D0%AE%D1%80%D0%B8%D0%B4%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B9%20%D0%B0%D0%B4%D1%80%D0%B5%D1%81" target="_blank" rel="noopener">Открыть в Яндекс Картах</a>
+              </div>
+              <iframe id="yandexMapFrame-legal" title="Юридический адрес Sobag" src="https://yandex.ru/map-widget/v1/?text=%D0%AE%D1%80%D0%B8%D0%B4%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B9%20%D0%B0%D0%B4%D1%80%D0%B5%D1%81&z=16" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </article>
+            <article class="info-page__panel map-panel">
+              <div class="map-panel__text">
+                <h2>Адрес производства</h2>
+                <p data-contacts-production-address>Адрес производства и самовывоза согласуется с менеджером</p>
+                <a class="map-link" id="yandexMapLink-production" href="https://yandex.ru/maps/?text=%D0%90%D0%B4%D1%80%D0%B5%D1%81%20%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%B0" target="_blank" rel="noopener">Открыть в Яндекс Картах</a>
+              </div>
+              <iframe id="yandexMapFrame-production" title="Адрес производства Sobag" src="https://yandex.ru/map-widget/v1/?text=%D0%90%D0%B4%D1%80%D0%B5%D1%81%20%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%B0&z=16" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </article>
+          </div>
         </div>
       </section>
     </main>
@@ -53,9 +63,9 @@
     <div data-site-footer></div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="components/site-shell.js?v=20260604-saved-quotes"></script>
+    <script src="components/site-shell.js?v=20260610-footer-ui"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="app.js?v=20260604-saved-quotes"></script>
+    <script src="app.js?v=20260610-footer-ui"></script>
   </body>
 </html>

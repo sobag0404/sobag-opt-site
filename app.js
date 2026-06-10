@@ -291,8 +291,34 @@ const defaultSiteContent = {
   contactsPageTitle: "Контакты",
   contactsPageLead: "Свяжитесь с отделом опта, чтобы уточнить наличие, сроки запуска партии, упаковку, отгрузку и документы.",
   contactsAddress: "Адрес производства и самовывоза согласуется с менеджером",
+  contactsLegalAddress: "Юридический адрес будет указан после подтверждения реквизитов",
+  contactsProductionAddress: "Адрес производства и самовывоза согласуется с менеджером",
   contactsSchedule: "Пн-Пт, 10:00-18:00 по Москве",
   contactsMapButton: "показать на карте",
+  howToOrderPageTitle: "Как оформить заказ",
+  howToOrderPageLead: "Покупатель собирает товары в корзину, проверяет скидку и отправляет заявку менеджеру.",
+  howToOrderPageText:
+    "Добавьте нужные варианты товара, перейдите в корзину, заполните контакты и отправьте заказ. Менеджер проверит наличие, сроки, упаковку, документы и подтвердит финальные условия.",
+  deliveryPageTitle: "Доставка товара",
+  deliveryPageLead: "Способ доставки и город отгрузки согласуются после проверки оптовой заявки.",
+  deliveryPageText:
+    "Доставка рассчитывается после подтверждения состава заказа, веса, объема и требований к упаковке. Возможны самовывоз, транспортная компания или индивидуальная схема отгрузки.",
+  paymentPageTitle: "Оплата товара",
+  paymentPageLead: "Оплата фиксируется после согласования заказа, счета и реквизитов.",
+  paymentPageText:
+    "Для юридических лиц и ИП возможна оплата по счету. Финальный порядок оплаты, резерв товара и документы подтверждает менеджер перед запуском партии.",
+  returnsPageTitle: "Возврат товара",
+  returnsPageLead: "Вопросы возврата и претензий решаются по согласованным условиям заказа.",
+  returnsPageText:
+    "Если в партии есть расхождения по количеству, комплектности или качеству, зафиксируйте их фото и описанием. Менеджер проверит обращение и предложит решение.",
+  sellerSupportPageTitle: "Поддержка селлеров",
+  sellerSupportPageLead: "Помощь с упаковкой, маркировкой и подготовкой партий для маркетплейсов.",
+  sellerSupportPageText:
+    "Можно согласовать штрихкоды, упаковку, комплектацию, маркировку и требования площадок. Детали фиксируются до запуска партии в производство.",
+  wholesalePageTitle: "Оптовые партии",
+  wholesalePageLead: "Партии собираются из готовых позиций и изделий под макет клиента.",
+  wholesalePageText:
+    "Оптовая партия может включать разные изделия, размеры, материалы и принты. Скидка зависит от суммы корзины, а сроки запуска подтверждаются после проверки состава заказа.",
   footerBrand: "SOBAG OPT",
   footerText: "B2B-каталог для оптовых заказов текстиля с принтами, производства под макет и поставок партиями.",
   footerSalesLabel: "Отдел опта",
@@ -418,9 +444,29 @@ const siteTextFields = [
   { key: "aboutPageProductionText", label: "О компании: текст производства", multiline: true, wide: true },
   { key: "contactsPageTitle", label: "Контакты: заголовок" },
   { key: "contactsPageLead", label: "Контакты: вступление", multiline: true, wide: true },
-  { key: "contactsAddress", label: "Контакты: адрес для Яндекс Карт" },
+  { key: "contactsAddress", label: "Контакты: общий адрес" },
+  { key: "contactsLegalAddress", label: "Контакты: юридический адрес" },
+  { key: "contactsProductionAddress", label: "Контакты: адрес производства" },
   { key: "contactsSchedule", label: "Контакты: график" },
   { key: "contactsMapButton", label: "Контакты: кнопка карты" },
+  { key: "howToOrderPageTitle", label: "Как оформить заказ: заголовок" },
+  { key: "howToOrderPageLead", label: "Как оформить заказ: вступление", multiline: true, wide: true },
+  { key: "howToOrderPageText", label: "Как оформить заказ: текст", multiline: true, wide: true },
+  { key: "deliveryPageTitle", label: "Доставка: заголовок" },
+  { key: "deliveryPageLead", label: "Доставка: вступление", multiline: true, wide: true },
+  { key: "deliveryPageText", label: "Доставка: текст", multiline: true, wide: true },
+  { key: "paymentPageTitle", label: "Оплата: заголовок" },
+  { key: "paymentPageLead", label: "Оплата: вступление", multiline: true, wide: true },
+  { key: "paymentPageText", label: "Оплата: текст", multiline: true, wide: true },
+  { key: "returnsPageTitle", label: "Возврат: заголовок" },
+  { key: "returnsPageLead", label: "Возврат: вступление", multiline: true, wide: true },
+  { key: "returnsPageText", label: "Возврат: текст", multiline: true, wide: true },
+  { key: "sellerSupportPageTitle", label: "Поддержка селлеров: заголовок" },
+  { key: "sellerSupportPageLead", label: "Поддержка селлеров: вступление", multiline: true, wide: true },
+  { key: "sellerSupportPageText", label: "Поддержка селлеров: текст", multiline: true, wide: true },
+  { key: "wholesalePageTitle", label: "Оптовые партии: заголовок" },
+  { key: "wholesalePageLead", label: "Оптовые партии: вступление", multiline: true, wide: true },
+  { key: "wholesalePageText", label: "Оптовые партии: текст", multiline: true, wide: true },
   { key: "footerBrand", label: "Подвал: название" },
   { key: "footerText", label: "Подвал: описание", multiline: true, wide: true },
   { key: "footerSalesLabel", label: "Подвал: отдел" },
@@ -487,7 +533,37 @@ const siteTextFieldPages = [
   {
     title: "Страница: контакты",
     note: "Отдельная страница контактов, адрес для Яндекс Карт и график работы.",
-    keys: ["contactsPageTitle", "contactsPageLead", "contactsAddress", "contactsSchedule", "contactsMapButton"],
+    keys: ["contactsPageTitle", "contactsPageLead", "contactsAddress", "contactsLegalAddress", "contactsProductionAddress", "contactsSchedule", "contactsMapButton"],
+  },
+  {
+    title: "Страница: как оформить заказ",
+    note: "Информационный раздел из подвала.",
+    keys: ["howToOrderPageTitle", "howToOrderPageLead", "howToOrderPageText"],
+  },
+  {
+    title: "Страница: доставка товара",
+    note: "Информационный раздел из подвала.",
+    keys: ["deliveryPageTitle", "deliveryPageLead", "deliveryPageText"],
+  },
+  {
+    title: "Страница: оплата товара",
+    note: "Информационный раздел из подвала.",
+    keys: ["paymentPageTitle", "paymentPageLead", "paymentPageText"],
+  },
+  {
+    title: "Страница: возврат товара",
+    note: "Информационный раздел из подвала.",
+    keys: ["returnsPageTitle", "returnsPageLead", "returnsPageText"],
+  },
+  {
+    title: "Страница: поддержка селлеров",
+    note: "Информационный раздел из подвала.",
+    keys: ["sellerSupportPageTitle", "sellerSupportPageLead", "sellerSupportPageText"],
+  },
+  {
+    title: "Страница: оптовые партии",
+    note: "Информационный раздел из подвала.",
+    keys: ["wholesalePageTitle", "wholesalePageLead", "wholesalePageText"],
   },
   {
     title: "Страница: корзина и оформление",
@@ -501,7 +577,24 @@ const siteTextFieldPages = [
   },
 ];
 
-const adminPageAnchors = ["global", "home", "catalog", "marketplaces", "custom", "business", "about", "contacts", "cart", "footer"];
+const adminPageAnchors = [
+  "global",
+  "home",
+  "catalog",
+  "marketplaces",
+  "custom",
+  "business",
+  "about",
+  "contacts",
+  "how-to-order",
+  "delivery",
+  "payment",
+  "returns",
+  "seller-support",
+  "wholesale",
+  "cart",
+  "footer",
+];
 
 const siteTextFieldGroups = siteTextFieldPages.map((group, index) => ({
   ...group,
@@ -704,7 +797,7 @@ function normalizeSiteContent(content = {}) {
   const migrated = { ...content };
   const benefitReplacements = {
     heroSpecOneText: ["минимальная сумма корзины", defaultSiteContent.heroSpecOneText],
-    heroSpecTwoText: [["тестовый срок запуска партии", "тестовый запуск партии"], defaultSiteContent.heroSpecTwoText],
+    heroSpecTwoText: [["временный срок запуска партии", "временный запуск партии"], defaultSiteContent.heroSpecTwoText],
     heroSpecThreeValue: ["18%", defaultSiteContent.heroSpecThreeValue],
     heroSpecThreeText: ["максимальная скидка по шкале", defaultSiteContent.heroSpecThreeText],
     benefitOneTitle: ["Скидки по количеству", defaultSiteContent.benefitOneTitle],
@@ -720,7 +813,7 @@ function normalizeSiteContent(content = {}) {
     businessPageLead: [
       [
         "Оптовые условия для магазинов, селлеров и корпоративных клиентов: скидка от суммы заказа, производство в одном месте и сопровождение менеджера.",
-        "Рабочие тестовые условия для магазинов, селлеров и корпоративных клиентов: скидка от суммы заказа, производство в одном месте и сопровождение менеджера.",
+        "Рабочие условия для магазинов, селлеров и корпоративных клиентов: скидка от суммы заказа, производство в одном месте и сопровождение менеджера.",
       ],
       defaultSiteContent.businessPageLead,
     ],
@@ -735,7 +828,7 @@ function normalizeSiteContent(content = {}) {
     businessProductionText: [
       [
         "Печать, пошив, упаковка, маркировка и подготовка к отгрузке выполняются в одном процессе, чтобы партия была готова к продаже.",
-        "Печать, раскрой, пошив, упаковка, маркировка и подготовка к отгрузке выполняются в одном процессе. Для теста считаем, что стандартная партия запускается за 7 рабочих дней после согласования.",
+        "Печать, раскрой, пошив, упаковка, маркировка и подготовка к отгрузке выполняются в одном процессе. Стандартная партия запускается после согласования состава заказа и материалов.",
       ],
       defaultSiteContent.businessProductionText,
     ],
@@ -750,15 +843,15 @@ function normalizeSiteContent(content = {}) {
     aboutPageTitle: ["О компании", defaultSiteContent.aboutPageTitle],
     aboutPageLead: [
       [
-        "Sobag Opt — тестовая витрина для оптовых продаж текстиля с принтами и заказов на производство под ваш макет.",
-        "Sobag Opt — тестовый B2B-каталог для оптовых продаж текстиля с принтами и заказов на производство под макет покупателя.",
+        "Sobag Opt — B2B-витрина для оптовых продаж текстиля с принтами и заказов на производство под ваш макет.",
+        "Sobag Opt — B2B-каталог для оптовых продаж текстиля с принтами и заказов на производство под макет покупателя.",
       ],
       defaultSiteContent.aboutPageLead,
     ],
     aboutPageText: [
       [
         "Здесь позже появится история компании, описание производства, сильные стороны команды и условия работы с оптовыми покупателями.",
-        "Мы работаем с магазинами, селлерами и корпоративными клиентами: помогаем подобрать товар, собрать партию, рассчитать скидку, подготовить упаковку и передать заказ в производство. Эти данные тестовые, позже здесь будут реальные факты о компании.",
+        "Мы работаем с магазинами, селлерами и корпоративными клиентами: помогаем подобрать товар, собрать партию, рассчитать скидку, подготовить упаковку и передать заказ в производство.",
       ],
       defaultSiteContent.aboutPageText,
     ],
@@ -766,14 +859,14 @@ function normalizeSiteContent(content = {}) {
     aboutPageProductionText: [
       [
         "Мы готовим партии для маркетплейсов, магазинов и корпоративных клиентов: печать, пошив, комплектация и подготовка к отгрузке.",
-        "В тестовой модели производство включает печать, раскрой, пошив, контроль качества, упаковку, маркировку и подготовку к отгрузке. Один принт можно выпускать в разных изделиях, размерах и материалах.",
+        "Производство включает печать, раскрой, пошив, контроль качества, упаковку, маркировку и подготовку к отгрузке. Один принт можно выпускать в разных изделиях, размерах и материалах.",
       ],
       defaultSiteContent.aboutPageProductionText,
     ],
     contactsPageLead: [
       [
         "Здесь будут контакты отдела опта, адрес производства и карта.",
-        "Тестовые контакты отдела опта. Позже здесь будут реальные телефон, почта, адрес производства и карта.",
+        "Контакты отдела опта: телефон, почта, адрес производства и карта.",
       ],
       defaultSiteContent.contactsPageLead,
     ],
@@ -781,14 +874,14 @@ function normalizeSiteContent(content = {}) {
     contactsSchedule: ["Пн-Пт, 10:00-18:00", defaultSiteContent.contactsSchedule],
     footerText: [
       [
-        "Тестовый прототип B2B-сайта для оптовых продаж текстиля с принтами.",
-        "Тестовый B2B-каталог для оптовых заказов текстиля с принтами, производства под макет и поставок партиями.",
+        "B2B-сайт для оптовых продаж текстиля с принтами.",
+        "B2B-каталог для оптовых заказов текстиля с принтами, производства под макет и поставок партиями.",
       ],
       defaultSiteContent.footerText,
     ],
     footerEmail: ["opt@sobag-shop.ru", defaultSiteContent.footerEmail],
     footerPhone: ["+7 900 000-00-00", defaultSiteContent.footerPhone],
-    footerAddress: [["Адрес производства будет уточнен", "Тестовый адрес: Москва, ул. Текстильщиков, 12, стр. 2"], defaultSiteContent.footerAddress],
+    footerAddress: [["Адрес производства будет уточнен", "Адрес: Москва, ул. Текстильщиков, 12, стр. 2"], defaultSiteContent.footerAddress],
   };
   Object.entries(benefitReplacements).forEach(([key, [oldValue, newValue]]) => {
     const oldValues = Array.isArray(oldValue) ? oldValue : [oldValue];
@@ -945,6 +1038,12 @@ function footerLinkUrl(label = "") {
   if (prepared.includes("маркетплейс")) return "marketplaces.html";
   if (prepared.includes("свой") || prepared.includes("принт")) return "custom.html";
   if (prepared.includes("услов")) return "business.html";
+  if (prepared.includes("как оформить") || prepared.includes("оформить заказ")) return "how-to-order.html";
+  if (prepared.includes("достав")) return "delivery.html";
+  if (prepared.includes("оплат")) return "payment.html";
+  if (prepared.includes("возврат")) return "returns.html";
+  if (prepared.includes("поддерж") || prepared.includes("селлер")) return "seller-support.html";
+  if (prepared.includes("оптов") || prepared.includes("парт")) return "wholesale.html";
   if (prepared.includes("политик") || prepared.includes("персональ")) return "assets/legal/personal-data-consent.pdf";
   if (prepared.includes("соглаш")) return "terms.html";
   return "#";
@@ -965,7 +1064,7 @@ function renderFooterLinks(selector, value) {
   });
 }
 
-function syncCatalogRoute() {
+function syncCatalogRoute(options = {}) {
   if (!catalogListing || document.body.classList.contains("home-page")) return;
   const params = new URLSearchParams();
   if (state.selectedCategory) params.set("category", state.selectedCategory);
@@ -973,7 +1072,9 @@ function syncCatalogRoute() {
   if (state.selectedHoliday) params.set("holiday", state.selectedHoliday);
   if (state.search.trim()) params.set("q", state.search.trim());
   const nextUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
-  window.history.replaceState({}, "", nextUrl);
+  if (nextUrl === `${window.location.pathname}${window.location.search}`) return;
+  const method = options.mode === "push" ? "pushState" : "replaceState";
+  window.history[method]({ catalog: true }, "", nextUrl);
 }
 
 function routeKey(pathname = window.location.pathname) {
@@ -990,7 +1091,7 @@ function smoothScrollToHash(hash) {
   return true;
 }
 
-function applyCatalogUrl(targetUrl) {
+function applyCatalogUrl(targetUrl, options = {}) {
   if (!catalogListing) return false;
   const params = new URLSearchParams(targetUrl.search);
   state.selectedCategory = params.get("category") || "";
@@ -1000,7 +1101,7 @@ function applyCatalogUrl(targetUrl) {
   if (searchInput) searchInput.value = state.search;
   Object.values(state.filters).forEach((bucket) => bucket.clear());
   resetVisibleProducts();
-  syncCatalogRoute();
+  if (options.sync !== false) syncCatalogRoute();
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -1270,11 +1371,12 @@ function navigateWithinSite(url) {
   window.location.href = targetUrl.href;
 }
 
-function updateYandexMap(address) {
-  const prepared = String(address || "").trim() || defaultSiteContent.contactsAddress;
+function updateYandexMap(address, target = "") {
+  const prepared = String(address || "").trim() || defaultSiteContent.contactsProductionAddress || defaultSiteContent.contactsAddress;
   const encoded = encodeURIComponent(prepared);
-  const frame = document.querySelector("#yandexMapFrame");
-  const link = document.querySelector("#yandexMapLink");
+  const suffix = target ? `-${target}` : "";
+  const frame = document.querySelector(`#yandexMapFrame${suffix}`);
+  const link = document.querySelector(`#yandexMapLink${suffix}`);
   if (frame) frame.src = `https://yandex.ru/map-widget/v1/?text=${encoded}&z=16`;
   if (link) link.href = `https://yandex.ru/maps/?text=${encoded}`;
 }
@@ -1724,11 +1826,25 @@ function renderSiteContent() {
   setText("[data-contacts-page-title]", content.contactsPageTitle);
   setText("[data-contacts-page-lead]", content.contactsPageLead);
   setText("[data-contacts-address]", content.contactsAddress);
+  setText("[data-contacts-legal-address]", content.contactsLegalAddress);
+  setText("[data-contacts-production-address]", content.contactsProductionAddress);
   setText("[data-contacts-schedule]", content.contactsSchedule);
   setText("[data-contacts-map-button]", buttonLabel(content.contactsMapButton));
-  const mapAddressInput = document.querySelector("#mapAddressInput");
-  if (mapAddressInput && !mapAddressInput.dataset.userEdited) mapAddressInput.value = content.contactsAddress;
-  updateYandexMap(mapAddressInput?.value || content.contactsAddress);
+  updateYandexMap(content.contactsLegalAddress, "legal");
+  updateYandexMap(content.contactsProductionAddress, "production");
+  updateYandexMap(content.contactsAddress);
+  [
+    ["how-to-order", content.howToOrderPageTitle, content.howToOrderPageLead, content.howToOrderPageText],
+    ["delivery", content.deliveryPageTitle, content.deliveryPageLead, content.deliveryPageText],
+    ["payment", content.paymentPageTitle, content.paymentPageLead, content.paymentPageText],
+    ["returns", content.returnsPageTitle, content.returnsPageLead, content.returnsPageText],
+    ["seller-support", content.sellerSupportPageTitle, content.sellerSupportPageLead, content.sellerSupportPageText],
+    ["wholesale", content.wholesalePageTitle, content.wholesalePageLead, content.wholesalePageText],
+  ].forEach(([page, title, lead, text]) => {
+    setText(`[data-info-page-title="${page}"]`, title);
+    setText(`[data-info-page-lead="${page}"]`, lead);
+    setText(`[data-info-page-text="${page}"]`, text);
+  });
   const marketplaceCards = document.querySelectorAll(".marketplace-card");
   [
     [content.marketplaceOneName, content.marketplaceOneTitle, content.marketplaceOneText],
@@ -3937,7 +4053,12 @@ function renderActiveFilterChips() {
   if (!activeFilterChips) return;
   const items = activeFilterItems();
   activeFilterChips.classList.toggle("is-hidden", !items.length);
-  activeFilterChips.innerHTML = items
+  activeFilterChips.innerHTML = [
+    `<button class="active-filter-chips__reset" type="button" data-clear-all-filters>
+      <i data-lucide="rotate-ccw"></i>
+      <span>Снять все фильтры</span>
+    </button>`,
+    ...items
     .map(
       (item) => `
         <button type="button" data-clear-filter="${escapeHtml(item.key)}" data-clear-value="${escapeHtml(item.value || "")}">
@@ -3945,8 +4066,8 @@ function renderActiveFilterChips() {
           <i data-lucide="x"></i>
         </button>
       `
-    )
-    .join("");
+    ),
+  ].join("");
 }
 
 function catalogContentItem(items = [], name = "") {
@@ -4071,6 +4192,20 @@ function clearCatalogFilter(key, value = "") {
     if (value) state.filters[key].delete(value);
     else state.filters[key].clear();
   }
+  resetVisibleProducts();
+  syncCatalogRoute();
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
+}
+
+function clearAllCatalogFilters() {
+  state.selectedCategory = "";
+  state.selectedCollection = "";
+  state.selectedHoliday = "";
+  state.search = "";
+  if (searchInput) searchInput.value = "";
+  Object.values(state.filters).forEach((bucket) => bucket.clear());
   resetVisibleProducts();
   syncCatalogRoute();
   renderCatalogShell();
@@ -4414,7 +4549,7 @@ function openCatalogCategory(category) {
   state.selectedHoliday = "";
   state.filters.category.clear();
   resetVisibleProducts();
-  syncCatalogRoute();
+  syncCatalogRoute({ mode: "push" });
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -4431,7 +4566,7 @@ function openCatalogCollection(collection) {
   state.selectedHoliday = "";
   state.filters.collection.clear();
   resetVisibleProducts();
-  syncCatalogRoute();
+  syncCatalogRoute({ mode: "push" });
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -4448,7 +4583,7 @@ function openCatalogHoliday(holiday) {
   state.selectedHoliday = holiday;
   state.filters.holiday.clear();
   resetVisibleProducts();
-  syncCatalogRoute();
+  syncCatalogRoute({ mode: "push" });
   renderCatalogShell();
   renderFilters();
   renderProducts();
@@ -4755,13 +4890,16 @@ function renderAccountButton() {
   if (!button) return;
   const users = getUsers();
   const user = users[state.currentUser];
+  const isGuest = !user;
+  button.classList.toggle("account-login-button", isGuest);
   button.title = user ? `${user.name || user.email}` : "Войти или зарегистрироваться";
-  button.innerHTML =
-    user?.role === "admin"
-      ? '<i data-lucide="shield"></i>'
-      : user?.role === "manager"
-      ? '<i data-lucide="briefcase-business"></i>'
-      : '<i data-lucide="user"></i>';
+  button.innerHTML = isGuest
+    ? '<i data-lucide="user"></i><span>Вход / регистрация</span>'
+    : user?.role === "admin"
+    ? '<i data-lucide="shield"></i>'
+    : user?.role === "manager"
+    ? '<i data-lucide="briefcase-business"></i>'
+    : '<i data-lucide="user"></i>';
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -7298,6 +7436,12 @@ function adminSectionHref(anchor) {
       business: "business.html",
       about: "about.html",
       contacts: "contacts.html",
+      "how-to-order": "how-to-order.html",
+      delivery: "delivery.html",
+      payment: "payment.html",
+      returns: "returns.html",
+      "seller-support": "seller-support.html",
+      wholesale: "wholesale.html",
       cart: "cart.html",
       footer: "index.html#footer",
     }[anchor] || "index.html"
@@ -7323,6 +7467,12 @@ function adminSectionMapHtml() {
     { anchor: "business", title: "Условия для бизнеса", note: "Оптовые условия, скидки и запуск партии", shot: "page" },
     { anchor: "about", title: "О компании", note: "Описание производства", shot: "page" },
     { anchor: "contacts", title: "Контакты", note: "Адрес, карта, график", shot: "contacts" },
+    { anchor: "how-to-order", title: "Как оформить заказ", note: "Инструкция из подвала", shot: "page" },
+    { anchor: "delivery", title: "Доставка товара", note: "Условия доставки", shot: "page" },
+    { anchor: "payment", title: "Оплата товара", note: "Условия оплаты", shot: "page" },
+    { anchor: "returns", title: "Возврат товара", note: "Возврат и претензии", shot: "page" },
+    { anchor: "seller-support", title: "Поддержка селлеров", note: "Маркировка и упаковка", shot: "page" },
+    { anchor: "wholesale", title: "Оптовые партии", note: "Партии и условия", shot: "page" },
     { anchor: "cart", title: "Корзина", note: "Оформление и промокод", shot: "cart" },
     { anchor: "footer", title: "Подвал", note: "Нижнее меню и контакты", shot: "footer" },
   ];
@@ -8639,6 +8789,11 @@ function boot() {
     loadImportBatches();
   });
 
+  window.addEventListener("popstate", () => {
+    if (!catalogListing) return;
+    applyCatalogUrl(new URL(window.location.href), { sync: false });
+  });
+
   document.addEventListener("click", async (event) => {
     if (event.target.dataset.closeModal !== undefined) {
       closeModal();
@@ -8716,6 +8871,10 @@ function boot() {
     }
     if (button.dataset.clearFilter) {
       clearCatalogFilter(button.dataset.clearFilter, button.dataset.clearValue || "");
+      return;
+    }
+    if (button.dataset.clearAllFilters !== undefined) {
+      clearAllCatalogFilters();
       return;
     }
     if (button.dataset.searchQuery) {
