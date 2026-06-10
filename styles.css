@@ -5378,6 +5378,22 @@ body.theme-night .hero__actions .ghost-button:hover {
   padding-top: 48px;
 }
 
+.catalog-page .page-back {
+  padding-top: 12px;
+}
+
+.catalog-page .catalog-section {
+  padding-top: 8px;
+}
+
+.catalog-page .section-head {
+  margin-bottom: 14px;
+}
+
+.catalog-page .accent-stripe {
+  margin-bottom: 12px;
+}
+
 .custom-page .custom__photo-band {
   margin-top: 28px;
 }

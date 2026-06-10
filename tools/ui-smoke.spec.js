@@ -267,6 +267,7 @@ test("catalog navigation and favorite toggles do not reload the same document", 
   await page.waitForTimeout(250);
   await expect(page).toHaveURL(/\/catalog(?:\.html)?$/);
   await expect(page.locator("#catalogHome")).toBeVisible();
+  await expect(page.locator("#catalogPageBack")).toContainText("На главную");
   await expect.poll(() => page.evaluate(() => Number(localStorage.getItem("__sobagQaDocumentLoads") || "0"))).toBe(0);
 
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
@@ -483,19 +484,15 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator("#catalogTitle")).toContainText(category);
   await expect(page.locator("[data-back-catalog]")).toContainText("В каталог");
   await expect(page.locator(".page-back .ghost-button")).toContainText("В каталог");
-  await expect(page.locator("#catalogSeoCopy")).toBeVisible();
-  await expect(page.locator("#catalogSeoCopy")).toContainText(category);
-  await expect(page.locator("#catalogSeoCopy")).toContainText("оптовая");
+  await expect(page.locator("#catalogSeoCopy")).toBeHidden();
 
   await page.goto(`${BASE_URL}/catalog?collection=${encodeURIComponent("Паттерны")}`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
-  await expect(page.locator("#catalogSeoCopy")).toContainText("Паттерны");
-  await expect(page.locator("#catalogSeoCopy")).toContainText("Повторяющиеся");
+  await expect(page.locator("#catalogSeoCopy")).toBeHidden();
 
   await page.goto(`${BASE_URL}/catalog?holiday=${encodeURIComponent("23 февраля")}`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
-  await expect(page.locator("#catalogSeoCopy")).toContainText("23 февраля");
-  await expect(page.locator("#catalogSeoCopy")).toContainText("Сезонная подборка");
+  await expect(page.locator("#catalogSeoCopy")).toBeHidden();
 
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);

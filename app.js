@@ -624,6 +624,7 @@ const catalogHome = document.querySelector("#catalogHome");
 const catalogListing = document.querySelector("#catalogListing");
 const catalogTools = document.querySelector("#catalogTools");
 const catalogTitle = document.querySelector("#catalogTitle");
+const catalogPageBack = document.querySelector("#catalogPageBack");
 const filterToggle = document.querySelector("#filterToggle");
 const searchInput = document.querySelector("#searchInput");
 const sortSelect = document.querySelector("#sortSelect");
@@ -3799,11 +3800,20 @@ function catalogSeoCopyData(total = 0) {
 
 function renderCatalogSeoCopy(total = 0) {
   if (!catalogSeoCopy) return;
-  const data = catalogSeoCopyData(total);
-  catalogSeoCopy.classList.toggle("is-hidden", !data);
-  catalogSeoCopy.innerHTML = data
-    ? `<h2>${escapeHtml(data.title)}</h2><p>${escapeHtml(data.text)}</p>`
-    : "";
+  catalogSeoCopy.innerHTML = "";
+  catalogSeoCopy.classList.add("is-hidden");
+}
+
+function updateCatalogPageBack(isHome) {
+  if (!catalogPageBack) return;
+  updateButtonText(catalogPageBack, isHome ? "На главную" : getSiteContent().catalogBackButton, { preserveCase: true });
+  if (isHome) {
+    delete catalogPageBack.dataset.backCatalog;
+    catalogPageBack.dataset.nav = "index.html";
+    return;
+  }
+  delete catalogPageBack.dataset.nav;
+  catalogPageBack.dataset.backCatalog = "";
 }
 
 function miniProductCard(product) {
@@ -3954,6 +3964,7 @@ function renderCatalogShell() {
   catalogHome.classList.toggle("is-hidden", !isHome);
   catalogListing.classList.toggle("is-hidden", isHome);
   catalogTools.classList.toggle("is-hidden", isHome || isFavoritesPage);
+  updateCatalogPageBack(isHome);
   document.body.classList.remove("filters-open");
   updateFilterToggle();
 

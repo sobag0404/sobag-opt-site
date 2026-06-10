@@ -22,7 +22,7 @@ Last updated: 2026-06-10
 - [x] Smoke tests and autofix checks.
 - [x] Separate search results page: `/search?q=...`, result count, suggestions, quick filters, exact SKU priority, production check.
 - [x] Product reviews: authorized buyer form, rating/text, approved reviews in product modal, admin moderation and persistence through existing storage/API.
-- [x] Goal-mode UI invariant: product photos and category/collection/holiday photos render as square 1:1 previews; selected catalog pages use `В каталог`, not `На главную`, for the top/catalog return action.
+- [x] Goal-mode UI invariant: product photos and category/collection/holiday photos render as square 1:1 previews; catalog home uses `На главную`, while selected catalog pages use `В каталог` for the top return action.
 
 ## Remaining Checklist
 
@@ -66,7 +66,7 @@ Last updated: 2026-06-10
      - [x] Product schema for public product modal/detail state, including offers, images, and approved review aggregate data.
      - [x] FAQ schema for the real business terms FAQ block.
    - [ ] SEO landing copy for important categories, collections, and holidays.
-     - [x] First catalog landing copy slice: selected category/collection/holiday pages now render contextual SEO copy from the current content/catalog state.
+     - [x] First catalog landing copy slice: selected category/collection/holiday SEO descriptions are kept in the current content/admin state; the former visible catalog plaque was later hidden per UX feedback.
      - [x] Editable SEO descriptions for default collections and holidays: admin content supports `name | description | icon`, with backward compatibility for old `name | icon` rows.
    - [ ] Yandex map final address setup.
 

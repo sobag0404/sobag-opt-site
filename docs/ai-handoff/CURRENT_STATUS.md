@@ -33,7 +33,7 @@ Current focus:
 - VPS env readiness now has a safe local preflight script and offline self-test coverage;
 - VPS file-store backups now have a local helper and offline backup/restore self-test coverage;
 - VPS launch/cutover now has a step-by-step runbook with preflight, smoke, DNS cutover, rollback, backup, photo/catalog, and Vercel fallback checks;
-- Goal-mode UI invariant: product photos and category/collection/holiday photos should stay square 1:1; selected catalog pages should say `В каталог`, not `На главную`, for the top return action;
+- Goal-mode UI invariant: product photos and category/collection/holiday photos should stay square 1:1; catalog home top return action should say `На главную`, while selected catalog pages should say `В каталог`;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, smaller public query page size, and smaller local fallback pages;
 - Responsive product images now have frontend `<picture>` selection for stored AVIF/WebP variants; real migrated catalog validation is still pending.
 - SEO/content structured data covers Product/FAQ schema; production-safe public copy and first catalog landing copy slices are committed locally;
@@ -41,6 +41,13 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Catalog listing UI cleanup:
+  - catalog home has a single top return button labeled `На главную`;
+  - selected category/collection/holiday pages reuse the same top button as `В каталог`;
+  - the duplicate section-level return button was removed from the catalog heading;
+  - selected-listing top spacing was tightened so products start higher under the search/header area;
+  - the visible category SEO/promo plaque under the toolbar was disabled per user screenshot while keeping the content element and offline audit surface in place;
+  - UI smoke now guards home/category button labels and the hidden plaque.
 - 10k+ catalog runtime performance slice:
   - public `/api/catalog-query` card payload no longer includes unused `galleryCount`;
   - scale smoke now guards compact list payloads against detail/gallery fields;
@@ -138,12 +145,12 @@ Completed most recently:
   - default collection/holiday content now carries editable `description`;
   - admin content supports `name | description | icon` for collections/holidays while preserving old `name | icon` rows;
   - imported missing collections/holidays get editable placeholder descriptions;
-  - UI smoke checks collection and holiday SEO copy.
+  - later UX feedback hides the visible catalog SEO plaque while keeping descriptions in content/admin state.
 - SEO/content cleanup and catalog landing copy slice:
   - public fallback copy no longer says test/prototype on about, contacts, business, marketplace, footer, cart promo, and terms surfaces;
   - fake static production address wording was replaced with manager-confirmed address/отгрузка wording; final Yandex address remains intentionally unconfigured until real data is confirmed;
-  - catalog category/collection/holiday listing pages now render contextual `#catalogSeoCopy` landing copy from the current content/catalog state;
-  - UI smoke now checks that selected category pages expose the SEO copy block.
+  - catalog category/collection/holiday SEO descriptions remain in the current content/catalog state;
+  - the former visible `#catalogSeoCopy` block is hidden after the 2026-06-10 catalog UI cleanup.
 - S3-compatible object storage provider slice:
   - replaced the `s3-compatible` placeholder in `api/_lib/object-storage.js` with a real provider-ready adapter for VPS/MinIO/R2 style endpoints;
   - adapter uses AWS Signature Version 4 over Node `fetch` and supports image upload, list by product prefix, hard delete, mark-unused, and public URL generation through `SOBAG_S3_PUBLIC_BASE_URL`;
