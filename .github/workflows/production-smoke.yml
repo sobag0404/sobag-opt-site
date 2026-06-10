@@ -39,5 +39,13 @@ jobs:
           node-version: "22"
       - name: Run read-only production smoke
         env:
-          SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'http://77.239.107.164' }}
+          SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}
         run: node tools/production-smoke.mjs --timeout 15000 --retries 6 --retry-delay 20000
+      - name: Run read-only production performance smoke
+        env:
+          SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}
+        run: node tools/production-performance-smoke.mjs --timeout 15000 --max-ms 8000
+      - name: Run read-only production storage readiness
+        env:
+          SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}
+        run: node tools/production-storage-readiness.mjs --timeout 15000

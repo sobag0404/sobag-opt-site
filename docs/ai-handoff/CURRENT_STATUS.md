@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Post-deploy production readiness workflow:
+  - `.github/workflows/production-smoke.yml` now runs basic production smoke, production performance smoke, and non-strict storage readiness after successful VPS deploy;
+  - added `tools/production-workflow-audit.mjs` and `npm run audit:production-workflow`;
+  - the audit keeps the workflow default on `https://sobag-shop.online` and prevents strict object-storage/catalog-DB cutover flags before approval.
 - PostgreSQL catalog DB cutover runbook/audit:
   - added `docs/catalog-db-cutover-runbook.md`, `tools/catalog-db-cutover-audit.mjs`, and `npm run audit:catalog:db-cutover`;
   - the runbook fixes the future safe switch sequence: offline catalog/PIM gates, rollback-only test DB rehearsal, disabled-by-default runtime toggle, production readiness smoke, and rollback;
