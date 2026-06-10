@@ -80,6 +80,7 @@ Last updated: 2026-06-10
      - [x] PostgreSQL query builder prep: `api/_lib/catalog-db-query.js` builds parameterized future `public_catalog_cards` list/count and `public_catalog_products` detail SQL for compact reads with guarded sort/filter/page-size mapping; `tools/catalog-db-query-smoke.mjs` guards placeholders and bounded page size.
      - [x] PostgreSQL source adapter prep: `api/_lib/catalog-db-source.js` composes the DB query builder and row adapter behind a fake-client smoke, returning current `/api/catalog-query` and `/api/catalog-detail` compatible payloads without connecting to PostgreSQL or changing runtime storage.
      - [x] PostgreSQL runtime toggle prep: `SOBAG_CATALOG_SOURCE=postgres` can switch `/api/catalog-query` and `/api/catalog-detail` to the future DB source when a configured PostgreSQL URL exists; default production remains store/static, `/api/health` reports safe catalog DB status, and `docs/catalog-postgres-source.md` documents the guardrails.
+     - [x] PostgreSQL rollback rehearsal: `tools/pim-postgres-rehearsal.mjs` builds the schema + live catalog seed SQL and can execute it inside one transaction that always rolls back, requiring explicit env-based DB config and remote-test confirmation.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:

@@ -19,6 +19,7 @@
     "audit:pim-db": "node tools/pim-db-contract-audit.mjs",
     "audit:pim-schema": "node tools/pim-postgres-schema-audit.mjs",
     "audit:pim-query": "node tools/pim-postgres-query-contract.mjs",
+    "rehearse:pim:postgres": "node tools/pim-postgres-rehearsal.mjs",
     "upload:photos": "node tools/bulk-upload-product-photos.mjs",
     "smoke:prod": "node tools/production-smoke.mjs",
     "smoke:prod:performance": "node tools/production-performance-smoke.mjs",

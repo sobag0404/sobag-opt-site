@@ -30,4 +30,12 @@ Checks:
 
 - `npm.cmd run smoke:catalog:db-client`
 - `npm.cmd run smoke:catalog:db-source`
+- `npm.cmd run rehearse:pim:postgres`
 - `npm.cmd run check`
+
+Rollback-only rehearsal:
+
+- `npm.cmd run rehearse:pim:postgres` builds schema + seed SQL locally and does not connect.
+- `node tools/pim-postgres-rehearsal.mjs --execute` connects through `SOBAG_CATALOG_DATABASE_URL`, runs schema + seed in one transaction, and always rolls back.
+- Remote test databases require `--allow-remote-test`.
+- Do not run rehearsal against production data or with production DB credentials.

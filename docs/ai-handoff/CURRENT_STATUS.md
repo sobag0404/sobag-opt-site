@@ -41,6 +41,13 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL rollback rehearsal:
+  - added `tools/pim-postgres-rehearsal.mjs` and `npm run rehearse:pim:postgres`;
+  - default mode builds schema + current catalog seed SQL without connecting to any DB;
+  - `--execute` connects only through an env var, runs schema + seed in one transaction, and always rolls back;
+  - remote test DBs require `--allow-remote-test`;
+  - production DB credentials/data remain forbidden;
+  - verification passed: `npm.cmd run rehearse:pim:postgres`, `node tools/pim-postgres-rehearsal.mjs --self-test`, and `npm.cmd run check`.
 - PostgreSQL runtime toggle prep:
   - added `api/_lib/catalog-db-client.js`, `server-routes/_lib/catalog-db-client.js`, and `tools/catalog-db-client-smoke.mjs`;
   - installed runtime dependency `pg` for the future DB source path;
