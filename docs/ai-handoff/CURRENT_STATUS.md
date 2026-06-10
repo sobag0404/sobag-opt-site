@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL env packet validator:
+  - added `docs/catalog-db-env-packet.md`, `tools/catalog-db-env-packet-audit.mjs`, and `npm run audit:catalog:db-packet`;
+  - expected test/staging DB confirmation lives in ignored `local-import-output/catalog-db-env-packet.json`;
+  - the validator rejects URL/user/password/credential-like keys and keeps production runtime toggle approval separate.
 - Object storage env packet validator:
   - added `docs/object-storage-env-packet.md`, `tools/object-storage-env-packet-audit.mjs`, and `npm run audit:object-storage-packet`;
   - expected provider confirmation lives in ignored `local-import-output/object-storage-env-packet.json`;
