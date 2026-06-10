@@ -71,3 +71,9 @@ Recommended pages:
 - one product modal from a large category
 
 Record LCP, CLS, INP/TBT, total transfer size, image format usage, and first-page API payload. Do not mark final CWV done from synthetic 808-product data.
+
+Use an ignored local packet to validate the final field audit before marking this done:
+
+```powershell
+npm.cmd run audit:cwv-field -- --packet local-import-output/cwv-field-audit-packet.json --strict
+```

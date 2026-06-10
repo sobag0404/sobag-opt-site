@@ -141,6 +141,7 @@ Last updated: 2026-06-10
    - [x] Production performance smoke: `tools/production-performance-smoke.mjs` checks live VPS compact `/api/catalog-query?pageSize=48` payload, no full list-card detail fields, public API cache headers, bounded `/api/catalog-detail`, static `app.js`/`styles.css` budgets, and static validator headers.
    - [x] Post-deploy production readiness workflow: `production-smoke.yml` now runs basic production smoke, performance smoke, and non-strict storage readiness after successful VPS deploy, with `tools/production-workflow-audit.mjs` guarding the HTTPS domain default and read-only checks.
    - [x] Goal readiness report: `tools/goal-readiness-report.mjs` aggregates SEO/content, photo migration, DB split readiness, and CWV readiness so the project does not claim the four-upgrade goal complete while final external inputs are still missing.
+   - [x] CWV field audit packet validator: `docs/cwv-field-audit-packet.md` and `tools/cwv-field-audit-packet.mjs` define the ignored final audit packet for real 10k+ catalog/photo data, required pages, WebP/AVIF usage, and LCP/CLS/INP/TBT/payload thresholds.
    - [x] VPS static revalidation: `server.mjs` returns ETag/Last-Modified for static assets and supports conditional 304 responses so repeat page loads do not redownload unchanged JS/CSS/assets.
    - [ ] Core Web Vitals audit after real catalog growth.
 

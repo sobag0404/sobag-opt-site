@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- CWV field audit packet validator:
+  - added `docs/cwv-field-audit-packet.md`, `tools/cwv-field-audit-packet.mjs`, and `npm run audit:cwv-field`;
+  - expected final field audit lives in ignored `local-import-output/cwv-field-audit-packet.json`;
+  - the validator requires real 10k+ catalog/photo readiness, required pages, WebP/AVIF usage, and LCP/CLS/INP-or-TBT/API-payload thresholds.
 - PostgreSQL env packet validator:
   - added `docs/catalog-db-env-packet.md`, `tools/catalog-db-env-packet-audit.mjs`, and `npm run audit:catalog:db-packet`;
   - expected test/staging DB confirmation lives in ignored `local-import-output/catalog-db-env-packet.json`;
