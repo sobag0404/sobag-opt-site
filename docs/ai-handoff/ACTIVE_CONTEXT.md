@@ -33,6 +33,7 @@ Last updated: 2026-06-10
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-10: added `docs/final-content-apply-plan.md`, `tools/final-content-apply-plan.mjs`, and `npm run plan:final-content`; after a strict final content packet is available, it creates an ignored dry-run content patch for review without calling production APIs or changing server content.
 - Current pass 2026-06-10: added `tools/goal-inputs-packet-template.mjs` and `npm run prepare:goal-inputs`, which create ignored local starter packet files for the remaining real external inputs without secrets and without overwriting existing local packets by default.
 - Current pass 2026-06-10: continued the active four-upgrade goal by adding `docs/goal-inputs-packet.md`, `tools/goal-inputs-packet-audit.mjs`, and `npm run audit:goal-inputs`, a single non-strict/strict gate over the ignored local packets for final content facts, object storage readiness, PostgreSQL test DB readiness, and final CWV field measurements.
 - Current pass 2026-06-10: continued ordered upgrade point 4 (Performance/Core Web Vitals). Strengthened `tools/production-performance-smoke.mjs` so the live VPS performance smoke now verifies static `app.js`/`styles.css` conditional `304` revalidation and `HEAD` responses without bodies, and `tools/core-web-vitals-readiness.mjs` guards that coverage.

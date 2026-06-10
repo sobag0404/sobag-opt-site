@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Final content apply plan:
+  - added `docs/final-content-apply-plan.md`, `tools/final-content-apply-plan.mjs`, and `npm run plan:final-content`;
+  - the tool reads a strict-ready `local-import-output/final-content-packet.json` and writes an ignored dry-run content patch for review;
+  - it does not call production APIs or change server content.
 - Goal input packet templates:
   - added `tools/goal-inputs-packet-template.mjs` and `npm run prepare:goal-inputs`;
   - the command creates ignored starter JSON packets under `local-import-output/` for final content facts, object storage readiness, PostgreSQL test DB readiness, and final CWV measurements;
