@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Content readiness guard:
+  - added `tools/content-readiness-report.mjs` and `npm run audit:content-readiness`;
+  - the report rejects fake/old public contact data and reports final contact/address readiness without inventing legal facts;
+  - current state is safe but not final-ready because phone/legal address/production address/dispatch address still require confirmed real data.
 - PostgreSQL write transaction rehearsal:
   - added `tools/catalog-db-write-rehearsal.mjs` and `npm run rehearse:catalog:db-write`;
   - the rehearsal runs the current live catalog through the future transaction wrapper with a fake client and verifies rollback-only behavior;
