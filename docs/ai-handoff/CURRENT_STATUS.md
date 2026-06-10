@@ -41,6 +41,9 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Live static revalidation performance smoke:
+  - strengthened `tools/production-performance-smoke.mjs` so post-deploy live checks verify `app.js` and `styles.css` validator headers, conditional `304` responses, and `HEAD` without a body;
+  - `tools/core-web-vitals-readiness.mjs` now guards that the production performance smoke keeps this coverage.
 - CWV field audit packet validator:
   - added `docs/cwv-field-audit-packet.md`, `tools/cwv-field-audit-packet.mjs`, and `npm run audit:cwv-field`;
   - expected final field audit lives in ignored `local-import-output/cwv-field-audit-packet.json`;

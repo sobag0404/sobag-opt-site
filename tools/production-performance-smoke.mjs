@@ -56,13 +56,18 @@ function normalizeBaseUrl(raw) {
   return url.toString().replace(/\/$/, "");
 }
 
-async function fetchText(base, path, args) {
+async function fetchText(base, path, args, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(new Error(`Timed out after ${args.timeoutMs}ms`)), args.timeoutMs);
   const startedAt = performance.now();
   try {
     const response = await fetch(new URL(path, `${base}/`), {
-      headers: { accept: "application/json,text/css,application/javascript,*/*;q=0.1", "user-agent": "sobag-production-performance-smoke/1.0" },
+      method: options.method || "GET",
+      headers: {
+        accept: "application/json,text/css,application/javascript,*/*;q=0.1",
+        "user-agent": "sobag-production-performance-smoke/1.0",
+        ...(options.headers || {}),
+      },
       signal: controller.signal,
     });
     const body = await response.text();
@@ -81,6 +86,16 @@ async function fetchText(base, path, args) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function assertStaticRevalidation(base, asset, args) {
+  const headers = asset.etag ? { "If-None-Match": asset.etag } : { "If-Modified-Since": asset.lastModified };
+  const cached = await fetchText(base, asset.path, args, { headers });
+  assert(cached.status === 304, `${asset.path}: expected 304 revalidation, got ${cached.status}`);
+
+  const head = await fetchText(base, asset.path, args, { method: "HEAD" });
+  assert(head.ok, `${asset.path}: HEAD expected 2xx, got ${head.status}`);
+  assert(head.bytes === 0, `${asset.path}: HEAD should not return a body`);
 }
 
 function parseJson(result) {
@@ -140,6 +155,7 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
     assert(asset.cacheControl.includes("max-age=3600") || asset.cacheControl.includes("max-age=31536000"), `${path}: static cache header missing`);
     assert(asset.etag || asset.lastModified, `${path}: static validator header missing`);
     assert(asset.bytes <= args.staticMaxBytes, `${path}: ${asset.bytes} bytes exceeds ${args.staticMaxBytes}`);
+    await assertStaticRevalidation(base, asset, args);
     checks.push({ name: path.slice(1), path, bytes: asset.bytes, elapsedMs: asset.elapsedMs });
   }
 
@@ -175,7 +191,16 @@ async function createSelfTestServer() {
       return;
     }
     if (req.url === "/app.js" || req.url === "/styles.css") {
+      if (req.headers["if-none-match"] === '"fixture"') {
+        res.writeHead(304, { "cache-control": "public, max-age=3600", etag: '"fixture"' });
+        res.end();
+        return;
+      }
       res.writeHead(200, { "content-type": req.url.endsWith(".css") ? "text/css" : "application/javascript", "cache-control": "public, max-age=3600", etag: '"fixture"' });
+      if (req.method === "HEAD") {
+        res.end();
+        return;
+      }
       res.end("body{}");
       return;
     }

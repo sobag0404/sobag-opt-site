@@ -57,6 +57,7 @@ function auditCoreWebVitalsReadiness() {
   const server = read("server.mjs");
   const catalogQueryRoute = read("server-routes/catalog-query.js");
   const catalogDetailRoute = read("server-routes/catalog-detail.js");
+  const productionPerformanceSmoke = read("tools/production-performance-smoke.mjs");
   const products = JSON.parse(read("data/products-live.json"));
   const bundleReports = Object.keys(BUDGETS).map(sizeReport);
 
@@ -91,6 +92,7 @@ function auditCoreWebVitalsReadiness() {
   assert(server.includes("staticEntityHeaders") && server.includes("isNotModified"), "VPS static server should support ETag/Last-Modified conditional cache validation", errors);
   assert(catalogQueryRoute.includes('"Cache-Control": "public, max-age=300, stale-while-revalidate=3600"'), "catalog-query should keep public cache", errors);
   assert(catalogDetailRoute.includes('"Cache-Control": "public, max-age=300, stale-while-revalidate=3600"'), "catalog-detail should keep public cache", errors);
+  assert(productionPerformanceSmoke.includes("assertStaticRevalidation") && productionPerformanceSmoke.includes("If-None-Match") && productionPerformanceSmoke.includes('method: "HEAD"'), "production performance smoke should verify static 304/HEAD revalidation", errors);
 
   const catalogPerformance = auditCatalogPerformance();
   const photoReadiness = photoReadinessReport(products, { provider: "", strict: false });

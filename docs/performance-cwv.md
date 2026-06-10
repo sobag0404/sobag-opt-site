@@ -14,7 +14,7 @@ The current production architecture keeps the public catalog fast by default:
 - product cards use rendering containment;
 - public catalog query/detail JSON can be browser-cached briefly;
 - public catalog query/detail responses are also cached in bounded localStorage for faster repeat navigation;
-- VPS static assets return ETag/Last-Modified validators and support conditional 304 responses;
+- VPS static assets return ETag/Last-Modified validators and support conditional 304 responses plus HEAD requests;
 - account, order, admin, and auth APIs stay `no-store`.
 
 ## Offline Checks
@@ -37,7 +37,7 @@ npm.cmd run audit:cwv
 - append-only cursor rendering;
 - product-card `content-visibility` containment;
 - public cache headers for `/api/catalog-query`, `/api/catalog-detail`, and `data/products-live.json`;
-- static ETag/Last-Modified conditional cache validation on the VPS server;
+- static ETag/Last-Modified conditional cache validation and HEAD support on the VPS server;
 - bounded browser cache for public catalog query/detail responses;
 - current image migration readiness status;
 - no static XLSX CDN load during first render; SheetJS is lazy-loaded only when a user imports/exports XLSX.
@@ -50,7 +50,7 @@ After deploy, use the read-only production performance smoke to verify current p
 npm.cmd run smoke:prod:performance -- --base-url https://sobag-shop.online
 ```
 
-It checks that `/api/catalog-query?pageSize=48` stays compact, does not include full variants/gallery/detail fields, has public cache headers, and that `/api/catalog-detail`, `app.js`, and `styles.css` stay within bounded response-size and response-time budgets. Static assets must also expose a validator header for browser revalidation. AutoFix runs only the offline self-test; the live command is for post-deploy verification.
+It checks that `/api/catalog-query?pageSize=48` stays compact, does not include full variants/gallery/detail fields, has public cache headers, and that `/api/catalog-detail`, `app.js`, and `styles.css` stay within bounded response-size and response-time budgets. Static assets must expose validator headers, return `304` on conditional requests, and support `HEAD` without a body. AutoFix runs only the offline self-test; the live command is for post-deploy verification.
 
 ## When To Run Real CWV
 
