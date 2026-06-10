@@ -66,6 +66,11 @@ function auditPimPostgresSchema(sqlText = readFileSync(schemaPath, "utf8")) {
     });
   });
 
+  const publicProductView = viewBody(sql, "public_catalog_products");
+  if (publicProductView.includes("jsonb_agg(t.name")) {
+    errors.push("public_catalog_products taxonomy fields must be text[] arrays, not jsonb_agg values");
+  }
+
   [
     "references products (id) on delete restrict",
     "references images (id) on delete cascade",
@@ -76,11 +81,15 @@ function auditPimPostgresSchema(sqlText = readFileSync(schemaPath, "utf8")) {
     "check (format in ('webp', 'avif', 'jpg', 'png'))",
     "where p.status = 'published' and p.hidden = false",
     "from public_catalog_products p",
+    ")::text[] as categories",
+    ")::text[] as collections",
+    ")::text[] as holidays",
+    ")::text[] as tags",
   ].forEach((fragment) => {
     if (!sql.includes(fragment)) errors.push(`missing constraint: ${fragment}`);
   });
 
-  ["products_status_idx", "variants_product_id_idx", "images_product_id_idx", "taxonomies_type_idx", "product_taxonomies_product_id_idx", "import_batches_status_idx", "import_batch_rows_batch_id_idx"].forEach((indexName) => {
+  ["products_status_idx", "products_base_sku_trgm_idx", "products_name_trgm_idx", "products_description_trgm_idx", "variants_product_id_idx", "images_product_id_idx", "taxonomies_type_idx", "product_taxonomies_product_id_idx", "import_batches_status_idx", "import_batch_rows_batch_id_idx"].forEach((indexName) => {
     if (!sql.includes(`create index if not exists ${indexName}`)) warnings.push(`missing optional index: ${indexName}`);
   });
 

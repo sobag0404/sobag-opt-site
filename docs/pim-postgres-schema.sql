@@ -23,7 +23,9 @@ create table if not exists products (
 );
 
 create index if not exists products_status_idx on products (status);
+create index if not exists products_base_sku_trgm_idx on products using gin (base_sku gin_trgm_ops);
 create index if not exists products_name_trgm_idx on products using gin (name gin_trgm_ops);
+create index if not exists products_description_trgm_idx on products using gin (description gin_trgm_ops);
 
 create table if not exists variants (
   id text primary key,
@@ -158,42 +160,34 @@ select
   p.min_price,
   p.max_price,
   p.variant_count,
-  coalesce(
-    (
-      select jsonb_agg(t.name order by t.name)
-      from product_taxonomies pt
-      join taxonomies t on t.id = pt.taxonomy_id
-      where pt.product_id = p.id and pt.type = 'category'
-    ),
-    '[]'::jsonb
-  ) as categories,
-  coalesce(
-    (
-      select jsonb_agg(t.name order by t.name)
-      from product_taxonomies pt
-      join taxonomies t on t.id = pt.taxonomy_id
-      where pt.product_id = p.id and pt.type = 'collection'
-    ),
-    '[]'::jsonb
-  ) as collections,
-  coalesce(
-    (
-      select jsonb_agg(t.name order by t.name)
-      from product_taxonomies pt
-      join taxonomies t on t.id = pt.taxonomy_id
-      where pt.product_id = p.id and pt.type = 'holiday'
-    ),
-    '[]'::jsonb
-  ) as holidays,
-  coalesce(
-    (
-      select jsonb_agg(t.name order by t.name)
-      from product_taxonomies pt
-      join taxonomies t on t.id = pt.taxonomy_id
-      where pt.product_id = p.id and pt.type = 'tag'
-    ),
-    '[]'::jsonb
-  ) as tags
+  array(
+    select t.name
+    from product_taxonomies pt
+    join taxonomies t on t.id = pt.taxonomy_id
+    where pt.product_id = p.id and pt.type = 'category'
+    order by t.name
+  )::text[] as categories,
+  array(
+    select t.name
+    from product_taxonomies pt
+    join taxonomies t on t.id = pt.taxonomy_id
+    where pt.product_id = p.id and pt.type = 'collection'
+    order by t.name
+  )::text[] as collections,
+  array(
+    select t.name
+    from product_taxonomies pt
+    join taxonomies t on t.id = pt.taxonomy_id
+    where pt.product_id = p.id and pt.type = 'holiday'
+    order by t.name
+  )::text[] as holidays,
+  array(
+    select t.name
+    from product_taxonomies pt
+    join taxonomies t on t.id = pt.taxonomy_id
+    where pt.product_id = p.id and pt.type = 'tag'
+    order by t.name
+  )::text[] as tags
 from products p
 where p.status = 'published' and p.hidden = false;
 

@@ -41,6 +41,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL public view compatibility:
+  - `public_catalog_products` taxonomy fields now use `text[]` arrays instead of JSONB aggregation;
+  - this matches the future DB query builder's `categories/collections/holidays/tags && $n::text[]` filters;
+  - added trigram indexes for future `base_sku`, `name`, and `description` search;
+  - schema audit now rejects the old JSONB taxonomy view shape.
 - VPS static cache revalidation:
   - `server.mjs` now emits ETag and Last-Modified for static files;
   - matching conditional requests return 304 without redownloading unchanged assets;
