@@ -70,12 +70,48 @@ test("manager order pages can open guest customer history", async ({ page }) => 
     localStorage.setItem("sobag.currentUser", "admin@sobag");
     localStorage.setItem("sobag.users", JSON.stringify({ "admin@sobag": { email: "admin@sobag", name: "Admin", role: "admin", orders: [] } }));
   }, order);
+  let serverOrder = { ...order, crmThread: [] };
+  await page.route("**/api/admin/orders", async (route) => {
+    const request = route.request();
+    if (request.method() === "PATCH") {
+      const patch = request.postDataJSON();
+      const statusHistoryEntry =
+        patch.status && patch.status !== serverOrder.status
+          ? {
+              id: `H-QA-${Date.now()}`,
+              at: new Date().toISOString(),
+              actor: "admin@sobag",
+              summary: "Статус: Новый -> В работе",
+            }
+          : null;
+      const crmEntry = patch.commentText
+        ? {
+            id: `CRM-QA-${Date.now()}`,
+            at: new Date().toISOString(),
+            actor: "Admin",
+            role: "admin",
+            visibility: patch.commentVisibility === "customer" ? "customer" : "internal",
+            text: patch.commentText,
+          }
+        : null;
+      serverOrder = {
+        ...serverOrder,
+        ...(patch.status ? { status: patch.status } : {}),
+        ...(Object.prototype.hasOwnProperty.call(patch, "managerEmail") ? { managerEmail: patch.managerEmail, managerName: patch.managerName || "" } : {}),
+        ...(Object.prototype.hasOwnProperty.call(patch, "managerNote") ? { managerNote: patch.managerNote || "" } : {}),
+        crmThread: crmEntry ? [crmEntry, ...(serverOrder.crmThread || [])] : serverOrder.crmThread || [],
+        statusHistory: statusHistoryEntry ? [statusHistoryEntry, ...(serverOrder.statusHistory || [])] : serverOrder.statusHistory || [],
+      };
+      await route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify({ order: serverOrder }) });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify({ orders: [serverOrder] }) });
+  });
 
   await page.goto(`${BASE_URL}/admin-order?id=SO-QA-GUEST`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#adminOrderPage")).toContainText("SO-QA-GUEST");
   await expect(page.locator("#adminOrderPage")).toContainText("Guest Buyer");
   await expect(page.locator("#adminOrderPage")).toContainText("Экспорт XLSX");
-  await page.route("**/api/admin/orders", (route) => route.abort());
   await page.locator('[data-order-status="SO-QA-GUEST"][data-status-value="processing"]').click();
   await expect
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.orders.v1") || "[]")[0]?.status))
@@ -347,7 +383,46 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
   await expect
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.favorites.buyer@example.com") || "[]").length))
     .toBeGreaterThan(0);
-  await page.route("**/api/orders", (route) => route.abort());
+  await page.route("**/api/orders", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST") {
+      const body = request.postDataJSON();
+      const order = {
+        id: "SO-QA-SAVED-CART",
+        date: "02.06.2026",
+        createdAt: new Date().toISOString(),
+        status: "new",
+        userEmail: "buyer@example.com",
+        customer: body.customer || {},
+        items: body.items || [],
+        total: body.total || 0,
+        source: body.source || "site",
+      };
+      await route.fulfill({ status: 201, contentType: "application/json; charset=utf-8", body: JSON.stringify({ order }) });
+      return;
+    }
+    if (request.method() !== "PATCH") {
+      await route.continue();
+      return;
+    }
+    const patch = request.postDataJSON();
+    const current = await page.evaluate(() => JSON.parse(localStorage.getItem("sobag.orders.v1") || "[]")[0]);
+    const updated = {
+      ...current,
+      crmThread: [
+        {
+          id: `CRM-QA-${Date.now()}`,
+          at: new Date().toISOString(),
+          actor: "Buyer",
+          role: "buyer",
+          visibility: "customer",
+          text: patch.commentText,
+        },
+        ...(current.crmThread || []),
+      ],
+    };
+    await route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify({ order: updated }) });
+  });
   await page.locator("#accountButton").click();
   await page.locator('[data-order-customer-message-form] textarea[name="commentText"]').fill("QA buyer order reply");
   await page.locator("[data-order-customer-message-form]").getByRole("button", { name: /Отправить сообщение/i }).click();

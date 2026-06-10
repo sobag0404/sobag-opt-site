@@ -256,6 +256,11 @@ function isBackendUnavailable(error) {
   return error?.status === 503 || error?.code === "storage_not_configured" || error instanceof TypeError;
 }
 
+function serverSaveErrorMessage(error, fallback) {
+  if (isBackendUnavailable(error) || error?.status === 404) return fallback;
+  return error?.message || fallback;
+}
+
 function initFormEnhancements(root = document) {
   root.querySelectorAll('input[name="name"]').forEach((field) => field.setAttribute("autocomplete", "name"));
   root.querySelectorAll('input[name="email"]').forEach((field) => field.setAttribute("autocomplete", "email"));
@@ -1046,6 +1051,9 @@ document.querySelector("#checkoutForm").addEventListener("submit", async (event)
     if (result.order) {
       localStorage.setItem("sobag.lastOrder", JSON.stringify(result.order));
       saveOrderRecord(result.order);
+    } else {
+      showToast("Сервер не вернул номер заказа. Попробуйте еще раз.");
+      return;
     }
     state.cart.clear();
     closeCheckout();
@@ -1054,18 +1062,9 @@ document.querySelector("#checkoutForm").addEventListener("submit", async (event)
     showToast("Заказ отправлен и сохранен на сервере.");
     return;
   } catch (error) {
-    if (!isBackendUnavailable(error)) {
-      showToast(error.message || "Не удалось отправить заказ.");
-      return;
-    }
+    showToast(serverSaveErrorMessage(error, "Не удалось сохранить заказ на сервере. Попробуйте еще раз."));
+    return;
   }
-  localStorage.setItem("sobag.lastOrder", JSON.stringify(order));
-  saveOrderRecord(order);
-  state.cart.clear();
-  closeCheckout();
-  event.target.reset();
-  renderCart();
-  showToast("Заказ отправлен. Менеджер свяжется с покупателем.");
 });
 
 renderCartContent();

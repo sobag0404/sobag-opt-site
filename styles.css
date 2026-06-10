@@ -3232,6 +3232,8 @@ textarea:focus-visible {
   .request-panel {
     position: static;
     grid-column: 1 / -1;
+    max-height: none;
+    overflow: visible;
   }
 
   .admin-customers-list {
@@ -3541,8 +3543,8 @@ h3,
 .admin-form select,
 .excel-import input {
   color: var(--on-dark);
-  background: var(--surface-soft);
-  border: 0;
+  background: var(--surface-card);
+  border: 1px solid var(--hairline-strong);
   border-radius: 24px;
 }
 
@@ -4305,20 +4307,34 @@ main {
   border-radius: var(--control-radius);
 }
 
-.filters {
+.filters,
+.request-panel {
   max-height: calc(100vh - 104px);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--hairline) transparent;
 }
 
-.filters::-webkit-scrollbar {
+.request-panel {
+  max-height: calc(100vh - 220px);
+}
+
+.filters::-webkit-scrollbar,
+.request-panel::-webkit-scrollbar {
   width: 8px;
 }
 
-.filters::-webkit-scrollbar-thumb {
+.filters::-webkit-scrollbar-thumb,
+.request-panel::-webkit-scrollbar-thumb {
   background: var(--hairline);
   border-radius: 999px;
+}
+
+@media (max-width: 1240px) {
+  .request-panel {
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 .product-card__body,
@@ -5708,6 +5724,7 @@ body.theme-night.cart-page .cart-page-line__remove:hover {
 .brief-form select,
 .brief-form input,
 .request-form input,
+.request-form select,
 .request-form textarea,
 .detail-qty input,
 .auth-form input,
@@ -5723,6 +5740,8 @@ body.theme-night.cart-page .cart-page-line__remove:hover {
 .checkout-form textarea,
 .filter-search,
 .search {
+  background: var(--surface-card);
+  border: 1px solid var(--hairline-strong);
   border-radius: var(--control-radius);
   font-size: 14px;
   font-weight: 400;
@@ -6524,8 +6543,9 @@ body.theme-night .theme-toggle__track::after {
   min-height: 32px;
   padding: 0 6px;
   text-align: center;
-  border: 0;
-  background: var(--surface-soft);
+  color: var(--on-dark);
+  background: var(--surface-card);
+  border: 1px solid var(--hairline-strong);
 }
 
 .variant-matrix__row button {

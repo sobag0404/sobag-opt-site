@@ -598,6 +598,11 @@ const state = {
   productReviews: [],
   adminReviews: [],
   adminPreview: [],
+  backendSession: {
+    checked: false,
+    available: false,
+    user: null,
+  },
   importPhotoFiles: [],
   importPhotoReport: [],
   importPhotoUploading: false,
@@ -1375,6 +1380,11 @@ function isBackendUnavailable(error) {
   return error?.status === 503 || error?.code === "storage_not_configured" || error instanceof TypeError;
 }
 
+function serverSaveErrorMessage(error, fallback) {
+  if (isBackendUnavailable(error) || error?.status === 404) return fallback;
+  return error?.message || fallback;
+}
+
 function saveServerUserProfile(profile) {
   if (!profile?.email) return;
   const users = getUsers();
@@ -1426,6 +1436,7 @@ function mirrorServerOrder(order, userEmail = state.currentUser) {
 async function loadBackendAccountData() {
   try {
     const session = await apiRequest("/api/auth/me");
+    state.backendSession = { checked: true, available: true, user: session.user || null };
     if (!session.user) return false;
     if (Array.isArray(session.savedCarts)) {
       const mergedSavedCarts = mergeSavedCarts(session.savedCarts, getSavedCarts(session.user.email));
@@ -1449,6 +1460,11 @@ async function loadBackendAccountData() {
     }
     return true;
   } catch (error) {
+    state.backendSession = {
+      checked: true,
+      available: error?.status !== 404 && !(error instanceof TypeError),
+      user: null,
+    };
     if (!isBackendUnavailable(error)) console.warn(error);
     return false;
   }
@@ -2438,20 +2454,8 @@ async function submitManagerOrderMessage(form) {
     if (result.order) mirrorServerOrder(result.order, result.order.userEmail || result.order.customer?.email || "");
     await loadBackendAccountData();
   } catch (error) {
-    if (!isBackendUnavailable(error)) {
-      showToast(error.message || "Не удалось добавить комментарий.");
-      return;
-    }
-    const user = getUsers()[state.currentUser] || {};
-    appendLocalOrderComment(
-      orderId,
-      orderThreadEntry({
-        text,
-        visibility,
-        actor: user.name || user.email || "Менеджер",
-        role: user.role || "manager",
-      })
-    );
+    showToast(serverSaveErrorMessage(error, "Не удалось сохранить комментарий на сервере."));
+    return;
   }
   form.reset();
   if (isAdminOrdersPage || isAdminOrderPage || isAdminCustomerPage) renderManagementPages();
@@ -2475,19 +2479,8 @@ async function submitCustomerOrderMessage(form) {
     if (result.order) mirrorServerOrder(result.order, result.order.userEmail || state.currentUser);
     await loadBackendAccountData();
   } catch (error) {
-    if (!isBackendUnavailable(error)) {
-      showToast(error.message || "Не удалось отправить сообщение.");
-      return;
-    }
-    appendLocalOrderComment(
-      orderId,
-      orderThreadEntry({
-        text,
-        visibility: "customer",
-        actor: user.name || user.email || "Покупатель",
-        role: "buyer",
-      })
-    );
+    showToast(serverSaveErrorMessage(error, "Не удалось сохранить сообщение на сервере."));
+    return;
   }
   form.reset();
   rerenderAccountModal();
@@ -2959,23 +2952,12 @@ async function sendSavedCartToManager(cartId) {
     order = result.order;
     if (order) mirrorServerOrder(order, state.currentUser);
   } catch (error) {
-    if (!isBackendUnavailable(error) && error.status !== 404) {
-      showToast(error.message || "Не удалось отправить КП менеджеру.");
-      return;
-    }
+    showToast(serverSaveErrorMessage(error, "Не удалось сохранить КП на сервере. Попробуйте еще раз."));
+    return;
   }
   if (!order) {
-    order = saveOrderRecord(
-      {
-        id: `SO-${Date.now().toString().slice(-6)}`,
-        date: new Date().toLocaleString("ru-RU"),
-        customer,
-        items,
-        total: totals.total,
-        source: "saved_cart",
-      },
-      state.currentUser
-    );
+    showToast("Сервер не вернул номер заказа. Попробуйте еще раз.");
+    return;
   }
   updateSavedCart(cartId, {
     status: "sent",
@@ -5572,12 +5554,29 @@ function customerDetailHtml(customer) {
   `;
 }
 
+function managementServerAccessHtml() {
+  return `
+    <article class="info-page__panel">
+      <h2>Нужен серверный вход</h2>
+      <p>Заказы хранятся на сервере. Войдите в серверный аккаунт администратора или менеджера, чтобы видеть новые заявки.</p>
+      <button class="primary-button" type="button" data-open-account><i data-lucide="user"></i> Войти</button>
+    </article>
+  `;
+}
+
 function renderManagementPages() {
   const user = currentManagerUser();
   const ordersNode = document.querySelector("#adminOrdersPage");
   const orderNode = document.querySelector("#adminOrderPage");
   const customerNode = document.querySelector("#adminCustomerPage");
   if (!ordersNode && !orderNode && !customerNode) return;
+  if (state.backendSession.checked && state.backendSession.available && !canManageOrders(state.backendSession.user)) {
+    if (ordersNode) ordersNode.innerHTML = managementServerAccessHtml();
+    if (orderNode) orderNode.innerHTML = managementServerAccessHtml();
+    if (customerNode) customerNode.innerHTML = managementServerAccessHtml();
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
   if (!canManageOrders(user)) {
     if (ordersNode) ordersNode.innerHTML = managementAccessHtml();
     if (orderNode) orderNode.innerHTML = managementAccessHtml();
@@ -8185,10 +8184,6 @@ async function submitOrder(form) {
     return;
   }
   const data = Object.fromEntries(new FormData(form).entries());
-  if (!String(data.company || "").trim()) {
-    setFieldError(form, "company", "Укажите компанию или ИП.");
-    return;
-  }
   if (!String(data.phone || "").trim()) {
     setFieldError(form, "phone", "Укажите телефон для связи.");
     return;
@@ -8233,6 +8228,10 @@ async function submitOrder(form) {
         source: "catalog",
       },
     });
+    if (!result.order) {
+      showToast("Сервер не вернул номер заказа. Попробуйте еще раз.");
+      return;
+    }
     mirrorServerOrder(result.order, state.currentUser);
     form.reset();
     state.cart.clear();
@@ -8240,26 +8239,9 @@ async function submitOrder(form) {
     showToast("Заказ отправлен и сохранен на сервере.");
     return;
   } catch (error) {
-    if (!isBackendUnavailable(error)) {
-      showToast(error.message || "Не удалось отправить заказ.");
-      return;
-    }
+    showToast(serverSaveErrorMessage(error, "Не удалось сохранить заказ на сервере. Попробуйте еще раз."));
+    return;
   }
-  saveOrderRecord(
-    {
-      id: `SO-${Date.now().toString().slice(-6)}`,
-      date: new Date().toLocaleString("ru-RU"),
-      customer,
-      items: [...state.cart.values()],
-      total: totals.total,
-      source: "catalog",
-    },
-    state.currentUser
-  );
-  form.reset();
-  state.cart.clear();
-  renderCart();
-  showToast("Заказ отправлен и появился у администратора и менеджеров.");
 }
 
 function boot() {
@@ -8288,7 +8270,10 @@ function boot() {
   loadImportBatches();
   initFormEnhancements();
   loadBackendAccountData().then(async (changed) => {
-    if (!changed) return;
+    if (!changed) {
+      renderManagementPages();
+      return;
+    }
     loadCart();
     loadFavorites();
     await loadServerPersonalState();
@@ -8505,18 +8490,17 @@ function boot() {
       renderCart();
       renderProducts();
       renderAccountButton();
+      renderManagementPages();
     }
     if (button.dataset.orderStatus) {
       const status = button.dataset.statusValue || "new";
       try {
-        await apiRequest("/api/admin/orders", { method: "PATCH", body: { id: button.dataset.orderStatus, status } });
+        const result = await apiRequest("/api/admin/orders", { method: "PATCH", body: { id: button.dataset.orderStatus, status } });
+        if (result.order) mirrorServerOrder(result.order, result.order.userEmail || result.order.customer?.email || "");
         await loadBackendAccountData();
       } catch (error) {
-        if (!isBackendUnavailable(error)) {
-          showToast(error.message || "Не удалось обновить статус заказа.");
-          return;
-        }
-        updateOrderStatus(button.dataset.orderStatus, status);
+        showToast(serverSaveErrorMessage(error, "Не удалось сохранить статус заказа на сервере."));
+        return;
       }
       if (isAdminOrdersPage || isAdminOrderPage || isAdminCustomerPage) {
         renderManagementPages();
@@ -8888,6 +8872,7 @@ function boot() {
           renderCart();
           renderProducts();
           renderAccountButton();
+          renderManagementPages();
           showToast("Вы зарегистрированы. Аккаунт сохранен на сервере.");
           return;
         } catch (error) {
@@ -8921,6 +8906,7 @@ function boot() {
           renderCart();
           renderProducts();
           renderAccountButton();
+          renderManagementPages();
           showToast("Вы вошли. Серверная сессия активна.");
           return;
         } catch (error) {
@@ -8946,6 +8932,7 @@ function boot() {
       renderCart();
       renderProducts();
       renderAccountButton();
+      renderManagementPages();
       showToast("Вы вошли. Корзина и заказы сохраняются за аккаунтом.");
     }
     if (event.target.dataset.adminProductForm) {
@@ -9011,11 +8998,8 @@ function boot() {
         if (result.order) mirrorServerOrder(result.order, result.order.userEmail || "");
         await loadBackendAccountData();
       } catch (error) {
-        if (!isBackendUnavailable(error)) {
-          showToast(error.message || "Не удалось сохранить данные заказа.");
-          return;
-        }
-        updateOrderRecord(event.target.dataset.orderManagerForm, patch);
+        showToast(serverSaveErrorMessage(error, "Не удалось сохранить данные заказа на сервере."));
+        return;
       }
       if (isAdminOrdersPage || isAdminOrderPage || isAdminCustomerPage) {
         renderManagementPages();

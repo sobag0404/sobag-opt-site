@@ -39,6 +39,7 @@ Last updated: 2026-06-10
    - [x] Customer-visible comments/status messages.
    - [x] Export order detail to XLSX from admin.
    - [x] Better customer list and segmentation.
+   - [x] Server-only order persistence guard: buyer/cart/saved-quote submissions and CRM order actions no longer report success from local-only fallback; guest order visibility is covered by VPS write smoke.
 
 3. [planned] Import/PIM 2.0:
   - [x] Import batches with preview report and rollback.

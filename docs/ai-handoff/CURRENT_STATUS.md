@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Order persistence and catalog side-cart UI reliability:
+  - buyer catalog/cart order submit, saved quote send-to-manager, buyer order messages, manager CRM comments, status changes, and manager note edits no longer silently create local-only records when the backend is unavailable;
+  - successful order/CRM actions now require server persistence through `/api/orders` or `/api/admin/orders`;
+  - admin order pages refresh after the server session check and require a server admin/manager session when the backend is available;
+  - `tools/vps-write-smoke.mjs` now verifies that a guest order created through `/api/orders` is visible through `/api/admin/orders`;
+  - the catalog/favorites side cart removed company/requisites fields, keeps visible input borders, has its own scrollable panel, and the discount block title is now `Скидка`.
 - Compact selected catalog header:
   - selected category/collection/holiday catalog pages now use one compact row with `В каталог`, title, product count, and sorting;
   - the old large heading/upper `КАТАЛОГ` area is hidden on listing pages;

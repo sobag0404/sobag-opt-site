@@ -149,6 +149,34 @@ try {
   const adminOrders = await request(baseUrl, "/api/admin/orders", { cookie: adminLogin.cookie });
   assert(adminOrders.payload.orders?.some((order) => order.id === orderId && order.status === "processing"), "admin orders should include updated order");
 
+  const guestOrderCreate = await request(baseUrl, "/api/orders", {
+    method: "POST",
+    body: {
+      source: "guest-vps-write-smoke",
+      total: Number(variant.price || 100),
+      customer: {
+        name: "Guest VPS Smoke",
+        phone: "+79990000002",
+        email: "guest-vps-smoke@example.com",
+        city: "Moscow",
+      },
+      items: [
+        {
+          key: `${variant.sku}-guest`,
+          productId: detail.payload.product.id,
+          productName: detail.payload.product.name,
+          qty: 1,
+          variant,
+        },
+      ],
+    },
+  });
+  const guestOrderId = guestOrderCreate.payload.order?.id;
+  assert(guestOrderId, "guest order should be created");
+
+  const adminGuestOrders = await request(baseUrl, "/api/admin/orders", { cookie: adminLogin.cookie });
+  assert(adminGuestOrders.payload.orders?.some((order) => order.id === guestOrderId), "admin orders should include guest order");
+
   console.log(`vps-write smoke passed: ${baseUrl}`);
 } finally {
   await close(server).catch(() => {});
