@@ -41,6 +41,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS static cache revalidation:
+  - `server.mjs` now emits ETag and Last-Modified for static files;
+  - matching conditional requests return 304 without redownloading unchanged assets;
+  - static HEAD requests return headers without a body;
+  - `tools/vps-server-smoke.mjs`, `tools/production-performance-smoke.mjs`, and `tools/core-web-vitals-readiness.mjs` now guard the behavior.
 - Photo migration pilot smoke:
   - added `tools/photo-migration-pilot-smoke.mjs` and `npm run smoke:photo-pilot`;
   - the smoke creates an ignored local fixture catalog/photo set;

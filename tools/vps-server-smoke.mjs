@@ -49,6 +49,14 @@ try {
 
   const appJs = await readText(baseUrl, "/app.js");
   assert((appJs.response.headers.get("cache-control") || "").includes("max-age=3600"), "static JS should be browser-cacheable");
+  const appEtag = appJs.response.headers.get("etag");
+  assert(appEtag, "static JS should include ETag");
+  assert(appJs.response.headers.get("last-modified"), "static JS should include Last-Modified");
+  const cachedAppJs = await fetch(new URL("/app.js", baseUrl), { headers: { "if-none-match": appEtag } });
+  assert(cachedAppJs.status === 304, `static JS should support conditional 304, got ${cachedAppJs.status}`);
+  const headAppJs = await fetch(new URL("/app.js", baseUrl), { method: "HEAD" });
+  assert(headAppJs.ok, `static JS HEAD should return 2xx, got ${headAppJs.status}`);
+  assert((await headAppJs.text()) === "", "static JS HEAD should not return a body");
 
   const catalogPage = await readText(baseUrl, "/catalog");
   assert(catalogPage.text.includes("Каталог"), "clean catalog URL should resolve to catalog.html");

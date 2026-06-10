@@ -73,6 +73,8 @@ async function fetchText(base, path, args) {
       elapsedMs: Math.round(performance.now() - startedAt),
       contentType: response.headers.get("content-type") || "",
       cacheControl: response.headers.get("cache-control") || "",
+      etag: response.headers.get("etag") || "",
+      lastModified: response.headers.get("last-modified") || "",
       bytes: Buffer.byteLength(body, "utf8"),
       body,
     };
@@ -136,6 +138,7 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
     assert(asset.ok, `${path}: expected 2xx, got ${asset.status}`);
     assertFast(asset, args.maxMs);
     assert(asset.cacheControl.includes("max-age=3600") || asset.cacheControl.includes("max-age=31536000"), `${path}: static cache header missing`);
+    assert(asset.etag || asset.lastModified, `${path}: static validator header missing`);
     assert(asset.bytes <= args.staticMaxBytes, `${path}: ${asset.bytes} bytes exceeds ${args.staticMaxBytes}`);
     checks.push({ name: path.slice(1), path, bytes: asset.bytes, elapsedMs: asset.elapsedMs });
   }
@@ -172,7 +175,7 @@ async function createSelfTestServer() {
       return;
     }
     if (req.url === "/app.js" || req.url === "/styles.css") {
-      res.writeHead(200, { "content-type": req.url.endsWith(".css") ? "text/css" : "application/javascript", "cache-control": "public, max-age=3600" });
+      res.writeHead(200, { "content-type": req.url.endsWith(".css") ? "text/css" : "application/javascript", "cache-control": "public, max-age=3600", etag: '"fixture"' });
       res.end("body{}");
       return;
     }

@@ -46,6 +46,23 @@ function cacheControlFor(pathname) {
   return "public, max-age=0, must-revalidate";
 }
 
+function staticEntityHeaders(filePath) {
+  const stats = statSync(filePath);
+  const modified = stats.mtime.toUTCString();
+  const etag = `W/"${stats.size.toString(16)}-${Math.trunc(stats.mtimeMs).toString(16)}"`;
+  return { etag, modified };
+}
+
+function isNotModified(request, { etag, modified }) {
+  const requestEtag = request.headers["if-none-match"];
+  if (requestEtag && requestEtag.split(",").map((value) => value.trim()).includes(etag)) return true;
+  const requestModifiedSince = request.headers["if-modified-since"];
+  if (!requestModifiedSince) return false;
+  const requestedTime = Date.parse(requestModifiedSince);
+  const modifiedTime = Date.parse(modified);
+  return Number.isFinite(requestedTime) && Number.isFinite(modifiedTime) && modifiedTime <= requestedTime;
+}
+
 function isInsideRoot(filePath) {
   const prepared = normalize(filePath);
   return prepared === root || prepared.startsWith(`${root}${sep}`);
@@ -83,10 +100,23 @@ function serveStatic(request, response, pathname) {
     response.end("Not found");
     return;
   }
-  response.writeHead(200, {
+  const entity = staticEntityHeaders(filePath);
+  const headers = {
     "Content-Type": contentTypes[extname(filePath).toLowerCase()] || "application/octet-stream",
     "Cache-Control": cacheControlFor(pathname),
-  });
+    ETag: entity.etag,
+    "Last-Modified": entity.modified,
+  };
+  if (isNotModified(request, entity)) {
+    response.writeHead(304, headers);
+    response.end();
+    return;
+  }
+  response.writeHead(200, headers);
+  if (request.method === "HEAD") {
+    response.end();
+    return;
+  }
   createReadStream(filePath).pipe(response);
 }
 

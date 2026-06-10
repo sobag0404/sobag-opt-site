@@ -88,6 +88,7 @@ function auditCoreWebVitalsReadiness() {
   assert(css.includes("content-visibility: auto;"), "product cards should keep rendering containment", errors);
   assert(css.includes("contain-intrinsic-size:"), "product cards should reserve intrinsic size", errors);
   assert(server.includes('"/data/products-live.json") return "public, max-age=300, stale-while-revalidate=3600"'), "static product JSON should keep browser cache", errors);
+  assert(server.includes("staticEntityHeaders") && server.includes("isNotModified"), "VPS static server should support ETag/Last-Modified conditional cache validation", errors);
   assert(catalogQueryRoute.includes('"Cache-Control": "public, max-age=300, stale-while-revalidate=3600"'), "catalog-query should keep public cache", errors);
   assert(catalogDetailRoute.includes('"Cache-Control": "public, max-age=300, stale-while-revalidate=3600"'), "catalog-detail should keep public cache", errors);
 
