@@ -229,7 +229,6 @@ function productCard(product, summary = variantSummary(product), filterValues = 
     stock: text(product?.stock),
     image: image?.url || text(product?.image),
     imageMeta: image,
-    galleryCount: list(product?.gallery).length + Math.max(0, imageRecordsForProduct(product).length - 1),
     minPrice: summary.minPrice,
     maxPrice: summary.maxPrice,
     variantCount: summary.count,

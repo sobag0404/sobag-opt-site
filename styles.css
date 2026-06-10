@@ -791,6 +791,8 @@ h3 {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
   background: var(--surface-card);
   border: 1px solid var(--hairline);
 }

@@ -83,9 +83,10 @@ Last updated: 2026-06-10
      - [x] Frontend `<picture>` rendering uses stored AVIF sources first and WebP fallback for product cards, related cards, product modal/gallery, and admin product previews.
      - [x] Offline image metadata audit for migrated catalogs: provider metadata, square dimensions, and WebP/AVIF variant records can be checked before publication.
      - [ ] Validate WebP/AVIF behavior on the real migrated catalog image set.
-   - [ ] Catalog virtualization or smaller server pages.
+   - [x] Catalog virtualization or smaller server pages.
      - [x] Smaller public catalog page payload: frontend now requests `/api/catalog-query` with the server default `pageSize=48` instead of 120, and UI smoke asserts the request size.
      - [x] Smaller local fallback catalog pages: when `/api/catalog-query` is unavailable, the client renders 48 cards per step instead of 120.
+     - [x] Runtime list rendering optimization: server cursor pages append only new cards instead of replacing existing first-page DOM, and product cards use browser rendering containment for long lists.
    - [ ] Core Web Vitals audit after real catalog growth.
 
 6. [planned] QA/security/ops:

@@ -4326,6 +4326,68 @@ function renderFilters() {
   if (window.lucide) window.lucide.createIcons();
 }
 
+function productCardHtml(product) {
+  const favorite = state.favorites.has(product.id) ? " is-active" : "";
+  const favoritePressed = state.favorites.has(product.id) ? "true" : "false";
+  const productId = escapeHtml(product.id);
+  const productName = escapeHtml(product.name);
+  const productSku = escapeHtml(product.baseSku);
+  return `
+        <article class="product-card">
+          <div class="product-card__image">
+            <button class="product-card__image-button" type="button" data-open-product="${productId}" aria-label="Открыть ${productName}">
+              ${productPictureHtml(product, product.image, product.name, imageAttrs(640, 640))}
+            </button>
+            <button class="favorite-button${favorite}" type="button" title="${favoritePressed === "true" ? "Убрать из избранного" : "В избранное"}" data-favorite="${productId}" aria-pressed="${favoritePressed}">
+              <i data-lucide="heart"></i>
+            </button>
+          </div>
+          <div class="product-card__body">
+            <div class="product-card__sku-row">
+              <span class="product-card__sku">${productSku}</span>
+              <button class="copy-sku-button" type="button" data-copy-sku="${productSku}" title="Скопировать артикул" aria-label="Скопировать артикул ${productSku}">
+                <i data-lucide="copy"></i>
+              </button>
+            </div>
+            <h3>${productName}</h3>
+            <div class="product-card__bottom">
+              <button class="add-button product-card__price-button" type="button" data-open-product="${productId}" aria-label="Открыть ${productName}">
+                <span>от ${formatMoney(product.minPrice)}</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      `;
+}
+
+function resetProductGridRenderState() {
+  if (!productGrid) return;
+  delete productGrid.dataset.renderKey;
+  delete productGrid.dataset.renderedCount;
+}
+
+function renderProductGridCards(visibleList, renderKey = "") {
+  const renderedKey = productGrid.dataset.renderKey || "";
+  const renderedCount = Number(productGrid.dataset.renderedCount || 0) || 0;
+  const canAppend =
+    renderKey &&
+    renderedKey === renderKey &&
+    renderedCount > 0 &&
+    renderedCount < visibleList.length &&
+    productGrid.children.length === renderedCount;
+  if (canAppend) {
+    productGrid.insertAdjacentHTML("beforeend", visibleList.slice(renderedCount).map(productCardHtml).join(""));
+  } else {
+    productGrid.innerHTML = visibleList.map(productCardHtml).join("");
+  }
+  if (renderKey) {
+    productGrid.dataset.renderKey = renderKey;
+    productGrid.dataset.renderedCount = String(visibleList.length);
+  } else {
+    resetProductGridRenderState();
+  }
+}
+
 function renderProducts() {
   if (!productGrid || !productCount) return;
   queueServerCatalogRefresh();
@@ -4356,42 +4418,12 @@ function renderProducts() {
       if (emptyText) emptyText.textContent = "Поиск работает по точному артикулу, названию, подборкам, праздникам и тегам.";
     }
     if (catalogLoadMore) catalogLoadMore.innerHTML = "";
+    resetProductGridRenderState();
     renderRecentProducts();
     if (window.lucide) window.lucide.createIcons();
     return;
   }
-  productGrid.innerHTML = visibleList
-    .map((product) => {
-      const favorite = state.favorites.has(product.id) ? " is-active" : "";
-      const favoritePressed = state.favorites.has(product.id) ? "true" : "false";
-      return `
-        <article class="product-card">
-          <div class="product-card__image">
-            <button class="product-card__image-button" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}">
-              ${productPictureHtml(product, product.image, product.name, imageAttrs(640, 640))}
-            </button>
-            <button class="favorite-button${favorite}" type="button" title="${favoritePressed === "true" ? "Убрать из избранного" : "В избранное"}" data-favorite="${product.id}" aria-pressed="${favoritePressed}">
-              <i data-lucide="heart"></i>
-            </button>
-          </div>
-          <div class="product-card__body">
-            <div class="product-card__sku-row">
-              <span class="product-card__sku">${product.baseSku}</span>
-              <button class="copy-sku-button" type="button" data-copy-sku="${product.baseSku}" title="Скопировать артикул" aria-label="Скопировать артикул ${product.baseSku}">
-                <i data-lucide="copy"></i>
-              </button>
-            </div>
-            <h3>${product.name}</h3>
-            <div class="product-card__bottom">
-              <button class="add-button product-card__price-button" type="button" data-open-product="${product.id}" aria-label="Открыть ${product.name}">
-                <span>от ${formatMoney(product.minPrice)}</span>
-              </button>
-            </div>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
+  renderProductGridCards(visibleList, serverResult ? `server:${serverResult.key}` : "");
 
   if (catalogLoadMore) {
     if (serverResult) {

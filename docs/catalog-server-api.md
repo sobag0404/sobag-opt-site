@@ -1,6 +1,6 @@
 # Catalog Server Query API
 
-Last updated: 2026-06-09
+Last updated: 2026-06-10
 
 ## Goal
 
@@ -60,7 +60,7 @@ Response shape:
 }
 ```
 
-`items` are card payloads. They include price range, primary image metadata, taxonomy arrays, and counts, but not full gallery or full variants.
+`items` are card payloads. They include price range, primary image metadata, taxonomy arrays, and variant counts, but not full gallery, gallery counts, detail copy, or full variants.
 
 `facets` describe the current filtered result set. `facetOptions` are prepared for UI filter controls: each bucket is calculated with the current query and all other filters, but without the filter from the same bucket. This keeps alternative values visible in the active group while still respecting the rest of the search context.
 
@@ -103,6 +103,6 @@ The product modal tries `/api/catalog-detail` before rendering, then falls back 
 
 The public catalog/search list now progressively uses `/api/catalog-query` for compact card payloads, total counts, cursor-based "load more" pagination, and visible filter options from `facetOptions`. On active server-query listing pages, successful `/api/catalog-query` bootstrap skips the full `/api/catalog` request. If the endpoint is unavailable, the old local/full-catalog rendering path remains the fallback. Favorites, catalog home, empty search, and admin catalog screens still use the local/admin/full catalog flow.
 
-The frontend requests the server default `pageSize=48` for public listing pages, so the initial list and cursor pages do not force the previous 120-card payload. The next performance slice can add catalog virtualization or server-rendered pages for very large catalogs.
+The frontend requests the server default `pageSize=48` for public listing pages, so the initial list and cursor pages do not force the previous 120-card payload. Cursor-page rendering appends new product cards instead of replacing the existing first-page DOM, and product cards use browser rendering containment (`content-visibility`) to reduce layout/paint work on long lists.
 
-`npm run check` also runs an offline 10k-product synthetic scale smoke (`tools/catalog-query-scale-smoke.mjs`). It verifies published-only filtering, 48-card cursor pages, compact card payloads without full variants/images, exact SKU lookup, and full detail hydration through the same query helpers.
+`npm run check` also runs an offline 10k-product synthetic scale smoke (`tools/catalog-query-scale-smoke.mjs`). It verifies published-only filtering, 48-card cursor pages, compact card payloads without full variants/images/detail/gallery fields, exact SKU lookup, and full detail hydration through the same query helpers.

@@ -57,6 +57,7 @@ assert(pageOne.pageInfo.hasMore, "10k category query should expose a next page")
 assert(pageOne.pageInfo.nextCursor, "10k category query should expose a cursor");
 assert(pageOne.items.every((item) => item.baseSku !== hidden.baseSku && item.baseSku !== draft.baseSku), "list payload must be published-only");
 assert(pageOne.items.every((item) => !("variants" in item) && !("variantPrices" in item) && !("images" in item)), "card payload must stay compact");
+assert(pageOne.items.every((item) => !("galleryCount" in item) && !("detailDescription" in item) && !("gallery" in item)), "card payload must not include detail/gallery fields");
 assert(pageOne.items.every((item) => item.variantCount > 0), "card payload should include variant counts");
 assert(pageOne.facetOptions?.categories?.some((item) => item.value === SCALE_CATEGORY), "facetOptions should include the scale category");
 

@@ -31,6 +31,7 @@ Last updated: 2026-06-10
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-10: added a 10k+ catalog runtime performance slice. Public `/api/catalog-query` card payload no longer includes unused `galleryCount`; `tools/catalog-query-scale-smoke.mjs` now guards against detail/gallery fields in list payloads; public server-query cursor pages append only newly loaded cards instead of replacing the existing first-page DOM; product cards use `content-visibility` containment for long lists; Playwright smoke now verifies cursor pagination keeps the first-page card node stable.
 - Current pass 2026-06-10: completed VPS DNS/SSL cutover. `sobag-shop.online` and `www.sobag-shop.online` now resolve to `77.239.107.164`; `certbot --nginx` issued and installed the certificate for both names; `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` passed 4/4; GitHub repo variable `PRODUCTION_BASE_URL` is set to `https://sobag-shop.online`; manual `production-smoke` workflow run `27258638138` passed.
 - Current pass 2026-06-09: added VPS launch runbook. `docs/vps-launch-runbook.md` documents local gates, VPS setup, env names without values, preflight, runtime start, VPS URL smoke, DNS cutover, rollback, backup restore, photo/catalog guardrails, and Vercel fallback checks. `tools/vps-release-audit.mjs` now requires the runbook file.
 - Current pass 2026-06-09: added offline SEO/content audit. `tools/content-seo-audit.mjs` checks public pages and current default content for stale test/prototype/Tilda/placeholder copy, fake contacts, required meta descriptions, catalog SEO copy, FAQ schema surface, `В каталог`, and editable category/collection/holiday descriptions. AutoFix runs the audit plus self-test. Also removed the remaining public "Для теста" wording from `business.html` and replaced the public personal-data consent draft note with production-safe wording that avoids fake реквизиты/address.
@@ -77,11 +78,11 @@ Last updated: 2026-06-10
 - Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
-- Current next task: continue remaining roadmap upgrades after the VPS cutover: final SEO/content once real company facts are confirmed, later PIM DB/storage split, real photo migration/validation, and performance work for larger catalog data.
+- Current next task: continue remaining roadmap upgrades after the VPS cutover: final SEO/content once real company facts are confirmed, later PIM DB/storage split, and real photo migration/WebP/AVIF validation.
 - SEO next step: real company/legal/contact details only after confirmed facts; Product/FAQ schema, editable catalog landing copy, and offline SEO/content audit are already covered.
 - Import/PIM next step: later DB/storage split for product, variant, image, taxonomy, and import-batch entities. The current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
 - Deployment next step: VPS primary is live via HTTPS; after future pushes, verify `autofix-check`, `vps-deploy`, `production-smoke`, and keep Vercel as fallback.
-- Performance next step: catalog virtualization, real-catalog WebP/AVIF validation, and Core Web Vitals audit after larger catalog growth.
+- Performance next step: real-catalog WebP/AVIF validation and Core Web Vitals audit after larger catalog growth.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
 ## Useful Files
@@ -93,6 +94,7 @@ Last updated: 2026-06-10
 ## Verification
 - Current device note: `git` works via `C:\Program Files\Git\cmd\git.exe`; `node`, `npm.cmd`, `python`, and `py` are available in PATH on this device.
 - Current VPS DNS/SSL cutover verification: authoritative REG.RU DNS returns `77.239.107.164` for `sobag-shop.online` and `www.sobag-shop.online`; certbot installed the Nginx certificate; `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` passed 4/4; GitHub `production-smoke` run `27258638138` passed with `PRODUCTION_BASE_URL=https://sobag-shop.online`.
+- Current 10k+ catalog runtime pass verification: `node --check app.js`; `node --check api/_lib/catalog-query.js`; `node --check tools/catalog-query-scale-smoke.mjs`; `node --check tools/ui-smoke.spec.js`; `npm.cmd run smoke:catalog:scale`; focused `npm.cmd run ui:smoke -- --grep "catalog list renders server query"` after `dev:static`.
 - Current VPS launch runbook pass verification: `node --check tools/vps-release-audit.mjs`; `npm.cmd run audit:vps-release`; `npm.cmd run check`.
 - Current SEO/content audit pass verification: `node --check tools/content-seo-audit.mjs`; package JSON parse; `node tools/content-seo-audit.mjs`; `node tools/content-seo-audit.mjs --self-test`; `node --check tools/autofix.mjs`; `node --check tools/vps-release-audit.mjs`; `npm.cmd run audit:vps-release`; `npm.cmd run check`.
 - Current VPS release audit pass verification: `node --check tools/vps-release-audit.mjs`; `node --check tools/autofix.mjs`; package JSON parse; `npm.cmd run audit:vps-release`; `node tools/vps-release-audit.mjs --self-test`; `npm.cmd run check`.

@@ -734,8 +734,12 @@ test("catalog list renders server query cards and cursor pages", async ({ page }
   await page.locator('[data-filter="size"][value="QA Size"]').check();
   await expect.poll(() => requestedUrls.some((url) => url.searchParams.get("size") === "QA Size")).toBe(true);
   await expect(page.locator("[data-show-more-products]")).toBeVisible();
+  await page.locator(".product-card").first().evaluate((card) => {
+    card.setAttribute("data-qa-stable-node", "server-first-page");
+  });
   await page.locator("[data-show-more-products]").click();
   await expect(page.locator(".product-card__sku")).toHaveText(["QA-SERVER-001", "QA-SERVER-002"]);
+  await expect(page.locator('.product-card[data-qa-stable-node="server-first-page"]')).toHaveCount(1);
   expect(requestedUrls[0].searchParams.get("category")).toBe("QA Server");
   expect(requestedUrls[0].searchParams.get("pageSize")).toBe("48");
   expect(requestedUrls.every((url) => url.searchParams.get("pageSize") === "48")).toBe(true);

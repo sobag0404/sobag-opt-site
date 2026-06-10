@@ -2,8 +2,8 @@
 
 Date: 2026-06-10
 
-Current deployed VPS release before this docs pass:
-- `20260609T115150Z-59a3858`
+Current deployed VPS release before this performance pass:
+- `20260610T065427Z-f4a472a`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- 10k+ catalog runtime performance slice:
+  - public `/api/catalog-query` card payload no longer includes unused `galleryCount`;
+  - scale smoke now guards compact list payloads against detail/gallery fields;
+  - server cursor pages append only newly loaded cards instead of replacing existing first-page DOM;
+  - product cards use browser rendering containment for long lists;
+  - focused UI smoke verifies the first server page DOM node remains stable after cursor pagination.
 - VPS DNS/SSL cutover:
   - authoritative REG.RU DNS for `sobag-shop.online` and `www.sobag-shop.online` returns `77.239.107.164`;
   - `certbot --nginx` issued and deployed the Let's Encrypt certificate for both names;
@@ -613,7 +619,7 @@ Important remaining work:
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: choose/configure the real provider env for the next photo migration run and validate AVIF/WebP behavior on the real migrated catalog image set.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, final Yandex map setup.
-- Performance for 10k+ products: catalog virtualization, smaller server pages, Core Web Vitals audit, WebP/AVIF responsive images on the real catalog.
+- Performance for 10k+ products: Core Web Vitals audit and WebP/AVIF responsive images on the real migrated catalog.
 - QA/Ops current checklist is done; next work is performance/SEO/remaining Import-PIM larger items.
 
 Important constraints:
