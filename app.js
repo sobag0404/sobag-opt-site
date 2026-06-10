@@ -323,7 +323,7 @@ const defaultSiteContent = {
   footerText: "B2B-каталог для оптовых заказов текстиля с принтами, производства под макет и поставок партиями.",
   footerSalesLabel: "Отдел опта",
   footerEmail: "opt@sobag-shop.online",
-  footerPhone: "+7 900 123-45-67",
+  footerPhone: "Телефон по запросу",
   footerCompanyTitle: "Компания",
   footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Согласие на обработку персональных данных|Пользовательское соглашение",
   footerClientsTitle: "Клиентам",
@@ -989,7 +989,8 @@ function setButtonText(selector, value, options = {}) {
 
 function phoneHref(value = "") {
   const prepared = String(value).replace(/[^\d+]/g, "");
-  return prepared ? `tel:${prepared}` : "#";
+  const digits = prepared.replace(/\D/g, "");
+  return digits.length >= 10 ? `tel:${prepared}` : "contacts.html";
 }
 
 function formatPhoneNumber(value = "") {
@@ -4575,14 +4576,15 @@ function updateCatalogSeo() {
     document.head.appendChild(canonical);
   }
   canonical.setAttribute("href", `${location.origin}${location.pathname}${location.search}`);
-  setJsonLd("sobag-organization-jsonld", {
+  const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Sobag Opt",
     url: location.origin,
-    email: getSiteContent().footerEmail || "opt@sobag-shop.online",
-    telephone: getSiteContent().footerPhone || "",
-  });
+    email: content.footerEmail || "opt@sobag-shop.online",
+  };
+  if (phoneHref(content.footerPhone).startsWith("tel:")) organizationSchema.telephone = content.footerPhone;
+  setJsonLd("sobag-organization-jsonld", organizationSchema);
   setJsonLd("sobag-catalog-jsonld", {
     "@context": "https://schema.org",
     "@type": "CollectionPage",

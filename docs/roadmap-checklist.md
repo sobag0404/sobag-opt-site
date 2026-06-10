@@ -72,6 +72,7 @@ Last updated: 2026-06-10
      - [x] First production-safe public copy pass: removed test/prototype wording from about, contacts, business, marketplace, footer, cart promo, and terms fallbacks without inventing final legal реквизиты or address.
      - [x] Footer informational page skeletons: `how-to-order.html`, `delivery.html`, `payment.html`, `returns.html`, `seller-support.html`, and `wholesale.html` now have production-safe placeholder copy editable from admin content.
      - [x] Offline SEO/content audit: public pages and current default content are checked for stale test/prototype/Tilda/placeholder copy, fake contacts, required meta descriptions, catalog SEO copy, FAQ schema surface, `В каталог`, and editable category/collection/holiday descriptions.
+     - [x] Public fallback phone is no longer a fake `+7 900...` number; unconfirmed phone output points users to contacts, and Organization JSON-LD omits `telephone` until a real number is configured.
    - [x] Add Product/FAQ schema where appropriate.
      - [x] Product schema for public product modal/detail state, including offers, images, and approved review aggregate data.
      - [x] FAQ schema for the real business terms FAQ block.

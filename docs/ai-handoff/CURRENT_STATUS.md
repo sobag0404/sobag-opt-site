@@ -41,6 +41,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- SEO/content fallback contact cleanup:
+  - the remaining fake public fallback phone (`+7 900 123-45-67`) was removed from `defaultSiteContent`, static `contacts.html`, and the shared footer shell;
+  - non-dialable phone text now links to contacts instead of a fake `tel:` URL;
+  - Organization JSON-LD omits `telephone` until a real dialable footer phone is configured;
+  - `tools/content-seo-audit.mjs` now rejects the old fake phone and fake `tel:+79001234567` link.
 - Next goal prompt update:
   - `docs/ai-handoff/NEXT_GOAL_PROMPT.md` now focuses the next run on four ordered upgrades: SEO/content, photo storage/images, Import/PIM DB split preparation, and performance/Core Web Vitals;
   - it explicitly instructs the next run to remind the user after those four items about the future point 5 migration without Node.js on VPS: Rust Axum, HTMX/templates, PostgreSQL, Redis, Meilisearch, MinIO/S3-compatible storage, and Docker/systemd behind Nginx.

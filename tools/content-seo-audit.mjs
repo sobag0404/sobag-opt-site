@@ -37,6 +37,8 @@ const FORBIDDEN_COPY = [
   { pattern: /Москва,\s*ул\.\s*Текстильщиков/iu, label: "unconfirmed address" },
   { pattern: /Новоданиловская\s+набережная/iu, label: "unconfirmed address" },
   { pattern: /\+7\s*900\s*000[-\s]?00[-\s]?00/iu, label: "fake phone" },
+  { pattern: /\+7\s*900\s*123[-\s]?45[-\s]?67/iu, label: "fake phone" },
+  { pattern: /tel:\+79001234567/iu, label: "fake phone link" },
   { pattern: /opt@sobag-shop\.ru/iu, label: "old email" },
 ];
 
