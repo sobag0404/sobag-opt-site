@@ -16,6 +16,7 @@
     "backup:store:self-test": "node tools/file-store-backup.mjs --self-test",
     "export:pim": "node tools/pim-export-normalized.mjs",
     "export:pim:postgres": "node tools/pim-postgres-seed.mjs",
+    "bundle:pim:postgres": "node tools/pim-postgres-migration-bundle.mjs",
     "audit:pim-db": "node tools/pim-db-contract-audit.mjs",
     "audit:pim-schema": "node tools/pim-postgres-schema-audit.mjs",
     "audit:pim-query": "node tools/pim-postgres-query-contract.mjs",

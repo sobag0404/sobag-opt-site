@@ -41,6 +41,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL migration bundle prep:
+  - added `tools/pim-postgres-migration-bundle.mjs` and `npm run bundle:pim:postgres`;
+  - the tool builds an ignored local bundle with `00-schema.sql`, generated `01-seed.sql`, and `manifest.json`;
+  - manifest includes SHA-256 hashes, row counts, source files, and guardrails for future reviewed DB cutover;
+  - default checks run dry-run/self-test only and do not connect to PostgreSQL or touch production data.
 - PostgreSQL variant SKU search prep:
   - future public catalog views now expose `variant_skus`;
   - DB search SQL matches base SKU, variant SKU, name, and description;
