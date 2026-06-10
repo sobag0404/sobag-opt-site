@@ -41,6 +41,7 @@
     "audit:photo-migration": "node tools/photo-migration-readiness.mjs",
     "audit:photo-manifest": "node tools/photo-migration-manifest-audit.mjs",
     "audit:photo-candidate": "node tools/photo-migration-candidate-audit.mjs",
+    "smoke:photo-pilot": "node tools/photo-migration-pilot-smoke.mjs",
     "plan:photos": "node tools/photo-migration-manifest.mjs",
     "audit:vps-release": "node tools/vps-release-audit.mjs",
     "audit:access": "node tools/access-audit.mjs",

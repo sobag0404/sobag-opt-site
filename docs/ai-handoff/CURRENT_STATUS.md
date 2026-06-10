@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Photo migration pilot smoke:
+  - added `tools/photo-migration-pilot-smoke.mjs` and `npm run smoke:photo-pilot`;
+  - the smoke creates an ignored local fixture catalog/photo set;
+  - it runs manifest planning, strict manifest audit, bulk CLI dry-run with responsive WebP/AVIF planning, and candidate metadata audit;
+  - it does not upload/delete files, read secrets, or touch production data;
+  - AutoFix now runs the pilot smoke.
 - Photo migration candidate audit:
   - added `tools/photo-migration-candidate-audit.mjs` and `npm run audit:photo-candidate`;
   - the audit compares current products JSON with a candidate migration output before publication;
