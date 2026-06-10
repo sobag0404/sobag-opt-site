@@ -27,7 +27,7 @@ const sampleBatch = {
   snapshot: { products: products.slice(0, 2) },
 };
 
-const pim = buildCatalogPim(products, { source: "pim-smoke", importBatches: [sampleBatch] });
+const pim = buildCatalogPim(products, { source: "pim-smoke", importBatches: [sampleBatch], includeImportBatchRows: true });
 
 assert(pim.version === 1, "PIM version must be 1");
 assert(pim.products.length === products.length, "PIM product count must match catalog product count");
@@ -41,6 +41,8 @@ assert(pim.importBatches.length === 1, "PIM must include import batch summaries"
 assert(!("products" in pim.importBatches[0]), "PIM import summary must not include batch products");
 assert(!("snapshot" in pim.importBatches[0]), "PIM import summary must not include snapshots");
 assert(pim.importBatches[0].snapshotProductCount === 2, "PIM import summary must keep snapshot count");
+assert(pim.importBatchRows.length === 1, "PIM must include safe import batch rows when requested");
+assert(pim.importBatchRows[0].batchId === sampleBatch.id, "PIM import batch row must reference its batch");
 
 console.log(
   `PIM smoke passed: ${pim.products.length} products, ${pim.variants.length} variants, ${pim.images.length} images, ${pim.taxonomies.categories.length} categories, ${pim.taxonomyAssignments.length} taxonomy links`

@@ -33,6 +33,7 @@ The first implementation is a sidecar payload stored next to the existing `produ
     },
     "taxonomyAssignments": [],
     "importBatches": [],
+    "importBatchRows": [],
     "counts": {}
   }
 }
@@ -76,6 +77,7 @@ Diagnostics compare stored sidecar counts with a freshly rebuilt PIM view and re
 - `taxonomies`: category, collection, holiday, and tag indexes with product counts.
 - `taxonomyAssignments`: one row per product-taxonomy link. This is the bridge table for the future DB split, equivalent to `product_taxonomies` in PostgreSQL.
 - `importBatches`: safe import batch summaries only. Large `products`, row reports, and rollback `snapshot` payloads are not copied into the PIM sidecar.
+- `importBatchRows`: future DB row-report records, included only by offline tools when explicitly requested; runtime catalog saves keep the sidecar compact.
 
 ## Import Batch Sync
 
@@ -109,6 +111,7 @@ The PostgreSQL contract draft lives in `docs/pim-postgres-schema.sql`. It is not
 - `taxonomies`
 - `product_taxonomies`
 - `import_batches`
+- `import_batch_rows`
 
 Check the schema contract without touching production data:
 
@@ -132,6 +135,7 @@ The export writes ignored local JSONL files:
 - `taxonomies.jsonl`
 - `taxonomy-assignments.jsonl`
 - `import-batches.jsonl`
+- `import-batch-rows.jsonl`
 - `manifest.json`
 
 The exporter reads only the supplied products JSON and does not touch production storage. Use `--dry-run` to validate table shape without writing files. AutoFix runs both the current catalog dry-run and a temporary self-test fixture.
@@ -153,6 +157,7 @@ The seed file targets `docs/pim-postgres-schema.sql` and writes upsert statement
 - `taxonomies`
 - `product_taxonomies`
 - `import_batches`
+- `import_batch_rows`
 
 This command is offline: it reads the supplied products JSON, writes only under `local-import-output` by default, does not connect to PostgreSQL, does not apply schema changes, and does not touch production data. Use `--dry-run` to validate the current catalog seed shape without writing SQL. Review generated SQL before applying it to any database. AutoFix runs the current catalog dry-run plus a temporary self-test fixture.
 

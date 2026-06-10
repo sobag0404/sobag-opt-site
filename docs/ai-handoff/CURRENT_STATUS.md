@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Import batch row DB contract:
+  - added future `import_batch_rows` coverage to `docs/pim-postgres-schema.sql`, schema audit, normalized export, seed exporter, and PIM smoke;
+  - row-report records are included only when offline tooling explicitly requests them;
+  - runtime catalog saves keep the PIM sidecar compact and production data was not touched.
 - PIM PostgreSQL seed dry-run guard:
   - `tools/pim-postgres-seed.mjs` now supports `--dry-run`;
   - AutoFix validates the current live catalog can build the future PostgreSQL seed SQL shape without writing files;

@@ -127,3 +127,20 @@ create table if not exists import_batches (
 
 create index if not exists import_batches_status_idx on import_batches (status);
 create index if not exists import_batches_created_at_idx on import_batches (created_at);
+
+create table if not exists import_batch_rows (
+  id text primary key,
+  batch_id text not null references import_batches (id) on delete cascade,
+  row_number integer not null default 0,
+  base_sku text not null default '',
+  name text not null default '',
+  status text not null default '',
+  action text not null default '',
+  reason text not null default '',
+  warnings text not null default '',
+  variant_count integer not null default 0,
+  payload jsonb not null default '{}'::jsonb
+);
+
+create index if not exists import_batch_rows_batch_id_idx on import_batch_rows (batch_id);
+create index if not exists import_batch_rows_action_idx on import_batch_rows (action);

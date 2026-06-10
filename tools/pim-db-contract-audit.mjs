@@ -62,7 +62,7 @@ function flatTaxonomies(taxonomies = {}) {
 }
 
 function auditPimDbContract(products) {
-  const pim = buildCatalogPim(products, { source: "pim-db-contract-audit" });
+  const pim = buildCatalogPim(products, { source: "pim-db-contract-audit", includeImportBatchRows: true });
   const errors = [];
   const warnings = [];
   const productIds = assertUnique(pim.products, "id", "products", errors);
@@ -103,6 +103,7 @@ function auditPimDbContract(products) {
 
   if (!pim.taxonomyAssignments?.length) warnings.push("taxonomy assignment table is empty");
   if (!pim.importBatches?.length) warnings.push("import batch table is empty in static catalog export; server storage may still contain batches");
+  if (!pim.importBatchRows?.length) warnings.push("import batch row table is empty in static catalog export; server storage may still contain row reports");
 
   return {
     ok: errors.length === 0,
@@ -115,10 +116,11 @@ function auditPimDbContract(products) {
       taxonomies: taxonomies.length,
       taxonomyAssignments: pim.taxonomyAssignments?.length || 0,
       importBatches: pim.importBatches?.length || 0,
+      importBatchRows: pim.importBatchRows?.length || 0,
       statuses: pim.counts.statuses || {},
     },
     contractVersion: 1,
-    targetTables: ["products", "variants", "images", "taxonomies", "product_taxonomies", "import_batches"],
+    targetTables: ["products", "variants", "images", "taxonomies", "product_taxonomies", "import_batches", "import_batch_rows"],
   };
 }
 

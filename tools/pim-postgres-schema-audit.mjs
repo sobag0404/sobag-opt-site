@@ -13,6 +13,7 @@ const REQUIRED_TABLES = {
   taxonomies: ["id", "type", "name", "slug", "description", "icon", "payload"],
   product_taxonomies: ["id", "product_id", "taxonomy_id", "type"],
   import_batches: ["id", "source", "status", "update_existing", "created_at", "created_by", "applied_at", "created", "skipped", "updated", "errors", "row_count", "product_count", "snapshot_product_count", "payload"],
+  import_batch_rows: ["id", "batch_id", "row_number", "base_sku", "status", "action", "reason", "warnings", "variant_count", "payload"],
 };
 
 function normalizeSql(sql) {
@@ -47,6 +48,7 @@ function auditPimPostgresSchema(sqlText = readFileSync(schemaPath, "utf8")) {
   [
     "references products (id) on delete restrict",
     "references images (id) on delete cascade",
+    "references import_batches (id) on delete cascade",
     "references taxonomies (id) on delete restrict",
     "check (status in ('draft', 'published', 'hidden', 'archive'))",
     "check (type in ('category', 'collection', 'holiday', 'tag'))",
@@ -55,7 +57,7 @@ function auditPimPostgresSchema(sqlText = readFileSync(schemaPath, "utf8")) {
     if (!sql.includes(fragment)) errors.push(`missing constraint: ${fragment}`);
   });
 
-  ["products_status_idx", "variants_product_id_idx", "images_product_id_idx", "taxonomies_type_idx", "product_taxonomies_product_id_idx", "import_batches_status_idx"].forEach((indexName) => {
+  ["products_status_idx", "variants_product_id_idx", "images_product_id_idx", "taxonomies_type_idx", "product_taxonomies_product_id_idx", "import_batches_status_idx", "import_batch_rows_batch_id_idx"].forEach((indexName) => {
     if (!sql.includes(`create index if not exists ${indexName}`)) warnings.push(`missing optional index: ${indexName}`);
   });
 

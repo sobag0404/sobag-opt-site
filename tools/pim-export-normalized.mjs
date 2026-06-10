@@ -55,6 +55,7 @@ function pimTables(pim) {
     taxonomies: flattenTaxonomies(pim.taxonomies),
     taxonomyAssignments: pim.taxonomyAssignments || [],
     importBatches: pim.importBatches || [],
+    importBatchRows: pim.importBatchRows || [],
   };
 }
 
@@ -74,6 +75,7 @@ function validateTables(tables) {
   assertUnique(tables.images, "id", "images");
   assertUnique(tables.taxonomies, "id", "taxonomies");
   assertUnique(tables.taxonomyAssignments, "id", "taxonomyAssignments");
+  assertUnique(tables.importBatchRows, "id", "importBatchRows");
   tables.variants.forEach((variant) => {
     if (!tables.products.some((product) => product.id === variant.productId)) throw new Error(`variant ${variant.id} references missing product ${variant.productId}`);
   });
@@ -83,6 +85,9 @@ function validateTables(tables) {
   tables.taxonomyAssignments.forEach((assignment) => {
     if (!tables.products.some((product) => product.id === assignment.productId)) throw new Error(`taxonomy assignment ${assignment.id} references missing product ${assignment.productId}`);
     if (!tables.taxonomies.some((taxonomy) => taxonomy.id === assignment.taxonomyId)) throw new Error(`taxonomy assignment ${assignment.id} references missing taxonomy ${assignment.taxonomyId}`);
+  });
+  tables.importBatchRows.forEach((row) => {
+    if (!tables.importBatches.some((batch) => batch.id === row.batchId)) throw new Error(`import batch row ${row.id} references missing batch ${row.batchId}`);
   });
 }
 
@@ -99,6 +104,7 @@ function manifestFor(pim, tables, args) {
       taxonomies: "taxonomies.jsonl",
       taxonomyAssignments: "taxonomy-assignments.jsonl",
       importBatches: "import-batches.jsonl",
+      importBatchRows: "import-batch-rows.jsonl",
     },
     counts: {
       products: tables.products.length,
@@ -107,6 +113,7 @@ function manifestFor(pim, tables, args) {
       taxonomies: tables.taxonomies.length,
       taxonomyAssignments: tables.taxonomyAssignments.length,
       importBatches: tables.importBatches.length,
+      importBatchRows: tables.importBatchRows.length,
       imageVariants: pim.counts?.imageVariants || 0,
       statuses: pim.counts?.statuses || {},
     },
@@ -121,7 +128,7 @@ async function writeJsonl(file, rows) {
 async function exportPim(args) {
   const products = JSON.parse(readFileSync(args.products, "utf8"));
   if (!Array.isArray(products) || !products.length) throw new Error("Products JSON must contain a non-empty array.");
-  const pim = buildCatalogPim(products, { source: args.source });
+  const pim = buildCatalogPim(products, { source: args.source, includeImportBatchRows: true });
   const tables = pimTables(pim);
   validateTables(tables);
   const manifest = manifestFor(pim, tables, args);
@@ -134,6 +141,7 @@ async function exportPim(args) {
     await writeJsonl(join(args.out, "taxonomies.jsonl"), tables.taxonomies);
     await writeJsonl(join(args.out, "taxonomy-assignments.jsonl"), tables.taxonomyAssignments);
     await writeJsonl(join(args.out, "import-batches.jsonl"), tables.importBatches);
+    await writeJsonl(join(args.out, "import-batch-rows.jsonl"), tables.importBatchRows);
     await writeFile(join(args.out, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   }
 
@@ -197,7 +205,7 @@ export async function runPimExport(argv = process.argv.slice(2)) {
   const result = await exportPim(args);
   const mode = result.dryRun ? "dry-run" : result.out;
   console.log(
-    `PIM normalized export passed (${mode}): ${result.manifest.counts.products} products, ${result.manifest.counts.variants} variants, ${result.manifest.counts.images} images, ${result.manifest.counts.taxonomies} taxonomies, ${result.manifest.counts.taxonomyAssignments} taxonomy assignments`
+    `PIM normalized export passed (${mode}): ${result.manifest.counts.products} products, ${result.manifest.counts.variants} variants, ${result.manifest.counts.images} images, ${result.manifest.counts.taxonomies} taxonomies, ${result.manifest.counts.taxonomyAssignments} taxonomy assignments, ${result.manifest.counts.importBatchRows} import batch rows`
   );
   return result;
 }

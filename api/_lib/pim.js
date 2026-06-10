@@ -287,6 +287,27 @@ function summarizeImportBatches(batches = []) {
     .filter((batch) => batch.id);
 }
 
+function summarizeImportBatchRows(batches = []) {
+  return (Array.isArray(batches) ? batches : [])
+    .filter((batch) => batch && typeof batch === "object")
+    .slice(0, 50)
+    .flatMap((batch) =>
+      (Array.isArray(batch.rows) ? batch.rows : []).map((row, index) => ({
+        id: `${text(batch.id) || "batch"}::row-${Number(row?.row || index + 1) || index + 1}`,
+        batchId: text(batch.id),
+        rowNumber: Number(row?.row || index + 1) || index + 1,
+        baseSku: text(row?.baseSku),
+        name: text(row?.name),
+        status: text(row?.status),
+        action: text(row?.action),
+        reason: text(row?.reason),
+        warnings: text(row?.warnings),
+        variantCount: Math.max(0, Number(row?.variantCount || 0)),
+      }))
+    )
+    .filter((row) => row.batchId);
+}
+
 function buildCatalogPim(products = [], options = {}) {
   const safeProducts = (Array.isArray(products) ? products : []).filter((product) => product && typeof product === "object");
   const productRecords = safeProducts.map(productRecord);
@@ -295,6 +316,7 @@ function buildCatalogPim(products = [], options = {}) {
   const taxonomies = taxonomyRecords(safeProducts);
   const taxonomyAssignments = taxonomyAssignmentRecords(safeProducts);
   const importBatches = summarizeImportBatches(options.importBatches);
+  const importBatchRows = options.includeImportBatchRows ? summarizeImportBatchRows(options.importBatches) : [];
   const statusCounts = productRecords.reduce((counts, product) => {
     counts[product.status] = (counts[product.status] || 0) + 1;
     return counts;
@@ -309,6 +331,7 @@ function buildCatalogPim(products = [], options = {}) {
     taxonomies,
     taxonomyAssignments,
     importBatches,
+    importBatchRows,
     counts: {
       products: productRecords.length,
       variants: variantRecords.length,
@@ -320,6 +343,7 @@ function buildCatalogPim(products = [], options = {}) {
       tags: taxonomies.tags?.length || 0,
       taxonomyAssignments: taxonomyAssignments.length,
       importBatches: importBatches.length,
+      importBatchRows: importBatchRows.length,
       statuses: statusCounts,
     },
   };
@@ -330,6 +354,7 @@ module.exports = {
   imageRecordsForProduct,
   productRecord,
   productStatus,
+  summarizeImportBatchRows,
   summarizeImportBatches,
   taxonomyAssignmentRecords,
   variantRecordsForProduct,

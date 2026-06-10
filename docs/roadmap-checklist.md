@@ -70,6 +70,7 @@ Last updated: 2026-06-10
      - [x] DB split contract bridge: PIM sidecar/export now includes product-taxonomy assignment rows and `tools/pim-db-contract-audit.mjs` validates the future product/variant/image/taxonomy/import-batch table contract offline.
      - [x] PostgreSQL target schema contract draft: `docs/pim-postgres-schema.sql` defines products, variants, images, image variants, taxonomies, product-taxonomies, and import batches; `tools/pim-postgres-schema-audit.mjs` guards it in AutoFix.
      - [x] PostgreSQL seed export rehearsal: `tools/pim-postgres-seed.mjs` generates an ignored SQL upsert seed for the future schema from the current normalized PIM bridge without connecting to DB or touching production data; AutoFix validates the current catalog seed shape in dry-run mode.
+     - [x] Import batch row contract: future PostgreSQL schema, normalized export, and seed exporter now include safe `import_batch_rows` records while the runtime sidecar stays compact unless row export is explicitly requested.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:

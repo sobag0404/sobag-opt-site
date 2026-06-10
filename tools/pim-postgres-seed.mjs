@@ -254,8 +254,25 @@ function importBatchSql(row) {
   ]);
 }
 
+function importBatchRowSql(row) {
+  const columns = ["id", "batch_id", "row_number", "base_sku", "name", "status", "action", "reason", "warnings", "variant_count", "payload"];
+  return insertStatement("import_batch_rows", columns, [
+    sqlString(row.id),
+    sqlString(row.batchId),
+    sqlInteger(row.rowNumber),
+    sqlString(row.baseSku),
+    sqlString(row.name),
+    sqlString(row.status),
+    sqlString(row.action),
+    sqlString(row.reason),
+    sqlString(row.warnings),
+    sqlInteger(row.variantCount),
+    sqlJson(row),
+  ]);
+}
+
 function buildSeedSql(products, args) {
-  const pim = buildCatalogPim(products, { source: args.source });
+  const pim = buildCatalogPim(products, { source: args.source, importBatches: args.importBatches || [], includeImportBatchRows: true });
   const taxonomies = flattenTaxonomies(pim.taxonomies);
   const imageVariants = flattenImageVariants(pim.images);
   const imageIndexByProduct = new Map();
@@ -264,7 +281,7 @@ function buildSeedSql(products, args) {
     "-- Generated for the future DB split. Review before applying to any database.",
     `-- Source: ${args.source}`,
     `-- Products file: ${basename(args.products)}`,
-    `-- Counts: ${pim.products.length} products, ${pim.variants.length} variants, ${pim.images.length} images, ${imageVariants.length} image variants, ${taxonomies.length} taxonomies, ${pim.taxonomyAssignments.length} product-taxonomy links`,
+    `-- Counts: ${pim.products.length} products, ${pim.variants.length} variants, ${pim.images.length} images, ${imageVariants.length} image variants, ${taxonomies.length} taxonomies, ${pim.taxonomyAssignments.length} product-taxonomy links, ${pim.importBatchRows.length} import batch rows`,
     "begin;",
     "set constraints all deferred;",
     "",
@@ -275,6 +292,7 @@ function buildSeedSql(products, args) {
     ...taxonomies.map(taxonomySql),
     ...pim.taxonomyAssignments.map(assignmentSql),
     ...pim.importBatches.map(importBatchSql),
+    ...pim.importBatchRows.map(importBatchRowSql),
     "",
     "commit;",
     "",
@@ -316,12 +334,26 @@ async function selfTest() {
         },
       ])
     );
-    const result = await writeSeed({ products: productsPath, out, source: "self-test" });
+    const result = await writeSeed({
+      products: productsPath,
+      out,
+      source: "self-test",
+      importBatches: [
+        {
+          id: "IB-seed-self-test",
+          source: "self-test",
+          status: "applied",
+          rows: [{ row: 1, baseSku: "seed_1", name: "Seed one", status: "created", action: "created", variantCount: 1 }],
+        },
+      ],
+    });
     const sql = await readFile(out, "utf8");
-    for (const expected of ["insert into products", "insert into variants", "insert into images", "insert into taxonomies", "insert into product_taxonomies", "commit;"]) {
+    for (const expected of ["insert into products", "insert into variants", "insert into images", "insert into taxonomies", "insert into product_taxonomies", "insert into import_batches", "insert into import_batch_rows", "commit;"]) {
       if (!sql.includes(expected)) throw new Error(`PIM PostgreSQL seed self-test missing ${expected}`);
     }
-    if (sql.includes("undefined") || result.counts.products !== 1 || result.counts.variants !== 1) throw new Error("PIM PostgreSQL seed self-test counts mismatch");
+    if (sql.includes("undefined") || result.counts.products !== 1 || result.counts.variants !== 1 || result.counts.importBatchRows !== 1) {
+      throw new Error("PIM PostgreSQL seed self-test counts mismatch");
+    }
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -337,7 +369,7 @@ async function main() {
   const result = await writeSeed(args);
   console.log(args.dryRun ? "PIM PostgreSQL seed dry-run passed" : `PIM PostgreSQL seed written: ${args.out}`);
   console.log(
-    `Rows: ${result.counts.products} products, ${result.counts.variants} variants, ${result.counts.images} images, ${result.counts.imageVariants} image variants, ${result.counts.taxonomies} taxonomies, ${result.counts.taxonomyAssignments} product-taxonomy links`
+    `Rows: ${result.counts.products} products, ${result.counts.variants} variants, ${result.counts.images} images, ${result.counts.imageVariants} image variants, ${result.counts.taxonomies} taxonomies, ${result.counts.taxonomyAssignments} product-taxonomy links, ${result.counts.importBatchRows} import batch rows`
   );
 }
 
