@@ -42,6 +42,7 @@
             <span>Корзина</span>
             <strong id="cartCount">0</strong>
             <em id="cartHeaderTotal">0 ₽</em>
+            <small id="cartHeaderDiscount">30 000 ₽ до скидки 5%</small>
           </button>
         </div>
       </div>

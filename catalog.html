@@ -131,30 +131,10 @@
               <div class="totals__final"><span>Итого</span><strong id="grandTotal">0 ₽</strong></div>
             </div>
             <p class="cart-min-hint" id="cartMinHint">Минимальная сумма корзины 30 000 ₽.</p>
-            <form class="request-form" id="requestForm">
-              <input name="phone" type="tel" placeholder="Телефон" required />
-              <input name="email" type="email" placeholder="Email" />
-              <input name="city" type="text" placeholder="Город" autocomplete="address-level2" />
-              <input name="address" type="text" placeholder="Адрес доставки или город" autocomplete="street-address" />
-              <select name="delivery">
-                <option value="">Доставка: согласовать</option>
-                <option value="Самовывоз">Самовывоз</option>
-                <option value="Транспортная компания">Транспортная компания</option>
-                <option value="До маркетплейса">До маркетплейса</option>
-              </select>
-              <select name="packaging">
-                <option value="">Упаковка: стандартная</option>
-                <option value="Под маркетплейс">Под маркетплейс</option>
-                <option value="Индивидуальная">Индивидуальная</option>
-              </select>
-              <input name="layoutReference" type="text" placeholder="Макет из профиля или ссылка" />
-              <input name="layoutFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.zip,.rar" />
-              <textarea name="comment" placeholder="Комментарий: сроки, город, упаковка"></textarea>
-              <button class="primary-button" type="submit">
-                <i data-lucide="send"></i>
-                Отправить корзину
-              </button>
-            </form>
+            <a class="primary-button request-panel__checkout" href="cart.html">
+              <i data-lucide="shopping-cart"></i>
+              Оформить в корзине
+            </a>
           </aside>
         </div>
       </section>

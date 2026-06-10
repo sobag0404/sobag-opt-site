@@ -639,6 +639,7 @@ const cartItems = document.querySelector("#cartItems");
 const cartEmpty = document.querySelector("#cartEmpty");
 const cartCount = document.querySelector("#cartCount");
 const cartHeaderTotal = document.querySelector("#cartHeaderTotal");
+const cartHeaderDiscount = document.querySelector("#cartHeaderDiscount");
 const favoriteCount = document.querySelector("#favoriteCount");
 const subtotalNode = document.querySelector("#subtotal");
 const discountValue = document.querySelector("#discountValue");
@@ -4480,6 +4481,7 @@ function renderCart() {
   cartEmpty?.classList.toggle("is-hidden", lines.length > 0);
   setTextWithPop(cartCount, totals.qty);
   setTextWithPop(cartHeaderTotal, formatMoney(totals.total));
+  setTextWithPop(cartHeaderDiscount, totals.discount ? `скидка ${totals.discount}%` : getBasketDiscountHint(totals.subtotal));
   const headerCartButton = cartCount?.closest(".cart-button");
   headerCartButton?.classList.toggle("is-empty", totals.qty === 0);
   setTextWithPop(favoriteCount, state.favorites.size);

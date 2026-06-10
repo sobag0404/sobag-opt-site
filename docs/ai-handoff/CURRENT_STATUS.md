@@ -41,6 +41,13 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Catalog side-cart simplification:
+  - removed the order form from catalog/favorites side panels;
+  - buyer checkout/contact/company fields now live only on `/cart`;
+  - side panel has mini-cart totals plus `Оформить в корзине`;
+  - header cart button displays discount progress/discount info;
+  - selected catalog layout narrows the side cart to give product cards more room;
+  - product card outlines are lighter.
 - Order persistence and catalog side-cart UI reliability:
   - buyer catalog/cart order submit, saved quote send-to-manager, buyer order messages, manager CRM comments, status changes, and manager note edits no longer silently create local-only records when the backend is unavailable;
   - successful order/CRM actions now require server persistence through `/api/orders` or `/api/admin/orders`;
