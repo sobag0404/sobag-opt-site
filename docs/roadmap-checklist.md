@@ -78,6 +78,7 @@ Last updated: 2026-06-10
      - [x] Public catalog source seam: `api/_lib/catalog-source.js` centralizes public catalog/review loading for `/api/catalog`, `/api/catalog-query`, and `/api/catalog-detail`, so a later PostgreSQL source can replace store/static loading without changing the public route contracts.
      - [x] PostgreSQL row adapter prep: `api/_lib/catalog-db-rows.js` maps future snake_case `public_catalog_*`, variant, and image rows into current public card/detail payloads; `tools/catalog-db-rows-smoke.mjs` guards compact-card and detail hydration shape.
      - [x] PostgreSQL query builder prep: `api/_lib/catalog-db-query.js` builds parameterized future `public_catalog_cards` list/count and `public_catalog_products` detail SQL for compact reads with guarded sort/filter/page-size mapping; `tools/catalog-db-query-smoke.mjs` guards placeholders and bounded page size.
+     - [x] PostgreSQL source adapter prep: `api/_lib/catalog-db-source.js` composes the DB query builder and row adapter behind a fake-client smoke, returning current `/api/catalog-query` and `/api/catalog-detail` compatible payloads without connecting to PostgreSQL or changing runtime storage.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:

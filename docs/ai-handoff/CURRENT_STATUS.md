@@ -41,6 +41,13 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL source adapter prep:
+  - added `api/_lib/catalog-db-source.js`, `server-routes/_lib/catalog-db-source.js`, and `tools/catalog-db-source-smoke.mjs`;
+  - the adapter composes the SQL builder and DB row adapter behind a `query(sql, params)` client interface;
+  - fake-client smoke verifies current `/api/catalog-query` list/pageInfo and `/api/catalog-detail` detail payload compatibility;
+  - this does not connect to PostgreSQL, change runtime storage, or touch production data;
+  - AutoFix runs the source-adapter smoke;
+  - verification passed: `npm.cmd run smoke:catalog:db-source` and `npm.cmd run check`.
 - PostgreSQL query builder prep:
   - added `api/_lib/catalog-db-query.js` and `tools/catalog-db-query-smoke.mjs`;
   - the builder creates parameterized future `public_catalog_cards` list/count SQL and `public_catalog_products` detail SQL;
