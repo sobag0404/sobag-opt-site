@@ -31,6 +31,7 @@
     "smoke:catalog:db-query": "node tools/catalog-db-query-smoke.mjs",
     "smoke:catalog:db-source": "node tools/catalog-db-source-smoke.mjs",
     "smoke:catalog:db-client": "node tools/catalog-db-client-smoke.mjs",
+    "smoke:catalog:db-write": "node tools/catalog-db-write-smoke.mjs",
     "smoke:catalog:scale": "node tools/catalog-query-scale-smoke.mjs",
     "check": "node tools/autofix.mjs --check",
     "autofix": "node tools/autofix.mjs --write",

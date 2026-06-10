@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL write statement prep:
+  - added `api/_lib/catalog-db-write.js`, `server-routes/_lib/catalog-db-write.js`, `tools/catalog-db-write-smoke.mjs`, and `npm run smoke:catalog:db-write`;
+  - the builder creates parameterized upsert-only statements for future product, variant, image, image-variant, taxonomy, product-taxonomy, import-batch, and import-batch-row writes;
+  - smoke rejects destructive SQL and verifies all future DB write tables without connecting to PostgreSQL or changing current runtime storage.
 - PostgreSQL migration bundle audit:
   - added `tools/pim-postgres-migration-bundle-audit.mjs` and `npm run audit:pim:postgres-bundle`;
   - the audit checks generated schema/seed/manifest hashes, byte counts, row counts, relative paths, transaction markers, and secret-like values;
