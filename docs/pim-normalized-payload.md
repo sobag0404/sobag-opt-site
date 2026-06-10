@@ -136,6 +136,26 @@ The export writes ignored local JSONL files:
 
 The exporter reads only the supplied products JSON and does not touch production storage. Use `--dry-run` to validate table shape without writing files. AutoFix runs both the current catalog dry-run and a temporary self-test fixture.
 
+## PostgreSQL Seed Export
+
+For a future staging PostgreSQL rehearsal, generate an ignored SQL seed file from the same normalized PIM bridge:
+
+```bash
+npm run export:pim:postgres -- --products data/products-live.json --out local-import-output/pim-postgres-seed.sql
+```
+
+The seed file targets `docs/pim-postgres-schema.sql` and writes upsert statements for:
+
+- `products`
+- `variants`
+- `images`
+- `image_variants`
+- `taxonomies`
+- `product_taxonomies`
+- `import_batches`
+
+This command is offline: it reads the supplied products JSON, writes only under `local-import-output` by default, does not connect to PostgreSQL, does not apply schema changes, and does not touch production data. Review the SQL before applying it to any database. AutoFix runs only the temporary self-test fixture.
+
 ## DB Contract Audit
 
 Use the DB contract audit before any real database split:

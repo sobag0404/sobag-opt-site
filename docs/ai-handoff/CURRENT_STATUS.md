@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PIM PostgreSQL seed export:
+  - added `tools/pim-postgres-seed.mjs` and `npm run export:pim:postgres`;
+  - it generates an ignored SQL upsert seed for `docs/pim-postgres-schema.sql` from the current normalized PIM bridge;
+  - it covers products, variants, images, image variants, taxonomies, product-taxonomy links, and import batch summaries;
+  - it does not connect to PostgreSQL, apply schema changes, or touch production data;
+  - AutoFix now runs the seed exporter self-test.
 - Photo migration manifest planner:
   - added `tools/photo-migration-manifest.mjs` and `npm run plan:photos`;
   - it matches local product photo folders to products, records missing products, and plans object-storage prefixes plus optional WebP/AVIF variants;
