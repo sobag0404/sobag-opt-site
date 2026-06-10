@@ -15,6 +15,7 @@
     "backup:store": "node tools/file-store-backup.mjs",
     "backup:store:self-test": "node tools/file-store-backup.mjs --self-test",
     "export:pim": "node tools/pim-export-normalized.mjs",
+    "audit:pim-db": "node tools/pim-db-contract-audit.mjs",
     "upload:photos": "node tools/bulk-upload-product-photos.mjs",
     "smoke:prod": "node tools/production-smoke.mjs",
     "smoke:prod:self-test": "node tools/production-smoke.mjs --self-test",

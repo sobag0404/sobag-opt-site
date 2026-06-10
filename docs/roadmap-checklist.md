@@ -66,6 +66,7 @@ Last updated: 2026-06-10
      - [x] Admin diagnostics/export endpoint for the PIM sidecar: summary/full/table views and CSV exports for products, variants, images, taxonomies, and import batches.
      - [x] VPS storage bridge: explicit `SOBAG_STORE_PROVIDER=file` backend for shared data, catalog, content, import batches, and sessions, while Vercel stays on Redis/KV.
      - [x] Offline normalized PIM export for future DB import: products, variants, images, taxonomies, import-batches JSONL, and manifest.
+     - [x] DB split contract bridge: PIM sidecar/export now includes product-taxonomy assignment rows and `tools/pim-db-contract-audit.mjs` validates the future product/variant/image/taxonomy/import-batch table contract offline.
      - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:

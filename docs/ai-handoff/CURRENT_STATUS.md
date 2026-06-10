@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Import/PIM DB split contract:
+  - PIM sidecar/export now includes `taxonomyAssignments`, exported as ignored `taxonomy-assignments.jsonl`;
+  - this adds the missing future DB join table for product -> category/collection/holiday/tag links without changing public catalog APIs;
+  - added `tools/pim-db-contract-audit.mjs` and `npm run audit:pim-db`;
+  - the audit validates the future normalized contract offline: products, variants, images, taxonomies, product-taxonomy links, and import batch summaries;
+  - no production data/env/cache was touched.
 - Photo migration readiness:
   - added `tools/photo-migration-readiness.mjs` and `npm run audit:photo-migration`;
   - the report is offline and safe: no uploads, no deletes, no secret/env values printed;

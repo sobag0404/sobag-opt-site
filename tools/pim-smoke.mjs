@@ -34,6 +34,7 @@ assert(pim.products.length === products.length, "PIM product count must match ca
 assert(pim.variants.length > products.length, "PIM must include generated variants");
 assert(pim.images.length >= products.length, "PIM must include product images");
 assert(pim.taxonomies.categories.length > 0, "PIM must include categories taxonomy");
+assert(pim.taxonomyAssignments.length > 0, "PIM must include product-taxonomy assignments");
 assert(pim.counts.products === pim.products.length, "PIM product count metadata is wrong");
 assert(pim.counts.variants === pim.variants.length, "PIM variant count metadata is wrong");
 assert(pim.importBatches.length === 1, "PIM must include import batch summaries");
@@ -42,5 +43,5 @@ assert(!("snapshot" in pim.importBatches[0]), "PIM import summary must not inclu
 assert(pim.importBatches[0].snapshotProductCount === 2, "PIM import summary must keep snapshot count");
 
 console.log(
-  `PIM smoke passed: ${pim.products.length} products, ${pim.variants.length} variants, ${pim.images.length} images, ${pim.taxonomies.categories.length} categories`
+  `PIM smoke passed: ${pim.products.length} products, ${pim.variants.length} variants, ${pim.images.length} images, ${pim.taxonomies.categories.length} categories, ${pim.taxonomyAssignments.length} taxonomy links`
 );

@@ -223,6 +223,36 @@ function taxonomyRecords(products = []) {
   );
 }
 
+function taxonomyAssignmentRecords(products = []) {
+  const seen = new Set();
+  return (Array.isArray(products) ? products : []).flatMap((product, index) => {
+    const id = productId(product, index);
+    const buckets = {
+      category: productCategories(product),
+      collection: list(product?.collections),
+      holiday: list(product?.holidays),
+      tag: list(product?.tags),
+    };
+    return Object.entries(buckets).flatMap(([type, values]) =>
+      values
+        .map((name) => {
+          const taxonomyIdValue = taxonomyId(type, name);
+          const key = `${id}::${taxonomyIdValue}`;
+          if (seen.has(key)) return null;
+          seen.add(key);
+          return {
+            id: key,
+            productId: id,
+            taxonomyId: taxonomyIdValue,
+            type,
+            name,
+          };
+        })
+        .filter(Boolean)
+    );
+  });
+}
+
 function cleanCounts(counts = {}) {
   return {
     created: Math.max(0, Number(counts.created || 0)),
@@ -263,6 +293,7 @@ function buildCatalogPim(products = [], options = {}) {
   const variantRecords = safeProducts.flatMap(variantRecordsForProduct);
   const imageRecords = safeProducts.flatMap(imageRecordsForProduct);
   const taxonomies = taxonomyRecords(safeProducts);
+  const taxonomyAssignments = taxonomyAssignmentRecords(safeProducts);
   const importBatches = summarizeImportBatches(options.importBatches);
   const statusCounts = productRecords.reduce((counts, product) => {
     counts[product.status] = (counts[product.status] || 0) + 1;
@@ -276,6 +307,7 @@ function buildCatalogPim(products = [], options = {}) {
     variants: variantRecords,
     images: imageRecords,
     taxonomies,
+    taxonomyAssignments,
     importBatches,
     counts: {
       products: productRecords.length,
@@ -286,6 +318,7 @@ function buildCatalogPim(products = [], options = {}) {
       collections: taxonomies.collections?.length || 0,
       holidays: taxonomies.holidays?.length || 0,
       tags: taxonomies.tags?.length || 0,
+      taxonomyAssignments: taxonomyAssignments.length,
       importBatches: importBatches.length,
       statuses: statusCounts,
     },
@@ -298,6 +331,7 @@ module.exports = {
   productRecord,
   productStatus,
   summarizeImportBatches,
+  taxonomyAssignmentRecords,
   variantRecordsForProduct,
   variantSku,
 };

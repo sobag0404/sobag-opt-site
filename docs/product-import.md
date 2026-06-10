@@ -120,6 +120,14 @@ node tools/bulk-upload-product-photos.mjs --products data/products.import.json -
 node tools/image-metadata-audit.mjs --products local-import-output\products-with-object-images.json --published-only --require-metadata --require-responsive --require-square
 ```
 
+Для подготовки будущего DB/storage split PIM экспорт теперь также пишет `taxonomy-assignments.jsonl`, то есть связи товар -> категория/подборка/праздник/тег. Перед любым реальным переносом в БД запускайте:
+
+```powershell
+npm.cmd run audit:pim-db
+```
+
+Проверка read-only: она валидирует стабильные ID, уникальные `baseSku`/SKU вариантов, ссылки между product/variant/image/taxonomy, статусы публикации и положительные цены.
+
 ## Локальный импорт
 
 ```powershell

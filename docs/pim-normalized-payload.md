@@ -31,6 +31,7 @@ The first implementation is a sidecar payload stored next to the existing `produ
       "holidays": [],
       "tags": []
     },
+    "taxonomyAssignments": [],
     "importBatches": [],
     "counts": {}
   }
@@ -73,6 +74,7 @@ Diagnostics compare stored sidecar counts with a freshly rebuilt PIM view and re
 - `variants`: generated variant records from `types * sizes * materials`, using the same SKU pattern as the frontend.
 - `images`: metadata records from `images`, `image`, and `gallery`, including object storage fields and responsive `variants` when present.
 - `taxonomies`: category, collection, holiday, and tag indexes with product counts.
+- `taxonomyAssignments`: one row per product-taxonomy link. This is the bridge table for the future DB split, equivalent to `product_taxonomies` in PostgreSQL.
 - `importBatches`: safe import batch summaries only. Large `products`, row reports, and rollback `snapshot` payloads are not copied into the PIM sidecar.
 
 ## Import Batch Sync
@@ -112,7 +114,27 @@ The export writes ignored local JSONL files:
 - `variants.jsonl`
 - `images.jsonl`
 - `taxonomies.jsonl`
+- `taxonomy-assignments.jsonl`
 - `import-batches.jsonl`
 - `manifest.json`
 
 The exporter reads only the supplied products JSON and does not touch production storage. Use `--dry-run` to validate table shape without writing files. AutoFix runs both the current catalog dry-run and a temporary self-test fixture.
+
+## DB Contract Audit
+
+Use the DB contract audit before any real database split:
+
+```bash
+npm run audit:pim-db
+```
+
+It validates the current normalized bridge against the future tables:
+
+- `products`
+- `variants`
+- `images`
+- `taxonomies`
+- `product_taxonomies`
+- `import_batches`
+
+The audit checks stable IDs, unique `baseSku` and variant SKU, allowed product statuses, product references from variants/images, taxonomy references from product-taxonomy links, positive prices, and hidden/status consistency. It is read-only and does not touch production storage.
