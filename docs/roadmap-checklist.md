@@ -105,6 +105,7 @@ Last updated: 2026-06-10
      - [x] Runtime list rendering optimization: server cursor pages append only new cards instead of replacing existing first-page DOM, and product cards use browser rendering containment for long lists.
      - [x] Browser 10k pagination smoke: Playwright simulates a 10k server-query catalog, verifies 48-card cursor pages, bounded DOM growth after repeated "show more", stable first-page DOM, and no full `/api/catalog` bootstrap.
    - [x] Current performance guard: `tools/catalog-performance-audit.mjs` verifies compact 48-card list payloads, append-only cursor rendering hooks, card rendering containment, and reports current real-catalog image migration readiness.
+   - [x] Core Web Vitals readiness guard: `tools/core-web-vitals-readiness.mjs` verifies bundle budgets, deferred scripts on key pages, static image hints, public cache headers, skeleton loading, 48-card query pages, append-only rendering, card containment, and current image migration readiness without pretending final field CWV is done.
    - [ ] Core Web Vitals audit after real catalog growth.
 
 6. [planned] QA/security/ops:

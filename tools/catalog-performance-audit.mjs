@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { auditProducts } from "./image-metadata-audit.mjs";
 
@@ -63,17 +64,23 @@ function auditCatalogPerformance() {
   };
 }
 
-try {
-  const summary = auditCatalogPerformance();
-  console.log(
-    `Catalog performance audit passed: ${summary.publicProducts}/${summary.products} public products, ${summary.defaultPageSize}-card pages, ${summary.imageMetadata} metadata images, ${summary.webpVariants} WebP sets, ${summary.avifVariants} AVIF sets`
-  );
-  if (!summary.migratedImageReady) {
-    console.log("Catalog performance audit note: real catalog image migration/WebP/AVIF validation is still pending.");
+function main() {
+  try {
+    const summary = auditCatalogPerformance();
+    console.log(
+      `Catalog performance audit passed: ${summary.publicProducts}/${summary.products} public products, ${summary.defaultPageSize}-card pages, ${summary.imageMetadata} metadata images, ${summary.webpVariants} WebP sets, ${summary.avifVariants} AVIF sets`
+    );
+    if (!summary.migratedImageReady) {
+      console.log("Catalog performance audit note: real catalog image migration/WebP/AVIF validation is still pending.");
+    }
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
   }
-} catch (error) {
-  console.error(error.message);
-  process.exit(1);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
 }
 
 export { auditCatalogPerformance };

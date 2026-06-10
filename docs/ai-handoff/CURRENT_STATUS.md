@@ -41,6 +41,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Performance/Core Web Vitals readiness:
+  - added `tools/core-web-vitals-readiness.mjs` and `npm run audit:cwv`;
+  - AutoFix now checks bundle budgets, deferred scripts on key pages, static image hints, public cache headers for catalog data, skeleton loading, 48-card query pages, append-only cursor rendering, product-card containment, and image migration readiness;
+  - all HTML script tags now use `defer`, reducing render-blocking script work while preserving execution order;
+  - added `docs/performance-cwv.md` with the rule that final CWV must be measured only after real object-storage images and larger catalog data exist;
+  - current audit passes but warns that real WebP/AVIF image validation is still pending.
 - Import/PIM DB split contract:
   - PIM sidecar/export now includes `taxonomyAssignments`, exported as ignored `taxonomy-assignments.jsonl`;
   - this adds the missing future DB join table for product -> category/collection/holiday/tag links without changing public catalog APIs;

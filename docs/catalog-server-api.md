@@ -109,4 +109,6 @@ The frontend requests the server default `pageSize=48` for public listing pages,
 
 `npm run audit:performance` runs `tools/catalog-performance-audit.mjs`. It checks the current catalog performance invariants: 48-card server pages, compact list payloads, append-only cursor rendering hooks, product-card rendering containment, and current real-catalog image migration readiness.
 
+`npm run audit:cwv` runs `tools/core-web-vitals-readiness.mjs`. It is not a replacement for a real Core Web Vitals field/lab measurement after the catalog and photo set grow. It is a readiness gate that keeps the current performance assumptions true: JS/CSS bundle budgets, deferred scripts, static image hints, public cache headers for catalog query/detail data, skeleton loading, no cache-busting full catalog bootstrap, 48-card server pages, append-only cursor rendering, and product-card containment.
+
 The Playwright UI smoke includes a synthetic 10k server-query catalog case. It verifies bounded DOM growth after repeated cursor pages, a stable first-page card node, 48-card requests, and no full `/api/catalog` bootstrap while `/api/catalog-query` succeeds.
