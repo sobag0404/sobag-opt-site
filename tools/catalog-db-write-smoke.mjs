@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const { buildCatalogPim } = require("../api/_lib/pim.js");
-const { buildCatalogWriteStatements } = require("../api/_lib/catalog-db-write.js");
+const { buildCatalogWriteStatements, runCatalogWriteTransaction } = require("../api/_lib/catalog-db-write.js");
 
 function fixturePim() {
   return buildCatalogPim(
@@ -77,7 +77,19 @@ function assertStatement(statement) {
   assert.equal(Math.max(...placeholders), statement.params.length);
 }
 
-function main() {
+function fakeClient(failAtTable = "") {
+  const calls = [];
+  return {
+    calls,
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (failAtTable && sql.startsWith(`INSERT INTO ${failAtTable} `)) throw new Error(`planned ${failAtTable} failure`);
+      return { rows: [] };
+    },
+  };
+}
+
+async function main() {
   const statements = buildCatalogWriteStatements(fixturePim());
   const tables = new Set(statements.map((statement) => statement.table));
   for (const expected of ["products", "variants", "images", "image_variants", "taxonomies", "product_taxonomies", "import_batches", "import_batch_rows"]) {
@@ -88,7 +100,26 @@ function main() {
   assert.equal(product.params.includes("db_write_1"), true);
   const imageVariant = statements.find((statement) => statement.table === "image_variants");
   assert.equal(imageVariant.params.includes("avif"), true);
+
+  const dryClient = fakeClient();
+  const dryResult = await runCatalogWriteTransaction(dryClient, fixturePim());
+  assert.equal(dryResult.dryRun, true);
+  assert.equal(dryClient.calls[0].sql, "BEGIN");
+  assert.equal(dryClient.calls.at(-1).sql, "ROLLBACK");
+
+  const commitClient = fakeClient();
+  const commitResult = await runCatalogWriteTransaction(commitClient, fixturePim(), { dryRun: false });
+  assert.equal(commitResult.dryRun, false);
+  assert.equal(commitClient.calls.at(-1).sql, "COMMIT");
+
+  const failingClient = fakeClient("variants");
+  await assert.rejects(() => runCatalogWriteTransaction(failingClient, fixturePim(), { dryRun: false }), /planned variants failure/);
+  assert.equal(failingClient.calls.at(-1).sql, "ROLLBACK");
+
   console.log(`catalog DB write smoke passed: ${statements.length} upsert statements, ${tables.size} tables`);
 }
 
-main();
+main().catch((error) => {
+  console.error(error.message || error);
+  process.exit(1);
+});

@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL write transaction prep:
+  - `api/_lib/catalog-db-write.js` now includes a future transaction wrapper for catalog DB writes;
+  - default mode is rollback/dry-run, commit requires explicit `dryRun: false`, and errors force rollback;
+  - `smoke:catalog:db-write` verifies BEGIN/ROLLBACK/COMMIT/error rollback through a fake client, without connecting to PostgreSQL or touching production data.
 - PostgreSQL write statement prep:
   - added `api/_lib/catalog-db-write.js`, `server-routes/_lib/catalog-db-write.js`, `tools/catalog-db-write-smoke.mjs`, and `npm run smoke:catalog:db-write`;
   - the builder creates parameterized upsert-only statements for future product, variant, image, image-variant, taxonomy, product-taxonomy, import-batch, and import-batch-row writes;

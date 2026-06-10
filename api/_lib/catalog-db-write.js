@@ -239,9 +239,27 @@ function buildCatalogWriteStatements(pim = {}) {
   ];
 }
 
+async function runCatalogWriteTransaction(client, pim = {}, options = {}) {
+  if (!client || typeof client.query !== "function") throw new Error("PostgreSQL catalog writer needs a query(sql, params) client");
+  const statements = buildCatalogWriteStatements(pim);
+  const dryRun = options.dryRun !== false;
+  await client.query("BEGIN");
+  try {
+    for (const statement of statements) {
+      await client.query(statement.sql, statement.params);
+    }
+    await client.query(dryRun ? "ROLLBACK" : "COMMIT");
+    return { ok: true, dryRun, statements: statements.length, tables: [...new Set(statements.map((statement) => statement.table))] };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  }
+}
+
 module.exports = {
   buildCatalogWriteStatements,
   buildUpsert,
+  runCatalogWriteTransaction,
   productValues,
   variantValues,
   imageValues,
