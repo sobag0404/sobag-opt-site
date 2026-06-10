@@ -41,6 +41,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Photo migration manifest audit:
+  - added `tools/photo-migration-manifest-audit.mjs` and `npm run audit:photo-manifest`;
+  - the audit validates local photo migration manifests before real upload: counts, provider label, portable relative paths, `products/` storage prefixes, image extensions, and strict WebP/AVIF variant planning;
+  - it is offline only and does not upload, delete, read env secrets, or mutate product data;
+  - AutoFix covers its self-test fixture.
 - PIM public catalog read contract:
   - normalized product records now include description, min/max price, and popular score for future DB-backed catalog cards;
   - PostgreSQL schema now defines `public_catalog_products` and `public_catalog_cards` read views;

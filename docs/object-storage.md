@@ -119,6 +119,14 @@ local-import-output/photo-migration-manifest.json
 
 Use `--limit-products 20` for a small pilot manifest. Use `--json` when another script should consume the manifest from stdout instead of writing a file. The manifest records matched/missing products, source file names, planned provider, planned storage prefixes, and planned WebP/AVIF variant file names; raw photo folders and generated outputs stay ignored by Git.
 
+Audit the manifest before any real upload:
+
+```powershell
+npm.cmd run audit:photo-manifest -- --manifest local-import-output/photo-migration-manifest.json --strict
+```
+
+The manifest audit checks counts, provider label, portable relative paths, `products/` storage prefixes, image extensions, and WebP/AVIF variant planning. It does not upload, delete, read env secrets, or mutate product data.
+
 Use `npm run audit:images` after preparing or migrating product images. The audit checks image metadata shape, providers, dimensions, responsive WebP/AVIF variant records, and duplicate image keys. For the real migrated catalog, run the stricter mode:
 
 ```bash
