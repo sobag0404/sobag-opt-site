@@ -36,6 +36,7 @@ Current production stays on `https://sobag-shop.online`. Vercel is not an active
    - Current status: preview pages now share a Rust-rendered commerce shell with top navigation, logo, catalog link, search form, account/favorites links, and cart link so route-cutover testing is closer to the public storefront.
    - Current status: Rust also serves public-path aliases `/catalog`, `/search`, `/product`, `/catalog-fragment`, `/search-fragment`, and `/product-fragment` on port 3001 for Nginx cutover rehearsal only. Production public routing is not switched yet.
    - Current status: `docs/rust-ssr-cutover-runbook.md` and `tools/rust-ssr-cutover-audit.mjs` guard the exact candidate route list, Node fallback exclusions, pre-cutover checks, and rollback rules before any public SSR Nginx switch.
+   - Current status: Rust SSR page titles no longer expose `Rust Preview`, and the SSR smoke/audit gates fail if preview/debug branding appears on candidate public pages.
 
 3. Content pages:
    - Move read-only public pages to Rust templates.

@@ -47,26 +47,30 @@ function assertContains(text, needle, label) {
   if (!text.includes(needle)) throw new Error(`${label} missing ${needle}`);
 }
 
+function assertNotContains(text, needle, label) {
+  if (text.includes(needle)) throw new Error(`${label} must not expose ${needle}`);
+}
+
 async function main() {
   const args = parseArgs();
   const checks = [
-    ["/rust/catalog?pageSize=2", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-shell-search", "rust-grid", "rust-filter-panel", "hx-get"]],
-    ["/rust/search?q=opt_70190&pageSize=2", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-grid", "opt_70190"]],
+    ["/rust/catalog?pageSize=2", ["Sobag Opt", "rust-shell-header", "rust-shell-search", "rust-grid", "rust-filter-panel", "hx-get"]],
+    ["/rust/search?q=opt_70190&pageSize=2", ["Sobag Opt", "rust-shell-header", "rust-grid", "opt_70190"]],
     ["/rust/catalog?category=%D0%9F%D0%BE%D0%B4%D1%83%D1%88%D0%BA%D0%B8&pageSize=2", ["rust-filter-panel", "checked", "rust-clear-filters"]],
     ["/rust/catalog-fragment?pageSize=2", ["rust-grid", "rust-card"]],
-    ["/rust/product?baseSku=opt_70190", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-product", "rust-product-gallery", "rust-variant-qty", "rust-related", "opt_70190"]],
+    ["/rust/product?baseSku=opt_70190", ["Sobag Opt", "rust-shell-header", "rust-product", "rust-product-gallery", "rust-variant-qty", "rust-related", "opt_70190"]],
     ["/rust/product-fragment?baseSku=opt_70190", ["rust-product", "rust-product-main-image", "rust-variant-table", "rust-related", "opt_70190"]],
-    ["/catalog?pageSize=2", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-shell-search", "rust-grid", "rust-filter-panel", "hx-get=\"/catalog-fragment\""]],
-    ["/search?q=opt_70190&pageSize=2", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-grid", "opt_70190", "action=\"/search\""]],
+    ["/catalog?pageSize=2", ["Sobag Opt", "rust-shell-header", "rust-shell-search", "rust-grid", "rust-filter-panel", "hx-get=\"/catalog-fragment\""]],
+    ["/search?q=opt_70190&pageSize=2", ["Sobag Opt", "rust-shell-header", "rust-grid", "opt_70190", "action=\"/search\""]],
     ["/catalog-fragment?pageSize=2", ["rust-grid", "rust-card", "href=\"/product?baseSku="]],
     ["/search-fragment?q=opt_70190&pageSize=2", ["rust-grid", "rust-card", "opt_70190", "href=\"/product?baseSku="]],
-    ["/product?baseSku=opt_70190", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-product", "rust-product-gallery", "rust-variant-qty", "rust-related", "href=\"/catalog\"", "opt_70190"]],
+    ["/product?baseSku=opt_70190", ["Sobag Opt", "rust-shell-header", "rust-product", "rust-product-gallery", "rust-variant-qty", "rust-related", "href=\"/catalog\"", "opt_70190"]],
     ["/product-fragment?baseSku=opt_70190", ["rust-product", "rust-product-main-image", "rust-variant-table", "rust-related", "href=\"/catalog\"", "opt_70190"]],
-    ["/rust/pages/about", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-content-page", "data-rust-content-page=\"about\""]],
+    ["/rust/pages/about", ["Sobag Opt", "rust-shell-header", "rust-content-page", "data-rust-content-page=\"about\""]],
     ["/rust/pages/business", ["rust-content-page", "data-rust-content-page=\"business\""]],
     ["/rust/pages/contacts", ["rust-content-page", "rust-address", "data-rust-content-page=\"contacts\""]],
     ["/rust/pages/delivery", ["rust-content-page", "data-rust-content-page=\"delivery\""]],
-    ["/about", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-content-page", "data-rust-content-page=\"about\"", "href=\"/business\""]],
+    ["/about", ["Sobag Opt", "rust-shell-header", "rust-content-page", "data-rust-content-page=\"about\"", "href=\"/business\""]],
     ["/business", ["rust-content-page", "data-rust-content-page=\"business\"", "href=\"/catalog\""]],
     ["/marketplaces", ["rust-content-page", "data-rust-content-page=\"marketplaces\""]],
     ["/contacts", ["rust-content-page", "rust-address", "data-rust-content-page=\"contacts\""]],
@@ -80,6 +84,7 @@ async function main() {
   for (const [path, needles] of checks) {
     const text = await getText(args.base, path, args.timeout);
     needles.forEach((needle) => assertContains(text, needle, path));
+    assertNotContains(text, "Rust Preview", path);
     console.log(`OK ${path}`);
   }
   const authPreview = await getJson(args.base, "/rust/auth/me", args.timeout);

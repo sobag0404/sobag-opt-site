@@ -43,6 +43,7 @@ const REQUIRED_RUNBOOK_MARKERS = [
   "Node remains fallback",
   "Required Pre-Cutover Gates",
   "Nginx Cutover Shape",
+  "Public Rust pages must not expose preview/debug branding",
   "Post-Cutover Checks",
   "Rollback",
   "Do not edit production env, secrets, database data, file-store data, or user data",
@@ -74,9 +75,14 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, deploy }) {
     "cargo build --release --locked",
     "node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001",
   ].forEach((marker) => assertIncludes(deploy, marker, VPS_DEPLOY, errors));
+  assertIncludes(smoke, "assertNotContains", SSR_SMOKE, errors);
+  assertIncludes(smoke, "Rust Preview", SSR_SMOKE, errors);
 
   if (/location\s+\/\s+.*3001/s.test(runbook)) {
     errors.push("runbook must not suggest routing generic location / to Rust");
+  }
+  if (rustMain.includes("Rust Preview")) {
+    errors.push("Rust SSR templates must not expose Rust Preview branding");
   }
   if (/api\/admin\/\*/.test(rustMain)) {
     errors.push("Rust SSR cutover must not add public admin wildcard routes");
@@ -88,7 +94,7 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, deploy }) {
 
 function selfTest() {
   const goodRouteDecls = PUBLIC_ROUTES.map((route) => routeDeclaration(route)).join("\n");
-  const goodSmoke = PUBLIC_ROUTES.map((route) => `["${route}`, []).join("\n");
+  const goodSmoke = `${PUBLIC_ROUTES.map((route) => `["${route}`, []).join("\n")}\nassertNotContains\nRust Preview`;
   const goodRunbook = [...REQUIRED_RUNBOOK_MARKERS, ...PUBLIC_ROUTES, ...NODE_FALLBACK_ROUTES].join("\n");
   const goodDeploy = [
     "cargo test --locked",

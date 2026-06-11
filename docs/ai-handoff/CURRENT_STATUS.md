@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR public-route readiness guard:
+  - Rust page titles no longer expose `Rust Preview`;
+  - `tools/rust-ssr-smoke.mjs` fails if any Rust SSR candidate page exposes preview/debug branding;
+  - `tools/rust-ssr-cutover-audit.mjs` and the runbook guard this before future `/catalog`, `/search`, `/product`, or content-page Nginx cutover;
+  - no production route/data cutover was made.
 - Rust auth-read cutover candidate guard:
   - `tools/rust-auth-me-shadow-smoke.mjs` now verifies unsupported `POST`/`DELETE` on Node `/api/auth/me` and Rust `/rust/auth/me` both stay `405`;
   - this extends the existing anonymous/buyer/manager/content/admin/expired session parity and password-field leak checks before a future exact `GET /api/auth/me` switch;
