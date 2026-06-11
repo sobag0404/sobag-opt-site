@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR filter preview:
+  - internal `/rust/catalog` and `/rust/search` now render server-side facet filters from PostgreSQL, preserve active checkbox state, and expose a clear-filters HTMX action;
+  - `tools/rust-ssr-smoke.mjs` now verifies filter panel markup, selected facet state, and clear-filters coverage;
+  - public `/catalog` and `/search` still stay on the existing Node/static storefront until parity and rollback gates are green.
 - Rust briefs temp-store write preview:
   - internal `/rust/briefs` validates and writes custom print briefs into a temporary Node-compatible file-store;
   - the preview mirrors each brief into an admin-visible `custom_brief` order, matching the Node business flow;

@@ -169,6 +169,13 @@ mod ssr_tests {
         let query = parse_catalog_query("q=pod&pageSize=1&sort=popular");
         let page = ListingPage {
             total: 2,
+            facet_options: HashMap::from([(
+                "categories",
+                vec![FacetValue {
+                    value: "Pillows".to_string(),
+                    count: 2,
+                }],
+            )]),
             items: vec![CatalogCard {
                 id: "p1".to_string(),
                 base_sku: "opt_1".to_string(),
@@ -1473,14 +1480,16 @@ async fn render_listing_page(
     let query = parse_catalog_query(uri.query().unwrap_or(""));
     let page = load_listing(&state.pool, &query).await?;
     let body = format!(
-        "{}<main class=\"rust-catalog\"><nav><a href=\"/catalog\">Node fallback</a></nav><h1>{}</h1><form class=\"rust-toolbar\" hx-get=\"{}\" hx-target=\"#rustCatalog\" hx-push-url=\"true\"><input name=\"q\" value=\"{}\" placeholder=\"Поиск по каталогу\"/><select name=\"sort\"><option value=\"popular\"{}>Сначала популярные</option><option value=\"price_asc\"{}>Цена: ниже</option><option value=\"price_desc\"{}>Цена: выше</option></select><button type=\"submit\">Показать</button></form><section id=\"rustCatalog\">{}</section></main>{}",
+        "{}<main class=\"rust-catalog\"><nav><a href=\"/catalog\">Node fallback</a></nav><h1>{}</h1><form class=\"rust-catalog-layout\" hx-get=\"{}\" hx-target=\"#rustCatalog\" hx-push-url=\"true\"><aside class=\"rust-filter-panel\">{}</aside><section class=\"rust-results\"><div class=\"rust-toolbar\"><input name=\"q\" value=\"{}\" placeholder=\"Поиск по каталогу\"/><select name=\"sort\"><option value=\"popular\"{}>Сначала популярные</option><option value=\"price_asc\"{}>Цена: ниже</option><option value=\"price_desc\"{}>Цена: выше</option></select><button type=\"submit\">Показать</button>{}</div><section id=\"rustCatalog\">{}</section></section></form></main>{}",
         render_page_head(title),
         escape_html(title),
         fragment_path,
+        render_filter_panel(&query, &page),
         escape_attr(&query.q),
         selected_attr(&query.sort, "popular"),
         selected_attr(&query.sort, "price_asc"),
         selected_attr(&query.sort, "price_desc"),
+        render_clear_filters_link(fragment_path, &query),
         render_listing_fragment(fragment_path, &query, &page),
         render_page_foot()
     );
@@ -1490,12 +1499,14 @@ async fn render_listing_page(
 struct ListingPage {
     items: Vec<CatalogCard>,
     total: i64,
+    facet_options: HashMap<&'static str, Vec<FacetValue>>,
 }
 
 async fn load_listing(pool: &PgPool, query: &CatalogQuery) -> AppResult<ListingPage> {
     Ok(ListingPage {
         items: load_cards(pool, query).await?,
         total: load_count(pool, query).await?,
+        facet_options: load_facets(pool, query, true).await?,
     })
 }
 
@@ -1518,7 +1529,7 @@ fn render_page_head(title: &str) -> String {
     format!(
         "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} | Sobag Opt Rust Preview</title><style>{}</style><script defer src=\"https://unpkg.com/htmx.org@1.9.12\"></script></head><body>",
         escape_html(title),
-        "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-catalog,.rust-product,.rust-content-page{max-width:1180px;margin:0 auto;padding:24px}.rust-toolbar{display:flex;gap:10px;margin:18px 0}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-pager{margin-top:18px}.rust-product img{max-width:420px;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px}.rust-content-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}.rust-content-nav a{border:1px solid #bbb;border-radius:6px;padding:8px 10px;color:#111;text-decoration:none}.rust-content-hero{border-bottom:2px solid #111;padding-bottom:18px}.rust-content-hero h1{font-size:44px;line-height:1;margin:0 0 12px}.rust-content-panel{background:#f4f4f4;border:1px solid #ddd;border-radius:8px;margin-top:18px;padding:18px}.rust-content-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.rust-address{font-weight:700}"
+        "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-catalog,.rust-product,.rust-content-page{max-width:1180px;margin:0 auto;padding:24px}.rust-catalog-layout{display:grid;grid-template-columns:240px 1fr;gap:24px}.rust-filter-panel{border-right:1px solid #ddd;padding-right:16px}.rust-filter-group{border-top:1px solid #ddd;padding:14px 0}.rust-filter-group h2{font-size:16px;margin:0 0 10px}.rust-filter-option{display:flex;gap:8px;align-items:flex-start;margin:8px 0}.rust-filter-option input{margin-top:3px}.rust-filter-option span:last-child{color:#666}.rust-toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-clear-filters{border:1px solid #bbb;border-radius:6px;color:#111;padding:12px;text-decoration:none}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-pager{margin-top:18px}.rust-product img{max-width:420px;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px}.rust-content-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}.rust-content-nav a{border:1px solid #bbb;border-radius:6px;padding:8px 10px;color:#111;text-decoration:none}.rust-content-hero{border-bottom:2px solid #111;padding-bottom:18px}.rust-content-hero h1{font-size:44px;line-height:1;margin:0 0 12px}.rust-content-panel{background:#f4f4f4;border:1px solid #ddd;border-radius:8px;margin-top:18px;padding:18px}.rust-content-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.rust-address{font-weight:700}@media(max-width:760px){.rust-catalog-layout{grid-template-columns:1fr}.rust-filter-panel{border-right:0;border-bottom:1px solid #ddd;padding-right:0}.rust-toolbar input,.rust-toolbar select,.rust-toolbar button{width:100%}}"
     )
 }
 
@@ -2723,6 +2734,71 @@ fn render_listing_fragment(
         shown.min(page.total),
         cards,
         next
+    )
+}
+
+fn render_filter_panel(query: &CatalogQuery, page: &ListingPage) -> String {
+    let groups = [
+        ("category", "categories", "Категории"),
+        ("collection", "collections", "Подборки"),
+        ("holiday", "holidays", "Праздники"),
+        ("size", "sizes", "Размер"),
+        ("material", "materials", "Материал"),
+        ("stock", "stock", "Наличие"),
+    ];
+    let body = groups
+        .into_iter()
+        .filter_map(|(param, bucket, title)| {
+            let values = page.facet_options.get(bucket)?;
+            let selected = query.filters.get(param).cloned().unwrap_or_default();
+            let options = values
+                .iter()
+                .take(8)
+                .map(|item| {
+                    let checked = if selected.iter().any(|value| value == &item.value) {
+                        " checked"
+                    } else {
+                        ""
+                    };
+                    format!(
+                        "<label class=\"rust-filter-option\"><input type=\"checkbox\" name=\"{}\" value=\"{}\"{}><span>{}</span><span>{}</span></label>",
+                        escape_attr(param),
+                        escape_attr(&item.value),
+                        checked,
+                        escape_html(&item.value),
+                        item.count
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("");
+            (!options.is_empty()).then(|| {
+                format!(
+                    "<section class=\"rust-filter-group\"><h2>{}</h2>{}</section>",
+                    escape_html(title),
+                    options
+                )
+            })
+        })
+        .collect::<Vec<_>>()
+        .join("");
+    format!("<div class=\"rust-filter-head\">Фильтры</div>{body}")
+}
+
+fn render_clear_filters_link(fragment_path: &str, query: &CatalogQuery) -> String {
+    if query.q.is_empty()
+        && query.filters.values().all(Vec::is_empty)
+        && query.min_price <= 0
+        && query.max_price <= 0
+    {
+        return String::new();
+    }
+    format!(
+        "<a class=\"rust-clear-filters\" href=\"?sort={}&pageSize={}\" hx-get=\"{}?sort={}&pageSize={}\" hx-target=\"#rustCatalog\" hx-push-url=\"true\">Снять фильтры</a>",
+        url_encode(&query.sort),
+        query.page_size,
+        fragment_path,
+        url_encode(&query.sort),
+        query.page_size
     )
 }
 
