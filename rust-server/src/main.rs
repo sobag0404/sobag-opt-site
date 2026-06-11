@@ -237,10 +237,11 @@ mod ssr_tests {
             }],
             images: vec![],
         };
-        let html = render_product_fragment(&product);
+        let html = render_product_fragment(&product, &[]);
         assert!(html.contains("sku_1"));
         assert!(html.contains("от 220 ₽"));
         assert!(html.contains("assets/production-hero-1.png"));
+        assert!(html.contains("rust-variant-qty"));
     }
 
     #[test]
@@ -987,10 +988,11 @@ async fn product_page(
     Query(lookup): Query<DetailLookup>,
 ) -> AppResult<(HeaderMap, Html<String>)> {
     let product = lookup_product(&state.pool, lookup).await?;
+    let related = load_related_cards(&state.pool, &product, 4).await?;
     let body = format!(
         "{}{}{}",
         render_page_head(&product.name),
-        render_product_fragment(&product),
+        render_product_fragment(&product, &related),
         render_page_foot()
     );
     Ok((cache_headers(), Html(body)))
@@ -1001,7 +1003,8 @@ async fn product_fragment(
     Query(lookup): Query<DetailLookup>,
 ) -> AppResult<(HeaderMap, Html<String>)> {
     let product = lookup_product(&state.pool, lookup).await?;
-    Ok((cache_headers(), Html(render_product_fragment(&product))))
+    let related = load_related_cards(&state.pool, &product, 4).await?;
+    Ok((cache_headers(), Html(render_product_fragment(&product, &related))))
 }
 
 async fn content_page(Path(slug): Path<String>) -> AppResult<(HeaderMap, Html<String>)> {
@@ -1529,7 +1532,7 @@ fn render_page_head(title: &str) -> String {
     format!(
         "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} | Sobag Opt Rust Preview</title><style>{}</style><script defer src=\"https://unpkg.com/htmx.org@1.9.12\"></script></head><body>",
         escape_html(title),
-        "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-catalog,.rust-product,.rust-content-page{max-width:1180px;margin:0 auto;padding:24px}.rust-catalog-layout{display:grid;grid-template-columns:240px 1fr;gap:24px}.rust-filter-panel{border-right:1px solid #ddd;padding-right:16px}.rust-filter-group{border-top:1px solid #ddd;padding:14px 0}.rust-filter-group h2{font-size:16px;margin:0 0 10px}.rust-filter-option{display:flex;gap:8px;align-items:flex-start;margin:8px 0}.rust-filter-option input{margin-top:3px}.rust-filter-option span:last-child{color:#666}.rust-toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-clear-filters{border:1px solid #bbb;border-radius:6px;color:#111;padding:12px;text-decoration:none}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-pager{margin-top:18px}.rust-product img{max-width:420px;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px}.rust-content-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}.rust-content-nav a{border:1px solid #bbb;border-radius:6px;padding:8px 10px;color:#111;text-decoration:none}.rust-content-hero{border-bottom:2px solid #111;padding-bottom:18px}.rust-content-hero h1{font-size:44px;line-height:1;margin:0 0 12px}.rust-content-panel{background:#f4f4f4;border:1px solid #ddd;border-radius:8px;margin-top:18px;padding:18px}.rust-content-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.rust-address{font-weight:700}@media(max-width:760px){.rust-catalog-layout{grid-template-columns:1fr}.rust-filter-panel{border-right:0;border-bottom:1px solid #ddd;padding-right:0}.rust-toolbar input,.rust-toolbar select,.rust-toolbar button{width:100%}}"
+        "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-catalog,.rust-product,.rust-content-page{max-width:1180px;margin:0 auto;padding:24px}.rust-catalog-layout{display:grid;grid-template-columns:240px 1fr;gap:24px}.rust-filter-panel{border-right:1px solid #ddd;padding-right:16px}.rust-filter-group{border-top:1px solid #ddd;padding:14px 0}.rust-filter-group h2{font-size:16px;margin:0 0 10px}.rust-filter-option{display:flex;gap:8px;align-items:flex-start;margin:8px 0}.rust-filter-option input{margin-top:3px}.rust-filter-option span:last-child{color:#666}.rust-toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-clear-filters{border:1px solid #bbb;border-radius:6px;color:#111;padding:12px;text-decoration:none}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-pager{margin-top:18px}.rust-product-layout{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:28px}.rust-product-main-image,.rust-product-thumbs img{width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px;background:#eee}.rust-product-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.rust-product-meta{display:flex;flex-wrap:wrap;gap:8px}.rust-chip{border:1px solid #bbb;border-radius:999px;padding:6px 10px}.rust-variant-table{width:100%;border-collapse:collapse}.rust-variant-table th,.rust-variant-table td{border-bottom:1px solid #ddd;padding:10px;text-align:left}.rust-variant-qty{max-width:90px;padding:8px;border:1px solid #bbb;border-radius:6px}.rust-related{margin-top:28px}.rust-content-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}.rust-content-nav a{border:1px solid #bbb;border-radius:6px;padding:8px 10px;color:#111;text-decoration:none}.rust-content-hero{border-bottom:2px solid #111;padding-bottom:18px}.rust-content-hero h1{font-size:44px;line-height:1;margin:0 0 12px}.rust-content-panel{background:#f4f4f4;border:1px solid #ddd;border-radius:8px;margin-top:18px;padding:18px}.rust-content-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.rust-address{font-weight:700}@media(max-width:760px){.rust-catalog-layout,.rust-product-layout{grid-template-columns:1fr}.rust-filter-panel{border-right:0;border-bottom:1px solid #ddd;padding-right:0}.rust-toolbar input,.rust-toolbar select,.rust-toolbar button{width:100%}}"
     )
 }
 
@@ -2821,37 +2824,76 @@ fn render_card(product: &CatalogCard) -> String {
     )
 }
 
-fn render_product_fragment(product: &ProductDetail) -> String {
+fn render_product_fragment(product: &ProductDetail, related: &[CatalogCard]) -> String {
     let image = product
         .images
         .first()
         .map(|item| item.url.as_str())
         .filter(|value| !value.trim().is_empty())
         .unwrap_or("assets/production-hero-1.png");
-    let variants = product
-        .variants
+    let thumbs = product
+        .images
         .iter()
-        .take(12)
-        .map(|variant| {
+        .take(6)
+        .map(|item| {
             format!(
-                "<tr><td>{}</td><td>{}</td><td>{}</td><td>{} ₽</td></tr>",
-                escape_html(&variant.sku),
-                escape_html(&variant.variant_type),
-                escape_html(&variant.size),
-                variant.price
+                "<img loading=\"lazy\" src=\"{}\" alt=\"{}\">",
+                escape_attr(&item.url),
+                escape_attr(&product.name)
             )
         })
         .collect::<Vec<_>>()
         .join("");
+    let chips = product
+        .categories
+        .iter()
+        .chain(product.collections.iter())
+        .chain(product.holidays.iter())
+        .take(8)
+        .map(|value| format!("<span class=\"rust-chip\">{}</span>", escape_html(value)))
+        .collect::<Vec<_>>()
+        .join("");
+    let variants = product
+        .variants
+        .iter()
+        .take(24)
+        .map(|variant| {
+            format!(
+                "<tr><td>{}</td><td>{}</td><td>{}</td><td>{} ₽</td><td><input class=\"rust-variant-qty\" name=\"quantity_{}\" type=\"number\" min=\"0\" value=\"0\"></td></tr>",
+                escape_html(&variant.sku),
+                escape_html(&variant.variant_type),
+                escape_html(&variant.size),
+                variant.price,
+                escape_attr(&variant.sku)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("");
+    let detail = if product.detail_description.trim().is_empty() {
+        product.description.as_str()
+    } else {
+        product.detail_description.as_str()
+    };
+    let related_html = if related.is_empty() {
+        "<section class=\"rust-related\"><h2>Похожие товары</h2><p>Похожие товары появятся после уточнения категории.</p></section>".to_string()
+    } else {
+        format!(
+            "<section class=\"rust-related\"><h2>Похожие товары</h2><div class=\"rust-grid\">{}</div></section>",
+            related.iter().map(render_card).collect::<Vec<_>>().join("")
+        )
+    };
     format!(
-        "<main class=\"rust-product\" id=\"rustProduct\"><a href=\"/rust/catalog\">В каталог</a><h1>{}</h1><img src=\"{}\" alt=\"{}\"><p>{}</p><p><b>Артикул:</b> {}</p><p><b>Цена:</b> от {} ₽</p><table><thead><tr><th>SKU</th><th>Тип</th><th>Размер</th><th>Цена</th></tr></thead><tbody>{}</tbody></table></main>",
-        escape_html(&product.name),
+        "<main class=\"rust-product\" id=\"rustProduct\"><a href=\"/rust/catalog\">В каталог</a><div class=\"rust-product-layout\"><section class=\"rust-product-gallery\"><img class=\"rust-product-main-image\" src=\"{}\" alt=\"{}\"><div class=\"rust-product-thumbs\">{}</div></section><section class=\"rust-product-info\"><h1>{}</h1><div class=\"rust-product-meta\">{}</div><p>{}</p><p><b>Артикул:</b> {}</p><p><b>Цена:</b> от {} ₽</p><table class=\"rust-variant-table\"><thead><tr><th>SKU</th><th>Тип</th><th>Размер</th><th>Цена</th><th>Кол-во</th></tr></thead><tbody>{}</tbody></table></section></div>{}</main>",
         escape_attr(image),
         escape_attr(&product.name),
-        escape_html(&product.description),
+        thumbs,
+        escape_html(&product.name),
+        chips,
+        escape_html(detail),
         escape_html(&product.base_sku),
         product.min_price,
-        variants
+        variants,
+        related_html
     )
 }
 
@@ -3155,6 +3197,38 @@ async fn load_count(pool: &PgPool, query: &CatalogQuery) -> AppResult<i64> {
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
     Ok(row.try_get::<i64, _>("total").unwrap_or(0))
+}
+
+async fn load_related_cards(
+    pool: &PgPool,
+    product: &ProductDetail,
+    limit: i64,
+) -> AppResult<Vec<CatalogCard>> {
+    if product.categories.is_empty()
+        && product.collections.is_empty()
+        && product.holidays.is_empty()
+        && product.tags.is_empty()
+    {
+        return Ok(Vec::new());
+    }
+    let rows = sqlx::query(
+        "SELECT id, base_sku, name, description, stock, popular, min_price, max_price, variant_count, category, categories, collections, holidays, tags, image, image_meta
+         FROM public_catalog_cards
+         WHERE base_sku <> $1
+           AND (categories && $2::text[] OR collections && $3::text[] OR holidays && $4::text[] OR tags && $5::text[])
+         ORDER BY popular DESC, name ASC
+         LIMIT $6",
+    )
+    .bind(&product.base_sku)
+    .bind(product.categories.clone())
+    .bind(product.collections.clone())
+    .bind(product.holidays.clone())
+    .bind(product.tags.clone())
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+    .map_err(|error| AppError::internal(error.to_string()))?;
+    rows.into_iter().map(card_from_row).collect()
 }
 
 async fn load_facets(

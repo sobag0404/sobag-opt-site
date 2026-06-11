@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust product SSR parity preview:
+  - internal `/rust/product` and `/rust/product-fragment` now render gallery markup, product chips, extended variant quantity rows, and related-product blocks from PostgreSQL catalog cards;
+  - `tools/rust-ssr-smoke.mjs` now verifies product gallery, variant table/quantity inputs, and related-product coverage;
+  - public product modal/page behavior still stays on the existing storefront until parity and rollback gates are green.
 - Rust SSR filter preview:
   - internal `/rust/catalog` and `/rust/search` now render server-side facet filters from PostgreSQL, preserve active checkbox state, and expose a clear-filters HTMX action;
   - `tools/rust-ssr-smoke.mjs` now verifies filter panel markup, selected facet state, and clear-filters coverage;

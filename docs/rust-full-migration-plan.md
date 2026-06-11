@@ -32,6 +32,7 @@ Current production stays on `https://sobag-shop.online`. Vercel is not an active
    - Use HTMX fragments for pagination/search/detail partials.
    - Current status: `/rust/catalog`, `/rust/search`, `/rust/product`, and related fragments are implemented as internal preview routes.
    - Current status: catalog/search preview pages include server-rendered facet filters, active checkbox state, clear-filters HTMX action, and deploy-time smoke coverage; public `/catalog` and `/search` are not cut over yet.
+   - Current status: product preview pages include gallery markup, category/collection chips, extended variant quantity rows, related products from PostgreSQL catalog cards, and deploy-time smoke coverage; public product modal/page behavior is not cut over yet.
 
 3. Content pages:
    - Move read-only public pages to Rust templates.
