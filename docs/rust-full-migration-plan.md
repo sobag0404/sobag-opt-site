@@ -40,6 +40,7 @@ Current production stays on `https://sobag-shop.online`. Vercel is not an active
    - Move read-only public pages to Rust templates.
    - Keep admin content writes on Node until Rust auth/admin roles are migrated.
    - Current status: `/rust/pages/:slug` renders internal preview pages for `about`, `business`, `marketplaces`, `contacts`, `how-to-order`, `delivery`, `payment`, `returns`, `seller-support`, and `wholesale`.
+   - Current status: Rust also serves public-path aliases for those content pages on port 3001 for cutover rehearsal only. Production public routing is not switched yet.
    - The preview reads current file-store content when `SOBAG_STORE_PROVIDER=file`; otherwise it falls back to safe built-in defaults.
 
 4. Auth/account:

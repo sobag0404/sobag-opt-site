@@ -851,6 +851,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/product", get(product_page))
         .route("/product-fragment", get(product_fragment))
         .route("/rust/pages/:slug", get(content_page))
+        .route("/about", get(content_page_alias))
+        .route("/business", get(content_page_alias))
+        .route("/marketplaces", get(content_page_alias))
+        .route("/contacts", get(content_page_alias))
+        .route("/how-to-order", get(content_page_alias))
+        .route("/delivery", get(content_page_alias))
+        .route("/payment", get(content_page_alias))
+        .route("/returns", get(content_page_alias))
+        .route("/seller-support", get(content_page_alias))
+        .route("/wholesale", get(content_page_alias))
         .route("/rust/auth/me", get(auth_me_preview).put(auth_me_update_preview))
         .route("/rust/auth/login", post(auth_login_preview))
         .route("/rust/auth/register", post(auth_register_preview))
@@ -1035,14 +1045,26 @@ async fn product_fragment(
     ))
 }
 
-async fn content_page(Path(slug): Path<String>) -> AppResult<(HeaderMap, Html<String>)> {
-    let spec = content_page_spec(&slug)
+async fn content_page(Path(slug): Path<String>, uri: Uri) -> AppResult<(HeaderMap, Html<String>)> {
+    render_content_page_response(&slug, routes_for_path(uri.path())).await
+}
+
+async fn content_page_alias(uri: Uri) -> AppResult<(HeaderMap, Html<String>)> {
+    let slug = uri.path().trim_start_matches('/');
+    render_content_page_response(slug, routes_for_path(uri.path())).await
+}
+
+async fn render_content_page_response(
+    slug: &str,
+    routes: &RenderRoutes,
+) -> AppResult<(HeaderMap, Html<String>)> {
+    let spec = content_page_spec(slug)
         .ok_or_else(|| AppError::not_found("content_page_not_found", "Content page not found."))?;
     let content = load_site_content().await.unwrap_or(Value::Null);
     let body = format!(
         "{}{}{}",
-        render_page_head(spec.default_title),
-        render_content_page(spec, &content),
+        render_page_head_with_routes(spec.default_title, routes),
+        render_content_page_with_routes(spec, &content, routes),
         render_page_foot()
     );
     Ok((cache_headers(), Html(body)))
@@ -1531,6 +1553,7 @@ async fn render_listing_page(
 struct RenderRoutes {
     catalog_path: &'static str,
     search_path: &'static str,
+    content_path_prefix: &'static str,
     catalog_fragment_path: &'static str,
     search_fragment_path: &'static str,
     product_path: &'static str,
@@ -1540,6 +1563,7 @@ struct RenderRoutes {
 static RUST_ROUTES: RenderRoutes = RenderRoutes {
     catalog_path: "/rust/catalog",
     search_path: "/rust/search",
+    content_path_prefix: "/rust/pages/",
     catalog_fragment_path: "/rust/catalog-fragment",
     search_fragment_path: "/rust/search-fragment",
     product_path: "/rust/product",
@@ -1549,6 +1573,7 @@ static RUST_ROUTES: RenderRoutes = RenderRoutes {
 static PUBLIC_ROUTES: RenderRoutes = RenderRoutes {
     catalog_path: "/catalog",
     search_path: "/search",
+    content_path_prefix: "/",
     catalog_fragment_path: "/catalog-fragment",
     search_fragment_path: "/search-fragment",
     product_path: "/product",
@@ -2627,6 +2652,14 @@ fn content_text(content: &Value, key: &str, fallback: &str) -> String {
 }
 
 fn render_content_page(spec: &ContentPageSpec, content: &Value) -> String {
+    render_content_page_with_routes(spec, content, &RUST_ROUTES)
+}
+
+fn render_content_page_with_routes(
+    spec: &ContentPageSpec,
+    content: &Value,
+    routes: &RenderRoutes,
+) -> String {
     let title = content_text(content, spec.title_key, spec.default_title);
     let lead = content_text(content, spec.lead_key, spec.default_lead);
     let text = content_text(content, spec.text_key, spec.default_text);
@@ -2634,7 +2667,8 @@ fn render_content_page(spec: &ContentPageSpec, content: &Value) -> String {
         .iter()
         .map(|page| {
             format!(
-                "<a href=\"/rust/pages/{}\">{}</a>",
+                "<a href=\"{}{}\">{}</a>",
+                routes.content_path_prefix,
                 page.slug,
                 escape_html(&content_text(content, page.title_key, page.default_title))
             )

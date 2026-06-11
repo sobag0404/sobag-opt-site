@@ -65,6 +65,16 @@ async function main() {
     ["/rust/pages/business", ["rust-content-page", "data-rust-content-page=\"business\""]],
     ["/rust/pages/contacts", ["rust-content-page", "rust-address", "data-rust-content-page=\"contacts\""]],
     ["/rust/pages/delivery", ["rust-content-page", "data-rust-content-page=\"delivery\""]],
+    ["/about", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-content-page", "data-rust-content-page=\"about\"", "href=\"/business\""]],
+    ["/business", ["rust-content-page", "data-rust-content-page=\"business\"", "href=\"/catalog\""]],
+    ["/marketplaces", ["rust-content-page", "data-rust-content-page=\"marketplaces\""]],
+    ["/contacts", ["rust-content-page", "rust-address", "data-rust-content-page=\"contacts\""]],
+    ["/how-to-order", ["rust-content-page", "data-rust-content-page=\"how-to-order\""]],
+    ["/delivery", ["rust-content-page", "data-rust-content-page=\"delivery\""]],
+    ["/payment", ["rust-content-page", "data-rust-content-page=\"payment\""]],
+    ["/returns", ["rust-content-page", "data-rust-content-page=\"returns\""]],
+    ["/seller-support", ["rust-content-page", "data-rust-content-page=\"seller-support\""]],
+    ["/wholesale", ["rust-content-page", "data-rust-content-page=\"wholesale\""]],
   ];
   for (const [path, needles] of checks) {
     const text = await getText(args.base, path, args.timeout);

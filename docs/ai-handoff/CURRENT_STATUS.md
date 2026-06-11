@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust content-page alias preview:
+  - Rust now serves `/about`, `/business`, `/marketplaces`, `/contacts`, `/how-to-order`, `/delivery`, `/payment`, `/returns`, `/seller-support`, and `/wholesale` on port 3001 for future Nginx cutover rehearsal;
+  - content nav uses public aliases on alias routes and keeps `/rust/pages/*` links on preview routes;
+  - production public storefront routing is not switched yet, and Node/static fallback remains active.
 - Rust public-path SSR alias preview:
   - Rust now serves `/catalog`, `/search`, `/product`, `/catalog-fragment`, `/search-fragment`, and `/product-fragment` on port 3001 for future Nginx cutover rehearsal;
   - route-aware shell/search/product links keep `/rust/*` links on preview routes and public links on alias routes;
