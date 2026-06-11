@@ -10,7 +10,7 @@ use axum::{
     extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode, Uri},
     response::{Html, IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -428,6 +428,47 @@ mod ssr_tests {
         assert!(can_read_admin_orders(&json!({ "role": "manager" })));
         assert!(!can_read_admin_orders(&json!({ "role": "buyer" })));
     }
+
+    #[test]
+    fn builds_and_persists_order_preview_record() {
+        let user = json!({
+            "email": "buyer@example.test",
+            "name": "Buyer",
+            "phone": "+7 968 959-32-54"
+        });
+        let data = json!({
+            "items": [{
+                "key": "sku-1",
+                "productName": "Pillow",
+                "qty": 0,
+                "variant": { "sku": "sku-1", "price": 520 }
+            }],
+            "total": 30000,
+            "customer": { "name": "Buyer" },
+            "source": "site"
+        });
+        let order = build_order_record(&data, Some(&user)).expect("order");
+        assert_eq!(order["userEmail"], "buyer@example.test");
+        assert_eq!(order["customer"]["phone"], "+7 968 959-32-54");
+        assert_eq!(order["items"][0]["qty"], 1);
+        let mut store = default_store_value();
+        push_order_record(&mut store, order);
+        assert_eq!(store["orders"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn rejects_below_minimum_order_preview_record() {
+        let error = build_order_record(
+            &json!({
+                "items": [{ "variant": { "sku": "sku-1" } }],
+                "total": 29999,
+                "customer": { "phone": "+7 968 959-32-54" }
+            }),
+            None,
+        )
+        .expect_err("minimum error");
+        assert_eq!(error.code, "minimum_total");
+    }
 }
 
 #[derive(Debug)]
@@ -693,6 +734,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/product-fragment", get(product_fragment))
         .route("/rust/pages/:slug", get(content_page))
         .route("/rust/auth/me", get(auth_me_preview))
+        .route("/rust/orders", post(order_create_preview))
         .route("/rust/admin/orders", get(admin_orders_preview))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
@@ -882,6 +924,34 @@ async fn admin_orders_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<
     Ok((no_store_headers(), Json(admin_orders_payload_from_values(&store))))
 }
 
+async fn order_create_preview(
+    headers: HeaderMap,
+    Json(data): Json<Value>,
+) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let context = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    let mut store = if let Some((store, _)) = context.as_ref() {
+        store.clone()
+    } else {
+        load_file_store_value(STORE_KEY)
+            .await
+            .map_err(|error| AppError::internal(error.to_string()))?
+            .unwrap_or_else(default_store_value)
+    };
+    let user = context.as_ref().map(|(_, user)| user);
+    let order = build_order_record(&data, user)?;
+    push_order_record(&mut store, order.clone());
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    Ok((StatusCode::CREATED, no_store_headers(), Json(json!({ "order": order }))))
+}
+
 async fn render_listing_page(
     state: Arc<AppState>,
     uri: Uri,
@@ -1019,6 +1089,26 @@ async fn load_file_store_value(key: &str) -> Result<Option<Value>, std::io::Erro
     };
     let record: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
     Ok(file_store_unwrap_value(&record, Utc::now().timestamp()))
+}
+
+async fn save_file_store_value(key: &str, value: &Value) -> Result<(), std::io::Error> {
+    if !is_file_store_provider() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "file store provider is not enabled",
+        ));
+    }
+    let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
+    tokio::fs::create_dir_all(&dir).await?;
+    let path = file_store_path_for_key(dir, key);
+    let record = json!({
+        "version": 1,
+        "expiresAt": "",
+        "value": value
+    });
+    let text = serde_json::to_string_pretty(&record)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error.to_string()))?;
+    tokio::fs::write(path, format!("{text}\n")).await
 }
 
 fn is_file_store_provider() -> bool {
@@ -1165,6 +1255,175 @@ fn admin_orders_payload_from_values(store: &Value) -> Value {
             .cloned()
             .unwrap_or_default()
     })
+}
+
+fn default_store_value() -> Value {
+    json!({
+        "users": {},
+        "orders": [],
+        "carts": {},
+        "favorites": {},
+        "savedCarts": {},
+        "reviews": [],
+        "briefs": [],
+        "audit": [],
+        "version": 1
+    })
+}
+
+fn build_order_record(data: &Value, user: Option<&Value>) -> AppResult<Value> {
+    let items = data
+        .get("items")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .map(sanitize_order_line)
+                .filter(|line| {
+                    line.get("variant")
+                        .and_then(|variant| variant.get("sku"))
+                        .and_then(Value::as_str)
+                        .map(|sku| !sku.trim().is_empty())
+                        .unwrap_or(false)
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    if items.is_empty() {
+        return Err(AppError::bad_request("empty_order", "В заказе нет товаров."));
+    }
+    let total = data.get("total").and_then(Value::as_f64).unwrap_or(0.0);
+    if !total.is_finite() || total < 30_000.0 {
+        return Err(AppError::bad_request(
+            "minimum_total",
+            "Минимальная сумма заказа 30 000 ₽.",
+        ));
+    }
+    let customer = data.get("customer").unwrap_or(&Value::Null);
+    let phone = normalize_phone(
+        string_field(customer, "phone")
+            .or_else(|| user.and_then(|user| string_field(user, "phone")))
+            .unwrap_or_default()
+            .as_str(),
+    );
+    if phone.is_empty() {
+        return Err(AppError::bad_request("missing_phone", "Укажите телефон."));
+    }
+    let now = Utc::now();
+    let id = format!("SO-{:06}", now.timestamp_millis().rem_euclid(1_000_000));
+    Ok(json!({
+        "id": id,
+        "date": now.to_rfc3339(),
+        "createdAt": now.to_rfc3339(),
+        "status": "new",
+        "userEmail": user.and_then(|user| string_field(user, "email")).unwrap_or_default(),
+        "customer": {
+            "name": string_field(customer, "name").or_else(|| user.and_then(|user| string_field(user, "name"))).unwrap_or_default(),
+            "company": string_field(customer, "company").unwrap_or_default(),
+            "inn": string_field(customer, "inn").unwrap_or_default(),
+            "kpp": string_field(customer, "kpp").unwrap_or_default(),
+            "phone": phone,
+            "email": string_field(customer, "email").or_else(|| user.and_then(|user| string_field(user, "email"))).unwrap_or_default(),
+            "city": string_field(customer, "city").unwrap_or_default(),
+            "address": string_field(customer, "address").or_else(|| user.and_then(|user| string_field(user, "address"))).unwrap_or_default(),
+            "legalAddress": string_field(customer, "legalAddress").unwrap_or_default(),
+            "delivery": string_field(customer, "delivery").unwrap_or_default(),
+            "packaging": string_field(customer, "packaging").unwrap_or_default(),
+            "layoutFileName": string_field(customer, "layoutFileName").unwrap_or_default(),
+            "comment": string_field(customer, "comment").unwrap_or_default()
+        },
+        "items": items,
+        "total": total,
+        "promo": string_field(data, "promo").unwrap_or_default(),
+        "source": string_field(data, "source").unwrap_or_else(|| "site".to_string())
+    }))
+}
+
+fn push_order_record(store: &mut Value, order: Value) {
+    if !store.is_object() {
+        *store = default_store_value();
+    }
+    let Some(map) = store.as_object_mut() else {
+        return;
+    };
+    let orders = map.entry("orders").or_insert_with(|| json!([]));
+    if !orders.is_array() {
+        *orders = json!([]);
+    }
+    if let Some(items) = orders.as_array_mut() {
+        items.insert(0, order);
+    }
+}
+
+fn sanitize_order_line(line: &Value) -> Value {
+    let variant = line.get("variant").unwrap_or(&Value::Null);
+    json!({
+        "key": string_field(line, "key").unwrap_or_default(),
+        "productId": string_field(line, "productId").unwrap_or_default(),
+        "productName": string_field(line, "productName").unwrap_or_default(),
+        "productImage": string_field(line, "productImage").unwrap_or_default(),
+        "qty": std::cmp::max(1, line.get("qty").and_then(Value::as_i64).unwrap_or(1)),
+        "variant": {
+            "sku": string_field(variant, "sku").unwrap_or_default(),
+            "name": string_field(variant, "name").unwrap_or_default(),
+            "type": string_field(variant, "type").unwrap_or_default(),
+            "size": string_field(variant, "size").unwrap_or_default(),
+            "material": string_field(variant, "material").unwrap_or_default(),
+            "price": variant.get("price").and_then(Value::as_f64).unwrap_or(0.0)
+        }
+    })
+}
+
+fn string_field(value: &Value, key: &str) -> Option<String> {
+    value
+        .get(key)
+        .and_then(Value::as_str)
+        .map(|text| text.trim().to_string())
+        .filter(|text| !text.is_empty())
+}
+
+fn normalize_phone(raw: &str) -> String {
+    let mut digits: String = raw.chars().filter(|ch| ch.is_ascii_digit()).collect();
+    if digits.is_empty() {
+        return String::new();
+    }
+    if digits.starts_with('8') && digits.len() == 11 {
+        digits = format!("7{}", &digits[1..]);
+    }
+    if digits.starts_with('7') {
+        let main = &digits[1..std::cmp::min(digits.len(), 11)];
+        let mut formatted = "+7".to_string();
+        if !main.is_empty() {
+            formatted.push_str(&format!(" {}", &main[..std::cmp::min(main.len(), 3)]));
+        }
+        if main.len() > 3 {
+            formatted.push_str(&format!(" {}", &main[3..std::cmp::min(main.len(), 6)]));
+        }
+        if main.len() > 6 {
+            formatted.push_str(&format!("-{}", &main[6..std::cmp::min(main.len(), 8)]));
+        }
+        if main.len() > 8 {
+            formatted.push_str(&format!("-{}", &main[8..std::cmp::min(main.len(), 10)]));
+        }
+        if digits.len() > 11 {
+            formatted.push_str(&format!(" {}", &digits[11..]));
+        }
+        return formatted;
+    }
+    let country_len = if digits.len() > 11 {
+        3
+    } else if digits.len() > 10 {
+        2
+    } else {
+        1
+    };
+    let country = &digits[..std::cmp::min(country_len, digits.len())];
+    let rest = &digits[std::cmp::min(country_len, digits.len())..];
+    let mut groups = vec![format!("+{country}")];
+    for chunk in rest.as_bytes().chunks(3) {
+        groups.push(String::from_utf8_lossy(chunk).to_string());
+    }
+    groups.join(" ")
 }
 
 fn store_nested_items(store: &Value, bucket: &str, email: &str) -> Value {

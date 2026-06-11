@@ -169,6 +169,7 @@ jobs:
             . "$app_dir/shared/.env"
             set +a
             node tools/rust-auth-me-shadow-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust
+            node tools/rust-orders-write-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust
           fi
 
           mapfile -t releases < <(ls -1dt "$app_dir"/releases/* 2>/dev/null || true)

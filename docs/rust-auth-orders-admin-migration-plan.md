@@ -17,6 +17,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 - Internal `/rust/auth/me` preview exists for file-store/session fixtures and preserves the current `GET /api/auth/me` response shape without exposing password fields or internal buyer-hidden notes.
 - Internal `/rust/admin/orders` preview exists for read-only admin/manager order lists from the same Node-compatible file-store.
 - Deploy-time `tools/rust-auth-me-shadow-smoke.mjs` compares Node `/api/auth/me` and Rust `/rust/auth/me` on a temporary file-store for anonymous, buyer, manager, content, admin, and expired sessions; it also compares Node `/api/admin/orders` with Rust `/rust/admin/orders` for admin/manager sessions and verifies unauthorized/forbidden cases.
+- Internal `/rust/orders` preview can create an order in a temporary file-store and `tools/rust-orders-write-smoke.mjs` verifies minimum total, quantity sanitizing, server-side persistence, and admin visibility without touching production data.
 - Node remains fallback and still owns auth, account, carts, orders, briefs, admin, content writes, reviews, import/PIM, and media writes.
 - VPS storage uses file-store for shared app data; PostgreSQL currently backs public catalog reads.
 
@@ -56,6 +57,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 4. Orders and briefs:
    - Implement `/api/orders` POST/PATCH and `/api/briefs` POST in Rust temp-store mode.
    - Verify minimum order, guest order visibility in admin, buyer comments, internal-note filtering, and custom brief mirroring.
+   - Current status: preview POST `/rust/orders` writes only to the configured temp file-store; deploy smoke verifies successful create and below-minimum rejection. Production `/api/orders` still stays on Node.
 
 5. Admin orders/users:
    - Implement admin/manager order list/update and admin users/employees management.

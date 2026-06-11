@@ -21,6 +21,7 @@ const REQUIRED_FILES = [
   "tools/rust-catalog-shadow-smoke.mjs",
   "tools/rust-ssr-smoke.mjs",
   "tools/rust-auth-me-shadow-smoke.mjs",
+  "tools/rust-orders-write-smoke.mjs",
   "tools/rust-auth-orders-admin-plan-audit.mjs",
   "docs/vps-migration-notes.md",
   "docs/vps-launch-runbook.md",
@@ -50,6 +51,7 @@ const REQUIRED_SCRIPTS = {
   "smoke:rust:shadow": "tools/rust-catalog-shadow-smoke.mjs",
   "smoke:rust:ssr": "tools/rust-ssr-smoke.mjs",
   "smoke:rust:auth-me": "tools/rust-auth-me-shadow-smoke.mjs",
+  "smoke:rust:orders-write": "tools/rust-orders-write-smoke.mjs",
   "audit:rust-migration-plan": "tools/rust-auth-orders-admin-plan-audit.mjs",
   check: "tools/autofix.mjs --check",
   "ui:smoke": "tools/ui-smoke.spec.js",
@@ -64,6 +66,7 @@ const REQUIRED_VPS_DEPLOY_MARKERS = [
   "node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001",
   "node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001",
   "node tools/rust-auth-me-shadow-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust",
+  "node tools/rust-orders-write-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust",
   "Rust health failed; restoring previous binary",
 ];
 

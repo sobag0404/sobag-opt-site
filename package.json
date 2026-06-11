@@ -29,6 +29,7 @@
     "smoke:rust:shadow": "node tools/rust-catalog-shadow-smoke.mjs",
     "smoke:rust:ssr": "node tools/rust-ssr-smoke.mjs",
     "smoke:rust:auth-me": "node tools/rust-auth-me-shadow-smoke.mjs",
+    "smoke:rust:orders-write": "node tools/rust-orders-write-smoke.mjs",
     "audit:rust-migration-plan": "node tools/rust-auth-orders-admin-plan-audit.mjs",
     "audit:production-workflow": "node tools/production-workflow-audit.mjs",
     "smoke:prod:self-test": "node tools/production-smoke.mjs --self-test",
