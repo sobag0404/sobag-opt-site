@@ -652,6 +652,52 @@ mod ssr_tests {
     }
 
     #[test]
+    fn order_create_updates_user_profile_like_node() {
+        let user = json!({
+            "email": "buyer@example.test",
+            "name": "Buyer",
+            "phone": "+7 900 000-00-00"
+        });
+        let data = json!({
+            "items": [{ "key": "sku-1", "variant": { "sku": "sku-1", "price": 520 } }],
+            "total": 30000,
+            "customer": {
+                "name": "Buyer",
+                "company": "Sobag LLC",
+                "inn": "1234567890",
+                "phone": "89689593254",
+                "email": "buyer@example.test",
+                "city": "Kursk",
+                "address": "Factory lane",
+                "layoutFileName": "layout.pdf",
+                "comment": "Call first"
+            }
+        });
+        let order = build_order_record(&data, Some(&user)).expect("order");
+        let mut store = json!({
+            "users": {
+                "buyer@example.test": {
+                    "email": "buyer@example.test",
+                    "name": "Buyer",
+                    "role": "buyer",
+                    "addresses": ["Old address"]
+                }
+            },
+            "orders": []
+        });
+        update_user_profile_from_order(&mut store, &order);
+        let updated = &store["users"]["buyer@example.test"];
+        assert_eq!(updated["company"], "Sobag LLC");
+        assert_eq!(updated["inn"], "1234567890");
+        assert_eq!(updated["phone"], "+7 968 959-32-54");
+        assert_eq!(updated["addresses"][0], "Factory lane");
+        assert_eq!(updated["addresses"][1], "Old address");
+        assert_eq!(updated["layoutFiles"][0], "layout.pdf");
+        assert_eq!(updated["orderComments"][0], "Call first");
+        assert_eq!(updated["lastCustomer"]["city"], "Kursk");
+    }
+
+    #[test]
     fn rejects_below_minimum_order_preview_record() {
         let error = build_order_record(
             &json!({
@@ -1915,6 +1961,7 @@ async fn order_create_preview(
     let user = context.as_ref().map(|(_, user)| user);
     let order = build_order_record(&data, user)?;
     push_order_record(&mut store, order.clone());
+    update_user_profile_from_order(&mut store, &order);
     save_file_store_value(STORE_KEY, &store)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
@@ -3391,6 +3438,168 @@ fn push_order_record(store: &mut Value, order: Value) {
     if let Some(items) = orders.as_array_mut() {
         items.insert(0, order);
     }
+}
+
+fn unique_non_empty_values(values: Vec<String>, limit: usize) -> Value {
+    let mut seen = Vec::<String>::new();
+    let mut out = Vec::<Value>::new();
+    for value in values {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if seen.iter().any(|item| item == trimmed) {
+            continue;
+        }
+        seen.push(trimmed.to_string());
+        out.push(json!(trimmed));
+        if out.len() >= limit {
+            break;
+        }
+    }
+    Value::Array(out)
+}
+
+fn existing_string_array(value: Option<&Value>) -> Vec<String> {
+    value
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
+}
+
+fn merge_companies(primary: Value, existing: Option<&Value>) -> Value {
+    let mut seen = Vec::<String>::new();
+    let mut out = Vec::<Value>::new();
+    let iter = std::iter::once(primary).chain(
+        existing
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default(),
+    );
+    for company in iter {
+        let name = string_field(&company, "name").unwrap_or_default();
+        let inn = string_field(&company, "inn").unwrap_or_default();
+        if name.is_empty() && inn.is_empty() {
+            continue;
+        }
+        let key = if inn.is_empty() {
+            name.to_lowercase()
+        } else {
+            inn.clone()
+        };
+        if seen.iter().any(|item| item == &key) {
+            continue;
+        }
+        seen.push(key);
+        out.push(company);
+        if out.len() >= 10 {
+            break;
+        }
+    }
+    Value::Array(out)
+}
+
+fn update_user_profile_from_order(store: &mut Value, order: &Value) {
+    let email = normalize_email(&string_field(order, "userEmail").unwrap_or_default());
+    if email.is_empty() {
+        return;
+    }
+    let Some(users) = store
+        .as_object_mut()
+        .and_then(|map| map.get_mut("users"))
+        .and_then(Value::as_object_mut)
+    else {
+        return;
+    };
+    let Some(existing) = users.get(&email).cloned() else {
+        return;
+    };
+    let customer = order.get("customer").unwrap_or(&Value::Null);
+    let customer_name = string_field(customer, "name").unwrap_or_default();
+    let company = string_field(customer, "company").unwrap_or_default();
+    let inn = string_field(customer, "inn").unwrap_or_default();
+    let kpp = string_field(customer, "kpp").unwrap_or_default();
+    let legal_address = string_field(customer, "legalAddress").unwrap_or_default();
+    let phone = string_field(customer, "phone").unwrap_or_default();
+    let city = string_field(customer, "city").unwrap_or_default();
+    let address = string_field(customer, "address").unwrap_or_default();
+    let delivery = string_field(customer, "delivery").unwrap_or_default();
+    let packaging = string_field(customer, "packaging").unwrap_or_default();
+    let layout_file = string_field(customer, "layoutFileName").unwrap_or_default();
+    let comment = string_field(customer, "comment").unwrap_or_default();
+    let primary_company = json!({
+        "name": if company.is_empty() { string_field(&existing, "company").unwrap_or_default() } else { company.clone() },
+        "inn": if inn.is_empty() { string_field(&existing, "inn").unwrap_or_default() } else { inn.clone() },
+        "kpp": if kpp.is_empty() { string_field(&existing, "kpp").unwrap_or_default() } else { kpp.clone() },
+        "legalAddress": if legal_address.is_empty() { string_field(&existing, "legalAddress").unwrap_or_default() } else { legal_address.clone() },
+    });
+    let mut next = existing.as_object().cloned().unwrap_or_default();
+    if string_field(&existing, "name").unwrap_or_default().is_empty() {
+        next.insert("name".to_string(), json!(customer_name));
+    }
+    next.insert(
+        "company".to_string(),
+        json!(if company.is_empty() { string_field(&existing, "company").unwrap_or_default() } else { company }),
+    );
+    next.insert(
+        "inn".to_string(),
+        json!(if inn.is_empty() { string_field(&existing, "inn").unwrap_or_default() } else { inn }),
+    );
+    next.insert(
+        "kpp".to_string(),
+        json!(if kpp.is_empty() { string_field(&existing, "kpp").unwrap_or_default() } else { kpp }),
+    );
+    next.insert(
+        "legalAddress".to_string(),
+        json!(if legal_address.is_empty() { string_field(&existing, "legalAddress").unwrap_or_default() } else { legal_address }),
+    );
+    next.insert(
+        "phone".to_string(),
+        json!(if phone.is_empty() { string_field(&existing, "phone").unwrap_or_default() } else { phone }),
+    );
+    next.insert("email".to_string(), json!(email.clone()));
+    next.insert(
+        "city".to_string(),
+        json!(if city.is_empty() { string_field(&existing, "city").unwrap_or_default() } else { city }),
+    );
+    next.insert(
+        "address".to_string(),
+        json!(if address.is_empty() { string_field(&existing, "address").unwrap_or_default() } else { address.clone() }),
+    );
+    let mut addresses = vec![address];
+    addresses.extend(existing_string_array(existing.get("addresses")));
+    next.insert("addresses".to_string(), unique_non_empty_values(addresses, 10));
+    next.insert(
+        "delivery".to_string(),
+        json!(if delivery.is_empty() { string_field(&existing, "delivery").unwrap_or_default() } else { delivery }),
+    );
+    next.insert(
+        "packaging".to_string(),
+        json!(if packaging.is_empty() { string_field(&existing, "packaging").unwrap_or_default() } else { packaging }),
+    );
+    let mut layout_files = vec![layout_file];
+    layout_files.extend(existing_string_array(existing.get("layoutFiles")));
+    next.insert("layoutFiles".to_string(), unique_non_empty_values(layout_files, 20));
+    next.insert(
+        "orderComment".to_string(),
+        json!(if comment.is_empty() { string_field(&existing, "orderComment").unwrap_or_default() } else { comment.clone() }),
+    );
+    let mut comments = vec![comment];
+    comments.extend(existing_string_array(existing.get("orderComments")));
+    next.insert("orderComments".to_string(), unique_non_empty_values(comments, 10));
+    next.insert(
+        "companies".to_string(),
+        merge_companies(primary_company, existing.get("companies")),
+    );
+    next.insert("lastCustomer".to_string(), customer.clone());
+    next.insert("updatedAt".to_string(), json!(Utc::now().to_rfc3339()));
+    users.insert(email, Value::Object(next));
 }
 
 fn push_brief_record(store: &mut Value, brief: Value, order: Value) {

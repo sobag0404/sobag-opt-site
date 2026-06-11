@@ -7,13 +7,15 @@ import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 
 const DEFAULT_RUST_BIN = "rust-server/target/release/sobag-opt-rust";
+const DEFAULT_NODE_ENTRY = "server.mjs";
 const SESSION_COOKIE = "sobag_session";
 
 function parseArgs(argv = process.argv.slice(2)) {
-  const args = { rustBin: DEFAULT_RUST_BIN, timeout: 20000, selfTest: false };
+  const args = { nodeEntry: DEFAULT_NODE_ENTRY, rustBin: DEFAULT_RUST_BIN, timeout: 20000, selfTest: false };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
-    if (token === "--rust-bin") args.rustBin = argv[++index] || args.rustBin;
+    if (token === "--node-entry") args.nodeEntry = argv[++index] || args.nodeEntry;
+    else if (token === "--rust-bin") args.rustBin = argv[++index] || args.rustBin;
     else if (token === "--timeout") args.timeout = Number(argv[++index] || args.timeout) || args.timeout;
     else if (token === "--self-test") args.selfTest = true;
     else if (token === "--help") {
@@ -110,8 +112,188 @@ async function requestJson(url, { token = "", method = "GET", body = null } = {}
   return { status: response.status, ok: response.ok, payload };
 }
 
+function assertSame(label, actual, expected) {
+  const actualJson = JSON.stringify(actual);
+  const expectedJson = JSON.stringify(expected);
+  if (actualJson !== expectedJson) {
+    throw new Error(`${label} mismatch\nactual: ${actualJson}\nexpected: ${expectedJson}`);
+  }
+}
+
+function orderBody() {
+  return {
+    items: [{ key: "sku-1", productName: "Pillow", qty: 0, variant: { sku: "sku-1", price: 520 } }],
+    total: 30000,
+    customer: {
+      name: "Buyer",
+      company: "Sobag LLC",
+      inn: "1234567890",
+      phone: "89689593254",
+      email: "buyer@example.test",
+      city: "Kursk",
+      address: "Factory lane",
+      layoutFileName: "layout.pdf",
+      comment: "Call first",
+    },
+    source: "rust-write-smoke",
+  };
+}
+
+function orderCreateSlice(response) {
+  const order = response.payload.order || {};
+  return {
+    status: response.status,
+    error: response.payload.error,
+    order: response.status === 201 ? {
+      status: order.status,
+      userEmail: order.userEmail,
+      customer: customerSlice(order.customer),
+      items: (order.items || []).map(orderItemSlice),
+      total: order.total,
+      promo: order.promo,
+      source: order.source,
+    } : null,
+  };
+}
+
+function customerSlice(customer = {}) {
+  return {
+    name: customer.name || "",
+    company: customer.company || "",
+    inn: customer.inn || "",
+    kpp: customer.kpp || "",
+    phone: customer.phone || "",
+    email: customer.email || "",
+    city: customer.city || "",
+    address: customer.address || "",
+    legalAddress: customer.legalAddress || "",
+    delivery: customer.delivery || "",
+    packaging: customer.packaging || "",
+    layoutFileName: customer.layoutFileName || "",
+    comment: customer.comment || "",
+  };
+}
+
+function orderItemSlice(item = {}) {
+  const variant = item.variant || {};
+  return {
+    key: item.key || "",
+    productId: item.productId || "",
+    productName: item.productName || "",
+    productImage: item.productImage || "",
+    qty: item.qty,
+    variant: {
+      sku: variant.sku || "",
+      name: variant.name || "",
+      type: variant.type || "",
+      size: variant.size || "",
+      material: variant.material || "",
+      price: variant.price,
+    },
+  };
+}
+
+function accountAfterOrderSlice(response) {
+  const user = response.payload.user || {};
+  const lastCustomer = user.lastCustomer || {};
+  return {
+    status: response.status,
+    user: {
+      email: user.email,
+      company: user.company || "",
+      inn: user.inn || "",
+      phone: user.phone || "",
+      city: user.city || "",
+      address: user.address || "",
+      addresses: user.addresses || [],
+      layoutFiles: user.layoutFiles || [],
+      orderComments: user.orderComments || [],
+      lastCustomer: user.lastCustomer ? {
+        name: lastCustomer.name,
+        company: lastCustomer.company,
+        inn: lastCustomer.inn,
+        phone: lastCustomer.phone,
+        email: lastCustomer.email,
+        city: lastCustomer.city,
+        address: lastCustomer.address,
+        layoutFileName: lastCustomer.layoutFileName,
+        comment: lastCustomer.comment,
+      } : null,
+    },
+    orders: (response.payload.orders || []).map((order) => ({
+      status: order.status,
+      userEmail: order.userEmail,
+      source: order.source,
+      total: order.total,
+      customer: customerSlice(order.customer),
+      items: (order.items || []).map(orderItemSlice),
+    })),
+  };
+}
+
+function briefBody() {
+  return {
+    product: "Pillow",
+    quantity: 100,
+    name: "Buyer",
+    contact: "Telegram @buyer",
+    phone: "89689593254",
+    email: "buyer@example.test",
+    layoutReference: "layout.pdf",
+    comment: "Need sample",
+  };
+}
+
+function briefCreateSlice(response) {
+  const brief = response.payload.brief || {};
+  const order = response.payload.order || {};
+  return {
+    status: response.status,
+    error: response.payload.error,
+    brief: response.status === 201 ? {
+      type: brief.type,
+      source: brief.source,
+      status: brief.status,
+      userEmail: brief.userEmail,
+      product: brief.product,
+      quantity: brief.quantity,
+      name: brief.name,
+      contact: brief.contact,
+      phone: brief.phone,
+      email: brief.email,
+      layoutReference: brief.layoutReference,
+      comment: brief.comment,
+    } : null,
+    order: response.status === 201 ? {
+      status: order.status,
+      userEmail: order.userEmail,
+      requestType: order.requestType,
+      source: order.source,
+      customer: customerSlice(order.customer),
+      items: (order.items || []).map(orderItemSlice),
+      total: order.total,
+      promo: order.promo,
+      customBrief: {
+        type: order.customBrief?.type,
+        source: order.customBrief?.source,
+        status: order.customBrief?.status,
+        userEmail: order.customBrief?.userEmail,
+        product: order.customBrief?.product,
+        quantity: order.customBrief?.quantity,
+        name: order.customBrief?.name,
+        contact: order.customBrief?.contact,
+        phone: order.customBrief?.phone,
+        email: order.customBrief?.email,
+        layoutReference: order.customBrief?.layoutReference,
+        comment: order.customBrief?.comment,
+      },
+    } : null,
+  };
+}
+
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-orders-write-"));
+  const nodePort = 54000 + Math.floor(Math.random() * 1000);
   const rustPort = 55000 + Math.floor(Math.random() * 1000);
   await createFixtureStore(temp);
   const env = {
@@ -120,22 +302,27 @@ async function runSmoke(args) {
     SOBAG_FILE_STORE_DIR: temp,
     SOBAG_ADMIN_EMAIL: "",
     SOBAG_ADMIN_PASSWORD: "",
-    SOBAG_RUST_BIND: `127.0.0.1:${rustPort}`,
   };
-  const rust = startProcess(resolve(args.rustBin), [], env);
+  const node = startProcess(process.execPath, [resolve(args.nodeEntry)], { ...env, PORT: String(nodePort), HOST: "127.0.0.1" });
+  const rust = startProcess(resolve(args.rustBin), [], { ...env, SOBAG_RUST_BIND: `127.0.0.1:${rustPort}` });
   try {
+    await waitForJson(`http://127.0.0.1:${nodePort}/api/health`, args.timeout);
     await waitForJson(`http://127.0.0.1:${rustPort}/api/health-rust`, args.timeout);
-    const orderBody = {
-      items: [{ key: "sku-1", productName: "Pillow", qty: 0, variant: { sku: "sku-1", price: 520 } }],
-      total: 30000,
-      customer: { name: "Buyer" },
-      source: "rust-write-smoke",
-    };
+    const nodeCreated = await requestJson(`http://127.0.0.1:${nodePort}/api/orders`, {
+      token: "buyer",
+      method: "POST",
+      body: orderBody(),
+    });
+    const nodeAccountAfterOrder = await requestJson(`http://127.0.0.1:${nodePort}/api/auth/me`, { token: "buyer" });
+    await createFixtureStore(temp);
     const created = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
       token: "buyer",
       method: "POST",
-      body: orderBody,
+      body: orderBody(),
     });
+    const rustAccountAfterOrder = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, { token: "buyer" });
+    assertSame("order create", orderCreateSlice(created), orderCreateSlice(nodeCreated));
+    assertSame("account after order create", accountAfterOrderSlice(rustAccountAfterOrder), accountAfterOrderSlice(nodeAccountAfterOrder));
     if (created.status !== 201) throw new Error(`order create status ${created.status}: ${JSON.stringify(created.payload)}`);
     if (created.payload.order?.userEmail !== "buyer@example.test") throw new Error("created order user mismatch");
     if (created.payload.order?.items?.[0]?.qty !== 1) throw new Error("created order qty was not sanitized");
@@ -168,7 +355,7 @@ async function runSmoke(args) {
 
     const belowMinimum = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
       method: "POST",
-      body: { ...orderBody, total: 29999 },
+      body: { ...orderBody(), total: 29999 },
     });
     if (belowMinimum.status !== 400 || belowMinimum.payload.error !== "minimum_total") {
       throw new Error(`minimum check mismatch: ${belowMinimum.status} ${JSON.stringify(belowMinimum.payload)}`);
@@ -178,6 +365,21 @@ async function runSmoke(args) {
     if (adminOrders.status !== 200) throw new Error(`admin orders status ${adminOrders.status}`);
     if (adminOrders.payload.orders?.[0]?.source !== "rust-write-smoke") throw new Error("created order not visible to admin");
 
+    await createFixtureStore(temp);
+    const nodeBrief = await requestJson(`http://127.0.0.1:${nodePort}/api/briefs`, {
+      token: "buyer",
+      method: "POST",
+      body: briefBody(),
+    });
+    await createFixtureStore(temp);
+    const rustBriefParity = await requestJson(`http://127.0.0.1:${rustPort}/rust/briefs`, {
+      token: "buyer",
+      method: "POST",
+      body: briefBody(),
+    });
+    assertSame("brief create", briefCreateSlice(rustBriefParity), briefCreateSlice(nodeBrief));
+
+    await createFixtureStore(temp);
     const brief = await requestJson(`http://127.0.0.1:${rustPort}/rust/briefs`, {
       token: "buyer",
       method: "POST",
@@ -206,10 +408,11 @@ async function runSmoke(args) {
     }
     console.log("Rust orders/briefs write smoke passed");
   } catch (error) {
-    const output = rust.output().trim();
+    const output = `${node.output()}\n${rust.output()}`.trim();
     if (output) console.error(output.slice(-4000));
     throw error;
   } finally {
+    node.child.kill("SIGTERM");
     rust.child.kill("SIGTERM");
     await rm(temp, { recursive: true, force: true });
   }

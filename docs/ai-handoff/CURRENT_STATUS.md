@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust order/brief creation parity:
+  - internal `/rust/orders` now updates buyer profile fields from created orders like the current Node `/api/orders` handler;
+  - `tools/rust-orders-write-smoke.mjs` now starts temporary Node and Rust runtimes on the same temporary file-store and compares order creation, account side effects, and custom-print brief creation;
+  - public `/api/orders` and `/api/briefs` still stay on Node and no production route/data cutover was made.
 - Rust review moderation parity smoke:
   - `tools/rust-auth-me-shadow-smoke.mjs` now compares Node `/api/admin/content` and Rust `/rust/admin/content` PATCH behavior from identical temporary store fixtures;
   - the comparison covers review approve/hide, review delete, and follow-up admin review-list state;
