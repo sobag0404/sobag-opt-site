@@ -66,16 +66,20 @@ const REQUIRED_SCRIPTS = {
 };
 
 const REQUIRED_VPS_DEPLOY_MARKERS = [
+  "cleanup_failed_release()",
+  "rust_target_dir=\"$app_dir/shared/cargo-target\"",
+  "export CARGO_TARGET_DIR=\"$rust_target_dir\"",
   "cargo test --locked",
   "cargo build --release --locked",
-  "install -m 755 rust-server/target/release/sobag-opt-rust",
+  "install -m 755 \"$rust_target_dir/release/sobag-opt-rust\" \"$rust_binary\"",
   "sudo systemctl restart sobag-opt-rust",
   "Node health failed after PM2 restart",
   "http://127.0.0.1:3001/api/health-rust",
   "node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001",
   "node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001",
-  "node tools/rust-auth-me-shadow-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust",
-  "node tools/rust-orders-write-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust",
+  "node tools/rust-auth-me-shadow-smoke.mjs --rust-bin \"$rust_binary\"",
+  "node tools/rust-orders-write-smoke.mjs --rust-bin \"$rust_binary\"",
+  "rm -rf -- \"$rust_target_dir/debug\"",
   "Rust health failed; restoring previous binary",
 ];
 

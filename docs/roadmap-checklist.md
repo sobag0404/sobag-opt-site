@@ -207,6 +207,7 @@ Last updated: 2026-06-11
    - [x] VPS release audit: offline check for required runtime files/scripts, ignore rules, and forbidden tracked secret/local-output artifacts.
    - [x] VPS env preflight: `tools/vps-preflight.mjs` checks Node 20+, file-store readiness, bootstrap admin env, and S3-compatible object-storage env without printing secrets; AutoFix covers the self-test fixture.
    - [x] VPS file-store backup/restore fixture: `tools/file-store-backup.mjs` copies only JSON store records with a manifest, supports guarded restore, and AutoFix covers the self-test.
+   - [x] VPS deploy SSD guard: Rust builds now use shared Cargo target, failed pre-activation releases are cleaned, debug build output is removed after deploy, and old release directories are pruned to the current release.
    - [x] Stronger mojibake guard in AutoFix.
    - [x] Automated production smoke after deploy.
      - [x] Read-only production smoke script for `/`, `/catalog`, `/cart`, and `/api/health`, with offline self-test in AutoFix.

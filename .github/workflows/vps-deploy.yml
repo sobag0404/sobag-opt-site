@@ -66,6 +66,13 @@ jobs:
           repo_dir="$app_dir/repo"
           release="$(date -u +%Y%m%dT%H%M%SZ)-${DEPLOY_SHA:0:7}"
           release_dir="$app_dir/releases/$release"
+          release_activated=0
+          cleanup_failed_release() {
+            if [ "$release_activated" != "1" ]; then
+              rm -rf -- "$release_dir"
+            fi
+          }
+          trap cleanup_failed_release ERR
 
           sudo install -d -o "$USER" -g "$USER" "$app_dir/releases" "$app_dir/shared" "$repo_dir" /var/lib/sobag-opt/store /var/backups/sobag-opt
 
@@ -86,6 +93,7 @@ jobs:
           npm ci --omit=dev
           rust_binary="$app_dir/shared/sobag-opt-rust"
           rust_previous="$app_dir/shared/sobag-opt-rust.previous"
+          rust_target_dir="$app_dir/shared/cargo-target"
 
           if [ -f rust-server/Cargo.toml ]; then
             if command -v cargo >/dev/null 2>&1; then
@@ -101,11 +109,13 @@ jobs:
             }
             (
               cd rust-server
+              export CARGO_TARGET_DIR="$rust_target_dir"
               cargo test --locked
               cargo build --release --locked
             )
           fi
 
+          release_activated=1
           ln -sfn "$release_dir" "$app_dir/current"
           printf '%s\n' "$release" > "$app_dir/current-release.txt"
 
@@ -131,7 +141,7 @@ jobs:
             if [ -x "$rust_binary" ]; then
               cp -p "$rust_binary" "$rust_previous"
             fi
-            install -m 755 rust-server/target/release/sobag-opt-rust "$rust_binary"
+            install -m 755 "$rust_target_dir/release/sobag-opt-rust" "$rust_binary"
             cat > /tmp/sobag-opt-rust.service <<'SERVICE'
           [Unit]
           Description=Sobag Opt Rust API
@@ -177,15 +187,15 @@ jobs:
             set -a
             . "$app_dir/shared/.env"
             set +a
-            node tools/rust-auth-me-shadow-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust
-            node tools/rust-orders-write-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust
+            node tools/rust-auth-me-shadow-smoke.mjs --rust-bin "$rust_binary"
+            node tools/rust-orders-write-smoke.mjs --rust-bin "$rust_binary"
+            rm -rf -- "$rust_target_dir/debug"
           fi
 
           mapfile -t releases < <(ls -1dt "$app_dir"/releases/* 2>/dev/null || true)
           keep_current="$(readlink -f "$app_dir/current")"
-          keep_previous="${releases[1]:-}"
           for old_release in "${releases[@]}"; do
-            if [ "$old_release" != "$keep_current" ] && [ "$old_release" != "$keep_previous" ]; then
+            if [ "$old_release" != "$keep_current" ]; then
               rm -rf -- "$old_release"
             fi
           done

@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS deploy SSD pressure fix:
+  - failed deploy run `27372834285` reached `No space left on device` while building Rust inside a per-release `target`;
+  - old/failed VPS releases were safely cleaned, leaving the current live release;
+  - `.github/workflows/vps-deploy.yml` now removes failed pre-activation releases, uses shared `$app_dir/shared/cargo-target`, installs/smokes the shared Rust binary, removes debug build output after deploy, and keeps only the current release directory;
+  - `tools/vps-release-audit.mjs` guards the SSD-safe deploy markers.
 - VPS deploy health retry:
   - `.github/workflows/vps-deploy.yml` now retries Node `/api/health` after `pm2 restart` before continuing to Rust install/smokes;
   - this fixes the PM2 restart timing race seen on deploy run `27372283346`;
