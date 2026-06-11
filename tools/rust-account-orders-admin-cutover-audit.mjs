@@ -17,6 +17,7 @@ const PREVIEW_ROUTES = [
   "/rust/orders",
   "/rust/briefs",
   "/rust/admin/orders",
+  "/rust/admin/users",
   "/rust/admin/content",
 ];
 
@@ -72,6 +73,7 @@ function auditCutover({ runbook, rustMain, authSmoke, orderSmoke }) {
   [
     "/rust/auth/me",
     "/rust/admin/orders",
+    "/rust/admin/users",
   ].forEach((route) => assertIncludes(authSmoke, route, AUTH_SMOKE, errors));
   [
     "/rust/orders",
@@ -88,7 +90,7 @@ function auditCutover({ runbook, rustMain, authSmoke, orderSmoke }) {
 function selfTest() {
   const runbook = [...REQUIRED_MARKERS, ...PREVIEW_ROUTES, ...DO_NOT_SWITCH_YET].join("\n");
   const rustMain = PREVIEW_ROUTES.map(routeDeclaration).join("\n");
-  const authSmoke = ["/rust/auth/me", "/rust/admin/orders"].join("\n");
+  const authSmoke = ["/rust/auth/me", "/rust/admin/orders", "/rust/admin/users"].join("\n");
   const orderSmoke = ["/rust/orders", "/rust/briefs", "/rust/admin/orders"].join("\n");
   const summary = auditCutover({ runbook, rustMain, authSmoke, orderSmoke });
   if (summary.previewRoutes !== PREVIEW_ROUTES.length) throw new Error("self-test preview route count mismatch");

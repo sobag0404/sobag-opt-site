@@ -227,6 +227,27 @@ async function runSmoke(args) {
       assertSame(label, nodePayload, rustPayload);
       console.log(`OK ${label} ${digest(rustPayload)}`);
     }
+    for (const [label, token, email] of [
+      ["admin users buyer detail", "admin", "buyer@example.test"],
+      ["admin users order-only customer", "manager", "other@example.test"],
+    ]) {
+      const query = `email=${encodeURIComponent(email)}`;
+      const nodePayload = await getJson(`http://127.0.0.1:${nodePort}/api/admin/users?${query}`, token);
+      const rustPayload = await getJson(`http://127.0.0.1:${rustPort}/rust/admin/users?${query}`, token);
+      assertSame(label, nodePayload, rustPayload);
+      if (JSON.stringify(rustPayload).includes("passwordHash") || JSON.stringify(rustPayload).includes("passwordSalt")) {
+        throw new Error(`${label} leaked password fields`);
+      }
+      console.log(`OK ${label} ${digest(rustPayload)}`);
+    }
+    const rustUsers = await getJson(`http://127.0.0.1:${rustPort}/rust/admin/users`, "admin");
+    if (!Array.isArray(rustUsers.users) || rustUsers.users.length < 4) {
+      throw new Error(`admin users list mismatch: ${JSON.stringify(rustUsers)}`);
+    }
+    if (JSON.stringify(rustUsers).includes("passwordHash") || JSON.stringify(rustUsers).includes("passwordSalt")) {
+      throw new Error("admin users list leaked password fields");
+    }
+    console.log(`OK admin users list ${digest(rustUsers)}`);
     for (const [label, token, status, code] of [
       ["admin orders anonymous", "", 401, "unauthorized"],
       ["admin orders buyer", "buyer", 403, "forbidden"],
@@ -234,6 +255,21 @@ async function runSmoke(args) {
     ]) {
       const nodeResult = await getJsonResponse(`http://127.0.0.1:${nodePort}/api/admin/orders`, token);
       const rustResult = await getJsonResponse(`http://127.0.0.1:${rustPort}/rust/admin/orders`, token);
+      if (nodeResult.status !== status || rustResult.status !== status) {
+        throw new Error(`${label} status mismatch: node=${nodeResult.status} rust=${rustResult.status}`);
+      }
+      if (nodeResult.payload.error !== code || rustResult.payload.error !== code) {
+        throw new Error(`${label} error mismatch: node=${nodeResult.payload.error} rust=${rustResult.payload.error}`);
+      }
+      console.log(`OK ${label} ${status}`);
+    }
+    for (const [label, token, status, code] of [
+      ["admin users anonymous", "", 401, "unauthorized"],
+      ["admin users buyer", "buyer", 403, "forbidden"],
+      ["admin users missing", "admin", 404, "not_found"],
+    ]) {
+      const nodeResult = await getJsonResponse(`http://127.0.0.1:${nodePort}/api/admin/users?email=missing@example.test`, token);
+      const rustResult = await getJsonResponse(`http://127.0.0.1:${rustPort}/rust/admin/users?email=missing@example.test`, token);
       if (nodeResult.status !== status || rustResult.status !== status) {
         throw new Error(`${label} status mismatch: node=${nodeResult.status} rust=${rustResult.status}`);
       }

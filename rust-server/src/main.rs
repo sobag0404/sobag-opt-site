@@ -10,7 +10,7 @@ use axum::{
     extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode, Uri},
     response::{Html, IntoResponse, Response},
-    routing::{get, patch, post},
+    routing::{get, post},
     Json, Router,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -477,6 +477,37 @@ mod ssr_tests {
     }
 
     #[test]
+    fn admin_user_detail_matches_node_contract_without_private_fields() {
+        let store = json!({
+            "users": {
+                "buyer@example.test": {
+                    "email": "buyer@example.test",
+                    "name": "Buyer",
+                    "role": "buyer",
+                    "passwordHash": "hidden",
+                    "passwordSalt": "hidden"
+                }
+            },
+            "orders": [
+                { "id": "SO-1", "userEmail": "buyer@example.test", "customer": { "email": "buyer@example.test" } },
+                { "id": "SO-2", "userEmail": "other@example.test", "customer": { "email": "other@example.test", "address": "Kursk" } }
+            ]
+        });
+        let buyer = admin_user_detail_from_values(&store, "BUYER@example.test").expect("buyer detail");
+        assert_eq!(buyer["orders"].as_array().unwrap().len(), 1);
+        assert!(buyer.get("passwordHash").is_none());
+        assert!(buyer.get("passwordSalt").is_none());
+        let order_only =
+            admin_user_detail_from_values(&store, "other@example.test").expect("order-only detail");
+        assert_eq!(order_only["role"], "buyer");
+        assert_eq!(order_only["addresses"][0], "Kursk");
+        assert!(admin_user_detail_from_values(&store, "missing@example.test").is_err());
+        assert!(can_read_admin_users(&json!({ "role": "admin" })));
+        assert!(can_read_admin_users(&json!({ "role": "manager" })));
+        assert!(!can_read_admin_users(&json!({ "role": "buyer" })));
+    }
+
+    #[test]
     fn admin_content_roles_and_reviews_match_contract() {
         assert!(can_edit_content(&json!({ "role": "admin" })));
         assert!(can_edit_content(&json!({ "role": "content" })));
@@ -868,6 +899,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/orders", post(order_create_preview))
         .route("/rust/briefs", post(brief_create_preview))
         .route("/rust/admin/orders", get(admin_orders_preview))
+        .route("/rust/admin/users", get(admin_users_preview))
         .route(
             "/rust/admin/content",
             get(admin_content_preview)
@@ -1283,6 +1315,36 @@ async fn admin_orders_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<
         return Err(AppError::forbidden("Недостаточно прав."));
     }
     Ok((no_store_headers(), Json(admin_orders_payload_from_values(&store))))
+}
+
+async fn admin_users_preview(
+    headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> AppResult<(HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let Some((store, user)) = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+    else {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    };
+    if !can_read_admin_users(&user) {
+        return Err(AppError::forbidden("Недостаточно прав."));
+    }
+    let email = params
+        .get("email")
+        .map(|value| normalize_email(value))
+        .unwrap_or_default();
+    if email.is_empty() {
+        return Ok((no_store_headers(), Json(admin_users_payload_from_values(&store))));
+    }
+    Ok((
+        no_store_headers(),
+        Json(json!({ "user": admin_user_detail_from_values(&store, &email)? })),
+    ))
 }
 
 async fn admin_content_preview(headers: HeaderMap, uri: Uri) -> AppResult<(HeaderMap, Json<Value>)> {
@@ -1948,6 +2010,13 @@ fn can_read_admin_orders(user: &Value) -> bool {
     )
 }
 
+fn can_read_admin_users(user: &Value) -> bool {
+    matches!(
+        user.get("role").and_then(Value::as_str),
+        Some("admin" | "manager")
+    )
+}
+
 fn can_edit_content(user: &Value) -> bool {
     matches!(
         user.get("role").and_then(Value::as_str),
@@ -1963,6 +2032,100 @@ fn admin_orders_payload_from_values(store: &Value) -> Value {
             .cloned()
             .unwrap_or_default()
     })
+}
+
+fn admin_users_payload_from_values(store: &Value) -> Value {
+    let users = store
+        .get("users")
+        .and_then(Value::as_object)
+        .map(|users| users.values().map(public_user_value).collect::<Vec<_>>())
+        .unwrap_or_default();
+    json!({ "users": users })
+}
+
+fn admin_user_detail_from_values(store: &Value, email: &str) -> AppResult<Value> {
+    let normalized = normalize_email(email);
+    let orders = admin_orders_for_user(store, &normalized);
+    let found = store
+        .get("users")
+        .and_then(Value::as_object)
+        .and_then(|users| users.get(&normalized));
+    if let Some(user) = found {
+        let mut public = public_user_value(user);
+        if let Some(map) = public.as_object_mut() {
+            map.insert("orders".to_string(), orders);
+        }
+        return Ok(public);
+    }
+    if orders.as_array().map(|items| items.is_empty()).unwrap_or(true) {
+        return Err(AppError::not_found("not_found", "Пользователь не найден."));
+    }
+    let latest_customer = orders
+        .as_array()
+        .and_then(|items| items.first())
+        .and_then(|order| order.get("customer"))
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let name = string_field(&latest_customer, "name")
+        .or_else(|| string_field(&latest_customer, "company"))
+        .unwrap_or_else(|| normalized.clone());
+    let addresses = orders
+        .as_array()
+        .map(|items| {
+            let mut seen = Vec::<String>::new();
+            for order in items {
+                let Some(address) = order
+                    .get("customer")
+                    .and_then(|customer| string_field(customer, "address"))
+                else {
+                    continue;
+                };
+                if !seen.iter().any(|item| item == &address) {
+                    seen.push(address);
+                }
+            }
+            seen
+        })
+        .unwrap_or_default();
+    Ok(json!({
+        "email": normalized,
+        "name": name,
+        "phone": string_field(&latest_customer, "phone").unwrap_or_default(),
+        "role": "buyer",
+        "address": string_field(&latest_customer, "address").unwrap_or_default(),
+        "addresses": addresses,
+        "lastCustomer": latest_customer,
+        "orders": orders
+    }))
+}
+
+fn admin_orders_for_user(store: &Value, email: &str) -> Value {
+    let normalized = email.to_ascii_lowercase();
+    Value::Array(
+        store
+            .get("orders")
+            .and_then(Value::as_array)
+            .map(|orders| {
+                orders
+                    .iter()
+                    .filter(|order| {
+                        order
+                            .get("userEmail")
+                            .and_then(Value::as_str)
+                            .map(|value| value.eq_ignore_ascii_case(&normalized))
+                            .unwrap_or(false)
+                            || order
+                                .get("customer")
+                                .and_then(|customer| customer.get("email"))
+                                .and_then(Value::as_str)
+                                .map(|value| value.eq_ignore_ascii_case(&normalized))
+                                .unwrap_or(false)
+                    })
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default(),
+    )
 }
 
 async fn load_content_record() -> Result<Option<Value>, std::io::Error> {

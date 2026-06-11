@@ -31,6 +31,7 @@ Preview-only Rust routes that may be used for parity work:
 - `/rust/orders`
 - `/rust/briefs`
 - `/rust/admin/orders`
+- `/rust/admin/users`
 - `/rust/admin/content`
 
 These routes must not be exposed as public `/api/*` routes until the matching cutover gate is green.
@@ -41,8 +42,8 @@ These routes must not be exposed as public `/api/*` routes until the matching cu
 2. Auth writes: login, register, logout, profile update
 3. Orders/briefs writes
 4. Admin orders read/update
-5. Admin content/reviews
-6. Admin users/employees
+5. Admin users/employees
+6. Admin content/reviews
 7. Admin catalog/import/media/PIM writes
 
 ## Required Gates Per Route Group
@@ -115,4 +116,3 @@ Rollback is route-level:
 5. Keep Rust running for diagnosis unless Rust health itself is broken.
 
 Do not edit production data, env, sessions, user records, orders, content, or admin records during rollback.
-

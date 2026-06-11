@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust admin users read-only preview:
+  - internal `/rust/admin/users` now mirrors Node admin/manager user/customer read payloads from the Node-compatible file-store;
+  - `tools/rust-auth-me-shadow-smoke.mjs` compares user detail and order-only customer views against Node and rejects anonymous/buyer/missing cases;
+  - public `/api/admin/users` and all employee/user writes still stay on Node.
 - Rust account/orders/admin cutover guard:
   - added `docs/rust-account-orders-admin-cutover-runbook.md` with blocked public auth/order/admin routes, preview-only Rust routes, route-group order, required gates, Nginx shape, and rollback rules;
   - added `tools/rust-account-orders-admin-cutover-audit.mjs` and `npm run audit:rust-account-cutover` to guard preview route coverage, Node fallback, smoke coverage, and no generic `/api` or `/api/admin` routing to Rust;

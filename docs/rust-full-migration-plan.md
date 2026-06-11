@@ -54,7 +54,7 @@ Current production stays on `https://sobag-shop.online`. Vercel is not an active
 5. Orders and briefs:
    - Migrate cart order submission, custom print briefs, buyer order history, comments, and status visibility.
    - Keep minimum order, guest visibility in admin, and buyer/internal note separation.
-   - Current status: internal `/rust/admin/orders` read-only preview returns the current admin/manager order-list payload and shadow smoke compares it with Node `/api/admin/orders`; writes still stay on Node.
+   - Current status: internal `/rust/admin/orders` and `/rust/admin/users` read-only previews return the current admin/manager order-list and user/customer payloads; shadow smoke compares them with Node `/api/admin/orders` and `/api/admin/users`; writes still stay on Node.
    - Current status: internal `/rust/orders` and `/rust/briefs` can create orders/custom print briefs in a temporary file-store and deploy smoke verifies write persistence/admin visibility; public `/api/orders` and `/api/briefs` still stay on Node.
    - Current status: `docs/rust-account-orders-admin-cutover-runbook.md` and `tools/rust-account-orders-admin-cutover-audit.mjs` guard the preview routes, blocked public write/admin routes, route-group order, gates, and rollback before any auth/order/admin Nginx switch.
    - Detailed route contracts, tests, and rollback gates are tracked in `docs/rust-auth-orders-admin-migration-plan.md`.
