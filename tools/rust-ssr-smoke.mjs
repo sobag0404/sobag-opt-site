@@ -43,6 +43,10 @@ async function main() {
     ["/rust/catalog-fragment?pageSize=2", ["rust-grid", "rust-card"]],
     ["/rust/product?baseSku=opt_70190", ["Sobag Opt Rust Preview", "rust-product", "opt_70190"]],
     ["/rust/product-fragment?baseSku=opt_70190", ["rust-product", "opt_70190"]],
+    ["/rust/pages/about", ["Sobag Opt Rust Preview", "rust-content-page", "data-rust-content-page=\"about\""]],
+    ["/rust/pages/business", ["rust-content-page", "data-rust-content-page=\"business\""]],
+    ["/rust/pages/contacts", ["rust-content-page", "rust-address", "data-rust-content-page=\"contacts\""]],
+    ["/rust/pages/delivery", ["rust-content-page", "data-rust-content-page=\"delivery\""]],
   ];
   for (const [path, needles] of checks) {
     const text = await getText(args.base, path, args.timeout);

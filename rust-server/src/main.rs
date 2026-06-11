@@ -1,7 +1,7 @@
-use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, env, net::SocketAddr, path::PathBuf, sync::Arc};
 
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode, Uri},
     response::{Html, IntoResponse, Response},
     routing::get,
@@ -40,6 +40,110 @@ const FACET_BUCKET_KEYS: &[&str] = &[
 struct AppState {
     pool: PgPool,
 }
+
+#[derive(Clone, Copy)]
+struct ContentPageSpec {
+    slug: &'static str,
+    title_key: &'static str,
+    lead_key: &'static str,
+    text_key: &'static str,
+    default_title: &'static str,
+    default_lead: &'static str,
+    default_text: &'static str,
+}
+
+const CONTENT_PAGES: &[ContentPageSpec] = &[
+    ContentPageSpec {
+        slug: "about",
+        title_key: "aboutPageTitle",
+        lead_key: "aboutPageLead",
+        text_key: "aboutPageText",
+        default_title: "О компании Sobag Opt",
+        default_lead: "Sobag Opt — B2B-каталог для оптовых продаж текстиля с принтами и заказов на производство под макет покупателя.",
+        default_text: "Мы работаем с магазинами, селлерами и корпоративными клиентами: помогаем подобрать товар, собрать партию, рассчитать скидку, подготовить упаковку и передать заказ в производство.",
+    },
+    ContentPageSpec {
+        slug: "business",
+        title_key: "businessPageTitle",
+        lead_key: "businessPageLead",
+        text_key: "businessMinimumText",
+        default_title: "Условия для бизнеса",
+        default_lead: "Условия для магазинов, селлеров и корпоративных клиентов: скидка от суммы заказа, производство в одном месте и сопровождение менеджера.",
+        default_text: "Минимальная сумма для оформления оптовой заявки — 30 000 ₽. До этой суммы товары можно добавлять в корзину, сохранять подборку и готовить заказ к отправке менеджеру.",
+    },
+    ContentPageSpec {
+        slug: "marketplaces",
+        title_key: "marketplacesTitle",
+        lead_key: "marketplacesText",
+        text_key: "marketplaceOneText",
+        default_title: "Мы на маркетплейсах",
+        default_lead: "Готовые товары Sobag можно смотреть на витринах маркетплейсов, а оптовые партии и индивидуальные принты оформлять через этот сайт.",
+        default_text: "Витрины подходят для просмотра части готового ассортимента Sobag.",
+    },
+    ContentPageSpec {
+        slug: "contacts",
+        title_key: "contactsPageTitle",
+        lead_key: "contactsPageLead",
+        text_key: "contactsSchedule",
+        default_title: "Контакты",
+        default_lead: "Свяжитесь с отделом опта, чтобы уточнить наличие, сроки запуска партии, упаковку, отгрузку и документы.",
+        default_text: "Пн-Пт, 10:00-18:00 по Москве",
+    },
+    ContentPageSpec {
+        slug: "how-to-order",
+        title_key: "howToOrderPageTitle",
+        lead_key: "howToOrderPageLead",
+        text_key: "howToOrderPageText",
+        default_title: "Как оформить заказ",
+        default_lead: "Покупатель собирает товары в корзину, проверяет скидку и отправляет заявку менеджеру.",
+        default_text: "Добавьте нужные варианты товара, перейдите в корзину, заполните контакты и отправьте заказ. Менеджер проверит наличие, сроки, упаковку, документы и подтвердит финальные условия.",
+    },
+    ContentPageSpec {
+        slug: "delivery",
+        title_key: "deliveryPageTitle",
+        lead_key: "deliveryPageLead",
+        text_key: "deliveryPageText",
+        default_title: "Доставка товара",
+        default_lead: "Способ доставки и город отгрузки согласуются после проверки оптовой заявки.",
+        default_text: "Доставка рассчитывается после подтверждения состава заказа, веса, объема и требований к упаковке. Возможны самовывоз, транспортная компания или индивидуальная схема отгрузки.",
+    },
+    ContentPageSpec {
+        slug: "payment",
+        title_key: "paymentPageTitle",
+        lead_key: "paymentPageLead",
+        text_key: "paymentPageText",
+        default_title: "Оплата товара",
+        default_lead: "Оплата фиксируется после согласования заказа, счета и реквизитов.",
+        default_text: "Для юридических лиц и ИП возможна оплата по счету. Финальный порядок оплаты, резерв товара и документы подтверждает менеджер перед запуском партии.",
+    },
+    ContentPageSpec {
+        slug: "returns",
+        title_key: "returnsPageTitle",
+        lead_key: "returnsPageLead",
+        text_key: "returnsPageText",
+        default_title: "Возврат товара",
+        default_lead: "Вопросы возврата и претензий решаются по согласованным условиям заказа.",
+        default_text: "Если в партии есть расхождения по количеству, комплектности или качеству, зафиксируйте их фото и описанием. Менеджер проверит обращение и предложит решение.",
+    },
+    ContentPageSpec {
+        slug: "seller-support",
+        title_key: "sellerSupportPageTitle",
+        lead_key: "sellerSupportPageLead",
+        text_key: "sellerSupportPageText",
+        default_title: "Поддержка селлеров",
+        default_lead: "Помощь с упаковкой, маркировкой и подготовкой партий для маркетплейсов.",
+        default_text: "Можно согласовать штрихкоды, упаковку, комплектацию, маркировку и требования площадок. Детали фиксируются до запуска партии в производство.",
+    },
+    ContentPageSpec {
+        slug: "wholesale",
+        title_key: "wholesalePageTitle",
+        lead_key: "wholesalePageLead",
+        text_key: "wholesalePageText",
+        default_title: "Оптовые партии",
+        default_lead: "Партии собираются из готовых позиций и изделий под макет клиента.",
+        default_text: "Оптовая партия может включать разные изделия, размеры, материалы и принты. Скидка зависит от суммы корзины, а сроки запуска подтверждаются после проверки состава заказа.",
+    },
+];
 
 #[cfg(test)]
 mod ssr_tests {
@@ -115,6 +219,30 @@ mod ssr_tests {
         assert!(html.contains("sku_1"));
         assert!(html.contains("от 220 ₽"));
         assert!(html.contains("assets/production-hero-1.png"));
+    }
+
+    #[test]
+    fn renders_content_page_from_admin_content_shape() {
+        let content = json!({
+            "aboutPageTitle": "About <Sobag>",
+            "aboutPageLead": "Lead",
+            "aboutPageText": "Text",
+            "aboutPageProductionTitle": "Production",
+            "aboutPageProductionText": "Details"
+        });
+        let html = render_content_page(content_page_spec("about").unwrap(), &content);
+        assert!(html.contains("data-rust-content-page=\"about\""));
+        assert!(html.contains("About &lt;Sobag&gt;"));
+        assert!(html.contains("Production"));
+        assert!(!html.contains("About <Sobag>"));
+    }
+
+    #[test]
+    fn file_store_content_key_matches_node_contract() {
+        assert_eq!(
+            file_key_hex("sobag:content:v1"),
+            "736f6261673a636f6e74656e743a7631"
+        );
     }
 }
 
@@ -363,6 +491,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/search-fragment", get(catalog_fragment))
         .route("/rust/product", get(product_page))
         .route("/rust/product-fragment", get(product_fragment))
+        .route("/rust/pages/:slug", get(content_page))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
@@ -510,6 +639,19 @@ async fn product_fragment(
     Ok((cache_headers(), Html(render_product_fragment(&product))))
 }
 
+async fn content_page(Path(slug): Path<String>) -> AppResult<(HeaderMap, Html<String>)> {
+    let spec = content_page_spec(&slug)
+        .ok_or_else(|| AppError::not_found("content_page_not_found", "Content page not found."))?;
+    let content = load_site_content().await.unwrap_or(Value::Null);
+    let body = format!(
+        "{}{}{}",
+        render_page_head(spec.default_title),
+        render_content_page(spec, &content),
+        render_page_foot()
+    );
+    Ok((cache_headers(), Html(body)))
+}
+
 async fn render_listing_page(
     state: Arc<AppState>,
     uri: Uri,
@@ -564,12 +706,220 @@ fn render_page_head(title: &str) -> String {
     format!(
         "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} | Sobag Opt Rust Preview</title><style>{}</style><script defer src=\"https://unpkg.com/htmx.org@1.9.12\"></script></head><body>",
         escape_html(title),
-        "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-catalog,.rust-product{max-width:1180px;margin:0 auto;padding:24px}.rust-toolbar{display:flex;gap:10px;margin:18px 0}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-pager{margin-top:18px}.rust-product img{max-width:420px;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px}"
+        "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-catalog,.rust-product,.rust-content-page{max-width:1180px;margin:0 auto;padding:24px}.rust-toolbar{display:flex;gap:10px;margin:18px 0}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-pager{margin-top:18px}.rust-product img{max-width:420px;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px}.rust-content-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}.rust-content-nav a{border:1px solid #bbb;border-radius:6px;padding:8px 10px;color:#111;text-decoration:none}.rust-content-hero{border-bottom:2px solid #111;padding-bottom:18px}.rust-content-hero h1{font-size:44px;line-height:1;margin:0 0 12px}.rust-content-panel{background:#f4f4f4;border:1px solid #ddd;border-radius:8px;margin-top:18px;padding:18px}.rust-content-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.rust-address{font-weight:700}"
     )
 }
 
 fn render_page_foot() -> &'static str {
     "</body></html>"
+}
+
+fn content_page_spec(slug: &str) -> Option<&'static ContentPageSpec> {
+    CONTENT_PAGES.iter().find(|page| page.slug == slug)
+}
+
+async fn load_site_content() -> Result<Value, std::io::Error> {
+    if !matches!(
+        env::var("SOBAG_STORE_PROVIDER")
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase()
+            .as_str(),
+        "file" | "filesystem" | "fs"
+    ) {
+        return Ok(Value::Null);
+    }
+    let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
+    let key = env::var("SOBAG_CONTENT_KEY").unwrap_or_else(|_| "sobag:content:v1".to_string());
+    let path = PathBuf::from(dir).join(format!("{}.json", file_key_hex(&key)));
+    let text = match tokio::fs::read_to_string(path).await {
+        Ok(value) => value,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Value::Null),
+        Err(error) => return Err(error),
+    };
+    let record: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
+    let value = record.get("value").unwrap_or(&record);
+    let content = value.get("content").unwrap_or(value);
+    Ok(content.clone())
+}
+
+fn file_key_hex(value: &str) -> String {
+    value
+        .as_bytes()
+        .iter()
+        .map(|byte| format!("{:02x}", byte))
+        .collect::<Vec<_>>()
+        .join("")
+}
+
+fn content_text(content: &Value, key: &str, fallback: &str) -> String {
+    content
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or(fallback)
+        .trim()
+        .to_string()
+}
+
+fn render_content_page(spec: &ContentPageSpec, content: &Value) -> String {
+    let title = content_text(content, spec.title_key, spec.default_title);
+    let lead = content_text(content, spec.lead_key, spec.default_lead);
+    let text = content_text(content, spec.text_key, spec.default_text);
+    let nav = CONTENT_PAGES
+        .iter()
+        .map(|page| {
+            format!(
+                "<a href=\"/rust/pages/{}\">{}</a>",
+                page.slug,
+                escape_html(&content_text(content, page.title_key, page.default_title))
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("");
+    let extra = match spec.slug {
+        "about" => render_content_pair(
+            content,
+            "aboutPageProductionTitle",
+            "Производство текстиля с принтами",
+            "aboutPageProductionText",
+            "Производственный цикл включает печать, раскрой, пошив, контроль качества, упаковку, маркировку и подготовку к отгрузке.",
+        ),
+        "business" => render_business_content(content),
+        "contacts" => render_contacts_content(content),
+        "marketplaces" => render_marketplaces_content(content),
+        _ => String::new(),
+    };
+    format!(
+        "<main class=\"rust-content-page\" data-rust-content-page=\"{}\"><nav><a href=\"/\">На главную</a> <a href=\"/catalog\">В каталог</a></nav><div class=\"rust-content-nav\">{}</div><section class=\"rust-content-hero\"><h1>{}</h1><p>{}</p></section><article class=\"rust-content-panel\"><p>{}</p></article>{}</main>",
+        spec.slug,
+        nav,
+        escape_html(&title),
+        escape_html(&lead),
+        escape_html(&text),
+        extra
+    )
+}
+
+fn render_content_pair(
+    content: &Value,
+    title_key: &str,
+    default_title: &str,
+    text_key: &str,
+    default_text: &str,
+) -> String {
+    format!(
+        "<article class=\"rust-content-panel\"><h2>{}</h2><p>{}</p></article>",
+        escape_html(&content_text(content, title_key, default_title)),
+        escape_html(&content_text(content, text_key, default_text))
+    )
+}
+
+fn render_business_content(content: &Value) -> String {
+    let cards = [
+        (
+            "businessDiscountTitle",
+            "Скидка от суммы",
+            "businessDiscountText",
+            "Скидка пересчитывается автоматически по общей сумме корзины.",
+        ),
+        (
+            "businessProductionTitle",
+            "Производство и комплектация",
+            "businessProductionText",
+            "Печать, раскрой, пошив, упаковка и подготовка к отгрузке выполняются в одном процессе.",
+        ),
+        (
+            "businessManagerTitle",
+            "Связь с менеджером",
+            "businessManagerText",
+            "После отправки корзины менеджер связывается с покупателем и уточняет детали.",
+        ),
+        (
+            "businessDocumentsTitle",
+            "Документы и согласования",
+            "businessDocumentsText",
+            "Реквизиты, счет, макеты, штрихкоды и упаковку можно согласовать до запуска партии.",
+        ),
+    ];
+    format!(
+        "<section class=\"rust-content-grid\">{}</section>",
+        cards
+            .iter()
+            .map(|(title_key, default_title, text_key, default_text)| {
+                render_content_pair(content, title_key, default_title, text_key, default_text)
+            })
+            .collect::<Vec<_>>()
+            .join("")
+    )
+}
+
+fn render_contacts_content(content: &Value) -> String {
+    let legal = content_text(
+        content,
+        "contactsLegalAddress",
+        "431815, Республика Мордовия, Атяшевский р-н, село Наборные Сыреси, ул. Крупской, д. 18",
+    );
+    let production = content_text(
+        content,
+        "contactsProductionAddress",
+        "г. Курск, ул. Литовская, д. 12",
+    );
+    let email = content_text(content, "footerEmail", "ip.burago@yandex.ru");
+    let phone = content_text(content, "footerPhone", "+7 901 879-41-62");
+    format!(
+        "<section class=\"rust-content-grid\"><article class=\"rust-content-panel\"><h2>Отдел опта</h2><p><a href=\"mailto:{}\">{}</a></p><p><a href=\"tel:{}\">{}</a></p></article><article class=\"rust-content-panel\"><h2>Юридический адрес</h2><p class=\"rust-address\">{}</p></article><article class=\"rust-content-panel\"><h2>Адрес производства</h2><p class=\"rust-address\">{}</p></article></section>",
+        escape_attr(&email),
+        escape_html(&email),
+        escape_attr(&phone.replace([' ', '-'], "")),
+        escape_html(&phone),
+        escape_html(&legal),
+        escape_html(&production)
+    )
+}
+
+fn render_marketplaces_content(content: &Value) -> String {
+    let cards = [
+        (
+            "marketplaceOneName",
+            "Wildberries",
+            "marketplaceOneTitle",
+            "Витрина Sobag",
+            "marketplaceOneText",
+            "Витрина для просмотра части готового ассортимента Sobag.",
+        ),
+        (
+            "marketplaceTwoName",
+            "Ozon",
+            "marketplaceTwoTitle",
+            "Товары в наличии",
+            "marketplaceTwoText",
+            "Подходит для просмотра готовых коллекций.",
+        ),
+        (
+            "marketplaceThreeName",
+            "Яндекс Маркет",
+            "marketplaceThreeTitle",
+            "Проверка ассортимента",
+            "marketplaceThreeText",
+            "Дополнительный канал для проверки готовых коллекций и наличия.",
+        ),
+    ];
+    format!(
+        "<section class=\"rust-content-grid\">{}</section>",
+        cards
+            .iter()
+            .map(|(name_key, default_name, title_key, default_title, text_key, default_text)| {
+                format!(
+                    "<article class=\"rust-content-panel\"><span>{}</span><h2>{}</h2><p>{}</p></article>",
+                    escape_html(&content_text(content, name_key, default_name)),
+                    escape_html(&content_text(content, title_key, default_title)),
+                    escape_html(&content_text(content, text_key, default_text))
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("")
+    )
 }
 
 fn render_listing_fragment(

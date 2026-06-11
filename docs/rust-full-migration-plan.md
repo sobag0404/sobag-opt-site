@@ -30,10 +30,13 @@ Current production stays on `https://sobag-shop.online`. Vercel is not an active
    - Add Rust-rendered preview pages for catalog, search, and product detail.
    - Keep them under Rust-only preview paths until UI parity is proven.
    - Use HTMX fragments for pagination/search/detail partials.
+   - Current status: `/rust/catalog`, `/rust/search`, `/rust/product`, and related fragments are implemented as internal preview routes.
 
 3. Content pages:
    - Move read-only public pages to Rust templates.
    - Keep admin content writes on Node until Rust auth/admin roles are migrated.
+   - Current status: `/rust/pages/:slug` renders internal preview pages for `about`, `business`, `marketplaces`, `contacts`, `how-to-order`, `delivery`, `payment`, `returns`, `seller-support`, and `wholesale`.
+   - The preview reads current file-store content when `SOBAG_STORE_PROVIDER=file`; otherwise it falls back to safe built-in defaults.
 
 4. Auth/account:
    - Preserve `sobag_session` cookie, 30-day TTL, PBKDF2 password compatibility, and public user sanitization.
