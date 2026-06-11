@@ -48,6 +48,10 @@ Completed most recently:
   - failed Rust restart or health restores `/opt/sobag-opt/shared/sobag-opt-rust.previous` and fails the deploy instead of silently leaving broken Rust routes;
   - `tools/vps-release-audit.mjs` now guards Rust files, `smoke:rust:shadow`, and the critical VPS deploy markers;
   - added `docs/rust-deploy-runbook.md` with manual checks and Nginx route rollback to Node.
+- Rust auth/store foundation:
+  - Rust now has Node-compatible constants/helpers for `sobag_session`, 30-day session TTL, `sobag:session:<token>` keys, file-store key paths/wrapper expiry, and PBKDF2 SHA-256 password verification;
+  - the fixture is generated from Node `crypto.pbkdf2Sync` and Rust `cargo test --locked` covers it;
+  - no auth, order, admin, or write production route is switched to Rust yet.
 - Confirmed public contact details:
   - static `contacts.html`, shared footer `components/site-shell.js`, and `defaultSiteContent` in `app.js` now use `+7 901 879-41-62`, `ip.burago@yandex.ru`, the Republic of Mordovia legal/production address, and the Kursk production branch;
   - Yandex map widgets stay hidden with `data-map-pending` until exact Yandex URLs are confirmed;

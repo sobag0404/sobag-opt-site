@@ -13,6 +13,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 - Rust is live on VPS as `sobag-opt-rust` at `127.0.0.1:3001`.
 - Nginx routes only `/api/catalog-query` and `/api/catalog-detail` to Rust.
 - Rust internal preview routes exist for catalog/search/product and content pages.
+- Rust auth/store foundation helpers exist for Node-compatible `sobag_session`, session store keys, file-store key/wrapper handling, and PBKDF2 SHA-256 verification fixtures.
 - Node remains fallback and still owns auth, account, carts, orders, briefs, admin, content writes, reviews, import/PIM, and media writes.
 - VPS storage uses file-store for shared app data; PostgreSQL currently backs public catalog reads.
 
@@ -36,6 +37,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
    - Split Rust code into modules: `config`, `store`, `auth`, `errors`, `templates`, `account`, `orders`, `admin`.
    - Add file-store read/write adapter compatible with Node file-store wrapper format.
    - Add request id, method guard, JSON error shape, cookie helpers, and role helpers.
+   - Current status: first compatibility helpers and tests are in `rust-server/src/main.rs`; module split and write adapter are still pending.
 
 2. Read-only account:
    - Implement internal Rust preview/shadow for `GET /api/auth/me`.

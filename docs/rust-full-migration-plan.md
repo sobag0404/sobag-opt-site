@@ -41,6 +41,7 @@ Current production stays on `https://sobag-shop.online`. Vercel is not an active
 4. Auth/account:
    - Preserve `sobag_session` cookie, 30-day TTL, PBKDF2 password compatibility, and public user sanitization.
    - Migrate `GET /api/auth/me` first, then login/register/logout/profile writes.
+   - Current status: Rust has compatibility helpers/tests for session cookie/key parsing, file-store wrapper/key handling, and Node PBKDF2 password verification; no auth route is switched yet.
 
 5. Orders and briefs:
    - Migrate cart order submission, custom print briefs, buyer order history, comments, and status visibility.

@@ -1,4 +1,10 @@
-use std::{collections::HashMap, env, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    env,
+    net::SocketAddr,
+    path::{Path as FsPath, PathBuf},
+    sync::Arc,
+};
 
 use axum::{
     extract::{Path, Query, State},
@@ -8,11 +14,20 @@ use axum::{
     Json, Router,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use chrono::DateTime;
+use pbkdf2::pbkdf2_hmac;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sha2::Sha256;
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use tower_http::trace::TraceLayer;
 
+const SESSION_COOKIE: &str = "sobag_session";
+const SESSION_TTL_SECONDS: i64 = 60 * 60 * 24 * 30;
+const PBKDF2_ITERATIONS: u32 = 310_000;
+const PBKDF2_KEY_LEN: usize = 32;
+const STORE_KEY: &str = "sobag:store:v1";
+const CONTENT_KEY: &str = "sobag:content:v1";
 const DEFAULT_PAGE_SIZE: i64 = 48;
 const MAX_PAGE_SIZE: i64 = 120;
 const FACET_GROUPS: &[(&str, &str, bool)] = &[
@@ -243,6 +258,72 @@ mod ssr_tests {
             file_key_hex("sobag:content:v1"),
             "736f6261673a636f6e74656e743a7631"
         );
+        assert_eq!(
+            file_store_path_for_key(".sobag-store", CONTENT_KEY),
+            PathBuf::from(".sobag-store").join("736f6261673a636f6e74656e743a7631.json")
+        );
+        assert_eq!(
+            file_store_path_for_key(".sobag-store", STORE_KEY),
+            PathBuf::from(".sobag-store").join("736f6261673a73746f72653a7631.json")
+        );
+    }
+
+    #[test]
+    fn auth_session_cookie_contract_matches_node() {
+        let token = "abc123";
+        assert_eq!(SESSION_COOKIE, "sobag_session");
+        assert_eq!(SESSION_TTL_SECONDS, 2_592_000);
+        assert_eq!(session_store_key(token), "sobag:session:abc123");
+        assert_eq!(
+            parse_cookie_value("theme=dark; sobag_session=abc123; other=1", SESSION_COOKIE),
+            Some("abc123".to_string())
+        );
+        assert_eq!(
+            parse_cookie_value("sobag_session=token%20value", SESSION_COOKIE),
+            Some("token value".to_string())
+        );
+        assert_eq!(parse_cookie_value("other=1", SESSION_COOKIE), None);
+    }
+
+    #[test]
+    fn file_store_wrapper_unwraps_and_expires_like_node() {
+        let wrapped = json!({
+            "version": 1,
+            "expiresAt": "2030-01-01T00:00:00.000Z",
+            "value": { "email": "buyer@example.test" }
+        });
+        assert_eq!(
+            file_store_unwrap_value(&wrapped, 1_700_000_000),
+            Some(json!({ "email": "buyer@example.test" }))
+        );
+
+        let expired = json!({
+            "version": 1,
+            "expiresAt": "2020-01-01T00:00:00.000Z",
+            "value": { "email": "buyer@example.test" }
+        });
+        assert_eq!(file_store_unwrap_value(&expired, 1_700_000_000), None);
+        assert_eq!(
+            file_store_unwrap_value(&json!({"raw": true}), 1),
+            Some(json!({"raw": true}))
+        );
+    }
+
+    #[test]
+    fn verifies_node_pbkdf2_password_fixture() {
+        assert_eq!(PBKDF2_ITERATIONS, 310_000);
+        assert_eq!(PBKDF2_KEY_LEN, 32);
+        assert!(verify_password_hash(
+            "Qwerty1234567899",
+            "00112233445566778899aabbccddeeff",
+            "642284d450b3032d40340ccc7fc96fdaca2ffd9564761ecf7615269b4bef46f8"
+        ));
+        assert!(!verify_password_hash(
+            "wrong",
+            "00112233445566778899aabbccddeeff",
+            "642284d450b3032d40340ccc7fc96fdaca2ffd9564761ecf7615269b4bef46f8"
+        ));
+        assert!(!verify_password_hash("secret", "not-hex", "also-not-hex"));
     }
 }
 
@@ -730,8 +811,8 @@ async fn load_site_content() -> Result<Value, std::io::Error> {
         return Ok(Value::Null);
     }
     let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
-    let key = env::var("SOBAG_CONTENT_KEY").unwrap_or_else(|_| "sobag:content:v1".to_string());
-    let path = PathBuf::from(dir).join(format!("{}.json", file_key_hex(&key)));
+    let key = env::var("SOBAG_CONTENT_KEY").unwrap_or_else(|_| CONTENT_KEY.to_string());
+    let path = file_store_path_for_key(dir, &key);
     let text = match tokio::fs::read_to_string(path).await {
         Ok(value) => value,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Value::Null),
@@ -750,6 +831,87 @@ fn file_key_hex(value: &str) -> String {
         .map(|byte| format!("{:02x}", byte))
         .collect::<Vec<_>>()
         .join("")
+}
+
+fn file_store_path_for_key(dir: impl AsRef<FsPath>, key: &str) -> PathBuf {
+    dir.as_ref().join(format!("{}.json", file_key_hex(key)))
+}
+
+fn session_store_key(token: &str) -> String {
+    format!("sobag:session:{}", token.trim())
+}
+
+fn parse_cookie_value(cookie_header: &str, name: &str) -> Option<String> {
+    cookie_header
+        .split(';')
+        .filter_map(|part| {
+            let (key, value) = part.trim().split_once('=')?;
+            Some((key.trim(), value.trim()))
+        })
+        .find(|(key, _)| *key == name)
+        .map(|(_, value)| percent_decode_cookie(value))
+}
+
+fn percent_decode_cookie(value: &str) -> String {
+    let mut bytes = Vec::with_capacity(value.len());
+    let raw = value.as_bytes();
+    let mut index = 0;
+    while index < raw.len() {
+        if raw[index] == b'%' && index + 2 < raw.len() {
+            if let Ok(hex) = std::str::from_utf8(&raw[index + 1..index + 3]) {
+                if let Ok(byte) = u8::from_str_radix(hex, 16) {
+                    bytes.push(byte);
+                    index += 3;
+                    continue;
+                }
+            }
+        }
+        bytes.push(raw[index]);
+        index += 1;
+    }
+    String::from_utf8_lossy(&bytes).to_string()
+}
+
+fn file_store_unwrap_value(record: &Value, now_unix: i64) -> Option<Value> {
+    if !record.is_object() || record.get("value").is_none() {
+        return Some(record.clone());
+    }
+    if let Some(expires_at) = record.get("expiresAt").and_then(Value::as_str) {
+        if !expires_at.trim().is_empty() {
+            let expired = DateTime::parse_from_rfc3339(expires_at)
+                .map(|date| date.timestamp() <= now_unix)
+                .unwrap_or(false);
+            if expired {
+                return None;
+            }
+        }
+    }
+    Some(record.get("value").cloned().unwrap_or(Value::Null))
+}
+
+fn verify_password_hash(password: &str, salt_hex: &str, hash_hex: &str) -> bool {
+    let salt = match hex::decode(salt_hex) {
+        Ok(value) => value,
+        Err(_) => return false,
+    };
+    let expected = match hex::decode(hash_hex) {
+        Ok(value) if value.len() == PBKDF2_KEY_LEN => value,
+        _ => return false,
+    };
+    let mut derived = [0_u8; PBKDF2_KEY_LEN];
+    pbkdf2_hmac::<Sha256>(password.as_bytes(), &salt, PBKDF2_ITERATIONS, &mut derived);
+    constant_time_eq(&derived, &expected)
+}
+
+fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+    let diff = left
+        .iter()
+        .zip(right.iter())
+        .fold(0_u8, |acc, (a, b)| acc | (a ^ b));
+    diff == 0
 }
 
 fn content_text(content: &Value, key: &str, fallback: &str) -> String {
