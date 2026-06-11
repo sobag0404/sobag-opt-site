@@ -191,6 +191,52 @@ function assertSame(label, nodePayload, rustPayload) {
   }
 }
 
+function accountStateBody() {
+  return {
+    cartItems: [
+      ["line-1", {
+        key: "client-line",
+        productId: "p1",
+        productName: "Pillow",
+        productImage: "/img/pillow.jpg",
+        qty: 100000,
+        variant: { sku: "sku-1", name: "Velour", type: "Pillow", size: "40x40", material: "Velour", price: -5 },
+      }],
+      { key: "bad", variant: {} },
+    ],
+    favoriteItems: ["p1", "p1", "", "p2"],
+    savedCarts: [{
+      id: "SC-1",
+      title: "Quote",
+      createdAt: "2026-06-11T00:00:00.000Z",
+      updatedAt: "2026-06-11T00:01:00.000Z",
+      date: "11.06.2026",
+      items: [["line-1", { variant: { sku: "sku-1" }, qty: 2 }]],
+      qty: 2,
+      subtotal: 1040,
+      discount: 40,
+      total: 1000,
+      status: "sent",
+      sentAt: "2026-06-11T00:02:00.000Z",
+      sentOrderId: "SO-1",
+      customerComment: "Customer note",
+      managerComment: "hidden",
+      commentHistory: [
+        { at: "2026-06-11T00:03:00.000Z", actor: "Buyer", role: "buyer", type: "comment", visibility: "customer", text: "visible" },
+        { at: "2026-06-11T00:04:00.000Z", actor: "Manager", role: "manager", type: "comment", visibility: "internal", text: "hidden" },
+      ],
+    }],
+  };
+}
+
+function accountStateSlice(payload) {
+  return {
+    cartItems: payload.cartItems,
+    favoriteItems: payload.favoriteItems,
+    savedCarts: payload.savedCarts,
+  };
+}
+
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-auth-shadow-"));
   const nodePort = 53000 + Math.floor(Math.random() * 1000);
@@ -417,29 +463,22 @@ async function runSmoke(args) {
     }
     if (profile.payload.user?.inn !== "123456789012") throw new Error("profile inn sanitize mismatch");
 
-    const accountState = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, {
-      token: loginToken,
+    const accountBody = accountStateBody();
+    await createFixtureStore(temp);
+    const nodeAccountState = await requestJson(`http://127.0.0.1:${nodePort}/api/auth/me`, {
+      token: "buyer",
       method: "PUT",
-      body: {
-        cartItems: [
-          ["line-1", { qty: 100000, variant: { sku: "sku-1", price: -5 } }],
-          { key: "bad", variant: {} },
-        ],
-        favoriteItems: ["p1", "p1", "", "p2"],
-        savedCarts: [{
-          id: "SC-1",
-          title: "Quote",
-          items: [["line-1", { variant: { sku: "sku-1" } }]],
-          status: "sent",
-          managerComment: "hidden",
-          commentHistory: [
-            { visibility: "customer", text: "visible" },
-            { visibility: "internal", text: "hidden" },
-          ],
-        }],
-      },
+      body: accountBody,
     });
+    await createFixtureStore(temp);
+    const accountState = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, {
+      token: "buyer",
+      method: "PUT",
+      body: accountBody,
+    });
+    if (nodeAccountState.status !== 200) throw new Error(`node account state status ${nodeAccountState.status}: ${JSON.stringify(nodeAccountState.payload)}`);
     if (accountState.status !== 200) throw new Error(`account state status ${accountState.status}: ${JSON.stringify(accountState.payload)}`);
+    assertSame("account state write", accountStateSlice(nodeAccountState.payload), accountStateSlice(accountState.payload));
     if (accountState.payload.cartItems?.[0]?.[1]?.qty !== 99999) throw new Error("cart qty sanitize mismatch");
     if (accountState.payload.cartItems?.[0]?.[1]?.variant?.price !== 0) throw new Error("cart price sanitize mismatch");
     if (JSON.stringify(accountState.payload.favoriteItems) !== JSON.stringify(["p1", "p2"])) throw new Error("favorites sanitize mismatch");

@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust account-state write parity smoke:
+  - `tools/rust-auth-me-shadow-smoke.mjs` now compares Node `/api/auth/me` and Rust `/rust/auth/me` account-state PUT output from identical temporary file-store fixtures;
+  - the comparison covers `cartItems`, `favoriteItems`, and `savedCarts` sanitizing, including hidden internal saved-cart comments for buyers;
+  - public `/api/auth/me` still stays on Node and no production route/data cutover was made.
 - Rust account state PUT preview:
   - internal `PUT /rust/auth/me` now supports temporary `cartItems`, `favoriteItems`, `savedCarts`, and buyer review validation/writes in the Node-compatible file-store;
   - cart lines, favorites, saved carts, internal saved-cart comments, and review payloads are sanitized to the current Node contract;
