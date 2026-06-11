@@ -1726,12 +1726,18 @@ fn sanitize_profile_value(profile: &Value, existing: &Value) -> Value {
             .or_else(|| clean_text(existing.get(key), limit))
             .unwrap_or_default()
     };
+    let digits = |key: &str, limit: usize| {
+        let value = clean_text(profile.get(key), 240)
+            .or_else(|| clean_text(existing.get(key), 240))
+            .unwrap_or_default();
+        digits_only(&value, limit)
+    };
     json!({
         "name": text("name", 120),
         "phone": normalize_phone(&text("phone", 80)),
         "company": text("company", 180),
-        "inn": digits_only(&text("inn", 12), 12),
-        "kpp": digits_only(&text("kpp", 9), 9),
+        "inn": digits("inn", 12),
+        "kpp": digits("kpp", 9),
         "legalAddress": text("legalAddress", 240),
         "city": text("city", 120),
         "address": text("address", 240),
