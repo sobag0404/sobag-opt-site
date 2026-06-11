@@ -21,6 +21,7 @@ Last updated: 2026-06-11
 - [x] Basic SEO pages, sitemap, robots, Organization/CollectionPage/BreadcrumbList JSON-LD.
 - [x] Footer informational pages exist for order flow, delivery, payment, returns, seller support, and wholesale lots, with editable admin content fields.
 - [x] Custom print form is no longer fake: `/api/briefs` saves a server-side custom-print request, mirrors it into admin/manager order workflow, and VPS write-smoke verifies admin visibility.
+- [x] VPS deploy Node health retry: after `pm2 restart`, deploy waits/retries `/api/health` before Rust install/smokes, avoiding false deploy failures from PM2 startup timing.
 - [x] Privacy/legal split: `privacy.html` is separate from the personal-data consent PDF, and footer/sitemap/content audit include the new privacy page.
 - [x] Cart minimum is enforced consistently: UI blocks checkout below 30 000 ₽, saved quote sending checks the same minimum, and `/api/orders` rejects below-minimum order totals.
 - [x] Contacts maps do not render for unconfirmed address text; legal/production maps appear only after admin content contains a concrete address.

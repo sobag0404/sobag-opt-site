@@ -70,6 +70,7 @@ const REQUIRED_VPS_DEPLOY_MARKERS = [
   "cargo build --release --locked",
   "install -m 755 rust-server/target/release/sobag-opt-rust",
   "sudo systemctl restart sobag-opt-rust",
+  "Node health failed after PM2 restart",
   "http://127.0.0.1:3001/api/health-rust",
   "node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001",
   "node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001",

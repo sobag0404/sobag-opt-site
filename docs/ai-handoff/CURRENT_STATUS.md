@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS deploy health retry:
+  - `.github/workflows/vps-deploy.yml` now retries Node `/api/health` after `pm2 restart` before continuing to Rust install/smokes;
+  - this fixes the PM2 restart timing race seen on deploy run `27372283346`;
+  - `tools/vps-release-audit.mjs` guards the retry marker.
 - Rust SSR route cutover rehearsal guard:
   - added `tools/rust-ssr-route-rehearsal.mjs` and `npm run rehearse:rust-ssr-routes`;
   - it prints exact future Nginx `location = ...` snippets for catalog/search/product pages, fragments, and content pages;

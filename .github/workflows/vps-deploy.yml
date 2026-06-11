@@ -116,7 +116,16 @@ jobs:
           fi
 
           pm2 save --force
-          curl -fsS http://127.0.0.1:3000/api/health
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS http://127.0.0.1:3000/api/health; then
+              break
+            fi
+            if [ "$attempt" = "10" ]; then
+              echo "Node health failed after PM2 restart"
+              exit 1
+            fi
+            sleep 1
+          done
 
           if [ -f rust-server/Cargo.toml ]; then
             if [ -x "$rust_binary" ]; then
