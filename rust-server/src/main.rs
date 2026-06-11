@@ -1470,7 +1470,7 @@ fn sanitize_order_line(line: &Value) -> Value {
 }
 
 fn build_brief_record(data: &Value, user: Option<&Value>) -> AppResult<(Value, Value)> {
-    let product = clean_text(data.get("product"), 120);
+    let product = clean_text(data.get("product"), 120).unwrap_or_default();
     let quantity = std::cmp::max(
         0,
         data.get("quantity")
