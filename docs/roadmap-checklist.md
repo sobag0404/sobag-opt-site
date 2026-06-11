@@ -29,6 +29,7 @@ Last updated: 2026-06-11
 - [x] Separate search results page: `/search?q=...`, result count, suggestions, quick filters, exact SKU priority, production check.
 - [x] Rust public-path SSR alias preview: Rust now serves internal `/catalog`, `/search`, `/product`, and fragment aliases on port 3001 for future Nginx cutover testing, while production public routing still stays on the current storefront.
 - [x] Rust content-page alias preview: Rust now serves public-path aliases for about/business/contacts/footer informational pages on port 3001 for future Nginx cutover testing, while production public routing still stays on the current storefront.
+- [x] Rust SSR cutover guard: `docs/rust-ssr-cutover-runbook.md` and `tools/rust-ssr-cutover-audit.mjs` define/check the exact pre-cutover gates, public candidate paths, Node fallback exclusions, and rollback rules before any Nginx SSR page switch.
 - [x] Product reviews: authorized buyer form, rating/text, approved reviews in product modal, admin moderation and persistence through existing storage/API.
 - [x] Goal-mode UI invariant: product photos and category/collection/holiday photos render as square 1:1 previews; catalog home uses `На главную`, while selected catalog pages use `В каталог` for the top return action.
 - [x] Compact selected catalog header: category pages use one dense row with back button, title, count, and sorting, without the old large white heading area.

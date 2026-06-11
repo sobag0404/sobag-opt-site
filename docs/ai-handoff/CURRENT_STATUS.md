@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR cutover guard:
+  - added `docs/rust-ssr-cutover-runbook.md` with pre-cutover, Nginx shape, post-cutover, and rollback rules for catalog/search/product/content public SSR paths;
+  - added `tools/rust-ssr-cutover-audit.mjs` and `npm run audit:rust-ssr-cutover` to guard the route list, smoke coverage, deploy markers, Node fallback exclusions, and no generic `/` routing to Rust;
+  - no production routing was switched.
 - Rust content-page alias preview:
   - Rust now serves `/about`, `/business`, `/marketplaces`, `/contacts`, `/how-to-order`, `/delivery`, `/payment`, `/returns`, `/seller-support`, and `/wholesale` on port 3001 for future Nginx cutover rehearsal;
   - content nav uses public aliases on alias routes and keeps `/rust/pages/*` links on preview routes;
