@@ -469,6 +469,23 @@ mod ssr_tests {
     }
 
     #[test]
+    fn admin_content_roles_and_reviews_match_contract() {
+        assert!(can_edit_content(&json!({ "role": "admin" })));
+        assert!(can_edit_content(&json!({ "role": "content" })));
+        assert!(!can_edit_content(&json!({ "role": "manager" })));
+        assert!(!can_edit_content(&json!({ "role": "buyer" })));
+        let store = json!({
+            "reviews": [
+                { "id": "old", "createdAt": "2026-01-01T00:00:00.000Z" },
+                { "id": "new", "createdAt": "2026-02-01T00:00:00.000Z" }
+            ]
+        });
+        let reviews = sorted_reviews_for_admin(&store);
+        assert_eq!(reviews[0]["id"], "new");
+        assert_eq!(reviews[1]["id"], "old");
+    }
+
+    #[test]
     fn builds_and_persists_order_preview_record() {
         let user = json!({
             "email": "buyer@example.test",
@@ -824,6 +841,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/orders", post(order_create_preview))
         .route("/rust/briefs", post(brief_create_preview))
         .route("/rust/admin/orders", get(admin_orders_preview))
+        .route("/rust/admin/content", get(admin_content_preview).put(admin_content_update_preview))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
@@ -1199,6 +1217,86 @@ async fn admin_orders_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<
     Ok((no_store_headers(), Json(admin_orders_payload_from_values(&store))))
 }
 
+async fn admin_content_preview(headers: HeaderMap, uri: Uri) -> AppResult<(HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let Some((store, user)) = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+    else {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    };
+    if !can_edit_content(&user) {
+        return Err(AppError::forbidden("Недостаточно прав."));
+    }
+    if uri.query().unwrap_or("").split('&').any(|part| part == "reviews=1") {
+        return Ok((
+            no_store_headers(),
+            Json(json!({
+                "reviews": sorted_reviews_for_admin(&store)
+            })),
+        ));
+    }
+    let content = load_content_record()
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+        .unwrap_or_else(|| json!({ "content": {}, "updatedAt": Value::Null, "source": "empty" }));
+    Ok((no_store_headers(), Json(content)))
+}
+
+async fn admin_content_update_preview(
+    headers: HeaderMap,
+    Json(data): Json<Value>,
+) -> AppResult<(HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let Some((_store, user)) = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+    else {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    };
+    if !can_edit_content(&user) {
+        return Err(AppError::forbidden("Недостаточно прав."));
+    }
+    let Some(content) = data.get("content").filter(|value| value.is_object()) else {
+        return Err(AppError::bad_request(
+            "invalid_content",
+            "Некорректные настройки сайта.",
+        ));
+    };
+    let content_bytes = serde_json::to_vec(content)
+        .map_err(|error| AppError::internal(error.to_string()))?
+        .len();
+    if content_bytes > 4 * 1024 * 1024 {
+        return Err(AppError::bad_request(
+            "content_too_large",
+            "Слишком большой объем настроек сайта.",
+        ));
+    }
+    let updated_at = Utc::now().to_rfc3339();
+    let saved = json!({
+        "content": content,
+        "updatedAt": updated_at,
+        "updatedBy": string_field(&user, "email").unwrap_or_default(),
+        "version": 1
+    });
+    save_file_store_value(&content_store_key(), &saved)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    Ok((
+        no_store_headers(),
+        Json(json!({
+            "updatedAt": updated_at,
+            "count": content.as_object().map(|map| map.len()).unwrap_or(0)
+        })),
+    ))
+}
+
 async fn order_create_preview(
     headers: HeaderMap,
     Json(data): Json<Value>,
@@ -1488,6 +1586,10 @@ fn session_store_key(token: &str) -> String {
     format!("sobag:session:{}", token.trim())
 }
 
+fn content_store_key() -> String {
+    env::var("SOBAG_CONTENT_KEY").unwrap_or_else(|_| CONTENT_KEY.to_string())
+}
+
 fn session_cookie_header(token: &str) -> String {
     let secure = if env::var("NODE_ENV").unwrap_or_default() == "production" {
         "; Secure"
@@ -1623,6 +1725,13 @@ fn can_read_admin_orders(user: &Value) -> bool {
     )
 }
 
+fn can_edit_content(user: &Value) -> bool {
+    matches!(
+        user.get("role").and_then(Value::as_str),
+        Some("admin" | "content")
+    )
+}
+
 fn admin_orders_payload_from_values(store: &Value) -> Value {
     json!({
         "orders": store
@@ -1631,6 +1740,49 @@ fn admin_orders_payload_from_values(store: &Value) -> Value {
             .cloned()
             .unwrap_or_default()
     })
+}
+
+async fn load_content_record() -> Result<Option<Value>, std::io::Error> {
+    let Some(value) = load_file_store_value(&content_store_key()).await? else {
+        return Ok(None);
+    };
+    if value.get("content").and_then(Value::as_object).is_some() {
+        return Ok(Some(json!({
+            "content": value.get("content").cloned().unwrap_or_else(|| json!({})),
+            "updatedAt": value.get("updatedAt").cloned().unwrap_or(Value::Null),
+            "updatedBy": value.get("updatedBy").cloned().unwrap_or_else(|| json!("")),
+            "version": value.get("version").cloned().unwrap_or_else(|| json!(1))
+        })));
+    }
+    if value.is_object() {
+        return Ok(Some(json!({
+            "content": value,
+            "updatedAt": Value::Null,
+            "updatedBy": "",
+            "version": 1
+        })));
+    }
+    Ok(None)
+}
+
+fn sorted_reviews_for_admin(store: &Value) -> Value {
+    let mut reviews = store
+        .get("reviews")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    reviews.sort_by(|left, right| {
+        let left = left
+            .get("createdAt")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        let right = right
+            .get("createdAt")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        right.cmp(left)
+    });
+    Value::Array(reviews)
 }
 
 fn default_store_value() -> Value {

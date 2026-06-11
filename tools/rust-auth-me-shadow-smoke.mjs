@@ -86,6 +86,12 @@ function fixtureStore() {
 
 async function createFixtureStore(dir) {
   await writeStoreValue(dir, "sobag:store:v1", fixtureStore());
+  await writeStoreValue(dir, "sobag:content:v1", {
+    content: { brandName: "Sobag Preview", footerPhone: "+7 901 879-41-62" },
+    updatedAt: "2026-06-11T00:00:00.000Z",
+    updatedBy: "content@example.test",
+    version: 1,
+  });
   const sessions = {
     buyer: "buyer@example.test",
     manager: "manager@example.test",
@@ -288,6 +294,40 @@ async function runSmoke(args) {
     const registeredMe = await getJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, registerToken);
     if (registeredMe.user?.email !== "new@example.test") throw new Error("registered session mismatch");
     console.log("OK auth write preview login/register/profile/logout");
+
+    const adminContent = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, { token: "content" });
+    if (adminContent.status !== 200 || adminContent.payload.content?.brandName !== "Sobag Preview") {
+      throw new Error(`admin content get mismatch: ${adminContent.status} ${JSON.stringify(adminContent.payload)}`);
+    }
+    const contentForbidden = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, { token: "buyer" });
+    if (contentForbidden.status !== 403 || contentForbidden.payload.error !== "forbidden") {
+      throw new Error(`admin content forbidden mismatch: ${contentForbidden.status} ${JSON.stringify(contentForbidden.payload)}`);
+    }
+    const invalidContent = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, {
+      token: "content",
+      method: "PUT",
+      body: { content: [] },
+    });
+    if (invalidContent.status !== 400 || invalidContent.payload.error !== "invalid_content") {
+      throw new Error(`admin content validation mismatch: ${invalidContent.status} ${JSON.stringify(invalidContent.payload)}`);
+    }
+    const updatedContent = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, {
+      token: "content",
+      method: "PUT",
+      body: { content: { brandName: "Updated Sobag", contactsSchedule: "10-18" } },
+    });
+    if (updatedContent.status !== 200 || updatedContent.payload.count !== 2 || !updatedContent.payload.updatedAt) {
+      throw new Error(`admin content update mismatch: ${updatedContent.status} ${JSON.stringify(updatedContent.payload)}`);
+    }
+    const contentAfterUpdate = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, { token: "admin" });
+    if (contentAfterUpdate.payload.content?.brandName !== "Updated Sobag" || contentAfterUpdate.payload.updatedBy !== "content@example.test") {
+      throw new Error(`admin content persistence mismatch: ${JSON.stringify(contentAfterUpdate.payload)}`);
+    }
+    const contentReviews = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content?reviews=1`, { token: "content" });
+    if (contentReviews.status !== 200 || contentReviews.payload.reviews?.[0]?.id !== "REV-1") {
+      throw new Error(`admin content reviews mismatch: ${contentReviews.status} ${JSON.stringify(contentReviews.payload)}`);
+    }
+    console.log("OK admin content preview get/update/reviews");
     console.log("Rust auth/me and admin/orders shadow smoke passed");
   } catch (error) {
     const output = `${node.output()}\n${rust.output()}`.trim();
@@ -305,6 +345,7 @@ function selfTest() {
   const store = fixtureStore();
   if (!store.users["buyer@example.test"] || store.orders.length !== 2) throw new Error("fixture mismatch");
   if (!store.users["buyer@example.test"].passwordHash || !store.users["buyer@example.test"].phone) throw new Error("auth write fixture mismatch");
+  if (!store.users["content@example.test"]) throw new Error("content fixture mismatch");
   if (!wrap({ ok: true }, -60).expiresAt) throw new Error("expired wrapper mismatch");
   if (!store.orders[0].crmThread.some((entry) => entry.visibility === "internal")) throw new Error("admin orders fixture mismatch");
   console.log("Rust auth/me and admin/orders shadow smoke self-test passed");
