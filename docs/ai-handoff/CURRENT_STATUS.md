@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust account/orders/admin cutover guard:
+  - added `docs/rust-account-orders-admin-cutover-runbook.md` with blocked public auth/order/admin routes, preview-only Rust routes, route-group order, required gates, Nginx shape, and rollback rules;
+  - added `tools/rust-account-orders-admin-cutover-audit.mjs` and `npm run audit:rust-account-cutover` to guard preview route coverage, Node fallback, smoke coverage, and no generic `/api` or `/api/admin` routing to Rust;
+  - no production routing or production data was changed.
 - Rust SSR cutover guard:
   - added `docs/rust-ssr-cutover-runbook.md` with pre-cutover, Nginx shape, post-cutover, and rollback rules for catalog/search/product/content public SSR paths;
   - added `tools/rust-ssr-cutover-audit.mjs` and `npm run audit:rust-ssr-cutover` to guard the route list, smoke coverage, deploy markers, Node fallback exclusions, and no generic `/` routing to Rust;
