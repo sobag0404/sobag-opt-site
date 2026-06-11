@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust buyer order message PATCH preview:
+  - internal `/rust/orders` now supports authenticated buyer comments in the temporary Node-compatible file-store;
+  - ownership is checked by `userEmail`/`customer.email`, empty comments are rejected, and buyer responses hide internal CRM notes;
+  - `tools/rust-orders-write-smoke.mjs` verifies create, buyer PATCH, empty/guest rejection, below-minimum rejection, admin visibility, and brief creation;
+  - public `/api/orders` still stays on Node and no production route/data cutover was made.
 - Rust admin orders temp-store PATCH preview:
   - internal `/rust/admin/orders` now supports admin/manager temporary status, manager assignment, manager note, and customer/internal comment PATCH in the Node-compatible file-store;
   - `tools/rust-auth-me-shadow-smoke.mjs` verifies invalid status, invalid manager, missing order, history/thread/audit behavior, and keeps public `/api/admin/orders` on Node;

@@ -604,6 +604,50 @@ mod ssr_tests {
     }
 
     #[test]
+    fn buyer_order_patch_adds_public_customer_message() {
+        let user = json!({ "email": "buyer@example.test", "name": "Buyer" });
+        let mut store = json!({
+            "orders": [{
+                "id": "SO-1",
+                "userEmail": "buyer@example.test",
+                "customer": { "email": "buyer@example.test" },
+                "crmThread": [
+                    { "visibility": "internal", "text": "hidden" },
+                    { "visibility": "customer", "text": "visible" }
+                ]
+            }]
+        });
+        let updated = apply_buyer_order_comment_patch(
+            &mut store,
+            &json!({ "id": "SO-1", "commentText": "Need invoice" }),
+            &user,
+        )
+        .expect("patched order");
+        assert_eq!(store["orders"][0]["updatedBy"], "buyer@example.test");
+        assert_eq!(updated["crmThread"][0]["text"], "Need invoice");
+        assert_eq!(updated["crmThread"].as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn buyer_order_patch_rejects_other_customer_order() {
+        let user = json!({ "email": "buyer@example.test", "name": "Buyer" });
+        let mut store = json!({
+            "orders": [{
+                "id": "SO-1",
+                "userEmail": "other@example.test",
+                "customer": { "email": "other@example.test" }
+            }]
+        });
+        let error = apply_buyer_order_comment_patch(
+            &mut store,
+            &json!({ "id": "SO-1", "commentText": "Need invoice" }),
+            &user,
+        )
+        .expect_err("not found");
+        assert_eq!(error.code, "not_found");
+    }
+
+    #[test]
     fn builds_custom_print_brief_and_order_preview_record() {
         let user = json!({ "email": "buyer@example.test", "name": "Buyer" });
         let (brief, order) = build_brief_record(
@@ -939,7 +983,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/auth/login", post(auth_login_preview))
         .route("/rust/auth/register", post(auth_register_preview))
         .route("/rust/auth/logout", post(auth_logout_preview))
-        .route("/rust/orders", post(order_create_preview))
+        .route(
+            "/rust/orders",
+            post(order_create_preview).patch(order_patch_preview),
+        )
         .route("/rust/briefs", post(brief_create_preview))
         .route(
             "/rust/admin/orders",
@@ -1767,6 +1814,27 @@ async fn order_create_preview(
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
     Ok((StatusCode::CREATED, no_store_headers(), Json(json!({ "order": order }))))
+}
+
+async fn order_patch_preview(
+    headers: HeaderMap,
+    Json(data): Json<Value>,
+) -> AppResult<(HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let Some((mut store, user)) = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+    else {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    };
+    let order = apply_buyer_order_comment_patch(&mut store, &data, &user)?;
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    Ok((no_store_headers(), Json(json!({ "order": order }))))
 }
 
 async fn brief_create_preview(
@@ -2870,6 +2938,86 @@ fn build_order_record(data: &Value, user: Option<&Value>) -> AppResult<Value> {
         "promo": string_field(data, "promo").unwrap_or_default(),
         "source": string_field(data, "source").unwrap_or_else(|| "site".to_string())
     }))
+}
+
+fn apply_buyer_order_comment_patch(
+    store: &mut Value,
+    data: &Value,
+    user: &Value,
+) -> AppResult<Value> {
+    let order_id = clean_text(data.get("id"), 120).unwrap_or_default();
+    let text = clean_text(data.get("commentText"), 1200).unwrap_or_default();
+    if text.is_empty() {
+        return Err(AppError::bad_request(
+            "empty_comment",
+            "Напишите сообщение по заказу.",
+        ));
+    }
+    let user_email = normalize_email(&string_field(user, "email").unwrap_or_default());
+    if user_email.is_empty() {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    }
+    if !store.is_object() {
+        *store = default_store_value();
+    }
+    let Some(map) = store.as_object_mut() else {
+        return Err(AppError::internal("store is invalid"));
+    };
+    let orders = map.entry("orders").or_insert_with(|| json!([]));
+    if !orders.is_array() {
+        *orders = json!([]);
+    }
+    let Some(items) = orders.as_array_mut() else {
+        return Err(AppError::internal("orders store is invalid"));
+    };
+    let actor = string_field(user, "name")
+        .or_else(|| string_field(user, "company"))
+        .unwrap_or_else(|| user_email.clone());
+    let now = Utc::now();
+    for order in items.iter_mut() {
+        let is_target = order
+            .get("id")
+            .and_then(Value::as_str)
+            .map(|id| id == order_id)
+            .unwrap_or(false);
+        if !is_target {
+            continue;
+        }
+        let customer_email = order
+            .get("customer")
+            .and_then(|customer| customer.get("email"))
+            .and_then(Value::as_str)
+            .or_else(|| order.get("userEmail").and_then(Value::as_str))
+            .map(normalize_email)
+            .unwrap_or_default();
+        if customer_email != user_email {
+            continue;
+        }
+        let original = order.clone();
+        let mut next = order.as_object().cloned().unwrap_or_default();
+        let current = original.get("crmThread").and_then(Value::as_array).cloned();
+        next.insert(
+            "crmThread".to_string(),
+            prepend_limited(
+                current,
+                json!({
+                    "id": format!("CRM-{}", now.timestamp_millis()),
+                    "at": now.to_rfc3339(),
+                    "actor": actor,
+                    "role": "buyer",
+                    "visibility": "customer",
+                    "text": text
+                }),
+                200,
+            ),
+        );
+        next.insert("updatedAt".to_string(), json!(now.to_rfc3339()));
+        next.insert("updatedBy".to_string(), json!(user_email));
+        let updated = Value::Object(next);
+        *order = updated.clone();
+        return Ok(public_order_value(&updated));
+    }
+    Err(AppError::not_found("not_found", "Заказ не найден."))
 }
 
 fn push_order_record(store: &mut Value, order: Value) {

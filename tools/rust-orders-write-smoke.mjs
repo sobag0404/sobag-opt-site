@@ -140,6 +140,32 @@ async function runSmoke(args) {
     if (created.payload.order?.userEmail !== "buyer@example.test") throw new Error("created order user mismatch");
     if (created.payload.order?.items?.[0]?.qty !== 1) throw new Error("created order qty was not sanitized");
 
+    const patched = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
+      token: "buyer",
+      method: "PATCH",
+      body: { id: created.payload.order.id, commentText: "Need invoice" },
+    });
+    if (patched.status !== 200) throw new Error(`buyer order patch status ${patched.status}: ${JSON.stringify(patched.payload)}`);
+    if (patched.payload.order?.crmThread?.[0]?.text !== "Need invoice") throw new Error("buyer message not saved");
+    if (patched.payload.order?.crmThread?.some((entry) => entry.visibility === "internal")) {
+      throw new Error("buyer order patch leaked internal CRM entries");
+    }
+
+    const emptyPatch = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
+      token: "buyer",
+      method: "PATCH",
+      body: { id: created.payload.order.id, commentText: " " },
+    });
+    if (emptyPatch.status !== 400 || emptyPatch.payload.error !== "empty_comment") {
+      throw new Error(`buyer empty patch mismatch: ${emptyPatch.status} ${JSON.stringify(emptyPatch.payload)}`);
+    }
+
+    const guestPatch = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
+      method: "PATCH",
+      body: { id: created.payload.order.id, commentText: "Guest message" },
+    });
+    if (guestPatch.status !== 401) throw new Error(`guest patch status ${guestPatch.status}`);
+
     const belowMinimum = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
       method: "POST",
       body: { ...orderBody, total: 29999 },
