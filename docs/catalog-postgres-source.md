@@ -24,7 +24,7 @@ Safety rules:
 - Do not commit DB dumps, connection strings, or `.env` files.
 - Keep public API compatibility for `/api/catalog`, `/api/catalog-query`, and `/api/catalog-detail`.
 - Public reads must expose only `published` non-hidden products through the guarded public views.
-- Vercel remains the fallback/reference path and should not be moved to file-store.
+- Vercel is excluded from the working deploy/verification path; keep this migration focused on the VPS.
 
 Checks:
 

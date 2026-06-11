@@ -1,6 +1,6 @@
 # Catalog DB Cutover Runbook
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 Цель: безопасно подготовить будущий переход публичного каталога на PostgreSQL для product, variant, image, taxonomy и import-batch entities, сохранив текущие API и production data.
 
@@ -13,7 +13,7 @@ Last updated: 2026-06-10
 - Public catalog must return only `published` non-hidden products.
 - Imports must not delete existing products.
 - Existing products can be updated only through explicit update mode.
-- Vercel remains fallback/reference and must not be moved to file-store.
+- Vercel is excluded from the working deploy/verification path; keep this migration focused on the VPS.
 
 ## Offline Gates
 

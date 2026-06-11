@@ -33,6 +33,7 @@ Last updated: 2026-06-11
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-11: added `docs/ai-handoff/POSTGRES_CUTOVER_GOAL_PROMPT.md` with the detailed VPS-only PostgreSQL cutover goal prompt. It keeps secrets out of Git/chat, requires rollback rehearsal before cutover, and reminds that the no-Node migration is a later separate stage.
 - Current pass 2026-06-11: switched working deployment context to VPS-only. `tools/vercel-daily-deploy-gate.mjs` now always skips Vercel builds, and handoff docs say not to deploy or verify Vercel unless the user explicitly re-enables it.
 - Current pass 2026-06-11: added `docs/goal-completion-audit.md`, `tools/goal-completion-audit.mjs`, and `npm run audit:goal-completion`; it combines readiness, external packets, and apply-plan coverage as the final strict gate before claiming the four-upgrade goal complete.
 - Current pass 2026-06-10: added `docs/cwv-field-apply-plan.md`, `tools/cwv-field-apply-plan.mjs`, and `npm run plan:cwv-field`; after a strict real CWV field packet is available, it creates an ignored final performance verification plan without calling production APIs or changing server state.

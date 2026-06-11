@@ -2,8 +2,8 @@
 
 Date: 2026-06-11
 
-Current deployed VPS release before this performance pass:
-- `20260610T065427Z-f4a472a`
+Current deployed VPS release:
+- `20260611T064237Z-83b7b21`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- PostgreSQL cutover goal prompt:
+  - added `docs/ai-handoff/POSTGRES_CUTOVER_GOAL_PROMPT.md`;
+  - it gives the next goal-mode pass a VPS-only PostgreSQL rehearsal/cutover sequence with no secrets in Git/chat;
+  - it explicitly keeps the no-Node rewrite as a later separate stage.
 - VPS-only deployment context:
   - `tools/vercel-daily-deploy-gate.mjs` now always skips Vercel builds;
   - handoff/deploy docs now say not to deploy or verify Vercel unless the user explicitly re-enables it;
