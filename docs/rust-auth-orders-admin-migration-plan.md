@@ -16,7 +16,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 - Rust auth/store foundation helpers exist for Node-compatible `sobag_session`, session store keys, file-store key/wrapper handling, and PBKDF2 SHA-256 verification fixtures.
 - Internal `/rust/auth/me` preview exists for file-store/session fixtures and preserves the current `GET /api/auth/me` response shape without exposing password fields or internal buyer-hidden notes.
 - Internal `/rust/admin/orders` and `/rust/admin/users` previews exist for admin/manager order and user/customer views from the same Node-compatible file-store.
-- Deploy-time `tools/rust-auth-me-shadow-smoke.mjs` compares Node `/api/auth/me` and Rust `/rust/auth/me` on a temporary file-store for anonymous, buyer, manager, content, admin, and expired sessions; it also compares Node admin orders/users reads with Rust preview routes for admin/manager sessions and verifies unauthorized/forbidden cases. Rust-only temporary write checks cover admin user invite, role patch, and employee removal without touching production data.
+- Deploy-time `tools/rust-auth-me-shadow-smoke.mjs` compares Node `/api/auth/me` and Rust `/rust/auth/me` on a temporary file-store for anonymous, buyer, manager, content, admin, and expired sessions; it also compares Node admin orders/users reads with Rust preview routes for admin/manager sessions and verifies unauthorized/forbidden cases. Rust-only temporary write checks cover admin order status/manager/comment PATCH plus admin user invite, role patch, and employee removal without touching production data.
 - Internal `/rust/orders` preview can create an order in a temporary file-store and `tools/rust-orders-write-smoke.mjs` verifies minimum total, quantity sanitizing, server-side persistence, and admin visibility without touching production data.
 - Internal `/rust/briefs` preview can create a custom print brief in a temporary file-store, mirror it into a `custom_brief` admin order, and verify validation/persistence through the same smoke without touching production data.
 - Node remains fallback and still owns auth, account, carts, orders, briefs, admin, content writes, reviews, import/PIM, and media writes.
@@ -64,7 +64,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 5. Admin orders/users:
    - Implement admin/manager order list/update and admin users/employees management.
    - Verify role matrix, manager assignment, status history, internal notes, and historical actor preservation.
-   - Current status: `/rust/admin/orders` read-only preview and `/rust/admin/users` read/write temp-store preview exist. Node-vs-Rust shadow comparisons cover reads, and Rust temp-store smoke covers invite/role/delete writes; production `/api/admin/users` and `/api/admin/orders` writes remain on Node.
+   - Current status: `/rust/admin/orders` read/write temp-store preview and `/rust/admin/users` read/write temp-store preview exist. Node-vs-Rust shadow comparisons cover reads, and Rust temp-store smoke covers order status/manager/comment PATCH plus user invite/role/delete writes; production `/api/admin/orders` and `/api/admin/users` remain on Node.
 
 6. Admin content/reviews:
    - Implement admin content GET/PUT and review moderation PATCH.

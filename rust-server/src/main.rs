@@ -458,9 +458,13 @@ mod ssr_tests {
     #[test]
     fn admin_orders_payload_keeps_raw_order_data_for_managers() {
         let store = json!({
+            "users": {
+                "manager@example.test": { "email": "manager@example.test", "name": "Manager", "role": "manager" }
+            },
             "orders": [
                 {
                     "id": "SO-1",
+                    "status": "new",
                     "crmThread": [
                         { "visibility": "internal", "text": "manager-only" },
                         { "visibility": "customer", "text": "customer-visible" }
@@ -474,6 +478,32 @@ mod ssr_tests {
         assert!(can_read_admin_orders(&json!({ "role": "admin" })));
         assert!(can_read_admin_orders(&json!({ "role": "manager" })));
         assert!(!can_read_admin_orders(&json!({ "role": "buyer" })));
+        let mut store = store;
+        let updated = apply_admin_order_patch(
+            &mut store,
+            &json!({
+                "id": "SO-1",
+                "status": "processing",
+                "managerEmail": "manager@example.test",
+                "managerNote": "Call client",
+                "commentText": "Visible update",
+                "commentVisibility": "customer"
+            }),
+            &json!({ "email": "admin@example.test", "name": "Admin", "role": "admin" }),
+        )
+        .expect("order patch");
+        assert_eq!(updated["status"], "processing");
+        assert_eq!(updated["managerName"], "Manager");
+        assert_eq!(updated["crmThread"][0]["visibility"], "customer");
+        assert_eq!(updated["statusHistory"].as_array().unwrap().len(), 1);
+        assert_eq!(store["audit"][0]["type"], "order_update");
+        let invalid = apply_admin_order_patch(
+            &mut store,
+            &json!({ "id": "SO-1", "status": "bad" }),
+            &json!({ "email": "admin@example.test", "role": "admin" }),
+        )
+        .expect_err("invalid status");
+        assert_eq!(invalid.code, "invalid_status");
     }
 
     #[test]
@@ -911,7 +941,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/auth/logout", post(auth_logout_preview))
         .route("/rust/orders", post(order_create_preview))
         .route("/rust/briefs", post(brief_create_preview))
-        .route("/rust/admin/orders", get(admin_orders_preview))
+        .route(
+            "/rust/admin/orders",
+            get(admin_orders_preview).patch(admin_orders_patch_preview),
+        )
         .route(
             "/rust/admin/users",
             get(admin_users_preview)
@@ -1334,6 +1367,30 @@ async fn admin_orders_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<
         return Err(AppError::forbidden("Недостаточно прав."));
     }
     Ok((no_store_headers(), Json(admin_orders_payload_from_values(&store))))
+}
+
+async fn admin_orders_patch_preview(
+    headers: HeaderMap,
+    Json(data): Json<Value>,
+) -> AppResult<(HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let Some((mut store, user)) = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+    else {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    };
+    if !can_read_admin_orders(&user) {
+        return Err(AppError::forbidden("Недостаточно прав."));
+    }
+    let updated = apply_admin_order_patch(&mut store, &data, &user)?;
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    Ok((no_store_headers(), Json(json!({ "order": updated }))))
 }
 
 async fn admin_users_preview(
@@ -2194,6 +2251,246 @@ fn admin_orders_payload_from_values(store: &Value) -> Value {
             .cloned()
             .unwrap_or_default()
     })
+}
+
+fn apply_admin_order_patch(store: &mut Value, data: &Value, user: &Value) -> AppResult<Value> {
+    let order_id = clean_text(data.get("id"), 120).unwrap_or_default();
+    let status = clean_text(data.get("status"), 40).unwrap_or_default();
+    if !status.is_empty() && !valid_order_status(&status) {
+        return Err(AppError::bad_request("invalid_status", "Некорректный статус."));
+    }
+    let has_manager_email = has_object_key(data, "managerEmail");
+    let manager_email = if has_manager_email {
+        normalize_email(&clean_text(data.get("managerEmail"), 180).unwrap_or_default())
+    } else {
+        String::new()
+    };
+    let mut manager_name = clean_text(data.get("managerName"), 120).unwrap_or_default();
+    if has_manager_email && !manager_email.is_empty() {
+        let manager = store
+            .get("users")
+            .and_then(Value::as_object)
+            .and_then(|users| users.get(&manager_email));
+        let valid_manager = manager
+            .and_then(|manager| string_field(manager, "role"))
+            .map(|role| role == "admin" || role == "manager")
+            .unwrap_or(false);
+        if !valid_manager {
+            return Err(AppError::bad_request(
+                "invalid_manager",
+                "Выберите администратора или менеджера.",
+            ));
+        }
+        if let Some(manager) = manager {
+            manager_name = string_field(manager, "name")
+                .or_else(|| string_field(manager, "email"))
+                .unwrap_or_else(|| manager_email.clone());
+        }
+    }
+
+    if !store.is_object() {
+        *store = default_store_value();
+    }
+    let Some(map) = store.as_object_mut() else {
+        return Err(AppError::internal("store is invalid"));
+    };
+    let orders_value = map.entry("orders").or_insert_with(|| json!([]));
+    if !orders_value.is_array() {
+        *orders_value = json!([]);
+    }
+    let Some(orders) = orders_value.as_array_mut() else {
+        return Err(AppError::internal("orders store is invalid"));
+    };
+    let actor_email = string_field(user, "email").unwrap_or_default();
+    let actor_name = string_field(user, "name").unwrap_or_else(|| actor_email.clone());
+    let actor_role = string_field(user, "role").unwrap_or_else(|| "manager".to_string());
+    let mut updated: Option<Value> = None;
+
+    for order in orders.iter_mut() {
+        let is_target = order
+            .get("id")
+            .and_then(Value::as_str)
+            .map(|id| id == order_id)
+            .unwrap_or(false);
+        if !is_target {
+            continue;
+        }
+        let original = order.clone();
+        let mut next = order.as_object().cloned().unwrap_or_default();
+        if !status.is_empty() {
+            next.insert("status".to_string(), json!(status));
+        }
+        if has_manager_email {
+            next.insert("managerEmail".to_string(), json!(manager_email));
+            next.insert("managerName".to_string(), json!(manager_name));
+        }
+        if has_object_key(data, "managerNote") {
+            next.insert(
+                "managerNote".to_string(),
+                json!(clean_text(data.get("managerNote"), 1200).unwrap_or_default()),
+            );
+        }
+        if let Some(crm_entry) = order_crm_thread_entry(data, &actor_name, &actor_role) {
+            let current = original.get("crmThread").and_then(Value::as_array).cloned();
+            next.insert("crmThread".to_string(), prepend_limited(current, crm_entry, 200));
+        } else {
+            next.entry("crmThread".to_string())
+                .or_insert_with(|| original.get("crmThread").cloned().unwrap_or_else(|| json!([])));
+        }
+        if let Some(history_entry) = order_history_entry(&original, &next, &actor_email) {
+            let current = original
+                .get("statusHistory")
+                .and_then(Value::as_array)
+                .cloned();
+            next.insert(
+                "statusHistory".to_string(),
+                prepend_limited(current, history_entry, 100),
+            );
+        } else {
+            next.entry("statusHistory".to_string()).or_insert_with(|| {
+                original
+                    .get("statusHistory")
+                    .cloned()
+                    .unwrap_or_else(|| json!([]))
+            });
+        }
+        next.insert("updatedAt".to_string(), json!(Utc::now().to_rfc3339()));
+        next.insert("updatedBy".to_string(), json!(actor_email.clone()));
+        let next_value = Value::Object(next);
+        *order = next_value.clone();
+        updated = Some(next_value);
+        break;
+    }
+    let Some(updated) = updated else {
+        return Err(AppError::not_found("not_found", "Заказ не найден."));
+    };
+
+    let audit = map.entry("audit").or_insert_with(|| json!([]));
+    if !audit.is_array() {
+        *audit = json!([]);
+    }
+    if let Some(items) = audit.as_array_mut() {
+        items.insert(
+            0,
+            json!({
+                "id": format!("AUD-{}", Utc::now().timestamp_millis()),
+                "type": "order_update",
+                "orderId": updated.get("id").cloned().unwrap_or_else(|| json!("")),
+                "actor": actor_email,
+                "status": updated.get("status").cloned().unwrap_or_else(|| json!("")),
+                "managerEmail": updated.get("managerEmail").cloned().unwrap_or_else(|| json!("")),
+                "createdAt": Utc::now().to_rfc3339()
+            }),
+        );
+        items.truncate(500);
+    }
+    Ok(updated)
+}
+
+fn has_object_key(value: &Value, key: &str) -> bool {
+    value
+        .as_object()
+        .map(|map| map.contains_key(key))
+        .unwrap_or(false)
+}
+
+fn valid_order_status(status: &str) -> bool {
+    matches!(
+        status,
+        "new" | "processing" | "waiting" | "production" | "ready" | "shipped" | "done" | "canceled"
+    )
+}
+
+fn order_status_label(status: &str) -> &'static str {
+    match status {
+        "processing" => "В работе",
+        "waiting" => "Ждет клиента",
+        "production" => "В производстве",
+        "ready" => "Готов к отгрузке",
+        "shipped" => "Отгружен",
+        "done" => "Выполнен",
+        "canceled" => "Отменен",
+        _ => "Новый",
+    }
+}
+
+fn valid_comment_visibility(visibility: &str) -> bool {
+    matches!(visibility, "internal" | "customer")
+}
+
+fn order_crm_thread_entry(data: &Value, actor: &str, role: &str) -> Option<Value> {
+    let text = clean_text(data.get("commentText"), 1200)?;
+    let visibility = clean_text(data.get("commentVisibility"), 40).unwrap_or_default();
+    let visibility = if valid_comment_visibility(&visibility) {
+        visibility
+    } else {
+        "internal".to_string()
+    };
+    Some(json!({
+        "id": format!("CRM-{}", Utc::now().timestamp_millis()),
+        "at": Utc::now().to_rfc3339(),
+        "actor": actor.chars().take(120).collect::<String>(),
+        "role": role.chars().take(40).collect::<String>(),
+        "visibility": visibility,
+        "text": text
+    }))
+}
+
+fn order_history_entry(original: &Value, next: &serde_json::Map<String, Value>, actor: &str) -> Option<Value> {
+    let mut changes = Vec::new();
+    let old_status = string_field(original, "status").unwrap_or_else(|| "new".to_string());
+    let new_status = next
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or(&old_status);
+    if new_status != old_status {
+        changes.push(format!(
+            "Статус: {} -> {}",
+            order_status_label(&old_status),
+            order_status_label(new_status)
+        ));
+    }
+    let old_manager_email = string_field(original, "managerEmail").unwrap_or_default();
+    let new_manager_email = next
+        .get("managerEmail")
+        .and_then(Value::as_str)
+        .unwrap_or(&old_manager_email);
+    if new_manager_email != old_manager_email {
+        let manager = next
+            .get("managerName")
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+            .unwrap_or(if new_manager_email.is_empty() {
+                "не назначен"
+            } else {
+                new_manager_email
+            });
+        changes.push(format!("Менеджер: {manager}"));
+    }
+    let old_note = string_field(original, "managerNote").unwrap_or_default();
+    let new_note = next
+        .get("managerNote")
+        .and_then(Value::as_str)
+        .unwrap_or(&old_note);
+    if new_note != old_note {
+        changes.push("Комментарий менеджера обновлен".to_string());
+    }
+    if changes.is_empty() {
+        return None;
+    }
+    Some(json!({
+        "id": format!("H-{}", Utc::now().timestamp_millis()),
+        "at": Utc::now().to_rfc3339(),
+        "actor": actor,
+        "summary": changes.join("; ")
+    }))
+}
+
+fn prepend_limited(current: Option<Vec<Value>>, entry: Value, limit: usize) -> Value {
+    let mut items = current.unwrap_or_default();
+    items.insert(0, entry);
+    items.truncate(limit);
+    Value::Array(items)
 }
 
 async fn require_admin_user_context(headers: &HeaderMap) -> AppResult<(Value, Value)> {

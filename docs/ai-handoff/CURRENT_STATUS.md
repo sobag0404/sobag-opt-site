@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust admin orders temp-store PATCH preview:
+  - internal `/rust/admin/orders` now supports admin/manager temporary status, manager assignment, manager note, and customer/internal comment PATCH in the Node-compatible file-store;
+  - `tools/rust-auth-me-shadow-smoke.mjs` verifies invalid status, invalid manager, missing order, history/thread/audit behavior, and keeps public `/api/admin/orders` on Node;
+  - no production route or production data cutover was made.
 - Rust admin users temp-store write preview:
   - internal `/rust/admin/users` now supports admin-only temporary invite, role patch, and employee removal checks in addition to read preview;
   - `tools/rust-auth-me-shadow-smoke.mjs` verifies manager rejection, invalid email/role, invite persistence, role change, employee removal, and admin lock without touching production data;

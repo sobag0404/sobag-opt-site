@@ -343,6 +343,52 @@ async function runSmoke(args) {
       }
       console.log(`OK ${label} ${status}`);
     }
+    const invalidOrderStatus = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/orders`, {
+      token: "admin",
+      method: "PATCH",
+      body: { id: "SO-1", status: "bad" },
+    });
+    if (invalidOrderStatus.status !== 400 || invalidOrderStatus.payload.error !== "invalid_status") {
+      throw new Error(`admin orders invalid status mismatch: ${invalidOrderStatus.status} ${JSON.stringify(invalidOrderStatus.payload)}`);
+    }
+    const invalidOrderManager = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/orders`, {
+      token: "admin",
+      method: "PATCH",
+      body: { id: "SO-1", managerEmail: "buyer@example.test" },
+    });
+    if (invalidOrderManager.status !== 400 || invalidOrderManager.payload.error !== "invalid_manager") {
+      throw new Error(`admin orders invalid manager mismatch: ${invalidOrderManager.status} ${JSON.stringify(invalidOrderManager.payload)}`);
+    }
+    const patchedOrder = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/orders`, {
+      token: "manager",
+      method: "PATCH",
+      body: {
+        id: "SO-1",
+        status: "processing",
+        managerEmail: "manager@example.test",
+        managerNote: "Call client",
+        commentText: "Visible update",
+        commentVisibility: "customer",
+      },
+    });
+    if (
+      patchedOrder.status !== 200 ||
+      patchedOrder.payload.order?.status !== "processing" ||
+      patchedOrder.payload.order?.managerName !== "Manager" ||
+      patchedOrder.payload.order?.crmThread?.[0]?.visibility !== "customer" ||
+      !patchedOrder.payload.order?.statusHistory?.length
+    ) {
+      throw new Error(`admin orders patch mismatch: ${patchedOrder.status} ${JSON.stringify(patchedOrder.payload)}`);
+    }
+    const missingOrder = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/orders`, {
+      token: "admin",
+      method: "PATCH",
+      body: { id: "missing", status: "processing" },
+    });
+    if (missingOrder.status !== 404 || missingOrder.payload.error !== "not_found") {
+      throw new Error(`admin orders missing mismatch: ${missingOrder.status} ${JSON.stringify(missingOrder.payload)}`);
+    }
+    console.log("OK admin orders patch preview status/manager/comment");
     const invalidLogin = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/login`, {
       method: "POST",
       body: { login: "buyer@example.test", password: "wrong" },
