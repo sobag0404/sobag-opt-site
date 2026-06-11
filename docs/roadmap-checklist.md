@@ -130,6 +130,7 @@ Last updated: 2026-06-11
      - [x] Rust SSR/HTMX preview slice: internal Rust routes for catalog, search, product detail, listing fragments, product fragments, and deploy-time SSR smoke are prepared without switching public production routing away from Node fallback.
      - [x] Rust content page preview slice: internal `/rust/pages/:slug` templates render the editable content-page set from file-store content when available, with safe defaults and deploy-time SSR smoke coverage, while public routes still use Node/static fallback.
      - [x] Full Rust migration plan: `docs/rust-full-migration-plan.md` defines the staged Axum + SSR/HTMX + PostgreSQL + Redis/Meilisearch/S3-compatible path, parallel-agent split, gates, and rollback rules.
+     - [x] Rust auth/orders/admin migration plan: `docs/rust-auth-orders-admin-migration-plan.md` freezes session, PBKDF2, roles, order, brief, admin, content, review, test, route cutover, and rollback contracts; AutoFix audits it via `tools/rust-auth-orders-admin-plan-audit.mjs`.
      - [x] Migrate frontend catalog list/product modal to the new smaller API payloads.
        - [x] Product modal now hydrates public product detail from `/api/catalog-detail` with static/local fallback.
        - [x] Catalog/search list rendering now uses `/api/catalog-query` compact cards and cursor pagination with local fallback.

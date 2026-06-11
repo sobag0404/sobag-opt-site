@@ -45,11 +45,13 @@ Current production stays on `https://sobag-shop.online`. Vercel is not an active
 5. Orders and briefs:
    - Migrate cart order submission, custom print briefs, buyer order history, comments, and status visibility.
    - Keep minimum order, guest visibility in admin, and buyer/internal note separation.
+   - Detailed route contracts, tests, and rollback gates are tracked in `docs/rust-auth-orders-admin-migration-plan.md`.
 
 6. Admin:
    - Migrate admin orders/users/employees/content/reviews.
    - Then migrate catalog/import/media/PIM writes.
    - Do not delete products during import; update existing products only in explicit update mode.
+   - Public routing must not switch to Rust until the admin/auth/orders plan audit and write smokes are green.
 
 7. Search/storage scale:
    - Add Meilisearch for large catalog search after PostgreSQL route parity.

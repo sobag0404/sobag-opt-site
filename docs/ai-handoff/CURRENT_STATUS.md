@@ -985,6 +985,7 @@ Backend/storage state:
 
 Important remaining work:
 - Current Rust migration slice: internal Rust SSR/HTMX preview routes and `tools/rust-ssr-smoke.mjs` are verified locally and on VPS temp Rust runtime. `/rust/pages/:slug` now previews editable content pages from file-store content with safe defaults. Full staged migration/parallel-agent plan lives in `docs/rust-full-migration-plan.md`. Do not switch public `/catalog`, `/search`, or public content pages to Rust until preview parity, smoke, deploy, and rollback gates are green.
+- Current auth/orders/admin migration planning slice: `docs/rust-auth-orders-admin-migration-plan.md` and `tools/rust-auth-orders-admin-plan-audit.mjs` define and guard the next Rust write-route stage. No auth/order/admin production route is switched to Rust yet.
 - Deployment: after future pushes, verify `autofix-check`, `vps-deploy`, and `production-smoke`; Vercel is not an active deploy/verification target.
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: choose/configure the real provider env for the next photo migration run and validate AVIF/WebP behavior on the real migrated catalog image set.
