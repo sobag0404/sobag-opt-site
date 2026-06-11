@@ -2031,7 +2031,7 @@ async fn render_listing_page(
     let query = parse_catalog_query(uri.query().unwrap_or(""));
     let page = load_listing(&state.pool, &query).await?;
     let body = format!(
-        "{}<main class=\"rust-catalog\"><nav><a href=\"/catalog\">Node fallback</a></nav><h1>{}</h1><form class=\"rust-catalog-layout\" hx-get=\"{}\" hx-target=\"#rustCatalog\" hx-push-url=\"true\"><aside class=\"rust-filter-panel\">{}</aside><section class=\"rust-results\"><div class=\"rust-toolbar\"><input name=\"q\" value=\"{}\" placeholder=\"Поиск по каталогу\"/><select name=\"sort\"><option value=\"popular\"{}>Сначала популярные</option><option value=\"price_asc\"{}>Цена: ниже</option><option value=\"price_desc\"{}>Цена: выше</option></select><button type=\"submit\">Показать</button>{}</div><section id=\"rustCatalog\">{}</section></section></form></main>{}",
+        "{}<main class=\"rust-catalog\"><h1>{}</h1><form class=\"rust-catalog-layout\" hx-get=\"{}\" hx-target=\"#rustCatalog\" hx-push-url=\"true\"><aside class=\"rust-filter-panel\">{}</aside><section class=\"rust-results\"><div class=\"rust-toolbar\"><input name=\"q\" value=\"{}\" placeholder=\"Поиск по каталогу\"/><select name=\"sort\"><option value=\"popular\"{}>Сначала популярные</option><option value=\"price_asc\"{}>Цена: ниже</option><option value=\"price_desc\"{}>Цена: выше</option></select><button type=\"submit\">Показать</button>{}</div><section id=\"rustCatalog\">{}</section></section></form></main>{}",
         render_page_head_with_routes(title, routes),
         escape_html(title),
         fragment_path,

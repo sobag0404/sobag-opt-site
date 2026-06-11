@@ -45,7 +45,7 @@ curl -fsS http://127.0.0.1:3001/api/health-rust
 curl -fsS http://127.0.0.1:3000/api/health
 ```
 
-Public Rust pages must not expose preview/debug branding such as `Rust Preview` in page titles or body text before any public route is switched.
+Public Rust pages must not expose preview/debug branding such as `Rust Preview` or service labels such as `Node fallback` in page titles, links, or body text before any public route is switched.
 
 From the local machine:
 

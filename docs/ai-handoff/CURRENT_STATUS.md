@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR public-readiness guard:
+  - Rust listing pages no longer render the service-only `Node fallback` link;
+  - `tools/rust-ssr-smoke.mjs` rejects `Node fallback` on every Rust SSR candidate route;
+  - `tools/rust-ssr-cutover-audit.mjs` guards against reintroducing the label in templates/smoke;
+  - public Nginx page routing is still unchanged.
 - VPS deploy SSD pressure fix:
   - failed deploy run `27372834285` reached `No space left on device` while building Rust inside a per-release `target`;
   - old/failed VPS releases were safely cleaned, leaving the current live release;

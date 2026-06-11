@@ -80,6 +80,7 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, rehearsal, deploy }) {
   ].forEach((marker) => assertIncludes(deploy, marker, VPS_DEPLOY, errors));
   assertIncludes(smoke, "assertNotContains", SSR_SMOKE, errors);
   assertIncludes(smoke, "Rust Preview", SSR_SMOKE, errors);
+  assertIncludes(smoke, "Node fallback", SSR_SMOKE, errors);
   assertIncludes(rehearsal, "assertSafeLocations", SSR_REHEARSAL, errors);
   assertIncludes(rehearsal, "generic location / is forbidden", SSR_REHEARSAL, errors);
   assertIncludes(rehearsal, "generic /api/admin prefix location is forbidden", SSR_REHEARSAL, errors);
@@ -91,6 +92,9 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, rehearsal, deploy }) {
   if (rustMain.includes("Rust Preview")) {
     errors.push("Rust SSR templates must not expose Rust Preview branding");
   }
+  if (rustMain.includes("Node fallback")) {
+    errors.push("Rust SSR templates must not expose Node fallback links");
+  }
   if (/api\/admin\/\*/.test(rustMain)) {
     errors.push("Rust SSR cutover must not add public admin wildcard routes");
   }
@@ -101,7 +105,7 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, rehearsal, deploy }) {
 
 function selfTest() {
   const goodRouteDecls = PUBLIC_ROUTES.map((route) => routeDeclaration(route)).join("\n");
-  const goodSmoke = `${PUBLIC_ROUTES.map((route) => `["${route}`, []).join("\n")}\nassertNotContains\nRust Preview`;
+  const goodSmoke = `${PUBLIC_ROUTES.map((route) => `["${route}`, []).join("\n")}\nassertNotContains\nRust Preview\nNode fallback`;
   const goodRehearsal = `${PUBLIC_ROUTES.map((route) => `"${route}"`).join("\n")}\nassertSafeLocations\ngeneric location / is forbidden\ngeneric /api/admin prefix location is forbidden\nproxy_pass http://127.0.0.1:3001`;
   const goodRunbook = [...REQUIRED_RUNBOOK_MARKERS, ...PUBLIC_ROUTES, ...NODE_FALLBACK_ROUTES].join("\n");
   const goodDeploy = [
