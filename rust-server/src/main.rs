@@ -10,7 +10,7 @@ use axum::{
     extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode, Uri},
     response::{Html, IntoResponse, Response},
-    routing::{get, post},
+    routing::{get, patch, post},
     Json, Router,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -474,6 +474,9 @@ mod ssr_tests {
         assert!(can_edit_content(&json!({ "role": "content" })));
         assert!(!can_edit_content(&json!({ "role": "manager" })));
         assert!(!can_edit_content(&json!({ "role": "buyer" })));
+        assert!(valid_review_status("approved"));
+        assert!(valid_review_status("hidden"));
+        assert!(!valid_review_status("deleted"));
         let store = json!({
             "reviews": [
                 { "id": "old", "createdAt": "2026-01-01T00:00:00.000Z" },
@@ -841,7 +844,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/orders", post(order_create_preview))
         .route("/rust/briefs", post(brief_create_preview))
         .route("/rust/admin/orders", get(admin_orders_preview))
-        .route("/rust/admin/content", get(admin_content_preview).put(admin_content_update_preview))
+        .route(
+            "/rust/admin/content",
+            get(admin_content_preview)
+                .put(admin_content_update_preview)
+                .patch(admin_content_review_patch_preview),
+        )
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
@@ -1294,6 +1302,105 @@ async fn admin_content_update_preview(
             "updatedAt": updated_at,
             "count": content.as_object().map(|map| map.len()).unwrap_or(0)
         })),
+    ))
+}
+
+async fn admin_content_review_patch_preview(
+    headers: HeaderMap,
+    Json(data): Json<Value>,
+) -> AppResult<(HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let Some((mut store, user)) = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+    else {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    };
+    if !can_edit_content(&user) {
+        return Err(AppError::forbidden("Недостаточно прав."));
+    }
+    let review_id = clean_text(data.get("reviewId"), 120).unwrap_or_default();
+    if review_id.is_empty() {
+        return Err(AppError::bad_request("invalid_review", "Отзыв не найден."));
+    }
+    let delete = data.get("delete").and_then(Value::as_bool).unwrap_or(false);
+    let actor = string_field(&user, "email").unwrap_or_default();
+    let now = Utc::now().to_rfc3339();
+    let mut updated: Option<Value> = None;
+    let mut deleted = false;
+
+    {
+        let Some(reviews) = ensure_store_reviews_mut(&mut store).as_array_mut() else {
+            return Err(AppError::internal("reviews store is invalid"));
+        };
+        if delete {
+            let before = reviews.len();
+            reviews.retain(|review| {
+                review
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .map(|id| id != review_id)
+                    .unwrap_or(true)
+            });
+            deleted = reviews.len() != before;
+            if !deleted {
+                return Err(AppError::not_found("not_found", "Отзыв не найден."));
+            }
+        } else {
+            let status = clean_text(data.get("status"), 40).unwrap_or_default();
+            if !valid_review_status(&status) {
+                return Err(AppError::bad_request(
+                    "invalid_status",
+                    "Некорректный статус отзыва.",
+                ));
+            }
+            for review in reviews.iter_mut() {
+                let is_target = review
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .map(|id| id == review_id)
+                    .unwrap_or(false);
+                if !is_target {
+                    continue;
+                }
+                if let Some(map) = review.as_object_mut() {
+                    map.insert("status".to_string(), json!(status));
+                    map.insert("moderatedBy".to_string(), json!(actor.clone()));
+                    map.insert("moderatedAt".to_string(), json!(now.clone()));
+                    map.insert("updatedAt".to_string(), json!(now.clone()));
+                    updated = Some(Value::Object(map.clone()));
+                }
+                break;
+            }
+            if updated.is_none() {
+                return Err(AppError::not_found("not_found", "Отзыв не найден."));
+            }
+        }
+    }
+
+    push_audit_record(
+        &mut store,
+        json!({
+            "id": format!("AUD-{}", Utc::now().timestamp_millis()),
+            "type": if delete { "review_delete" } else { "review_update" },
+            "reviewId": review_id,
+            "actor": actor,
+            "status": updated
+                .as_ref()
+                .and_then(|review| string_field(review, "status"))
+                .unwrap_or_else(|| "deleted".to_string()),
+            "createdAt": Utc::now().to_rfc3339()
+        }),
+    );
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    Ok((
+        no_store_headers(),
+        Json(json!({ "review": updated, "deleted": deleted })),
     ))
 }
 
@@ -1809,6 +1916,37 @@ fn ensure_store_users_mut(store: &mut Value) -> &mut serde_json::Map<String, Val
         *users = json!({});
     }
     users.as_object_mut().expect("users object")
+}
+
+fn ensure_store_reviews_mut(store: &mut Value) -> &mut Value {
+    if !store.is_object() {
+        *store = default_store_value();
+    }
+    let map = store.as_object_mut().expect("store object");
+    let reviews = map.entry("reviews").or_insert_with(|| json!([]));
+    if !reviews.is_array() {
+        *reviews = json!([]);
+    }
+    reviews
+}
+
+fn push_audit_record(store: &mut Value, record: Value) {
+    if !store.is_object() {
+        *store = default_store_value();
+    }
+    let map = store.as_object_mut().expect("store object");
+    let audit = map.entry("audit").or_insert_with(|| json!([]));
+    if !audit.is_array() {
+        *audit = json!([]);
+    }
+    if let Some(items) = audit.as_array_mut() {
+        items.insert(0, record);
+        items.truncate(500);
+    }
+}
+
+fn valid_review_status(status: &str) -> bool {
+    matches!(status, "pending" | "approved" | "hidden")
 }
 
 fn normalize_email(value: &str) -> String {

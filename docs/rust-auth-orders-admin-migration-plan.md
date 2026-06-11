@@ -69,7 +69,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 6. Admin content/reviews:
    - Implement admin content GET/PUT and review moderation PATCH.
    - Keep public content/page preview compatible with the same stored content object.
-   - Current status: internal `/rust/admin/content` supports admin/content GET and PUT against the Node-compatible content key, including review-list preview via `?reviews=1`. Deploy smoke verifies content-role access, buyer rejection, invalid content rejection, update persistence, and review listing. Review moderation PATCH remains on Node.
+   - Current status: internal `/rust/admin/content` supports admin/content GET and PUT against the Node-compatible content key, including review-list preview via `?reviews=1`. Internal `PATCH /rust/admin/content` supports temporary-store review approve/hide/delete moderation with audit records. Deploy smoke verifies content-role access, buyer rejection, invalid content/status rejection, update persistence, review listing, moderation, and deletion. Public `/api/admin/content` still remains on Node.
 
 7. Admin catalog/import/media/PIM:
    - Move only after auth/admin/orders are stable.

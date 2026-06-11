@@ -77,7 +77,10 @@ function fixtureStore() {
     carts: { "buyer@example.test": { items: [{ key: "sku-1", variant: { sku: "sku-1" }, qty: 3 }] } },
     favorites: { "buyer@example.test": { items: ["p1", "p2"] } },
     savedCarts: {},
-    reviews: [{ id: "REV-1", userEmail: "buyer@example.test", text: "ok", status: "approved" }],
+    reviews: [
+      { id: "REV-1", userEmail: "buyer@example.test", text: "ok", status: "approved", createdAt: "2026-06-11T00:02:00.000Z" },
+      { id: "REV-2", userEmail: "buyer@example.test", text: "delete me", status: "pending", createdAt: "2026-06-11T00:01:00.000Z" },
+    ],
     briefs: [],
     audit: [],
     version: 1,
@@ -327,7 +330,35 @@ async function runSmoke(args) {
     if (contentReviews.status !== 200 || contentReviews.payload.reviews?.[0]?.id !== "REV-1") {
       throw new Error(`admin content reviews mismatch: ${contentReviews.status} ${JSON.stringify(contentReviews.payload)}`);
     }
-    console.log("OK admin content preview get/update/reviews");
+    const patchedReview = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, {
+      token: "content",
+      method: "PATCH",
+      body: { reviewId: "REV-1", status: "hidden" },
+    });
+    if (patchedReview.status !== 200 || patchedReview.payload.review?.status !== "hidden" || patchedReview.payload.review?.moderatedBy !== "content@example.test") {
+      throw new Error(`admin review patch mismatch: ${patchedReview.status} ${JSON.stringify(patchedReview.payload)}`);
+    }
+    const invalidReviewPatch = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, {
+      token: "content",
+      method: "PATCH",
+      body: { reviewId: "REV-1", status: "deleted" },
+    });
+    if (invalidReviewPatch.status !== 400 || invalidReviewPatch.payload.error !== "invalid_status") {
+      throw new Error(`admin review invalid status mismatch: ${invalidReviewPatch.status} ${JSON.stringify(invalidReviewPatch.payload)}`);
+    }
+    const deletedReview = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, {
+      token: "admin",
+      method: "PATCH",
+      body: { reviewId: "REV-2", delete: true },
+    });
+    if (deletedReview.status !== 200 || deletedReview.payload.deleted !== true || deletedReview.payload.review !== null) {
+      throw new Error(`admin review delete mismatch: ${deletedReview.status} ${JSON.stringify(deletedReview.payload)}`);
+    }
+    const reviewsAfterPatch = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content?reviews=1`, { token: "admin" });
+    if (reviewsAfterPatch.payload.reviews?.length !== 1 || reviewsAfterPatch.payload.reviews?.[0]?.status !== "hidden") {
+      throw new Error(`admin reviews after patch mismatch: ${JSON.stringify(reviewsAfterPatch.payload)}`);
+    }
+    console.log("OK admin content preview get/update/reviews/patch");
     console.log("Rust auth/me and admin/orders shadow smoke passed");
   } catch (error) {
     const output = `${node.output()}\n${rust.output()}`.trim();
