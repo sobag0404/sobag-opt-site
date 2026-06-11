@@ -15,7 +15,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 - Rust internal preview routes exist for catalog/search/product and content pages.
 - Rust auth/store foundation helpers exist for Node-compatible `sobag_session`, session store keys, file-store key/wrapper handling, and PBKDF2 SHA-256 verification fixtures.
 - Internal `/rust/auth/me` preview exists for file-store/session fixtures and preserves the current `GET /api/auth/me` response shape without exposing password fields or internal buyer-hidden notes.
-- Deploy-time `tools/rust-auth-me-shadow-smoke.mjs` compares Node `/api/auth/me` and Rust `/rust/auth/me` on a temporary file-store for anonymous, buyer, manager, content, and admin sessions.
+- Deploy-time `tools/rust-auth-me-shadow-smoke.mjs` compares Node `/api/auth/me` and Rust `/rust/auth/me` on a temporary file-store for anonymous, buyer, manager, content, admin, and expired sessions.
 - Node remains fallback and still owns auth, account, carts, orders, briefs, admin, content writes, reviews, import/PIM, and media writes.
 - VPS storage uses file-store for shared app data; PostgreSQL currently backs public catalog reads.
 
@@ -45,7 +45,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
    - Implement internal Rust preview/shadow for `GET /api/auth/me`.
    - Compare Node vs Rust for anonymous, buyer, manager, content, admin, and expired session.
    - Do not route production to Rust yet.
-   - Current status: internal `/rust/auth/me` preview exists for file-store fixtures; deploy-time Node-vs-Rust shadow comparison covers anonymous, buyer, manager, content, and admin sessions. Expired-session shadow coverage is still pending.
+   - Current status: internal `/rust/auth/me` preview exists for file-store fixtures; deploy-time Node-vs-Rust shadow comparison covers anonymous, buyer, manager, content, admin, and expired sessions.
 
 3. Auth writes:
    - Implement login, register, logout, profile update against temporary file-store first.

@@ -41,7 +41,7 @@ function keyFileName(key) {
 function wrap(value, ttlSeconds = 0) {
   return {
     version: 1,
-    expiresAt: ttlSeconds > 0 ? new Date(Date.now() + ttlSeconds * 1000).toISOString() : "",
+    expiresAt: ttlSeconds !== 0 ? new Date(Date.now() + ttlSeconds * 1000).toISOString() : "",
     value,
   };
 }
@@ -88,7 +88,8 @@ async function createFixtureStore(dir) {
   for (const [token, email] of Object.entries(sessions)) {
     await writeStoreValue(dir, `sobag:session:${token}`, { email, createdAt: "2026-06-11T00:00:00.000Z" }, 3600);
   }
-  return sessions;
+  await writeStoreValue(dir, "sobag:session:expired", { email: "buyer@example.test", createdAt: "2026-06-11T00:00:00.000Z" }, -60);
+  return { ...sessions, expired: "buyer@example.test" };
 }
 
 function startProcess(command, args, env) {
@@ -193,6 +194,7 @@ function selfTest() {
   if (keyFileName("sobag:store:v1") !== "736f6261673a73746f72653a7631.json") throw new Error("file key mismatch");
   const store = fixtureStore();
   if (!store.users["buyer@example.test"] || store.orders.length !== 2) throw new Error("fixture mismatch");
+  if (!wrap({ ok: true }, -60).expiresAt) throw new Error("expired wrapper mismatch");
   console.log("Rust auth/me shadow smoke self-test passed");
 }
 

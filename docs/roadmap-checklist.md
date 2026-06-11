@@ -133,7 +133,7 @@ Last updated: 2026-06-11
      - [x] Rust auth/orders/admin migration plan: `docs/rust-auth-orders-admin-migration-plan.md` freezes session, PBKDF2, roles, order, brief, admin, content, review, test, route cutover, and rollback contracts; AutoFix audits it via `tools/rust-auth-orders-admin-plan-audit.mjs`.
      - [x] Rust auth/store foundation prep: Rust now has Node-compatible session constants, session key/cookie parsing helpers, file-store key/wrapper helpers, and PBKDF2 SHA-256 password verification fixtures without switching any auth/order/admin production route.
      - [x] Rust `auth/me` read-only preview prep: internal `/rust/auth/me` returns the current auth payload shape from a Node-compatible file-store/session fixture, strips password fields and internal buyer-hidden notes, and is covered by Rust tests/deploy smoke without production cutover.
-     - [x] Rust `auth/me` shadow smoke: deploy now runs a temporary file-store comparison between Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, and admin sessions before accepting the release.
+     - [x] Rust `auth/me` shadow smoke: deploy now runs a temporary file-store comparison between Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, and expired sessions before accepting the release.
      - [x] Migrate frontend catalog list/product modal to the new smaller API payloads.
        - [x] Product modal now hydrates public product detail from `/api/catalog-detail` with static/local fallback.
        - [x] Catalog/search list rendering now uses `/api/catalog-query` compact cards and cursor pagination with local fallback.
