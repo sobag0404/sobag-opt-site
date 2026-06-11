@@ -27,6 +27,7 @@ Last updated: 2026-06-11
 - [x] P1 commercial UX polish: compact mobile header, balanced responsive hero H1, product modal quantity starts at 1 while still allowing 0, inactive promo field with honest manager note, and compact catalog collection list with show-more.
 - [x] Smoke tests and autofix checks.
 - [x] Separate search results page: `/search?q=...`, result count, suggestions, quick filters, exact SKU priority, production check.
+- [x] Rust public-path SSR alias preview: Rust now serves internal `/catalog`, `/search`, `/product`, and fragment aliases on port 3001 for future Nginx cutover testing, while production public routing still stays on the current storefront.
 - [x] Product reviews: authorized buyer form, rating/text, approved reviews in product modal, admin moderation and persistence through existing storage/API.
 - [x] Goal-mode UI invariant: product photos and category/collection/holiday photos render as square 1:1 previews; catalog home uses `На главную`, while selected catalog pages use `В каталог` for the top return action.
 - [x] Compact selected catalog header: category pages use one dense row with back button, title, count, and sorting, without the old large white heading area.

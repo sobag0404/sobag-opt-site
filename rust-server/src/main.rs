@@ -844,6 +844,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/search-fragment", get(catalog_fragment))
         .route("/rust/product", get(product_page))
         .route("/rust/product-fragment", get(product_fragment))
+        .route("/catalog", get(catalog_page))
+        .route("/search", get(search_page))
+        .route("/catalog-fragment", get(catalog_fragment))
+        .route("/search-fragment", get(catalog_fragment))
+        .route("/product", get(product_page))
+        .route("/product-fragment", get(product_fragment))
         .route("/rust/pages/:slug", get(content_page))
         .route("/rust/auth/me", get(auth_me_preview).put(auth_me_update_preview))
         .route("/rust/auth/login", post(auth_login_preview))
@@ -956,43 +962,60 @@ async fn catalog_page(
     State(state): State<Arc<AppState>>,
     uri: Uri,
 ) -> AppResult<(HeaderMap, Html<String>)> {
-    render_listing_page(state, uri, "Каталог", "/rust/catalog-fragment").await
+    let routes = routes_for_path(uri.path());
+    render_listing_page(
+        state,
+        uri,
+        "Каталог",
+        routes.catalog_fragment_path,
+        routes,
+    )
+    .await
 }
 
 async fn search_page(
     State(state): State<Arc<AppState>>,
     uri: Uri,
 ) -> AppResult<(HeaderMap, Html<String>)> {
-    render_listing_page(state, uri, "Поиск", "/rust/search-fragment").await
+    let routes = routes_for_path(uri.path());
+    render_listing_page(state, uri, "Поиск", routes.search_fragment_path, routes).await
 }
 
 async fn catalog_fragment(
     State(state): State<Arc<AppState>>,
     uri: Uri,
 ) -> AppResult<(HeaderMap, Html<String>)> {
+    let routes = routes_for_path(uri.path());
     let fragment_path = if uri.path().contains("search-fragment") {
-        "/rust/search-fragment"
+        routes.search_fragment_path
     } else {
-        "/rust/catalog-fragment"
+        routes.catalog_fragment_path
     };
     let query = parse_catalog_query(uri.query().unwrap_or(""));
     let page = load_listing(&state.pool, &query).await?;
     Ok((
         cache_headers(),
-        Html(render_listing_fragment(fragment_path, &query, &page)),
+        Html(render_listing_fragment_with_routes(
+            fragment_path,
+            routes,
+            &query,
+            &page,
+        )),
     ))
 }
 
 async fn product_page(
     State(state): State<Arc<AppState>>,
+    uri: Uri,
     Query(lookup): Query<DetailLookup>,
 ) -> AppResult<(HeaderMap, Html<String>)> {
+    let routes = routes_for_path(uri.path());
     let product = lookup_product(&state.pool, lookup).await?;
     let related = load_related_cards(&state.pool, &product, 4).await?;
     let body = format!(
         "{}{}{}",
-        render_page_head(&product.name),
-        render_product_fragment(&product, &related),
+        render_page_head_with_routes(&product.name, routes),
+        render_product_fragment_with_routes(&product, &related, routes),
         render_page_foot()
     );
     Ok((cache_headers(), Html(body)))
@@ -1000,11 +1023,16 @@ async fn product_page(
 
 async fn product_fragment(
     State(state): State<Arc<AppState>>,
+    uri: Uri,
     Query(lookup): Query<DetailLookup>,
 ) -> AppResult<(HeaderMap, Html<String>)> {
+    let routes = routes_for_path(uri.path());
     let product = lookup_product(&state.pool, lookup).await?;
     let related = load_related_cards(&state.pool, &product, 4).await?;
-    Ok((cache_headers(), Html(render_product_fragment(&product, &related))))
+    Ok((
+        cache_headers(),
+        Html(render_product_fragment_with_routes(&product, &related, routes)),
+    ))
 }
 
 async fn content_page(Path(slug): Path<String>) -> AppResult<(HeaderMap, Html<String>)> {
@@ -1479,12 +1507,13 @@ async fn render_listing_page(
     uri: Uri,
     title: &str,
     fragment_path: &str,
+    routes: &RenderRoutes,
 ) -> AppResult<(HeaderMap, Html<String>)> {
     let query = parse_catalog_query(uri.query().unwrap_or(""));
     let page = load_listing(&state.pool, &query).await?;
     let body = format!(
         "{}<main class=\"rust-catalog\"><nav><a href=\"/catalog\">Node fallback</a></nav><h1>{}</h1><form class=\"rust-catalog-layout\" hx-get=\"{}\" hx-target=\"#rustCatalog\" hx-push-url=\"true\"><aside class=\"rust-filter-panel\">{}</aside><section class=\"rust-results\"><div class=\"rust-toolbar\"><input name=\"q\" value=\"{}\" placeholder=\"Поиск по каталогу\"/><select name=\"sort\"><option value=\"popular\"{}>Сначала популярные</option><option value=\"price_asc\"{}>Цена: ниже</option><option value=\"price_desc\"{}>Цена: выше</option></select><button type=\"submit\">Показать</button>{}</div><section id=\"rustCatalog\">{}</section></section></form></main>{}",
-        render_page_head(title),
+        render_page_head_with_routes(title, routes),
         escape_html(title),
         fragment_path,
         render_filter_panel(&query, &page),
@@ -1493,10 +1522,45 @@ async fn render_listing_page(
         selected_attr(&query.sort, "price_asc"),
         selected_attr(&query.sort, "price_desc"),
         render_clear_filters_link(fragment_path, &query),
-        render_listing_fragment(fragment_path, &query, &page),
+        render_listing_fragment_with_routes(fragment_path, routes, &query, &page),
         render_page_foot()
     );
     Ok((cache_headers(), Html(body)))
+}
+
+struct RenderRoutes {
+    catalog_path: &'static str,
+    search_path: &'static str,
+    catalog_fragment_path: &'static str,
+    search_fragment_path: &'static str,
+    product_path: &'static str,
+    product_fragment_path: &'static str,
+}
+
+static RUST_ROUTES: RenderRoutes = RenderRoutes {
+    catalog_path: "/rust/catalog",
+    search_path: "/rust/search",
+    catalog_fragment_path: "/rust/catalog-fragment",
+    search_fragment_path: "/rust/search-fragment",
+    product_path: "/rust/product",
+    product_fragment_path: "/rust/product-fragment",
+};
+
+static PUBLIC_ROUTES: RenderRoutes = RenderRoutes {
+    catalog_path: "/catalog",
+    search_path: "/search",
+    catalog_fragment_path: "/catalog-fragment",
+    search_fragment_path: "/search-fragment",
+    product_path: "/product",
+    product_fragment_path: "/product-fragment",
+};
+
+fn routes_for_path(path: &str) -> &'static RenderRoutes {
+    if path.starts_with("/rust") {
+        &RUST_ROUTES
+    } else {
+        &PUBLIC_ROUTES
+    }
 }
 
 struct ListingPage {
@@ -1529,16 +1593,24 @@ async fn lookup_product(pool: &PgPool, lookup: DetailLookup) -> AppResult<Produc
 }
 
 fn render_page_head(title: &str) -> String {
+    render_page_head_with_routes(title, &RUST_ROUTES)
+}
+
+fn render_page_head_with_routes(title: &str, routes: &RenderRoutes) -> String {
     format!(
         "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} | Sobag Opt Rust Preview</title><style>{}</style><script defer src=\"https://unpkg.com/htmx.org@1.9.12\"></script></head><body>{}",
         escape_html(title),
         "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-shell-top{border-bottom:1px solid #ddd;background:#f7f7f7}.rust-shell-top__inner,.rust-shell-header__inner{max-width:1180px;margin:0 auto;padding:8px 24px;display:flex;align-items:center;gap:18px}.rust-shell-top__inner{justify-content:center}.rust-shell-top a,.rust-shell-header a{color:#111;text-decoration:none;font-weight:700}.rust-shell-header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #ddd}.rust-shell-logo{display:flex;align-items:center;gap:12px;font-size:24px;font-weight:900;letter-spacing:1px}.rust-shell-logo span{display:grid;place-items:center;width:48px;height:48px;border-radius:10px;background:#111;color:#fff}.rust-shell-catalog,.rust-shell-cart{border-radius:8px;background:#111;color:#fff!important;padding:14px 18px}.rust-shell-search{flex:1;display:flex}.rust-shell-search input{width:100%;padding:14px 16px;border:1px solid #ddd;border-radius:12px;background:#f4f4f4}.rust-shell-actions{display:flex;gap:8px}.rust-shell-icon{border:1px solid #ccc;border-radius:8px;padding:12px}.rust-catalog,.rust-product,.rust-content-page{max-width:1180px;margin:0 auto;padding:24px}.rust-catalog-layout{display:grid;grid-template-columns:240px 1fr;gap:24px}.rust-filter-panel{border-right:1px solid #ddd;padding-right:16px}.rust-filter-group{border-top:1px solid #ddd;padding:14px 0}.rust-filter-group h2{font-size:16px;margin:0 0 10px}.rust-filter-option{display:flex;gap:8px;align-items:flex-start;margin:8px 0}.rust-filter-option input{margin-top:3px}.rust-filter-option span:last-child{color:#666}.rust-toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-clear-filters{border:1px solid #bbb;border-radius:6px;color:#111;padding:12px;text-decoration:none}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-pager{margin-top:18px}.rust-product-layout{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:28px}.rust-product-main-image,.rust-product-thumbs img{width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px;background:#eee}.rust-product-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.rust-product-meta{display:flex;flex-wrap:wrap;gap:8px}.rust-chip{border:1px solid #bbb;border-radius:999px;padding:6px 10px}.rust-variant-table{width:100%;border-collapse:collapse}.rust-variant-table th,.rust-variant-table td{border-bottom:1px solid #ddd;padding:10px;text-align:left}.rust-variant-qty{max-width:90px;padding:8px;border:1px solid #bbb;border-radius:6px}.rust-related{margin-top:28px}.rust-content-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}.rust-content-nav a{border:1px solid #bbb;border-radius:6px;padding:8px 10px;color:#111;text-decoration:none}.rust-content-hero{border-bottom:2px solid #111;padding-bottom:18px}.rust-content-hero h1{font-size:44px;line-height:1;margin:0 0 12px}.rust-content-panel{background:#f4f4f4;border:1px solid #ddd;border-radius:8px;margin-top:18px;padding:18px}.rust-content-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.rust-address{font-weight:700}@media(max-width:760px){.rust-shell-top__inner{display:none}.rust-shell-header__inner{flex-wrap:wrap}.rust-shell-search{order:3;flex-basis:100%}.rust-catalog-layout,.rust-product-layout{grid-template-columns:1fr}.rust-filter-panel{border-right:0;border-bottom:1px solid #ddd;padding-right:0}.rust-toolbar input,.rust-toolbar select,.rust-toolbar button{width:100%}}",
-        render_preview_shell_header()
+        render_preview_shell_header(routes)
     )
 }
 
-fn render_preview_shell_header() -> &'static str {
-    "<div class=\"rust-shell-top\"><nav class=\"rust-shell-top__inner\" aria-label=\"Верхняя навигация\"><a href=\"/marketplaces\">Мы на маркетплейсах</a><a href=\"/business\">Условия для бизнеса</a><a href=\"/about\">О компании</a><a href=\"/contacts\">Контакты</a></nav></div><header class=\"rust-shell-header\"><div class=\"rust-shell-header__inner\"><a class=\"rust-shell-logo\" href=\"/\"><span>S</span>SOBAG OPT</a><a class=\"rust-shell-catalog\" href=\"/rust/catalog\">Каталог</a><form class=\"rust-shell-search\" action=\"/rust/search\" method=\"get\"><input name=\"q\" placeholder=\"Поиск: пледы, подушки, тираж, принт\"></form><nav class=\"rust-shell-actions\" aria-label=\"Действия\"><a class=\"rust-shell-icon\" href=\"/account\">Вход</a><a class=\"rust-shell-icon\" href=\"/favorites\">Избранное</a><a class=\"rust-shell-cart\" href=\"/cart\">Корзина</a></nav></div></header>"
+fn render_preview_shell_header(routes: &RenderRoutes) -> String {
+    format!(
+        "<div class=\"rust-shell-top\"><nav class=\"rust-shell-top__inner\" aria-label=\"Верхняя навигация\"><a href=\"/marketplaces\">Мы на маркетплейсах</a><a href=\"/business\">Условия для бизнеса</a><a href=\"/about\">О компании</a><a href=\"/contacts\">Контакты</a></nav></div><header class=\"rust-shell-header\"><div class=\"rust-shell-header__inner\"><a class=\"rust-shell-logo\" href=\"/\"><span>S</span>SOBAG OPT</a><a class=\"rust-shell-catalog\" href=\"{}\">Каталог</a><form class=\"rust-shell-search\" action=\"{}\" method=\"get\"><input name=\"q\" placeholder=\"Поиск: пледы, подушки, тираж, принт\"></form><nav class=\"rust-shell-actions\" aria-label=\"Действия\"><a class=\"rust-shell-icon\" href=\"/account\">Вход</a><a class=\"rust-shell-icon\" href=\"/favorites\">Избранное</a><a class=\"rust-shell-cart\" href=\"/cart\">Корзина</a></nav></div></header>",
+        routes.catalog_path,
+        routes.search_path
+    )
 }
 
 fn render_page_foot() -> &'static str {
@@ -2719,10 +2791,19 @@ fn render_listing_fragment(
     query: &CatalogQuery,
     page: &ListingPage,
 ) -> String {
+    render_listing_fragment_with_routes(fragment_path, &RUST_ROUTES, query, page)
+}
+
+fn render_listing_fragment_with_routes(
+    fragment_path: &str,
+    routes: &RenderRoutes,
+    query: &CatalogQuery,
+    page: &ListingPage,
+) -> String {
     let cards = page
         .items
         .iter()
-        .map(render_card)
+        .map(|product| render_card_with_routes(product, routes))
         .collect::<Vec<_>>()
         .join("");
     let shown = query.offset + page.items.len() as i64;
@@ -2811,14 +2892,20 @@ fn render_clear_filters_link(fragment_path: &str, query: &CatalogQuery) -> Strin
 }
 
 fn render_card(product: &CatalogCard) -> String {
+    render_card_with_routes(product, &RUST_ROUTES)
+}
+
+fn render_card_with_routes(product: &CatalogCard, routes: &RenderRoutes) -> String {
     let image = if product.image.trim().is_empty() {
         "assets/production-hero-1.png"
     } else {
         product.image.as_str()
     };
     format!(
-        "<article class=\"rust-card\"><a href=\"/rust/product?baseSku={}\" hx-get=\"/rust/product-fragment?baseSku={}\" hx-target=\"#rustProduct\" hx-swap=\"innerHTML\"><img loading=\"lazy\" src=\"{}\" alt=\"{}\"></a><div class=\"rust-card__body\"><small>{}</small><h2>{}</h2><p>{}</p><div class=\"rust-card__price\">от {} ₽</div></div></article>",
+        "<article class=\"rust-card\"><a href=\"{}?baseSku={}\" hx-get=\"{}?baseSku={}\" hx-target=\"#rustProduct\" hx-swap=\"innerHTML\"><img loading=\"lazy\" src=\"{}\" alt=\"{}\"></a><div class=\"rust-card__body\"><small>{}</small><h2>{}</h2><p>{}</p><div class=\"rust-card__price\">от {} ₽</div></div></article>",
+        routes.product_path,
         url_encode(&product.base_sku),
+        routes.product_fragment_path,
         url_encode(&product.base_sku),
         escape_attr(image),
         escape_attr(&product.name),
@@ -2830,6 +2917,14 @@ fn render_card(product: &CatalogCard) -> String {
 }
 
 fn render_product_fragment(product: &ProductDetail, related: &[CatalogCard]) -> String {
+    render_product_fragment_with_routes(product, related, &RUST_ROUTES)
+}
+
+fn render_product_fragment_with_routes(
+    product: &ProductDetail,
+    related: &[CatalogCard],
+    routes: &RenderRoutes,
+) -> String {
     let image = product
         .images
         .first()
@@ -2884,11 +2979,16 @@ fn render_product_fragment(product: &ProductDetail, related: &[CatalogCard]) -> 
     } else {
         format!(
             "<section class=\"rust-related\"><h2>Похожие товары</h2><div class=\"rust-grid\">{}</div></section>",
-            related.iter().map(render_card).collect::<Vec<_>>().join("")
+            related
+                .iter()
+                .map(|product| render_card_with_routes(product, routes))
+                .collect::<Vec<_>>()
+                .join("")
         )
     };
     format!(
-        "<main class=\"rust-product\" id=\"rustProduct\"><a href=\"/rust/catalog\">В каталог</a><div class=\"rust-product-layout\"><section class=\"rust-product-gallery\"><img class=\"rust-product-main-image\" src=\"{}\" alt=\"{}\"><div class=\"rust-product-thumbs\">{}</div></section><section class=\"rust-product-info\"><h1>{}</h1><div class=\"rust-product-meta\">{}</div><p>{}</p><p><b>Артикул:</b> {}</p><p><b>Цена:</b> от {} ₽</p><table class=\"rust-variant-table\"><thead><tr><th>SKU</th><th>Тип</th><th>Размер</th><th>Цена</th><th>Кол-во</th></tr></thead><tbody>{}</tbody></table></section></div>{}</main>",
+        "<main class=\"rust-product\" id=\"rustProduct\"><a href=\"{}\">В каталог</a><div class=\"rust-product-layout\"><section class=\"rust-product-gallery\"><img class=\"rust-product-main-image\" src=\"{}\" alt=\"{}\"><div class=\"rust-product-thumbs\">{}</div></section><section class=\"rust-product-info\"><h1>{}</h1><div class=\"rust-product-meta\">{}</div><p>{}</p><p><b>Артикул:</b> {}</p><p><b>Цена:</b> от {} ₽</p><table class=\"rust-variant-table\"><thead><tr><th>SKU</th><th>Тип</th><th>Размер</th><th>Цена</th><th>Кол-во</th></tr></thead><tbody>{}</tbody></table></section></div>{}</main>",
+        routes.catalog_path,
         escape_attr(image),
         escape_attr(&product.name),
         thumbs,

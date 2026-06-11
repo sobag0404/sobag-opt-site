@@ -3,7 +3,7 @@
 Date: 2026-06-11
 
 Current deployed VPS release:
-- `20260611T115117Z-f471b44`
+- latest successful VPS deploy; verify with `/opt/sobag-opt/current-release.txt` on the server.
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust public-path SSR alias preview:
+  - Rust now serves `/catalog`, `/search`, `/product`, `/catalog-fragment`, `/search-fragment`, and `/product-fragment` on port 3001 for future Nginx cutover rehearsal;
+  - route-aware shell/search/product links keep `/rust/*` links on preview routes and public links on alias routes;
+  - production public storefront routing is not switched yet, and Node/static fallback remains active.
 - Rust SSR shell parity preview:
   - internal Rust SSR pages now include a sticky commerce header with top links, Sobag logo, catalog link, search form, account/favorites links, and cart link;
   - `tools/rust-ssr-smoke.mjs` now verifies the shared shell on catalog, search, product, and content preview pages;

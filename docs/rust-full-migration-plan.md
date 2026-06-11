@@ -34,6 +34,7 @@ Current production stays on `https://sobag-shop.online`. Vercel is not an active
    - Current status: catalog/search preview pages include server-rendered facet filters, active checkbox state, clear-filters HTMX action, and deploy-time smoke coverage; public `/catalog` and `/search` are not cut over yet.
    - Current status: product preview pages include gallery markup, category/collection chips, extended variant quantity rows, related products from PostgreSQL catalog cards, and deploy-time smoke coverage; public product modal/page behavior is not cut over yet.
    - Current status: preview pages now share a Rust-rendered commerce shell with top navigation, logo, catalog link, search form, account/favorites links, and cart link so route-cutover testing is closer to the public storefront.
+   - Current status: Rust also serves public-path aliases `/catalog`, `/search`, `/product`, `/catalog-fragment`, `/search-fragment`, and `/product-fragment` on port 3001 for Nginx cutover rehearsal only. Production public routing is not switched yet.
 
 3. Content pages:
    - Move read-only public pages to Rust templates.
