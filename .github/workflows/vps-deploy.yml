@@ -164,6 +164,7 @@ jobs:
               exit 1
             fi
             node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001
+            node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001
           fi
 
           mapfile -t releases < <(ls -1dt "$app_dir"/releases/* 2>/dev/null || true)

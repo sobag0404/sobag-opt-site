@@ -155,6 +155,7 @@ Last updated: 2026-06-11
 - Важно: `npm.cmd run check` теперь не падает без установленного Python, но явно пропускает Python syntax checks; на новом устройстве желательно установить Python и вернуть полную проверку импортеров.
 
 ## Current Next Work
+- Current pass 2026-06-11: Rust SSR/HTMX preview slice is verified. Added internal Rust preview routes for `/rust/catalog`, `/rust/search`, `/rust/catalog-fragment`, `/rust/search-fragment`, `/rust/product`, and `/rust/product-fragment`; added deploy-time `tools/rust-ssr-smoke.mjs`; documented the full migration path in `docs/rust-full-migration-plan.md`. Public production routing is not switched for these preview pages yet; Node remains fallback.
 - Current next task: continue remaining roadmap upgrades after the current CWV-readiness slice: real photo migration/WebP/AVIF validation after actual photo set/provider confirmation, later actual DB/storage split implementation when approved, and real Core Web Vitals audit after real catalog/photo growth.
 - SEO next step: real company/legal/contact details only after confirmed facts; Product/FAQ schema, editable catalog landing copy, and offline SEO/content audit are already covered.
 - Import/PIM next step: later DB write cutover for admin/import product, variant, image, taxonomy, and import-batch entities. Public catalog query/detail reads are now PostgreSQL-backed on VPS; the current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.

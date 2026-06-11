@@ -984,7 +984,8 @@ Backend/storage state:
 - Do not expose env values in chat/docs/repo.
 
 Important remaining work:
-- Deployment: after future pushes, verify `autofix-check`, `vps-deploy`, and `production-smoke`; keep Vercel fallback healthy.
+- Current Rust migration slice: internal Rust SSR/HTMX preview routes and `tools/rust-ssr-smoke.mjs` are verified locally and on VPS temp Rust runtime; full staged migration/parallel-agent plan lives in `docs/rust-full-migration-plan.md`. Do not switch public `/catalog` or `/search` to Rust until preview parity, smoke, deploy, and rollback gates are green.
+- Deployment: after future pushes, verify `autofix-check`, `vps-deploy`, and `production-smoke`; Vercel is not an active deploy/verification target.
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
 - Durable image storage: choose/configure the real provider env for the next photo migration run and validate AVIF/WebP behavior on the real migrated catalog image set.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, final Yandex map setup.

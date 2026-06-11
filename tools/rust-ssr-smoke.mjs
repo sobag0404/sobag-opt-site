@@ -1,0 +1,58 @@
+#!/usr/bin/env node
+
+const DEFAULT_BASE = "http://127.0.0.1:3001";
+
+function parseArgs(argv = process.argv.slice(2)) {
+  const args = { base: DEFAULT_BASE, timeout: 10000 };
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (token === "--base") args.base = argv[++index] || args.base;
+    else if (token === "--timeout") args.timeout = Number(argv[++index] || args.timeout) || args.timeout;
+    else if (token === "--help") {
+      console.log("Usage: node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001");
+      process.exit(0);
+    } else {
+      throw new Error(`Unknown argument: ${token}`);
+    }
+  }
+  args.base = args.base.replace(/\/+$/, "");
+  return args;
+}
+
+async function getText(base, path, timeout) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(`${base}${path}`, { signal: controller.signal, headers: { accept: "text/html" } });
+    if (!response.ok) throw new Error(`${path} -> HTTP ${response.status}`);
+    return await response.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function assertContains(text, needle, label) {
+  if (!text.includes(needle)) throw new Error(`${label} missing ${needle}`);
+}
+
+async function main() {
+  const args = parseArgs();
+  const checks = [
+    ["/rust/catalog?pageSize=2", ["Sobag Opt Rust Preview", "rust-grid", "hx-get"]],
+    ["/rust/search?q=opt_70190&pageSize=2", ["Sobag Opt Rust Preview", "rust-grid", "opt_70190"]],
+    ["/rust/catalog-fragment?pageSize=2", ["rust-grid", "rust-card"]],
+    ["/rust/product?baseSku=opt_70190", ["Sobag Opt Rust Preview", "rust-product", "opt_70190"]],
+    ["/rust/product-fragment?baseSku=opt_70190", ["rust-product", "opt_70190"]],
+  ];
+  for (const [path, needles] of checks) {
+    const text = await getText(args.base, path, args.timeout);
+    needles.forEach((needle) => assertContains(text, needle, path));
+    console.log(`OK ${path}`);
+  }
+  console.log("Rust SSR smoke passed");
+}
+
+main().catch((error) => {
+  console.error(error.message || error);
+  process.exit(1);
+});

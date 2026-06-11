@@ -27,6 +27,7 @@
     "smoke:prod:performance": "node tools/production-performance-smoke.mjs",
     "smoke:prod:storage": "node tools/production-storage-readiness.mjs",
     "smoke:rust:shadow": "node tools/rust-catalog-shadow-smoke.mjs",
+    "smoke:rust:ssr": "node tools/rust-ssr-smoke.mjs",
     "audit:production-workflow": "node tools/production-workflow-audit.mjs",
     "smoke:prod:self-test": "node tools/production-smoke.mjs --self-test",
     "smoke:catalog:source": "node tools/catalog-source-smoke.mjs",

@@ -19,6 +19,7 @@ const REQUIRED_FILES = [
   "tools/file-store-backup.mjs",
   "tools/production-smoke.mjs",
   "tools/rust-catalog-shadow-smoke.mjs",
+  "tools/rust-ssr-smoke.mjs",
   "docs/vps-migration-notes.md",
   "docs/vps-launch-runbook.md",
   "docs/deploy-checklist.md",
@@ -44,6 +45,7 @@ const REQUIRED_SCRIPTS = {
   "smoke:prod": "tools/production-smoke.mjs",
   "smoke:prod:self-test": "tools/production-smoke.mjs --self-test",
   "smoke:rust:shadow": "tools/rust-catalog-shadow-smoke.mjs",
+  "smoke:rust:ssr": "tools/rust-ssr-smoke.mjs",
   check: "tools/autofix.mjs --check",
   "ui:smoke": "tools/ui-smoke.spec.js",
 };
@@ -55,6 +57,7 @@ const REQUIRED_VPS_DEPLOY_MARKERS = [
   "sudo systemctl restart sobag-opt-rust",
   "http://127.0.0.1:3001/api/health-rust",
   "node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001",
+  "node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001",
   "Rust health failed; restoring previous binary",
 ];
 

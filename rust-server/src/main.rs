@@ -3,7 +3,7 @@ use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
 use axum::{
     extract::{Query, State},
     http::{header, HeaderMap, StatusCode, Uri},
-    response::{IntoResponse, Response},
+    response::{Html, IntoResponse, Response},
     routing::get,
     Json, Router,
 };
@@ -39,6 +39,83 @@ const FACET_BUCKET_KEYS: &[&str] = &[
 #[derive(Clone)]
 struct AppState {
     pool: PgPool,
+}
+
+#[cfg(test)]
+mod ssr_tests {
+    use super::*;
+
+    #[test]
+    fn renders_catalog_fragment_as_htmx_safe_html() {
+        let query = parse_catalog_query("q=pod&pageSize=1&sort=popular");
+        let page = ListingPage {
+            total: 2,
+            items: vec![CatalogCard {
+                id: "p1".to_string(),
+                base_sku: "opt_1".to_string(),
+                name: "Pillow <test>".to_string(),
+                category: "Pillows".to_string(),
+                categories: vec!["Pillows".to_string()],
+                collections: vec![],
+                holidays: vec![],
+                tags: vec![],
+                badge: String::new(),
+                description: String::new(),
+                stock: "in_stock".to_string(),
+                image: "/img.jpg".to_string(),
+                image_meta: None,
+                min_price: 220,
+                max_price: 220,
+                variant_count: 1,
+                popular: 1,
+            }],
+        };
+        let html = render_listing_fragment("/rust/catalog-fragment", &query, &page);
+        assert!(html.contains("hx-get"));
+        assert!(html.contains("opt_1"));
+        assert!(html.contains("Pillow &lt;test&gt;"));
+        assert!(!html.contains("<test>"));
+    }
+
+    #[test]
+    fn renders_product_fragment_with_variants() {
+        let product = ProductDetail {
+            id: "p1".to_string(),
+            base_sku: "opt_1".to_string(),
+            name: "Pillow".to_string(),
+            status: "published".to_string(),
+            hidden: false,
+            category: "Pillows".to_string(),
+            categories: vec!["Pillows".to_string()],
+            collections: vec![],
+            holidays: vec![],
+            tags: vec![],
+            description: "Description".to_string(),
+            detail_description: String::new(),
+            base_price: 0,
+            min_price: 220,
+            max_price: 220,
+            popular: 1,
+            stock: "in_stock".to_string(),
+            variants: vec![Variant {
+                id: "v1".to_string(),
+                product_id: "p1".to_string(),
+                base_sku: "opt_1".to_string(),
+                sku: "sku_1".to_string(),
+                variant_type: "Pillow".to_string(),
+                size: "40x40".to_string(),
+                material: "Velour".to_string(),
+                name: String::new(),
+                price: 220,
+                price_source: String::new(),
+            }],
+            images: vec![],
+        };
+        let html = render_product_fragment(&product);
+        assert!(html.contains("sku_1"));
+        assert!(html.contains("от 220 ₽"));
+        assert!(html.contains("assets/production-hero-1.png"));
+    }
 }
 
 #[derive(Debug)]
@@ -280,6 +357,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/catalog-detail", get(catalog_detail))
         .route("/rust/catalog-query", get(catalog_query))
         .route("/rust/catalog-detail", get(catalog_detail))
+        .route("/rust/catalog", get(catalog_page))
+        .route("/rust/search", get(search_page))
+        .route("/rust/catalog-fragment", get(catalog_fragment))
+        .route("/rust/search-fragment", get(catalog_fragment))
+        .route("/rust/product", get(product_page))
+        .route("/rust/product-fragment", get(product_fragment))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
@@ -372,6 +455,248 @@ async fn catalog_detail(
             source: "postgres",
         }),
     ))
+}
+
+async fn catalog_page(
+    State(state): State<Arc<AppState>>,
+    uri: Uri,
+) -> AppResult<(HeaderMap, Html<String>)> {
+    render_listing_page(state, uri, "Каталог", "/rust/catalog-fragment").await
+}
+
+async fn search_page(
+    State(state): State<Arc<AppState>>,
+    uri: Uri,
+) -> AppResult<(HeaderMap, Html<String>)> {
+    render_listing_page(state, uri, "Поиск", "/rust/search-fragment").await
+}
+
+async fn catalog_fragment(
+    State(state): State<Arc<AppState>>,
+    uri: Uri,
+) -> AppResult<(HeaderMap, Html<String>)> {
+    let fragment_path = if uri.path().contains("search-fragment") {
+        "/rust/search-fragment"
+    } else {
+        "/rust/catalog-fragment"
+    };
+    let query = parse_catalog_query(uri.query().unwrap_or(""));
+    let page = load_listing(&state.pool, &query).await?;
+    Ok((
+        cache_headers(),
+        Html(render_listing_fragment(fragment_path, &query, &page)),
+    ))
+}
+
+async fn product_page(
+    State(state): State<Arc<AppState>>,
+    Query(lookup): Query<DetailLookup>,
+) -> AppResult<(HeaderMap, Html<String>)> {
+    let product = lookup_product(&state.pool, lookup).await?;
+    let body = format!(
+        "{}{}{}",
+        render_page_head(&product.name),
+        render_product_fragment(&product),
+        render_page_foot()
+    );
+    Ok((cache_headers(), Html(body)))
+}
+
+async fn product_fragment(
+    State(state): State<Arc<AppState>>,
+    Query(lookup): Query<DetailLookup>,
+) -> AppResult<(HeaderMap, Html<String>)> {
+    let product = lookup_product(&state.pool, lookup).await?;
+    Ok((cache_headers(), Html(render_product_fragment(&product))))
+}
+
+async fn render_listing_page(
+    state: Arc<AppState>,
+    uri: Uri,
+    title: &str,
+    fragment_path: &str,
+) -> AppResult<(HeaderMap, Html<String>)> {
+    let query = parse_catalog_query(uri.query().unwrap_or(""));
+    let page = load_listing(&state.pool, &query).await?;
+    let body = format!(
+        "{}<main class=\"rust-catalog\"><nav><a href=\"/catalog\">Node fallback</a></nav><h1>{}</h1><form class=\"rust-toolbar\" hx-get=\"{}\" hx-target=\"#rustCatalog\" hx-push-url=\"true\"><input name=\"q\" value=\"{}\" placeholder=\"Поиск по каталогу\"/><select name=\"sort\"><option value=\"popular\"{}>Сначала популярные</option><option value=\"price_asc\"{}>Цена: ниже</option><option value=\"price_desc\"{}>Цена: выше</option></select><button type=\"submit\">Показать</button></form><section id=\"rustCatalog\">{}</section></main>{}",
+        render_page_head(title),
+        escape_html(title),
+        fragment_path,
+        escape_attr(&query.q),
+        selected_attr(&query.sort, "popular"),
+        selected_attr(&query.sort, "price_asc"),
+        selected_attr(&query.sort, "price_desc"),
+        render_listing_fragment(fragment_path, &query, &page),
+        render_page_foot()
+    );
+    Ok((cache_headers(), Html(body)))
+}
+
+struct ListingPage {
+    items: Vec<CatalogCard>,
+    total: i64,
+}
+
+async fn load_listing(pool: &PgPool, query: &CatalogQuery) -> AppResult<ListingPage> {
+    Ok(ListingPage {
+        items: load_cards(pool, query).await?,
+        total: load_count(pool, query).await?,
+    })
+}
+
+async fn lookup_product(pool: &PgPool, lookup: DetailLookup) -> AppResult<ProductDetail> {
+    let id = clean(lookup.id.unwrap_or_default());
+    let base_sku = clean(lookup.base_sku.unwrap_or_default());
+    let sku = clean(lookup.sku.unwrap_or_default());
+    if id.is_empty() && base_sku.is_empty() && sku.is_empty() {
+        return Err(AppError::bad_request(
+            "missing_product_lookup",
+            "Provide id, baseSku, or sku.",
+        ));
+    }
+    load_product_detail(pool, &id, &base_sku, &sku)
+        .await?
+        .ok_or_else(|| AppError::not_found("product_not_found", "Product not found."))
+}
+
+fn render_page_head(title: &str) -> String {
+    format!(
+        "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} | Sobag Opt Rust Preview</title><style>{}</style><script defer src=\"https://unpkg.com/htmx.org@1.9.12\"></script></head><body>",
+        escape_html(title),
+        "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-catalog,.rust-product{max-width:1180px;margin:0 auto;padding:24px}.rust-toolbar{display:flex;gap:10px;margin:18px 0}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-pager{margin-top:18px}.rust-product img{max-width:420px;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px}"
+    )
+}
+
+fn render_page_foot() -> &'static str {
+    "</body></html>"
+}
+
+fn render_listing_fragment(
+    fragment_path: &str,
+    query: &CatalogQuery,
+    page: &ListingPage,
+) -> String {
+    let cards = page
+        .items
+        .iter()
+        .map(render_card)
+        .collect::<Vec<_>>()
+        .join("");
+    let shown = query.offset + page.items.len() as i64;
+    let next = if shown < page.total {
+        format!(
+            "<div class=\"rust-pager\"><a href=\"?{}\" hx-get=\"{}?{}\" hx-target=\"#rustCatalog\" hx-swap=\"beforeend\">Показать еще</a></div>",
+            listing_query_string(query, Some(shown)),
+            fragment_path,
+            listing_query_string(query, Some(shown))
+        )
+    } else {
+        String::new()
+    };
+    format!(
+        "<div class=\"rust-summary\">{} товаров, показано {}</div><div class=\"rust-grid\">{}</div>{}",
+        page.total,
+        shown.min(page.total),
+        cards,
+        next
+    )
+}
+
+fn render_card(product: &CatalogCard) -> String {
+    let image = if product.image.trim().is_empty() {
+        "assets/production-hero-1.png"
+    } else {
+        product.image.as_str()
+    };
+    format!(
+        "<article class=\"rust-card\"><a href=\"/rust/product?baseSku={}\" hx-get=\"/rust/product-fragment?baseSku={}\" hx-target=\"#rustProduct\" hx-swap=\"innerHTML\"><img loading=\"lazy\" src=\"{}\" alt=\"{}\"></a><div class=\"rust-card__body\"><small>{}</small><h2>{}</h2><p>{}</p><div class=\"rust-card__price\">от {} ₽</div></div></article>",
+        url_encode(&product.base_sku),
+        url_encode(&product.base_sku),
+        escape_attr(image),
+        escape_attr(&product.name),
+        escape_html(&product.base_sku),
+        escape_html(&product.name),
+        escape_html(&product.category),
+        product.min_price
+    )
+}
+
+fn render_product_fragment(product: &ProductDetail) -> String {
+    let image = product
+        .images
+        .first()
+        .map(|item| item.url.as_str())
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or("assets/production-hero-1.png");
+    let variants = product
+        .variants
+        .iter()
+        .take(12)
+        .map(|variant| {
+            format!(
+                "<tr><td>{}</td><td>{}</td><td>{}</td><td>{} ₽</td></tr>",
+                escape_html(&variant.sku),
+                escape_html(&variant.variant_type),
+                escape_html(&variant.size),
+                variant.price
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("");
+    format!(
+        "<main class=\"rust-product\" id=\"rustProduct\"><a href=\"/rust/catalog\">В каталог</a><h1>{}</h1><img src=\"{}\" alt=\"{}\"><p>{}</p><p><b>Артикул:</b> {}</p><p><b>Цена:</b> от {} ₽</p><table><thead><tr><th>SKU</th><th>Тип</th><th>Размер</th><th>Цена</th></tr></thead><tbody>{}</tbody></table></main>",
+        escape_html(&product.name),
+        escape_attr(image),
+        escape_attr(&product.name),
+        escape_html(&product.description),
+        escape_html(&product.base_sku),
+        product.min_price,
+        variants
+    )
+}
+
+fn selected_attr(current: &str, value: &str) -> &'static str {
+    if current == value {
+        " selected"
+    } else {
+        ""
+    }
+}
+
+fn listing_query_string(query: &CatalogQuery, offset: Option<i64>) -> String {
+    let mut pairs = Vec::new();
+    if !query.q.is_empty() {
+        pairs.push(format!("q={}", url_encode(&query.q)));
+    }
+    if query.sort != "relevance" {
+        pairs.push(format!("sort={}", url_encode(&query.sort)));
+    }
+    pairs.push(format!("pageSize={}", query.page_size));
+    if let Some(offset) = offset {
+        pairs.push(format!("cursor={}", url_encode(&encode_cursor(offset))));
+    }
+    for (key, values) in &query.filters {
+        for value in values {
+            pairs.push(format!("{}={}", url_encode(key), url_encode(value)));
+        }
+    }
+    pairs.join("&")
+}
+
+fn url_encode(value: &str) -> String {
+    url::form_urlencoded::byte_serialize(value.as_bytes()).collect()
+}
+
+fn escape_attr(value: &str) -> String {
+    escape_html(value).replace('"', "&quot;")
+}
+
+fn escape_html(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 fn cache_headers() -> HeaderMap {
