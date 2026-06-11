@@ -45,6 +45,8 @@ const REQUIRED_MARKERS = [
   "Do not switch these route groups yet",
   "Internal Rust Preview Routes",
   "Route Group Order",
+  "Current Candidate",
+  "Candidate 1 is auth/account read only",
   "Required Gates Per Route Group",
   "Nginx Cutover Shape",
   "rehearse:rust-account-routes",
@@ -75,6 +77,9 @@ function auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal
   DO_NOT_SWITCH_YET.forEach((route) => assertIncludes(runbook, route, RUNBOOK, errors));
   [
     "/rust/auth/me",
+    "auth-read candidate method guards",
+    "POST",
+    "DELETE",
     "/rust/admin/orders",
     "/rust/admin/users",
   ].forEach((route) => assertIncludes(authSmoke, route, AUTH_SMOKE, errors));
@@ -102,7 +107,7 @@ function auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal
 function selfTest() {
   const runbook = [...REQUIRED_MARKERS, ...PREVIEW_ROUTES, ...DO_NOT_SWITCH_YET].join("\n");
   const rustMain = PREVIEW_ROUTES.map(routeDeclaration).join("\n");
-  const authSmoke = ["/rust/auth/me", "/rust/admin/orders", "/rust/admin/users"].join("\n");
+  const authSmoke = ["/rust/auth/me", "auth-read candidate method guards", "POST", "DELETE", "/rust/admin/orders", "/rust/admin/users"].join("\n");
   const orderSmoke = ["/rust/orders", "/rust/briefs", "/rust/admin/orders"].join("\n");
   const routeRehearsal = ["auth-read", "auth-write", "orders-briefs", "admin-orders", "admin-users", "admin-content", "assertSafeLocations"].join("\n");
   const summary = auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal });

@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust auth-read cutover candidate guard:
+  - `tools/rust-auth-me-shadow-smoke.mjs` now verifies unsupported `POST`/`DELETE` on Node `/api/auth/me` and Rust `/rust/auth/me` both stay `405`;
+  - this extends the existing anonymous/buyer/manager/content/admin/expired session parity and password-field leak checks before a future exact `GET /api/auth/me` switch;
+  - public `/api/auth/me` still stays on Node and no production route/data cutover was made.
 - Rust account/orders/admin route rehearsal guard:
   - added `tools/rust-account-route-rehearsal.mjs` and `npm run rehearse:rust-account-routes`;
   - it generates exact future Nginx `location = ...` snippets per route group and rejects generic `/api`, wildcard `/api/admin`, and blocked admin catalog/import/media/PIM routes;

@@ -46,6 +46,12 @@ These routes must not be exposed as public `/api/*` routes until the matching cu
 6. Admin content/reviews
 7. Admin catalog/import/media/PIM writes
 
+## Current Candidate
+
+Candidate 1 is auth/account read only: `GET /api/auth/me`.
+
+Before switching it, `tools/rust-auth-me-shadow-smoke.mjs` must compare Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, and expired sessions, verify no password fields leak, and verify unsupported `POST`/`DELETE` stay `405` on both runtimes. Public `/api/auth/me` still stays on Node until the exact Nginx route is intentionally applied and rollback is ready.
+
 ## Required Gates Per Route Group
 
 Before any route group switch:

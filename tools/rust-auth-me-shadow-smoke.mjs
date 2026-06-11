@@ -301,6 +301,14 @@ async function runSmoke(args) {
       }
       console.log(`OK ${label} ${digest(rustPayload)}`);
     }
+    for (const method of ["POST", "DELETE"]) {
+      const nodeResponse = await requestJson(`http://127.0.0.1:${nodePort}/api/auth/me`, { token: "buyer", method });
+      const rustResponse = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, { token: "buyer", method });
+      if (nodeResponse.status !== 405 || rustResponse.status !== 405) {
+        throw new Error(`auth-read ${method} method mismatch: node ${nodeResponse.status}, rust ${rustResponse.status}`);
+      }
+    }
+    console.log("OK auth-read candidate method guards");
     for (const [label, token] of [
       ["admin orders admin", "admin"],
       ["admin orders manager", "manager"],
