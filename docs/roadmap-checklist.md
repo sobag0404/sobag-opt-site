@@ -149,6 +149,7 @@ Last updated: 2026-06-11
      - [x] Rust SSR filter preview slice: internal `/rust/catalog` and `/rust/search` now render server-side facet filters, active checkbox state, and a clear-filters HTMX action while public catalog pages still use the existing Node/static fallback.
      - [x] Rust product SSR parity preview: internal `/rust/product` and `/rust/product-fragment` now render gallery markup, product chips, extended variant quantity rows, and related-product blocks while public product modal/page behavior still stays on the existing storefront.
      - [x] Rust product cart bridge: full Rust product pages append add-to-cart buttons to variant rows and write the same localStorage cart contract as the current storefront, with authenticated cart sync through `/api/auth/me`.
+     - [x] Rust SSR browser smoke: `npm run smoke:rust:ssr-browser` verifies product add-to-cart writes the current cart contract before any public page cutover.
      - [x] Rust SSR shell parity preview: internal Rust SSR pages now include a sticky commerce header with top links, logo, catalog link, search form, account/favorites links, and cart link before any public route cutover.
      - [x] Rust SSR public-route readiness guard: page titles no longer expose `Rust Preview`, and SSR smoke/audit reject preview/debug branding on candidate public routes.
      - [x] Rust SSR route rehearsal guard: `npm run rehearse:rust-ssr-routes` prints safe exact-location Nginx snippets per SSR route group and rejects dangerous broad/API/account/admin routes.

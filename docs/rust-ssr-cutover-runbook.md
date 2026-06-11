@@ -40,6 +40,7 @@ Run before changing Nginx:
 cargo test --locked
 cargo build --release --locked
 node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001
+node tools/rust-ssr-browser-smoke.mjs --base http://127.0.0.1:3001
 node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001
 curl -fsS http://127.0.0.1:3001/api/health-rust
 curl -fsS http://127.0.0.1:3000/api/health

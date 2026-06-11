@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR browser smoke:
+  - added `tools/rust-ssr-browser-smoke.mjs` and `npm run smoke:rust:ssr-browser`;
+  - it opens a Rust product page, adds quantity 3, verifies `sobag.cart.guest` and Rust header cart count;
+  - `tools/autofix.mjs` syntax-checks it, and `tools/vps-release-audit.mjs` requires it for VPS release readiness.
 - Rust SSR product cart bridge:
   - full Rust product pages now append add-to-cart buttons to variant rows client-side;
   - the bridge writes current storefront-compatible `sobag.cart.guest` / `sobag.cart.<user>` localStorage entries;
