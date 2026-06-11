@@ -31,6 +31,18 @@ async function getText(base, path, timeout) {
   }
 }
 
+async function getJson(base, path, timeout) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(`${base}${path}`, { signal: controller.signal, headers: { accept: "application/json" } });
+    if (!response.ok) throw new Error(`${path} -> HTTP ${response.status}`);
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function assertContains(text, needle, label) {
   if (!text.includes(needle)) throw new Error(`${label} missing ${needle}`);
 }
@@ -53,6 +65,9 @@ async function main() {
     needles.forEach((needle) => assertContains(text, needle, path));
     console.log(`OK ${path}`);
   }
+  const authPreview = await getJson(args.base, "/rust/auth/me", args.timeout);
+  if (!authPreview || authPreview.user !== null) throw new Error("/rust/auth/me anonymous preview mismatch");
+  console.log("OK /rust/auth/me");
   console.log("Rust SSR smoke passed");
 }
 

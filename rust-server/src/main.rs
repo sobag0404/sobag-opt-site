@@ -14,7 +14,7 @@ use axum::{
     Json, Router,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
 use pbkdf2::pbkdf2_hmac;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -325,6 +325,88 @@ mod ssr_tests {
         ));
         assert!(!verify_password_hash("secret", "not-hex", "also-not-hex"));
     }
+
+    #[test]
+    fn builds_auth_me_payload_without_private_fields() {
+        let store = json!({
+            "users": {
+                "buyer@example.test": {
+                    "email": "buyer@example.test",
+                    "name": "Buyer",
+                    "role": "buyer",
+                    "passwordHash": "hidden",
+                    "passwordSalt": "hidden"
+                }
+            },
+            "orders": [
+                {
+                    "id": "SO-1",
+                    "userEmail": "buyer@example.test",
+                    "crmThread": [
+                        { "visibility": "customer", "text": "visible" },
+                        { "visibility": "internal", "text": "hidden" }
+                    ]
+                },
+                { "id": "SO-2", "customer": { "email": "other@example.test" } }
+            ],
+            "reviews": [
+                { "id": "REV-1", "userEmail": "buyer@example.test", "text": "ok" }
+            ],
+            "carts": {
+                "buyer@example.test": { "items": [{ "key": "sku-1" }] }
+            },
+            "favorites": {
+                "buyer@example.test": { "items": ["p1"] }
+            },
+            "savedCarts": {
+                "buyer@example.test": {
+                    "items": [{
+                        "id": "SC-1",
+                        "managerComment": "hidden",
+                        "commentHistory": [
+                            { "visibility": "customer", "text": "visible" },
+                            { "visibility": "internal", "text": "hidden" }
+                        ]
+                    }]
+                }
+            }
+        });
+        let payload = auth_me_payload_from_values(
+            &store,
+            &json!({ "email": "buyer@example.test", "createdAt": "2026-06-11T00:00:00.000Z" }),
+        );
+        assert_eq!(payload["user"]["email"], "buyer@example.test");
+        assert!(payload["user"].get("passwordHash").is_none());
+        assert!(payload["user"].get("passwordSalt").is_none());
+        assert_eq!(payload["user"]["orders"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            payload["user"]["orders"][0]["crmThread"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(payload["user"]["reviews"].as_array().unwrap().len(), 1);
+        assert_eq!(payload["cartItems"].as_array().unwrap().len(), 1);
+        assert_eq!(payload["favoriteItems"].as_array().unwrap().len(), 1);
+        assert!(payload["savedCarts"][0].get("managerComment").is_none());
+        assert_eq!(
+            payload["savedCarts"][0]["commentHistory"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn auth_me_payload_is_anonymous_without_session_user() {
+        let payload = auth_me_payload_from_values(
+            &json!({ "users": {} }),
+            &json!({ "email": "missing@example.test" }),
+        );
+        assert_eq!(payload, json!({ "user": null }));
+    }
 }
 
 #[derive(Debug)]
@@ -573,6 +655,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/product", get(product_page))
         .route("/rust/product-fragment", get(product_fragment))
         .route("/rust/pages/:slug", get(content_page))
+        .route("/rust/auth/me", get(auth_me_preview))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
@@ -733,6 +816,17 @@ async fn content_page(Path(slug): Path<String>) -> AppResult<(HeaderMap, Html<St
     Ok((cache_headers(), Html(body)))
 }
 
+async fn auth_me_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let payload = load_auth_me_from_file_store(cookie_header)
+        .await
+        .unwrap_or_else(|_| json!({ "user": null }));
+    Ok((no_store_headers(), Json(payload)))
+}
+
 async fn render_listing_page(
     state: Arc<AppState>,
     uri: Uri,
@@ -800,28 +894,55 @@ fn content_page_spec(slug: &str) -> Option<&'static ContentPageSpec> {
 }
 
 async fn load_site_content() -> Result<Value, std::io::Error> {
-    if !matches!(
+    let Some(value) = load_file_store_value(
+        &env::var("SOBAG_CONTENT_KEY").unwrap_or_else(|_| CONTENT_KEY.to_string()),
+    )
+    .await?
+    else {
+        return Ok(Value::Null);
+    };
+    let content = value.get("content").unwrap_or(&value);
+    Ok(content.clone())
+}
+
+async fn load_auth_me_from_file_store(cookie_header: &str) -> Result<Value, std::io::Error> {
+    let token = parse_cookie_value(cookie_header, SESSION_COOKIE).unwrap_or_default();
+    if token.trim().is_empty() {
+        return Ok(json!({ "user": null }));
+    }
+    let Some(session) = load_file_store_value(&session_store_key(&token)).await? else {
+        return Ok(json!({ "user": null }));
+    };
+    let Some(store) = load_file_store_value(STORE_KEY).await? else {
+        return Ok(json!({ "user": null }));
+    };
+    Ok(auth_me_payload_from_values(&store, &session))
+}
+
+async fn load_file_store_value(key: &str) -> Result<Option<Value>, std::io::Error> {
+    if !is_file_store_provider() {
+        return Ok(None);
+    }
+    let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
+    let path = file_store_path_for_key(dir, key);
+    let text = match tokio::fs::read_to_string(path).await {
+        Ok(value) => value,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error),
+    };
+    let record: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
+    Ok(file_store_unwrap_value(&record, Utc::now().timestamp()))
+}
+
+fn is_file_store_provider() -> bool {
+    matches!(
         env::var("SOBAG_STORE_PROVIDER")
             .unwrap_or_default()
             .trim()
             .to_ascii_lowercase()
             .as_str(),
         "file" | "filesystem" | "fs"
-    ) {
-        return Ok(Value::Null);
-    }
-    let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
-    let key = env::var("SOBAG_CONTENT_KEY").unwrap_or_else(|_| CONTENT_KEY.to_string());
-    let path = file_store_path_for_key(dir, &key);
-    let text = match tokio::fs::read_to_string(path).await {
-        Ok(value) => value,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Value::Null),
-        Err(error) => return Err(error),
-    };
-    let record: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
-    let value = record.get("value").unwrap_or(&record);
-    let content = value.get("content").unwrap_or(value);
-    Ok(content.clone())
+    )
 }
 
 fn file_key_hex(value: &str) -> String {
@@ -887,6 +1008,188 @@ fn file_store_unwrap_value(record: &Value, now_unix: i64) -> Option<Value> {
         }
     }
     Some(record.get("value").cloned().unwrap_or(Value::Null))
+}
+
+fn auth_me_payload_from_values(store: &Value, session: &Value) -> Value {
+    let email = session
+        .get("email")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
+    if email.is_empty() {
+        return json!({ "user": null });
+    }
+    let Some(user) = store
+        .get("users")
+        .and_then(Value::as_object)
+        .and_then(|users| users.get(email))
+    else {
+        return json!({ "user": null });
+    };
+    let public_user = public_user_value(user);
+    let user_email = public_user
+        .get("email")
+        .and_then(Value::as_str)
+        .unwrap_or(email)
+        .to_string();
+    let orders = user_orders(store, &user_email);
+    let reviews = user_reviews(store, &user_email);
+    let mut user_with_activity = public_user;
+    if let Some(map) = user_with_activity.as_object_mut() {
+        map.insert("orders".to_string(), orders);
+        map.insert("reviews".to_string(), reviews);
+    }
+    json!({
+        "user": user_with_activity,
+        "cartItems": store_nested_items(store, "carts", &user_email),
+        "favoriteItems": store_nested_items(store, "favorites", &user_email),
+        "savedCarts": saved_carts_for_user(store, &user_email, can_use_internal_saved_cart_fields(user))
+    })
+}
+
+fn public_user_value(user: &Value) -> Value {
+    let mut public = user.clone();
+    if let Some(map) = public.as_object_mut() {
+        map.remove("passwordHash");
+        map.remove("passwordSalt");
+    }
+    public
+}
+
+fn can_use_internal_saved_cart_fields(user: &Value) -> bool {
+    matches!(
+        user.get("role").and_then(Value::as_str),
+        Some("admin" | "manager")
+    )
+}
+
+fn store_nested_items(store: &Value, bucket: &str, email: &str) -> Value {
+    store
+        .get(bucket)
+        .and_then(Value::as_object)
+        .and_then(|items| items.get(email))
+        .and_then(|record| record.get("items"))
+        .filter(|items| items.is_array())
+        .cloned()
+        .unwrap_or_else(|| json!([]))
+}
+
+fn user_orders(store: &Value, email: &str) -> Value {
+    let email = email.to_ascii_lowercase();
+    let orders = store
+        .get("orders")
+        .and_then(Value::as_array)
+        .map(|orders| {
+            orders
+                .iter()
+                .filter(|order| {
+                    order
+                        .get("userEmail")
+                        .and_then(Value::as_str)
+                        .map(|value| value.eq_ignore_ascii_case(&email))
+                        .unwrap_or(false)
+                        || order
+                            .get("customer")
+                            .and_then(|customer| customer.get("email"))
+                            .and_then(Value::as_str)
+                            .map(|value| value.eq_ignore_ascii_case(&email))
+                            .unwrap_or(false)
+                })
+                .map(public_order_value)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    Value::Array(orders)
+}
+
+fn public_order_value(order: &Value) -> Value {
+    let mut public = order.clone();
+    if let Some(map) = public.as_object_mut() {
+        if let Some(thread) = map.get("crmThread").and_then(Value::as_array) {
+            map.insert(
+                "crmThread".to_string(),
+                Value::Array(
+                    thread
+                        .iter()
+                        .filter(|entry| {
+                            entry
+                                .get("visibility")
+                                .and_then(Value::as_str)
+                                .map(|visibility| visibility != "internal")
+                                .unwrap_or(true)
+                        })
+                        .cloned()
+                        .collect(),
+                ),
+            );
+        }
+    }
+    public
+}
+
+fn user_reviews(store: &Value, email: &str) -> Value {
+    Value::Array(
+        store
+            .get("reviews")
+            .and_then(Value::as_array)
+            .map(|reviews| {
+                reviews
+                    .iter()
+                    .filter(|review| {
+                        review
+                            .get("userEmail")
+                            .and_then(Value::as_str)
+                            .map(|value| value == email)
+                            .unwrap_or(false)
+                    })
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default(),
+    )
+}
+
+fn saved_carts_for_user(store: &Value, email: &str, include_internal: bool) -> Value {
+    let items = store_nested_items(store, "savedCarts", email);
+    let carts = items
+        .as_array()
+        .map(|saved_carts| {
+            saved_carts
+                .iter()
+                .map(|cart| sanitize_saved_cart_value(cart, include_internal))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    Value::Array(carts)
+}
+
+fn sanitize_saved_cart_value(cart: &Value, include_internal: bool) -> Value {
+    let mut next = cart.clone();
+    if include_internal {
+        return next;
+    }
+    if let Some(map) = next.as_object_mut() {
+        map.remove("managerComment");
+        if let Some(history) = map.get("commentHistory").and_then(Value::as_array) {
+            map.insert(
+                "commentHistory".to_string(),
+                Value::Array(
+                    history
+                        .iter()
+                        .filter(|entry| {
+                            entry
+                                .get("visibility")
+                                .and_then(Value::as_str)
+                                .map(|visibility| visibility != "internal")
+                                .unwrap_or(true)
+                        })
+                        .cloned()
+                        .collect(),
+                ),
+            );
+        }
+    }
+    next
 }
 
 fn verify_password_hash(password: &str, salt_hex: &str, hash_hex: &str) -> bool {
@@ -1218,6 +1521,15 @@ fn cache_headers() -> HeaderMap {
         "public, max-age=300, stale-while-revalidate=3600"
             .parse()
             .expect("valid cache-control"),
+    );
+    headers
+}
+
+fn no_store_headers() -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        header::CACHE_CONTROL,
+        "no-store".parse().expect("valid cache-control"),
     );
     headers
 }
