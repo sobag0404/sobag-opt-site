@@ -141,6 +141,7 @@ test("manager order pages can open guest customer history", async ({ page }) => 
 
   await page.goto(`${BASE_URL}/admin-products?q=opt_`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelectorAll(".admin-product-card").length > 0);
+  await expect(page.locator(".admin-product-card .copy-sku-button").first()).toHaveAttribute("aria-label", /^Скопировать артикул\s+\S+/);
   await expect(page.locator("#adminProductsPage")).toContainText("Экспорт вариантов");
   await expect(page.locator('.admin-products-filter select[name="status"]')).toContainText("Опубликованные");
   await page.goto(`${BASE_URL}/admin-products?status=all&q=opt_`, { waitUntil: "domcontentloaded" });

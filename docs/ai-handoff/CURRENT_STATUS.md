@@ -54,6 +54,9 @@ Completed most recently:
   - shadow comparison passed for popular list, category, lowercase/uppercase search, cursor page 2, and detail;
   - Nginx now sends only catalog query/detail routes to Rust while Node stays active for cart, orders, account, admin, content, and fallback routes;
   - `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` and `npm.cmd run smoke:prod:performance -- --base-url https://sobag-shop.online` passed after the switch.
+- Admin product SKU copy button accessibility:
+  - added an explicit `aria-label` to the copy-SKU icon button in admin product cards;
+  - extended the existing admin-products UI smoke path to assert the accessible label.
 - Rust migration goal prompt:
   - added `docs/ai-handoff/RUST_MIGRATION_GOAL_PROMPT.md`;
   - it starts with a low-risk Rust Axum read-only catalog API beside Node;
