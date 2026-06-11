@@ -18,7 +18,7 @@ use chrono::{DateTime, Utc};
 use pbkdf2::pbkdf2_hmac;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use sha2::Sha256;
+use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use tower_http::trace::TraceLayer;
 
@@ -274,6 +274,9 @@ mod ssr_tests {
         assert_eq!(SESSION_COOKIE, "sobag_session");
         assert_eq!(SESSION_TTL_SECONDS, 2_592_000);
         assert_eq!(session_store_key(token), "sobag:session:abc123");
+        assert!(session_cookie_header(token).contains("HttpOnly"));
+        assert!(session_cookie_header(token).contains("SameSite=Lax"));
+        assert!(expired_session_cookie_header().contains("Max-Age=0"));
         assert_eq!(
             parse_cookie_value("theme=dark; sobag_session=abc123; other=1", SESSION_COOKIE),
             Some("abc123".to_string())
@@ -283,6 +286,42 @@ mod ssr_tests {
             Some("token value".to_string())
         );
         assert_eq!(parse_cookie_value("other=1", SESSION_COOKIE), None);
+    }
+
+    #[test]
+    fn finds_login_user_by_email_or_phone_and_hashes_preview_password() {
+        let (password_hash, password_salt) = hash_password_preview("secret123", "buyer@example.test");
+        let store = json!({
+            "users": {
+                "buyer@example.test": {
+                    "email": "buyer@example.test",
+                    "phone": "+7 968 959-32-54",
+                    "passwordHash": password_hash,
+                    "passwordSalt": password_salt
+                }
+            }
+        });
+        let by_email = find_login_user(&store, "BUYER@example.test").expect("email login");
+        assert_eq!(by_email.0, "buyer@example.test");
+        let by_phone = find_login_user(&store, "89689593254").expect("phone login");
+        assert_eq!(by_phone.0, "buyer@example.test");
+        assert!(verify_user_password("secret123", &by_email.1));
+        assert!(!verify_user_password("wrong", &by_email.1));
+    }
+
+    #[test]
+    fn sanitizes_profile_preview_fields() {
+        let profile = json!({
+            "name": " Buyer ",
+            "phone": "89689593254",
+            "inn": "123abc456789012",
+            "kpp": "12x3456789"
+        });
+        let sanitized = sanitize_profile_value(&profile, &json!({}));
+        assert_eq!(sanitized["name"], "Buyer");
+        assert_eq!(sanitized["phone"], "+7 968 959-32-54");
+        assert_eq!(sanitized["inn"], "123456789012");
+        assert_eq!(sanitized["kpp"], "123456789");
     }
 
     #[test]
@@ -548,6 +587,14 @@ impl AppError {
         }
     }
 
+    fn conflict(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            code,
+            message: message.into(),
+        }
+    }
+
     fn internal(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
@@ -770,7 +817,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/product", get(product_page))
         .route("/rust/product-fragment", get(product_fragment))
         .route("/rust/pages/:slug", get(content_page))
-        .route("/rust/auth/me", get(auth_me_preview))
+        .route("/rust/auth/me", get(auth_me_preview).put(auth_me_update_preview))
+        .route("/rust/auth/login", post(auth_login_preview))
+        .route("/rust/auth/register", post(auth_register_preview))
+        .route("/rust/auth/logout", post(auth_logout_preview))
         .route("/rust/orders", post(order_create_preview))
         .route("/rust/briefs", post(brief_create_preview))
         .route("/rust/admin/orders", get(admin_orders_preview))
@@ -943,6 +993,193 @@ async fn auth_me_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<Value
         .await
         .unwrap_or_else(|_| json!({ "user": null }));
     Ok((no_store_headers(), Json(payload)))
+}
+
+async fn auth_login_preview(
+    Json(data): Json<Value>,
+) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
+    let store = load_file_store_value(STORE_KEY)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+        .unwrap_or_else(default_store_value);
+    let login = clean_text(data.get("login").or_else(|| data.get("email")), 180).unwrap_or_default();
+    let password = data.get("password").and_then(Value::as_str).unwrap_or("");
+    let Some((email, user)) = find_login_user(&store, &login) else {
+        return Err(AppError::unauthorized("Проверьте логин и пароль."));
+    };
+    if !verify_user_password(password, &user) {
+        return Err(AppError::unauthorized("Проверьте логин и пароль."));
+    }
+    let token = preview_session_token(&email);
+    save_file_store_value_with_ttl(
+        &session_store_key(&token),
+        &json!({ "email": email, "createdAt": Utc::now().to_rfc3339() }),
+        SESSION_TTL_SECONDS,
+    )
+    .await
+    .map_err(|error| AppError::internal(error.to_string()))?;
+    let mut headers = no_store_headers();
+    headers.insert(
+        header::SET_COOKIE,
+        session_cookie_header(&token).parse().expect("valid set-cookie"),
+    );
+    Ok((StatusCode::OK, headers, Json(json!({ "user": public_user_value(&user) }))))
+}
+
+async fn auth_register_preview(
+    Json(data): Json<Value>,
+) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
+    let mut store = load_file_store_value(STORE_KEY)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+        .unwrap_or_else(default_store_value);
+    let email = normalize_email(&clean_text(data.get("email"), 180).unwrap_or_default());
+    let password = data.get("password").and_then(Value::as_str).unwrap_or("");
+    let name = clean_text(data.get("name"), 120).unwrap_or_default();
+    let phone = normalize_phone(&clean_text(data.get("phone"), 180).unwrap_or_default());
+    if !is_valid_email(&email) {
+        return Err(AppError::bad_request("invalid_email", "Проверьте email."));
+    }
+    if password.len() < 6 {
+        return Err(AppError::bad_request(
+            "weak_password",
+            "Пароль должен быть не короче 6 символов.",
+        ));
+    }
+    if name.is_empty() || phone.is_empty() {
+        return Err(AppError::bad_request("missing_profile", "Укажите имя и телефон."));
+    }
+    if !data
+        .get("personalDataConsent")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        return Err(AppError::bad_request(
+            "missing_consent",
+            "Подтвердите согласие на обработку персональных данных.",
+        ));
+    }
+
+    let users = ensure_store_users_mut(&mut store);
+    if users
+        .get(&email)
+        .and_then(|user| user.get("passwordHash"))
+        .is_some()
+    {
+        return Err(AppError::conflict(
+            "email_exists",
+            "Этот email уже зарегистрирован в системе.",
+        ));
+    }
+    let now = Utc::now().to_rfc3339();
+    let mut user = users
+        .get(&email)
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    let password_data = hash_password_preview(password, &email);
+    user.insert("email".to_string(), json!(email));
+    user.insert("name".to_string(), json!(name));
+    user.insert("phone".to_string(), json!(phone));
+    user.insert(
+        "role".to_string(),
+        users
+            .get(&email)
+            .and_then(|user| string_field(user, "role"))
+            .map(Value::String)
+            .unwrap_or_else(|| json!("buyer")),
+    );
+    let created_at = now.clone();
+    user.entry("createdAt".to_string())
+        .or_insert_with(|| json!(created_at));
+    user.insert("updatedAt".to_string(), json!(now));
+    user.insert("personalDataConsent".to_string(), json!(true));
+    user.insert("consentAt".to_string(), json!(Utc::now().to_rfc3339()));
+    user.insert(
+        "consentTextVersion".to_string(),
+        json!("personal-data-consent-2026-05-29"),
+    );
+    user.insert("passwordHash".to_string(), json!(password_data.0));
+    user.insert("passwordSalt".to_string(), json!(password_data.1));
+    let user_value = Value::Object(user);
+    users.insert(email.clone(), user_value.clone());
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+
+    let token = preview_session_token(&email);
+    save_file_store_value_with_ttl(
+        &session_store_key(&token),
+        &json!({ "email": email, "createdAt": Utc::now().to_rfc3339() }),
+        SESSION_TTL_SECONDS,
+    )
+    .await
+    .map_err(|error| AppError::internal(error.to_string()))?;
+    let mut headers = no_store_headers();
+    headers.insert(
+        header::SET_COOKIE,
+        session_cookie_header(&token).parse().expect("valid set-cookie"),
+    );
+    Ok((StatusCode::CREATED, headers, Json(json!({ "user": public_user_value(&user_value) }))))
+}
+
+async fn auth_logout_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    if let Some(token) = parse_cookie_value(cookie_header, SESSION_COOKIE) {
+        delete_file_store_value(&session_store_key(&token))
+            .await
+            .map_err(|error| AppError::internal(error.to_string()))?;
+    }
+    let mut headers = no_store_headers();
+    headers.insert(
+        header::SET_COOKIE,
+        expired_session_cookie_header()
+            .parse()
+            .expect("valid set-cookie"),
+    );
+    Ok((headers, Json(json!({ "ok": true }))))
+}
+
+async fn auth_me_update_preview(
+    headers: HeaderMap,
+    Json(data): Json<Value>,
+) -> AppResult<(HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let Some((mut store, user)) = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+    else {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    };
+    let email = string_field(&user, "email").unwrap_or_default();
+    if email.is_empty() {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    }
+    if let Some(profile) = data.get("profile").filter(|value| value.is_object()) {
+        let profile = sanitize_profile_value(profile, &user);
+        let users = ensure_store_users_mut(&mut store);
+        let mut next = user.as_object().cloned().unwrap_or_default();
+        if let Some(profile_map) = profile.as_object() {
+            for (key, value) in profile_map {
+                next.insert(key.clone(), value.clone());
+            }
+        }
+        next.insert("updatedAt".to_string(), json!(Utc::now().to_rfc3339()));
+        users.insert(email.clone(), Value::Object(next));
+        save_file_store_value(STORE_KEY, &store)
+            .await
+            .map_err(|error| AppError::internal(error.to_string()))?;
+    }
+    Ok((
+        no_store_headers(),
+        Json(auth_me_payload_from_values(&store, &json!({ "email": email }))),
+    ))
 }
 
 async fn admin_orders_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<Value>)> {
@@ -1181,6 +1418,48 @@ async fn save_file_store_value(key: &str, value: &Value) -> Result<(), std::io::
     tokio::fs::write(path, format!("{text}\n")).await
 }
 
+async fn save_file_store_value_with_ttl(
+    key: &str,
+    value: &Value,
+    ttl_seconds: i64,
+) -> Result<(), std::io::Error> {
+    if !is_file_store_provider() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "file store provider is not enabled",
+        ));
+    }
+    let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
+    tokio::fs::create_dir_all(&dir).await?;
+    let path = file_store_path_for_key(dir, key);
+    let expires_at = if ttl_seconds > 0 {
+        (Utc::now() + chrono::Duration::seconds(ttl_seconds)).to_rfc3339()
+    } else {
+        String::new()
+    };
+    let record = json!({
+        "version": 1,
+        "expiresAt": expires_at,
+        "value": value
+    });
+    let text = serde_json::to_string_pretty(&record)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error.to_string()))?;
+    tokio::fs::write(path, format!("{text}\n")).await
+}
+
+async fn delete_file_store_value(key: &str) -> Result<(), std::io::Error> {
+    if !is_file_store_provider() {
+        return Ok(());
+    }
+    let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
+    let path = file_store_path_for_key(dir, key);
+    match tokio::fs::remove_file(path).await {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
 fn is_file_store_provider() -> bool {
     matches!(
         env::var("SOBAG_STORE_PROVIDER")
@@ -1207,6 +1486,33 @@ fn file_store_path_for_key(dir: impl AsRef<FsPath>, key: &str) -> PathBuf {
 
 fn session_store_key(token: &str) -> String {
     format!("sobag:session:{}", token.trim())
+}
+
+fn session_cookie_header(token: &str) -> String {
+    let secure = if env::var("NODE_ENV").unwrap_or_default() == "production" {
+        "; Secure"
+    } else {
+        ""
+    };
+    format!(
+        "{}={}; Path=/; HttpOnly; SameSite=Lax; Max-Age={}{}",
+        SESSION_COOKIE,
+        url_encode(token),
+        SESSION_TTL_SECONDS,
+        secure
+    )
+}
+
+fn expired_session_cookie_header() -> String {
+    let secure = if env::var("NODE_ENV").unwrap_or_default() == "production" {
+        "; Secure"
+    } else {
+        ""
+    };
+    format!(
+        "{}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0{}",
+        SESSION_COOKIE, secure
+    )
 }
 
 fn parse_cookie_value(cookie_header: &str, name: &str) -> Option<String> {
@@ -1339,6 +1645,108 @@ fn default_store_value() -> Value {
         "audit": [],
         "version": 1
     })
+}
+
+fn ensure_store_users_mut(store: &mut Value) -> &mut serde_json::Map<String, Value> {
+    if !store.is_object() {
+        *store = default_store_value();
+    }
+    let map = store.as_object_mut().expect("store object");
+    let users = map.entry("users").or_insert_with(|| json!({}));
+    if !users.is_object() {
+        *users = json!({});
+    }
+    users.as_object_mut().expect("users object")
+}
+
+fn normalize_email(value: &str) -> String {
+    value.trim().to_ascii_lowercase()
+}
+
+fn is_valid_email(value: &str) -> bool {
+    let value = value.trim();
+    value == "admin@sobag"
+        || (value.contains('@')
+            && value.contains('.')
+            && !value.chars().any(char::is_whitespace)
+            && !value.starts_with('@')
+            && !value.ends_with('@'))
+}
+
+fn find_login_user(store: &Value, login: &str) -> Option<(String, Value)> {
+    let normalized_email = normalize_email(login);
+    let users = store.get("users")?.as_object()?;
+    if let Some(user) = users.get(&normalized_email) {
+        return Some((normalized_email, user.clone()));
+    }
+    let normalized_phone = normalize_phone(login);
+    if normalized_phone.is_empty() {
+        return None;
+    }
+    users.iter().find_map(|(email, user)| {
+        let phone = string_field(user, "phone")
+            .map(|value| normalize_phone(&value))
+            .unwrap_or_default();
+        if phone == normalized_phone {
+            Some((email.clone(), user.clone()))
+        } else {
+            None
+        }
+    })
+}
+
+fn verify_user_password(password: &str, user: &Value) -> bool {
+    let Some(salt) = string_field(user, "passwordSalt") else {
+        return false;
+    };
+    let Some(hash) = string_field(user, "passwordHash") else {
+        return false;
+    };
+    verify_password_hash(password, &salt, &hash)
+}
+
+fn hash_password_preview(password: &str, email: &str) -> (String, String) {
+    let seed = format!("{}:{}:{}", email, Utc::now().timestamp_millis(), password.len());
+    let digest = Sha256::digest(seed.as_bytes());
+    let salt = hex::encode(&digest[..16]);
+    let mut derived = [0_u8; PBKDF2_KEY_LEN];
+    pbkdf2_hmac::<Sha256>(password.as_bytes(), &digest[..16], PBKDF2_ITERATIONS, &mut derived);
+    (hex::encode(derived), salt)
+}
+
+fn preview_session_token(email: &str) -> String {
+    let seed = format!("{}:{}:{}", email, Utc::now().timestamp_millis(), SESSION_COOKIE);
+    let digest = Sha256::digest(seed.as_bytes());
+    hex::encode(digest)
+}
+
+fn sanitize_profile_value(profile: &Value, existing: &Value) -> Value {
+    let text = |key: &str, limit: usize| {
+        clean_text(profile.get(key), limit)
+            .or_else(|| clean_text(existing.get(key), limit))
+            .unwrap_or_default()
+    };
+    json!({
+        "name": text("name", 120),
+        "phone": normalize_phone(&text("phone", 80)),
+        "company": text("company", 180),
+        "inn": digits_only(&text("inn", 12), 12),
+        "kpp": digits_only(&text("kpp", 9), 9),
+        "legalAddress": text("legalAddress", 240),
+        "city": text("city", 120),
+        "address": text("address", 240),
+        "delivery": text("delivery", 120),
+        "packaging": text("packaging", 120),
+        "orderComment": text("orderComment", 500)
+    })
+}
+
+fn digits_only(value: &str, limit: usize) -> String {
+    value
+        .chars()
+        .filter(|ch| ch.is_ascii_digit())
+        .take(limit)
+        .collect()
 }
 
 fn build_order_record(data: &Value, user: Option<&Value>) -> AppResult<Value> {

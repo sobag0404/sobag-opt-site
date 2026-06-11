@@ -54,6 +54,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
    - Implement login, register, logout, profile update against temporary file-store first.
    - Verify PBKDF2 compatibility with existing Node-generated fixtures.
    - Verify cookie flags and no password fields in responses.
+   - Current status: internal `/rust/auth/login`, `/rust/auth/register`, `/rust/auth/logout`, and `PUT /rust/auth/me` exist only as temp-store preview routes. Deploy smoke verifies login by phone/email, invalid login rejection, profile phone/INN sanitizing, session cookie set/clear, registration session creation, and no password-field leaks. Public `/api/auth/*` remains on Node.
 
 4. Orders and briefs:
    - Implement `/api/orders` POST/PATCH and `/api/briefs` POST in Rust temp-store mode.

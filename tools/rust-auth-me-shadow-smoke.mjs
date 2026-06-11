@@ -58,7 +58,14 @@ function fixtureStore() {
   ];
   return {
     users: {
-      "buyer@example.test": { email: "buyer@example.test", name: "Buyer", role: "buyer", passwordHash: "hidden", passwordSalt: "hidden" },
+      "buyer@example.test": {
+        email: "buyer@example.test",
+        name: "Buyer",
+        role: "buyer",
+        phone: "+7 968 959-32-54",
+        passwordHash: "642284d450b3032d40340ccc7fc96fdaca2ffd9564761ecf7615269b4bef46f8",
+        passwordSalt: "00112233445566778899aabbccddeeff",
+      },
       "manager@example.test": { email: "manager@example.test", name: "Manager", role: "manager", passwordHash: "hidden", passwordSalt: "hidden" },
       "content@example.test": { email: "content@example.test", name: "Content", role: "content", passwordHash: "hidden", passwordSalt: "hidden" },
       "admin@example.test": { email: "admin@example.test", name: "Admin", role: "admin", owner: true, passwordHash: "hidden", passwordSalt: "hidden" },
@@ -137,6 +144,24 @@ async function getJsonResponse(url, token = "") {
   return { ok: response.ok, status: response.status, payload };
 }
 
+async function requestJson(url, { token = "", method = "GET", body = null } = {}) {
+  const headers = token ? { cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` } : {};
+  if (body) headers["content-type"] = "application/json";
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const payload = await response.json().catch(() => ({}));
+  return { status: response.status, headers: response.headers, payload };
+}
+
+function sessionTokenFromSetCookie(response) {
+  const cookie = response.headers.get("set-cookie") || "";
+  const match = cookie.match(/sobag_session=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
   if (value && typeof value === "object") {
@@ -208,6 +233,61 @@ async function runSmoke(args) {
       }
       console.log(`OK ${label} ${status}`);
     }
+    const invalidLogin = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/login`, {
+      method: "POST",
+      body: { login: "buyer@example.test", password: "wrong" },
+    });
+    if (invalidLogin.status !== 401 || invalidLogin.payload.error !== "unauthorized") {
+      throw new Error(`invalid login mismatch: ${invalidLogin.status} ${JSON.stringify(invalidLogin.payload)}`);
+    }
+
+    const login = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/login`, {
+      method: "POST",
+      body: { login: "89689593254", password: "Qwerty1234567899" },
+    });
+    const loginToken = sessionTokenFromSetCookie(login);
+    if (login.status !== 200 || !loginToken) throw new Error(`login mismatch: ${login.status}`);
+    if (JSON.stringify(login.payload).includes("passwordHash") || JSON.stringify(login.payload).includes("passwordSalt")) {
+      throw new Error("login leaked password fields");
+    }
+
+    const profile = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, {
+      token: loginToken,
+      method: "PUT",
+      body: { profile: { name: "Updated Buyer", phone: "89001234567", inn: "123abc456789012" } },
+    });
+    if (profile.status !== 200 || profile.payload.user?.phone !== "+7 900 123-45-67") {
+      throw new Error(`profile update mismatch: ${profile.status} ${JSON.stringify(profile.payload)}`);
+    }
+    if (profile.payload.user?.inn !== "123456789012") throw new Error("profile inn sanitize mismatch");
+
+    const logout = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/logout`, { token: loginToken, method: "POST" });
+    if (logout.status !== 200 || !String(logout.headers.get("set-cookie") || "").includes("Max-Age=0")) {
+      throw new Error(`logout mismatch: ${logout.status}`);
+    }
+    const afterLogout = await getJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, loginToken);
+    if (afterLogout.user !== null) throw new Error("logout session still active");
+
+    const registered = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/register`, {
+      method: "POST",
+      body: {
+        email: "new@example.test",
+        password: "secret123",
+        name: "New Buyer",
+        phone: "89689593255",
+        personalDataConsent: true,
+      },
+    });
+    const registerToken = sessionTokenFromSetCookie(registered);
+    if (registered.status !== 201 || !registerToken || registered.payload.user?.role !== "buyer") {
+      throw new Error(`register mismatch: ${registered.status} ${JSON.stringify(registered.payload)}`);
+    }
+    if (JSON.stringify(registered.payload).includes("passwordHash") || JSON.stringify(registered.payload).includes("passwordSalt")) {
+      throw new Error("register leaked password fields");
+    }
+    const registeredMe = await getJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, registerToken);
+    if (registeredMe.user?.email !== "new@example.test") throw new Error("registered session mismatch");
+    console.log("OK auth write preview login/register/profile/logout");
     console.log("Rust auth/me and admin/orders shadow smoke passed");
   } catch (error) {
     const output = `${node.output()}\n${rust.output()}`.trim();
@@ -224,6 +304,7 @@ function selfTest() {
   if (keyFileName("sobag:store:v1") !== "736f6261673a73746f72653a7631.json") throw new Error("file key mismatch");
   const store = fixtureStore();
   if (!store.users["buyer@example.test"] || store.orders.length !== 2) throw new Error("fixture mismatch");
+  if (!store.users["buyer@example.test"].passwordHash || !store.users["buyer@example.test"].phone) throw new Error("auth write fixture mismatch");
   if (!wrap({ ok: true }, -60).expiresAt) throw new Error("expired wrapper mismatch");
   if (!store.orders[0].crmThread.some((entry) => entry.visibility === "internal")) throw new Error("admin orders fixture mismatch");
   console.log("Rust auth/me and admin/orders shadow smoke self-test passed");

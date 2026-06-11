@@ -1011,6 +1011,7 @@ Backend/storage state:
 - Do not expose env values in chat/docs/repo.
 
 Important remaining work:
+- Current Rust auth write preview slice: internal `/rust/auth/login`, `/rust/auth/register`, `/rust/auth/logout`, and `PUT /rust/auth/me` are implemented for temporary file-store validation only. Deploy smoke now verifies login by phone/email, invalid credentials, profile update sanitizing, registration, session cookie set/clear, and no password-field leaks. Public `/api/auth/*` still stays on Node.
 - Current Rust migration slice: internal Rust SSR/HTMX preview routes and `tools/rust-ssr-smoke.mjs` are verified locally and on VPS temp Rust runtime. `/rust/pages/:slug` now previews editable content pages from file-store content with safe defaults. Full staged migration/parallel-agent plan lives in `docs/rust-full-migration-plan.md`. Do not switch public `/catalog`, `/search`, or public content pages to Rust until preview parity, smoke, deploy, and rollback gates are green.
 - Current auth/orders/admin migration planning slice: `docs/rust-auth-orders-admin-migration-plan.md` and `tools/rust-auth-orders-admin-plan-audit.mjs` define and guard the next Rust write-route stage. No auth/order/admin production route is switched to Rust yet.
 - Deployment: after future pushes, verify `autofix-check`, `vps-deploy`, and `production-smoke`; Vercel is not an active deploy/verification target.
