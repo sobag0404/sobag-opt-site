@@ -50,13 +50,13 @@ function assertContains(text, needle, label) {
 async function main() {
   const args = parseArgs();
   const checks = [
-    ["/rust/catalog?pageSize=2", ["Sobag Opt Rust Preview", "rust-grid", "rust-filter-panel", "hx-get"]],
-    ["/rust/search?q=opt_70190&pageSize=2", ["Sobag Opt Rust Preview", "rust-grid", "opt_70190"]],
+    ["/rust/catalog?pageSize=2", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-shell-search", "rust-grid", "rust-filter-panel", "hx-get"]],
+    ["/rust/search?q=opt_70190&pageSize=2", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-grid", "opt_70190"]],
     ["/rust/catalog?category=%D0%9F%D0%BE%D0%B4%D1%83%D1%88%D0%BA%D0%B8&pageSize=2", ["rust-filter-panel", "checked", "rust-clear-filters"]],
     ["/rust/catalog-fragment?pageSize=2", ["rust-grid", "rust-card"]],
-    ["/rust/product?baseSku=opt_70190", ["Sobag Opt Rust Preview", "rust-product", "rust-product-gallery", "rust-variant-qty", "rust-related", "opt_70190"]],
+    ["/rust/product?baseSku=opt_70190", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-product", "rust-product-gallery", "rust-variant-qty", "rust-related", "opt_70190"]],
     ["/rust/product-fragment?baseSku=opt_70190", ["rust-product", "rust-product-main-image", "rust-variant-table", "rust-related", "opt_70190"]],
-    ["/rust/pages/about", ["Sobag Opt Rust Preview", "rust-content-page", "data-rust-content-page=\"about\""]],
+    ["/rust/pages/about", ["Sobag Opt Rust Preview", "rust-shell-header", "rust-content-page", "data-rust-content-page=\"about\""]],
     ["/rust/pages/business", ["rust-content-page", "data-rust-content-page=\"business\""]],
     ["/rust/pages/contacts", ["rust-content-page", "rust-address", "data-rust-content-page=\"contacts\""]],
     ["/rust/pages/delivery", ["rust-content-page", "data-rust-content-page=\"delivery\""]],
