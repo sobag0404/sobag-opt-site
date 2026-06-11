@@ -125,10 +125,16 @@ async function waitForJson(url, timeout) {
 }
 
 async function getJson(url, token = "") {
+  const result = await getJsonResponse(url, token);
+  if (!result.ok) throw new Error(`${url} -> HTTP ${result.status}`);
+  return result.payload;
+}
+
+async function getJsonResponse(url, token = "") {
   const headers = token ? { cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` } : {};
   const response = await fetch(url, { headers });
-  if (!response.ok) throw new Error(`${url} -> HTTP ${response.status}`);
-  return response.json();
+  const payload = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, payload };
 }
 
 function stable(value) {
@@ -178,7 +184,31 @@ async function runSmoke(args) {
       }
       console.log(`OK ${label} ${digest(rustPayload)}`);
     }
-    console.log("Rust auth/me shadow smoke passed");
+    for (const [label, token] of [
+      ["admin orders admin", "admin"],
+      ["admin orders manager", "manager"],
+    ]) {
+      const nodePayload = await getJson(`http://127.0.0.1:${nodePort}/api/admin/orders`, token);
+      const rustPayload = await getJson(`http://127.0.0.1:${rustPort}/rust/admin/orders`, token);
+      assertSame(label, nodePayload, rustPayload);
+      console.log(`OK ${label} ${digest(rustPayload)}`);
+    }
+    for (const [label, token, status, code] of [
+      ["admin orders anonymous", "", 401, "unauthorized"],
+      ["admin orders buyer", "buyer", 403, "forbidden"],
+      ["admin orders expired", "expired", 401, "unauthorized"],
+    ]) {
+      const nodeResult = await getJsonResponse(`http://127.0.0.1:${nodePort}/api/admin/orders`, token);
+      const rustResult = await getJsonResponse(`http://127.0.0.1:${rustPort}/rust/admin/orders`, token);
+      if (nodeResult.status !== status || rustResult.status !== status) {
+        throw new Error(`${label} status mismatch: node=${nodeResult.status} rust=${rustResult.status}`);
+      }
+      if (nodeResult.payload.error !== code || rustResult.payload.error !== code) {
+        throw new Error(`${label} error mismatch: node=${nodeResult.payload.error} rust=${rustResult.payload.error}`);
+      }
+      console.log(`OK ${label} ${status}`);
+    }
+    console.log("Rust auth/me and admin/orders shadow smoke passed");
   } catch (error) {
     const output = `${node.output()}\n${rust.output()}`.trim();
     if (output) console.error(output.slice(-4000));
@@ -195,7 +225,8 @@ function selfTest() {
   const store = fixtureStore();
   if (!store.users["buyer@example.test"] || store.orders.length !== 2) throw new Error("fixture mismatch");
   if (!wrap({ ok: true }, -60).expiresAt) throw new Error("expired wrapper mismatch");
-  console.log("Rust auth/me shadow smoke self-test passed");
+  if (!store.orders[0].crmThread.some((entry) => entry.visibility === "internal")) throw new Error("admin orders fixture mismatch");
+  console.log("Rust auth/me and admin/orders shadow smoke self-test passed");
 }
 
 const args = parseArgs();

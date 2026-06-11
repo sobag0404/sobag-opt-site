@@ -15,7 +15,8 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 - Rust internal preview routes exist for catalog/search/product and content pages.
 - Rust auth/store foundation helpers exist for Node-compatible `sobag_session`, session store keys, file-store key/wrapper handling, and PBKDF2 SHA-256 verification fixtures.
 - Internal `/rust/auth/me` preview exists for file-store/session fixtures and preserves the current `GET /api/auth/me` response shape without exposing password fields or internal buyer-hidden notes.
-- Deploy-time `tools/rust-auth-me-shadow-smoke.mjs` compares Node `/api/auth/me` and Rust `/rust/auth/me` on a temporary file-store for anonymous, buyer, manager, content, admin, and expired sessions.
+- Internal `/rust/admin/orders` preview exists for read-only admin/manager order lists from the same Node-compatible file-store.
+- Deploy-time `tools/rust-auth-me-shadow-smoke.mjs` compares Node `/api/auth/me` and Rust `/rust/auth/me` on a temporary file-store for anonymous, buyer, manager, content, admin, and expired sessions; it also compares Node `/api/admin/orders` with Rust `/rust/admin/orders` for admin/manager sessions and verifies unauthorized/forbidden cases.
 - Node remains fallback and still owns auth, account, carts, orders, briefs, admin, content writes, reviews, import/PIM, and media writes.
 - VPS storage uses file-store for shared app data; PostgreSQL currently backs public catalog reads.
 
@@ -59,6 +60,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 5. Admin orders/users:
    - Implement admin/manager order list/update and admin users/employees management.
    - Verify role matrix, manager assignment, status history, internal notes, and historical actor preservation.
+   - Current status: read-only `/rust/admin/orders` preview and Node-vs-Rust shadow comparison exist for admin/manager access; write/update routes remain on Node.
 
 6. Admin content/reviews:
    - Implement admin content GET/PUT and review moderation PATCH.

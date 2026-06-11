@@ -3,7 +3,7 @@
 Date: 2026-06-11
 
 Current deployed VPS release:
-- `20260611T070603Z-065dcce`
+- `20260611T111404Z-83113bb`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust admin orders read-only preview:
+  - internal `/rust/admin/orders` reads the Node-compatible file-store and returns the same `{ orders }` payload as Node `/api/admin/orders`;
+  - only `admin` and `manager` roles are allowed; anonymous, buyer, and expired sessions are rejected;
+  - `tools/rust-auth-me-shadow-smoke.mjs` now compares Node-vs-Rust admin/manager order-list success and rejection cases without touching production data;
+  - public `/api/admin/orders` still stays on Node.
 - Rust deploy automation:
   - `.github/workflows/vps-deploy.yml` now runs `cargo test --locked`, `cargo build --release --locked`, installs the Rust binary, restarts `sobag-opt-rust`, verifies `/api/health-rust`, and runs Node-vs-Rust shadow comparison on VPS;
   - failed Rust restart or health restores `/opt/sobag-opt/shared/sobag-opt-rust.previous` and fails the deploy instead of silently leaving broken Rust routes;

@@ -407,6 +407,27 @@ mod ssr_tests {
         );
         assert_eq!(payload, json!({ "user": null }));
     }
+
+    #[test]
+    fn admin_orders_payload_keeps_raw_order_data_for_managers() {
+        let store = json!({
+            "orders": [
+                {
+                    "id": "SO-1",
+                    "crmThread": [
+                        { "visibility": "internal", "text": "manager-only" },
+                        { "visibility": "customer", "text": "customer-visible" }
+                    ]
+                }
+            ]
+        });
+        let payload = admin_orders_payload_from_values(&store);
+        assert_eq!(payload["orders"].as_array().unwrap().len(), 1);
+        assert_eq!(payload["orders"][0]["crmThread"].as_array().unwrap().len(), 2);
+        assert!(can_read_admin_orders(&json!({ "role": "admin" })));
+        assert!(can_read_admin_orders(&json!({ "role": "manager" })));
+        assert!(!can_read_admin_orders(&json!({ "role": "buyer" })));
+    }
 }
 
 #[derive(Debug)]
@@ -429,6 +450,22 @@ impl AppError {
         Self {
             status: StatusCode::NOT_FOUND,
             code,
+            message: message.into(),
+        }
+    }
+
+    fn unauthorized(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::UNAUTHORIZED,
+            code: "unauthorized",
+            message: message.into(),
+        }
+    }
+
+    fn forbidden(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::FORBIDDEN,
+            code: "forbidden",
             message: message.into(),
         }
     }
@@ -656,6 +693,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/product-fragment", get(product_fragment))
         .route("/rust/pages/:slug", get(content_page))
         .route("/rust/auth/me", get(auth_me_preview))
+        .route("/rust/admin/orders", get(admin_orders_preview))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
@@ -827,6 +865,23 @@ async fn auth_me_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<Value
     Ok((no_store_headers(), Json(payload)))
 }
 
+async fn admin_orders_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let Some((store, user)) = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+    else {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    };
+    if !can_read_admin_orders(&user) {
+        return Err(AppError::forbidden("Недостаточно прав."));
+    }
+    Ok((no_store_headers(), Json(admin_orders_payload_from_values(&store))))
+}
+
 async fn render_listing_page(
     state: Arc<AppState>,
     uri: Uri,
@@ -917,6 +972,38 @@ async fn load_auth_me_from_file_store(cookie_header: &str) -> Result<Value, std:
         return Ok(json!({ "user": null }));
     };
     Ok(auth_me_payload_from_values(&store, &session))
+}
+
+async fn load_current_user_from_file_store(
+    cookie_header: &str,
+) -> Result<Option<(Value, Value)>, std::io::Error> {
+    let token = parse_cookie_value(cookie_header, SESSION_COOKIE).unwrap_or_default();
+    if token.trim().is_empty() {
+        return Ok(None);
+    }
+    let Some(session) = load_file_store_value(&session_store_key(&token)).await? else {
+        return Ok(None);
+    };
+    let Some(store) = load_file_store_value(STORE_KEY).await? else {
+        return Ok(None);
+    };
+    let email = session
+        .get("email")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
+    if email.is_empty() {
+        return Ok(None);
+    }
+    let Some(user) = store
+        .get("users")
+        .and_then(Value::as_object)
+        .and_then(|users| users.get(email))
+        .cloned()
+    else {
+        return Ok(None);
+    };
+    Ok(Some((store, user)))
 }
 
 async fn load_file_store_value(key: &str) -> Result<Option<Value>, std::io::Error> {
@@ -1061,6 +1148,23 @@ fn can_use_internal_saved_cart_fields(user: &Value) -> bool {
         user.get("role").and_then(Value::as_str),
         Some("admin" | "manager")
     )
+}
+
+fn can_read_admin_orders(user: &Value) -> bool {
+    matches!(
+        user.get("role").and_then(Value::as_str),
+        Some("admin" | "manager")
+    )
+}
+
+fn admin_orders_payload_from_values(store: &Value) -> Value {
+    json!({
+        "orders": store
+            .get("orders")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default()
+    })
 }
 
 fn store_nested_items(store: &Value, bucket: &str, email: &str) -> Value {
