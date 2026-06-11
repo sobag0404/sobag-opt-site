@@ -11,6 +11,7 @@ assets/bulk-product-photos/
 data/products.import.json
 data/import-report.csv
 node_modules
+rust-server/target/
 test-results/
 __pycache__/
 *.log

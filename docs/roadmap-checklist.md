@@ -124,6 +124,7 @@ Last updated: 2026-06-11
 5. [planned] Performance:
    - [ ] Server-side search/pagination for 10k+ products.
      - [x] First compatible backend slice: `/api/catalog-query` for published card results with query/filter/sort/page/cursor and `/api/catalog-detail` for full published product payloads.
+     - [x] First Rust Axum catalog runtime slice: VPS runs `sobag-opt-rust` under systemd on `127.0.0.1:3001`; Nginx routes only `/api/catalog-query` and `/api/catalog-detail` to Rust, with Node left as fallback for the rest of the site.
      - [x] Migrate frontend catalog list/product modal to the new smaller API payloads.
        - [x] Product modal now hydrates public product detail from `/api/catalog-detail` with static/local fallback.
        - [x] Catalog/search list rendering now uses `/api/catalog-query` compact cards and cursor pagination with local fallback.

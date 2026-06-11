@@ -26,6 +26,7 @@ Production URLs:
 
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
+- Rust migration first slice is live: `sobag-opt-rust` runs under systemd on VPS at `127.0.0.1:3001`, and Nginx routes only `/api/catalog-query` plus `/api/catalog-detail` to Rust; Node.js remains fallback for all other routes;
 - VPS primary domain cutover is complete: `sobag-shop.online` and `www.sobag-shop.online` resolve to `77.239.107.164`, HTTPS is enabled by certbot/Nginx, and production smoke now targets `https://sobag-shop.online`;
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - VPS migration path now has an explicit filesystem store bridge for shared API data; Vercel is not used for future deploy/verification;
@@ -42,6 +43,13 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust catalog API production slice:
+  - added `rust-server/` with Axum read-only catalog API for `/api/health-rust`, `/api/catalog-query`, and `/api/catalog-detail`;
+  - added `tools/rust-catalog-shadow-smoke.mjs` and `npm run smoke:rust:shadow`;
+  - VPS Rust unit tests passed, release binary was installed as `sobag-opt-rust`, and systemd health returns OK;
+  - shadow comparison passed for popular list, category, lowercase/uppercase search, cursor page 2, and detail;
+  - Nginx now sends only catalog query/detail routes to Rust while Node stays active for cart, orders, account, admin, content, and fallback routes;
+  - `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` and `npm.cmd run smoke:prod:performance -- --base-url https://sobag-shop.online` passed after the switch.
 - Rust migration goal prompt:
   - added `docs/ai-handoff/RUST_MIGRATION_GOAL_PROMPT.md`;
   - it starts with a low-risk Rust Axum read-only catalog API beside Node;
