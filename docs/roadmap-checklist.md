@@ -99,7 +99,8 @@ Last updated: 2026-06-11
      - [x] PostgreSQL catalog DB cutover runbook/audit: `docs/catalog-db-cutover-runbook.md` and `tools/catalog-db-cutover-audit.mjs` document and enforce the safe future switch sequence, including offline gates, rollback-only test DB rehearsal, runtime toggle, production readiness smoke, rollback, published-only reads, no product deletion, and no secrets in Git.
      - [x] PostgreSQL env packet validator: `docs/catalog-db-env-packet.md` and `tools/catalog-db-env-packet-audit.mjs` define an ignored no-secret test/staging DB readiness packet before rollback rehearsal or future runtime toggle.
      - [x] PostgreSQL apply plan: `docs/catalog-db-apply-plan.md` and `tools/catalog-db-apply-plan.mjs` build an ignored no-secret rehearsal/cutover plan from the strict DB packet without connecting to PostgreSQL or touching production env.
-     - [ ] Later DB/storage split for product, variant, image, taxonomy, and import-batch entities.
+     - [x] VPS PostgreSQL public catalog cutover: PostgreSQL is installed on VPS, schema+seed were applied after rollback-only rehearsal, and production `/api/catalog-query` plus `/api/catalog-detail` now run with `SOBAG_CATALOG_SOURCE=postgres`.
+     - [ ] Later DB write cutover for admin/import product, variant, image, taxonomy, and import-batch entities.
 
 4. [planned] SEO/content:
    - [ ] Fill final legal/company/contact copy.

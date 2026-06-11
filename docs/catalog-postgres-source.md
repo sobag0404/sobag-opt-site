@@ -1,8 +1,13 @@
 # Catalog PostgreSQL Source
 
-This is a future runtime path for the public catalog list/detail APIs.
+This is the VPS runtime path for the public catalog list/detail APIs.
 
-Current production default stays unchanged:
+Current production state:
+
+- VPS production has `SOBAG_CATALOG_SOURCE=postgres` enabled for `/api/catalog-query` and `/api/catalog-detail`.
+- `/api/health` must report `catalogDb.enabled=true` and `catalogDb.configured=true`.
+
+Code defaults remain safe:
 
 - `SOBAG_CATALOG_SOURCE` unset or not `postgres`: use the existing store/static catalog path.
 - `SOBAG_CATALOG_SOURCE=postgres`: `/api/catalog-query` and `/api/catalog-detail` read through the PostgreSQL source adapter.
@@ -20,7 +25,7 @@ Optional env:
 
 Safety rules:
 
-- Do not enable this in production until the PostgreSQL schema from `docs/pim-postgres-schema.sql` is applied and seeded outside Git.
+- Do not enable this on a new environment until the PostgreSQL schema from `docs/pim-postgres-schema.sql` is applied and seeded outside Git.
 - Do not commit DB dumps, connection strings, or `.env` files.
 - Keep public API compatibility for `/api/catalog`, `/api/catalog-query`, and `/api/catalog-detail`.
 - Public reads must expose only `published` non-hidden products through the guarded public views.

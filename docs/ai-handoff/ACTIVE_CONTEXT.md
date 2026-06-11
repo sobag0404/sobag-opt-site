@@ -33,6 +33,7 @@ Last updated: 2026-06-11
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-11: completed the VPS PostgreSQL public catalog cutover. PostgreSQL is installed on VPS, one current store backup was kept, schema+seed were applied after rollback-only rehearsal, `SOBAG_CATALOG_SOURCE=postgres` is enabled in VPS shared env, and `/api/health` reports `catalogDb.enabled=true` / `configured=true`. Verified live storage/basic/performance smoke plus catalog/search/detail API checks.
 - Current pass 2026-06-11: added `docs/ai-handoff/POSTGRES_CUTOVER_GOAL_PROMPT.md` with the detailed VPS-only PostgreSQL cutover goal prompt. It keeps secrets out of Git/chat, requires rollback rehearsal before cutover, and reminds that the no-Node migration is a later separate stage.
 - Current pass 2026-06-11: switched working deployment context to VPS-only. `tools/vercel-daily-deploy-gate.mjs` now always skips Vercel builds, and handoff docs say not to deploy or verify Vercel unless the user explicitly re-enables it.
 - Current pass 2026-06-11: added `docs/goal-completion-audit.md`, `tools/goal-completion-audit.mjs`, and `npm run audit:goal-completion`; it combines readiness, external packets, and apply-plan coverage as the final strict gate before claiming the four-upgrade goal complete.
@@ -151,7 +152,7 @@ Last updated: 2026-06-11
 ## Current Next Work
 - Current next task: continue remaining roadmap upgrades after the current CWV-readiness slice: real photo migration/WebP/AVIF validation after actual photo set/provider confirmation, later actual DB/storage split implementation when approved, and real Core Web Vitals audit after real catalog/photo growth.
 - SEO next step: real company/legal/contact details only after confirmed facts; Product/FAQ schema, editable catalog landing copy, and offline SEO/content audit are already covered.
-- Import/PIM next step: later DB/storage split for product, variant, image, taxonomy, and import-batch entities. The current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
+- Import/PIM next step: later DB write cutover for admin/import product, variant, image, taxonomy, and import-batch entities. Public catalog query/detail reads are now PostgreSQL-backed on VPS; the current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
 - Deployment next step: VPS primary is live via HTTPS; after future pushes, verify `autofix-check`, `vps-deploy`, `production-smoke`; do not deploy or verify Vercel.
 - Performance next step: real-catalog WebP/AVIF validation and Core Web Vitals audit after larger catalog growth.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.

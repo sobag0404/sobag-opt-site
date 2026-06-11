@@ -30,6 +30,7 @@ Current focus:
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - VPS migration path now has an explicit filesystem store bridge for shared API data; Vercel is not used for future deploy/verification;
 - VPS runtime path now has `server.mjs` for static clean URLs plus existing `/api/*` handlers;
+- Public catalog query/detail reads are now backed by PostgreSQL on VPS via `SOBAG_CATALOG_SOURCE=postgres`;
 - VPS env readiness now has a safe local preflight script and offline self-test coverage;
 - VPS file-store backups now have a local helper and offline backup/restore self-test coverage;
 - VPS launch/cutover now has a step-by-step runbook with preflight, smoke, DNS cutover, rollback, backup, and photo/catalog checks;
@@ -41,6 +42,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS PostgreSQL public catalog cutover:
+  - PostgreSQL is installed on VPS and seeded from the reviewed PIM migration bundle;
+  - rollback-only rehearsal passed before applying schema+seed;
+  - VPS shared env now enables `SOBAG_CATALOG_SOURCE=postgres` for `/api/catalog-query` and `/api/catalog-detail`;
+  - `/api/health` reports `catalogDb.enabled=true` and `catalogDb.configured=true`;
+  - live storage/basic/performance smoke and catalog/search/detail API checks passed.
 - PostgreSQL cutover goal prompt:
   - added `docs/ai-handoff/POSTGRES_CUTOVER_GOAL_PROMPT.md`;
   - it gives the next goal-mode pass a VPS-only PostgreSQL rehearsal/cutover sequence with no secrets in Git/chat;

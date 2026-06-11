@@ -2,7 +2,15 @@
 
 Last updated: 2026-06-11
 
-Цель: безопасно подготовить будущий переход публичного каталога на PostgreSQL для product, variant, image, taxonomy и import-batch entities, сохранив текущие API и production data.
+Цель: безопасно поддерживать переход публичного каталога на PostgreSQL для product, variant, image, taxonomy и import-batch entities, сохранив текущие API и production data.
+
+## Current Cutover Status
+
+- 2026-06-11: VPS production PostgreSQL cutover completed for public `/api/catalog-query` and `/api/catalog-detail`.
+- Current VPS source: `SOBAG_CATALOG_SOURCE=postgres`.
+- `/api/health` should report `catalogDb.enabled=true` and `catalogDb.configured=true`.
+- PostgreSQL was seeded from the reviewed migration bundle after rollback-only rehearsal.
+- Keep rollback path available by removing/reverting `SOBAG_CATALOG_SOURCE` and restarting PM2.
 
 ## Границы
 
