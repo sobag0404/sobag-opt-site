@@ -151,7 +151,34 @@ async function runSmoke(args) {
     const adminOrders = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/orders`, { token: "admin" });
     if (adminOrders.status !== 200) throw new Error(`admin orders status ${adminOrders.status}`);
     if (adminOrders.payload.orders?.[0]?.source !== "rust-write-smoke") throw new Error("created order not visible to admin");
-    console.log("Rust orders write smoke passed");
+
+    const brief = await requestJson(`http://127.0.0.1:${rustPort}/rust/briefs`, {
+      token: "buyer",
+      method: "POST",
+      body: {
+        product: "Подушка",
+        quantity: 100,
+        phone: "89689593254",
+        comment: "Need sample",
+      },
+    });
+    if (brief.status !== 201) throw new Error(`brief create status ${brief.status}: ${JSON.stringify(brief.payload)}`);
+    if (brief.payload.brief?.type !== "custom_print") throw new Error("brief type mismatch");
+    if (brief.payload.order?.source !== "custom_brief") throw new Error("brief order mirror mismatch");
+
+    const invalidBrief = await requestJson(`http://127.0.0.1:${rustPort}/rust/briefs`, {
+      method: "POST",
+      body: { product: "Подушка", quantity: 100, email: "bad-email" },
+    });
+    if (invalidBrief.status !== 400 || invalidBrief.payload.error !== "invalid_email") {
+      throw new Error(`brief validation mismatch: ${invalidBrief.status} ${JSON.stringify(invalidBrief.payload)}`);
+    }
+
+    const adminBriefOrders = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/orders`, { token: "admin" });
+    if (!adminBriefOrders.payload.orders?.some((order) => order.source === "custom_brief" && order.customBrief?.product === "Подушка")) {
+      throw new Error("custom brief not visible to admin orders");
+    }
+    console.log("Rust orders/briefs write smoke passed");
   } catch (error) {
     const output = rust.output().trim();
     if (output) console.error(output.slice(-4000));
@@ -166,7 +193,7 @@ function selfTest() {
   if (keyFileName("sobag:store:v1") !== "736f6261673a73746f72653a7631.json") throw new Error("file key mismatch");
   const store = fixtureStore();
   if (!store.users["buyer@example.test"] || store.orders.length !== 0) throw new Error("fixture mismatch");
-  console.log("Rust orders write smoke self-test passed");
+  console.log("Rust orders/briefs write smoke self-test passed");
 }
 
 const args = parseArgs();

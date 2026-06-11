@@ -3,7 +3,7 @@
 Date: 2026-06-11
 
 Current deployed VPS release:
-- `20260611T113432Z-2be3305`
+- `20260611T115117Z-f471b44`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust briefs temp-store write preview:
+  - internal `/rust/briefs` validates and writes custom print briefs into a temporary Node-compatible file-store;
+  - the preview mirrors each brief into an admin-visible `custom_brief` order, matching the Node business flow;
+  - `tools/rust-orders-write-smoke.mjs` now verifies order create, brief create, validation failures, persistence, and admin visibility;
+  - public `/api/briefs` still stays on Node.
 - Rust orders temp-store write preview:
   - internal `/rust/orders` can create an order in a temporary Node-compatible file-store with minimum-total, phone, and line sanitizing checks;
   - `tools/rust-orders-write-smoke.mjs` verifies create, below-minimum rejection, persistence, and admin visibility through `/rust/admin/orders`;

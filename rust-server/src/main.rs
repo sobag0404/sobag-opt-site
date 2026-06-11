@@ -469,6 +469,43 @@ mod ssr_tests {
         .expect_err("minimum error");
         assert_eq!(error.code, "minimum_total");
     }
+
+    #[test]
+    fn builds_custom_print_brief_and_order_preview_record() {
+        let user = json!({ "email": "buyer@example.test", "name": "Buyer" });
+        let (brief, order) = build_brief_record(
+            &json!({
+                "product": "Подушка",
+                "quantity": 100,
+                "phone": "89689593254",
+                "comment": "Need sample"
+            }),
+            Some(&user),
+        )
+        .expect("brief");
+        assert_eq!(brief["type"], "custom_print");
+        assert_eq!(brief["phone"], "+7 968 959-32-54");
+        assert_eq!(order["source"], "custom_brief");
+        assert_eq!(order["customBrief"]["quantity"], 100);
+        let mut store = default_store_value();
+        push_brief_record(&mut store, brief, order);
+        assert_eq!(store["briefs"].as_array().unwrap().len(), 1);
+        assert_eq!(store["orders"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn rejects_invalid_brief_email() {
+        let error = build_brief_record(
+            &json!({
+                "product": "Подушка",
+                "quantity": 100,
+                "email": "bad-email"
+            }),
+            None,
+        )
+        .expect_err("email error");
+        assert_eq!(error.code, "invalid_email");
+    }
 }
 
 #[derive(Debug)]
@@ -735,6 +772,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/pages/:slug", get(content_page))
         .route("/rust/auth/me", get(auth_me_preview))
         .route("/rust/orders", post(order_create_preview))
+        .route("/rust/briefs", post(brief_create_preview))
         .route("/rust/admin/orders", get(admin_orders_preview))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
@@ -950,6 +988,38 @@ async fn order_create_preview(
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
     Ok((StatusCode::CREATED, no_store_headers(), Json(json!({ "order": order }))))
+}
+
+async fn brief_create_preview(
+    headers: HeaderMap,
+    Json(data): Json<Value>,
+) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let context = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    let mut store = if let Some((store, _)) = context.as_ref() {
+        store.clone()
+    } else {
+        load_file_store_value(STORE_KEY)
+            .await
+            .map_err(|error| AppError::internal(error.to_string()))?
+            .unwrap_or_else(default_store_value)
+    };
+    let user = context.as_ref().map(|(_, user)| user);
+    let (brief, order) = build_brief_record(&data, user)?;
+    push_brief_record(&mut store, brief.clone(), order.clone());
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    Ok((
+        StatusCode::CREATED,
+        no_store_headers(),
+        Json(json!({ "brief": brief, "order": order })),
+    ))
 }
 
 async fn render_listing_page(
@@ -1355,6 +1425,31 @@ fn push_order_record(store: &mut Value, order: Value) {
     }
 }
 
+fn push_brief_record(store: &mut Value, brief: Value, order: Value) {
+    if !store.is_object() {
+        *store = default_store_value();
+    }
+    let Some(map) = store.as_object_mut() else {
+        return;
+    };
+    let briefs = map.entry("briefs").or_insert_with(|| json!([]));
+    if !briefs.is_array() {
+        *briefs = json!([]);
+    }
+    if let Some(items) = briefs.as_array_mut() {
+        items.insert(0, brief);
+        items.truncate(500);
+    }
+    let orders = map.entry("orders").or_insert_with(|| json!([]));
+    if !orders.is_array() {
+        *orders = json!([]);
+    }
+    if let Some(items) = orders.as_array_mut() {
+        items.insert(0, order);
+        items.truncate(1000);
+    }
+}
+
 fn sanitize_order_line(line: &Value) -> Value {
     let variant = line.get("variant").unwrap_or(&Value::Null);
     json!({
@@ -1372,6 +1467,152 @@ fn sanitize_order_line(line: &Value) -> Value {
             "price": variant.get("price").and_then(Value::as_f64).unwrap_or(0.0)
         }
     })
+}
+
+fn build_brief_record(data: &Value, user: Option<&Value>) -> AppResult<(Value, Value)> {
+    let product = clean_text(data.get("product"), 120);
+    let quantity = std::cmp::max(
+        0,
+        data.get("quantity")
+            .and_then(Value::as_f64)
+            .unwrap_or(0.0)
+            .round() as i64,
+    );
+    let name = clean_text(data.get("name"), 160)
+        .or_else(|| user.and_then(|user| string_field(user, "name")))
+        .unwrap_or_default();
+    let contact = clean_text(data.get("contact"), 180).unwrap_or_default();
+    let email = clean_text(data.get("email"), 180)
+        .or_else(|| user.and_then(|user| string_field(user, "email")))
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    let comment = clean_text(data.get("comment"), 1200).unwrap_or_default();
+    let layout_reference = clean_text(data.get("layoutReference"), 500).unwrap_or_default();
+    let phone = normalize_phone(
+        clean_text(data.get("phone"), 180)
+            .unwrap_or_else(|| contact.clone())
+            .as_str(),
+    );
+
+    if product.is_empty() {
+        return Err(AppError::bad_request("missing_product", "Выберите изделие."));
+    }
+    if quantity < 1 {
+        return Err(AppError::bad_request("missing_quantity", "Укажите тираж."));
+    }
+    if contact.is_empty() && phone.is_empty() && email.is_empty() {
+        return Err(AppError::bad_request(
+            "missing_contact",
+            "Укажите контакт для связи.",
+        ));
+    }
+    if !valid_email(&email) {
+        return Err(AppError::bad_request("invalid_email", "Проверьте формат email."));
+    }
+
+    let now = Utc::now();
+    let id = format!("BR-{:06}", now.timestamp_millis().rem_euclid(1_000_000));
+    let brief = json!({
+        "id": id,
+        "type": "custom_print",
+        "source": "custom",
+        "status": "new",
+        "createdAt": now.to_rfc3339(),
+        "userEmail": user.and_then(|user| string_field(user, "email")).unwrap_or_else(|| email.clone()),
+        "product": product,
+        "quantity": quantity,
+        "name": name.clone(),
+        "contact": contact.clone(),
+        "phone": phone,
+        "email": email,
+        "layoutReference": layout_reference.clone(),
+        "comment": comment.clone()
+    });
+    let thread_text = format!(
+        "Заявка на изделие с принтом: {}, тираж {} шт.{}{}",
+        brief["product"].as_str().unwrap_or(""),
+        quantity,
+        if layout_reference.is_empty() {
+            String::new()
+        } else {
+            format!(" Макет/ссылка: {layout_reference}.")
+        },
+        if comment.is_empty() {
+            String::new()
+        } else {
+            format!(" Комментарий: {comment}")
+        }
+    );
+    let customer_comment = [
+        if contact.is_empty() {
+            String::new()
+        } else {
+            format!("Контакт: {contact}")
+        },
+        comment.clone(),
+    ]
+    .into_iter()
+    .filter(|text| !text.is_empty())
+    .collect::<Vec<_>>()
+    .join("\n");
+    let actor = if name.is_empty() {
+        "Покупатель".to_string()
+    } else {
+        name.clone()
+    };
+    let order = json!({
+        "id": id,
+        "date": now.to_rfc3339(),
+        "createdAt": now.to_rfc3339(),
+        "status": "new",
+        "userEmail": brief["userEmail"].clone(),
+        "requestType": "custom_print",
+        "source": "custom_brief",
+        "customer": {
+            "name": brief["name"].clone(),
+            "company": "",
+            "inn": "",
+            "kpp": "",
+            "phone": brief["phone"].clone(),
+            "email": brief["email"].clone(),
+            "city": "",
+            "address": "",
+            "legalAddress": "",
+            "delivery": "",
+            "packaging": "",
+            "layoutFileName": brief["layoutReference"].clone(),
+            "comment": customer_comment
+        },
+        "customBrief": brief.clone(),
+        "items": [],
+        "total": 0,
+        "promo": "",
+        "crmThread": [{
+            "id": format!("CRM-{}", now.timestamp_millis()),
+            "at": now.to_rfc3339(),
+            "actor": actor,
+            "role": "buyer",
+            "visibility": "customer",
+            "text": thread_text
+        }]
+    });
+    Ok((brief, order))
+}
+
+fn clean_text(value: Option<&Value>, limit: usize) -> Option<String> {
+    value
+        .and_then(Value::as_str)
+        .map(|text| text.trim().chars().take(limit).collect::<String>())
+        .filter(|text| !text.is_empty())
+}
+
+fn valid_email(value: &str) -> bool {
+    value.is_empty()
+        || (value.contains('@')
+            && value.contains('.')
+            && !value.chars().any(char::is_whitespace)
+            && !value.starts_with('@')
+            && !value.ends_with('@'))
 }
 
 fn string_field(value: &Value, key: &str) -> Option<String> {

@@ -136,6 +136,7 @@ Last updated: 2026-06-11
      - [x] Rust `auth/me` shadow smoke: deploy now runs a temporary file-store comparison between Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, and expired sessions before accepting the release.
      - [x] Rust admin orders read-only preview: internal `/rust/admin/orders` returns the current admin/manager order-list payload from the Node-compatible file-store, and deploy shadow smoke compares it with Node `/api/admin/orders` without production cutover.
      - [x] Rust orders temp-store write preview: internal `/rust/orders` can create an order in a temporary file-store, and deploy smoke verifies minimum-total rejection plus admin visibility without routing public `/api/orders` away from Node.
+     - [x] Rust briefs temp-store write preview: internal `/rust/briefs` can save custom print briefs and mirror them into admin-visible custom-brief orders in a temporary file-store without routing public `/api/briefs` away from Node.
      - [x] Migrate frontend catalog list/product modal to the new smaller API payloads.
        - [x] Product modal now hydrates public product detail from `/api/catalog-detail` with static/local fallback.
        - [x] Catalog/search list rendering now uses `/api/catalog-query` compact cards and cursor pagination with local fallback.
