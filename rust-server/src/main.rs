@@ -505,6 +505,11 @@ mod ssr_tests {
         assert!(can_read_admin_users(&json!({ "role": "admin" })));
         assert!(can_read_admin_users(&json!({ "role": "manager" })));
         assert!(!can_read_admin_users(&json!({ "role": "buyer" })));
+        assert!(can_manage_admin_users(&json!({ "role": "admin" })));
+        assert!(!can_manage_admin_users(&json!({ "role": "manager" })));
+        assert!(valid_admin_assignable_role("manager"));
+        assert!(valid_admin_assignable_role("content"));
+        assert!(!valid_admin_assignable_role("admin"));
     }
 
     #[test]
@@ -642,6 +647,14 @@ impl AppError {
         Self {
             status: StatusCode::FORBIDDEN,
             code: "forbidden",
+            message: message.into(),
+        }
+    }
+
+    fn forbidden_code(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::FORBIDDEN,
+            code,
             message: message.into(),
         }
     }
@@ -899,7 +912,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/orders", post(order_create_preview))
         .route("/rust/briefs", post(brief_create_preview))
         .route("/rust/admin/orders", get(admin_orders_preview))
-        .route("/rust/admin/users", get(admin_users_preview))
+        .route(
+            "/rust/admin/users",
+            get(admin_users_preview)
+                .post(admin_users_invite_preview)
+                .patch(admin_users_role_patch_preview)
+                .delete(admin_users_delete_preview),
+        )
         .route(
             "/rust/admin/content",
             get(admin_content_preview)
@@ -1345,6 +1364,145 @@ async fn admin_users_preview(
         no_store_headers(),
         Json(json!({ "user": admin_user_detail_from_values(&store, &email)? })),
     ))
+}
+
+async fn admin_users_invite_preview(
+    headers: HeaderMap,
+    Json(data): Json<Value>,
+) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
+    let (mut store, user) = require_admin_user_context(&headers).await?;
+    if !can_manage_admin_users(&user) {
+        return Err(AppError::forbidden(
+            "Сотрудников может добавлять только администратор.",
+        ));
+    }
+    let email = normalize_email(&clean_text(data.get("email"), 180).unwrap_or_default());
+    if !is_valid_email(&email) || email == "admin@sobag" {
+        return Err(AppError::bad_request(
+            "invalid_email",
+            "Проверьте email сотрудника.",
+        ));
+    }
+    let now = Utc::now().to_rfc3339();
+    let users = ensure_store_users_mut(&mut store);
+    let existing = users.get(&email).cloned().unwrap_or_else(|| json!({}));
+    if string_field(&existing, "role")
+        .map(|role| role == "admin")
+        .unwrap_or(false)
+    {
+        return Err(AppError::forbidden_code(
+            "admin_locked",
+            "Администратора нельзя изменить здесь.",
+        ));
+    }
+    let mut next = existing.as_object().cloned().unwrap_or_default();
+    next.insert("email".to_string(), json!(email.clone()));
+    next.insert(
+        "name".to_string(),
+        json!(clean_text(data.get("name"), 120)
+            .or_else(|| string_field(&existing, "name"))
+            .unwrap_or_else(|| email.clone())),
+    );
+    next.insert(
+        "phone".to_string(),
+        json!(normalize_phone(
+            &clean_text(data.get("phone"), 180)
+                .or_else(|| string_field(&existing, "phone"))
+                .unwrap_or_default()
+        )),
+    );
+    next.insert("role".to_string(), json!("manager"));
+    next.insert("employee".to_string(), json!(true));
+    if !next.contains_key("invitedAt") {
+        next.insert("invitedAt".to_string(), json!(now.clone()));
+    }
+    next.insert("updatedAt".to_string(), json!(now));
+    let user_value = Value::Object(next);
+    users.insert(email, user_value.clone());
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    Ok((
+        StatusCode::CREATED,
+        no_store_headers(),
+        Json(json!({ "user": public_user_value(&user_value) })),
+    ))
+}
+
+async fn admin_users_role_patch_preview(
+    headers: HeaderMap,
+    Json(data): Json<Value>,
+) -> AppResult<(HeaderMap, Json<Value>)> {
+    let (mut store, user) = require_admin_user_context(&headers).await?;
+    if !can_manage_admin_users(&user) {
+        return Err(AppError::forbidden(
+            "Роли может менять только администратор.",
+        ));
+    }
+    let email = normalize_email(&clean_text(data.get("email"), 180).unwrap_or_default());
+    let role = clean_text(data.get("role"), 40).unwrap_or_default();
+    if !valid_admin_assignable_role(&role) {
+        return Err(AppError::bad_request("invalid_role", "Некорректная роль."));
+    }
+    let users = ensure_store_users_mut(&mut store);
+    let Some(existing) = users.get(&email).cloned() else {
+        return Err(AppError::not_found("not_found", "Пользователь не найден."));
+    };
+    if string_field(&existing, "role")
+        .map(|role| role == "admin")
+        .unwrap_or(false)
+    {
+        return Err(AppError::forbidden_code(
+            "admin_locked",
+            "Роль администратора нельзя менять здесь.",
+        ));
+    }
+    let mut next = existing.as_object().cloned().unwrap_or_default();
+    next.insert("role".to_string(), json!(role));
+    next.insert("updatedAt".to_string(), json!(Utc::now().to_rfc3339()));
+    let user_value = Value::Object(next);
+    users.insert(email, user_value.clone());
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    Ok((no_store_headers(), Json(json!({ "user": public_user_value(&user_value) }))))
+}
+
+async fn admin_users_delete_preview(
+    headers: HeaderMap,
+    Json(data): Json<Value>,
+) -> AppResult<(HeaderMap, Json<Value>)> {
+    let (mut store, user) = require_admin_user_context(&headers).await?;
+    if !can_manage_admin_users(&user) {
+        return Err(AppError::forbidden(
+            "Сотрудников может удалять только администратор.",
+        ));
+    }
+    let email = normalize_email(&clean_text(data.get("email"), 180).unwrap_or_default());
+    let users = ensure_store_users_mut(&mut store);
+    let Some(existing) = users.get(&email).cloned() else {
+        return Err(AppError::not_found("not_found", "Пользователь не найден."));
+    };
+    if string_field(&existing, "role")
+        .map(|role| role == "admin")
+        .unwrap_or(false)
+    {
+        return Err(AppError::forbidden_code(
+            "admin_locked",
+            "Администратора нельзя удалить здесь.",
+        ));
+    }
+    let mut next = existing.as_object().cloned().unwrap_or_default();
+    next.insert("role".to_string(), json!("buyer"));
+    next.insert("employee".to_string(), json!(false));
+    next.insert("managerRemovedAt".to_string(), json!(Utc::now().to_rfc3339()));
+    next.insert("updatedAt".to_string(), json!(Utc::now().to_rfc3339()));
+    let user_value = Value::Object(next);
+    users.insert(email, user_value.clone());
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
+    Ok((no_store_headers(), Json(json!({ "user": public_user_value(&user_value) }))))
 }
 
 async fn admin_content_preview(headers: HeaderMap, uri: Uri) -> AppResult<(HeaderMap, Json<Value>)> {
@@ -2017,6 +2175,10 @@ fn can_read_admin_users(user: &Value) -> bool {
     )
 }
 
+fn can_manage_admin_users(user: &Value) -> bool {
+    matches!(user.get("role").and_then(Value::as_str), Some("admin"))
+}
+
 fn can_edit_content(user: &Value) -> bool {
     matches!(
         user.get("role").and_then(Value::as_str),
@@ -2034,6 +2196,23 @@ fn admin_orders_payload_from_values(store: &Value) -> Value {
     })
 }
 
+async fn require_admin_user_context(headers: &HeaderMap) -> AppResult<(Value, Value)> {
+    let cookie_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    let Some((store, user)) = load_current_user_from_file_store(cookie_header)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+    else {
+        return Err(AppError::unauthorized("Нужно войти в аккаунт."));
+    };
+    if !can_read_admin_users(&user) {
+        return Err(AppError::forbidden("Недостаточно прав."));
+    }
+    Ok((store, user))
+}
+
 fn admin_users_payload_from_values(store: &Value) -> Value {
     let users = store
         .get("users")
@@ -2041,6 +2220,10 @@ fn admin_users_payload_from_values(store: &Value) -> Value {
         .map(|users| users.values().map(public_user_value).collect::<Vec<_>>())
         .unwrap_or_default();
     json!({ "users": users })
+}
+
+fn valid_admin_assignable_role(role: &str) -> bool {
+    matches!(role, "buyer" | "manager" | "content")
 }
 
 fn admin_user_detail_from_values(store: &Value, email: &str) -> AppResult<Value> {

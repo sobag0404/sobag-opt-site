@@ -248,6 +248,71 @@ async function runSmoke(args) {
       throw new Error("admin users list leaked password fields");
     }
     console.log(`OK admin users list ${digest(rustUsers)}`);
+    const managerInviteForbidden = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/users`, {
+      token: "manager",
+      method: "POST",
+      body: { email: "blocked-manager@example.test" },
+    });
+    if (managerInviteForbidden.status !== 403 || managerInviteForbidden.payload.error !== "forbidden") {
+      throw new Error(`admin users manager invite mismatch: ${managerInviteForbidden.status} ${JSON.stringify(managerInviteForbidden.payload)}`);
+    }
+    const invalidEmployee = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/users`, {
+      token: "admin",
+      method: "POST",
+      body: { email: "bad-email" },
+    });
+    if (invalidEmployee.status !== 400 || invalidEmployee.payload.error !== "invalid_email") {
+      throw new Error(`admin users invalid invite mismatch: ${invalidEmployee.status} ${JSON.stringify(invalidEmployee.payload)}`);
+    }
+    const invitedEmployee = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/users`, {
+      token: "admin",
+      method: "POST",
+      body: { email: "employee@example.test", name: "Employee", phone: "89001234567" },
+    });
+    if (
+      invitedEmployee.status !== 201 ||
+      invitedEmployee.payload.user?.role !== "manager" ||
+      invitedEmployee.payload.user?.employee !== true ||
+      invitedEmployee.payload.user?.phone !== "+7 900 123-45-67"
+    ) {
+      throw new Error(`admin users invite mismatch: ${invitedEmployee.status} ${JSON.stringify(invitedEmployee.payload)}`);
+    }
+    if (JSON.stringify(invitedEmployee.payload).includes("passwordHash") || JSON.stringify(invitedEmployee.payload).includes("passwordSalt")) {
+      throw new Error("admin users invite leaked password fields");
+    }
+    const patchedEmployee = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/users`, {
+      token: "admin",
+      method: "PATCH",
+      body: { email: "employee@example.test", role: "content" },
+    });
+    if (patchedEmployee.status !== 200 || patchedEmployee.payload.user?.role !== "content") {
+      throw new Error(`admin users role patch mismatch: ${patchedEmployee.status} ${JSON.stringify(patchedEmployee.payload)}`);
+    }
+    const invalidRole = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/users`, {
+      token: "admin",
+      method: "PATCH",
+      body: { email: "employee@example.test", role: "admin" },
+    });
+    if (invalidRole.status !== 400 || invalidRole.payload.error !== "invalid_role") {
+      throw new Error(`admin users invalid role mismatch: ${invalidRole.status} ${JSON.stringify(invalidRole.payload)}`);
+    }
+    const deletedEmployee = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/users`, {
+      token: "admin",
+      method: "DELETE",
+      body: { email: "employee@example.test" },
+    });
+    if (deletedEmployee.status !== 200 || deletedEmployee.payload.user?.role !== "buyer" || deletedEmployee.payload.user?.employee !== false) {
+      throw new Error(`admin users delete mismatch: ${deletedEmployee.status} ${JSON.stringify(deletedEmployee.payload)}`);
+    }
+    const adminLocked = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/users`, {
+      token: "admin",
+      method: "DELETE",
+      body: { email: "admin@example.test" },
+    });
+    if (adminLocked.status !== 403 || adminLocked.payload.error !== "admin_locked") {
+      throw new Error(`admin users admin-locked mismatch: ${adminLocked.status} ${JSON.stringify(adminLocked.payload)}`);
+    }
+    console.log("OK admin users write preview invite/role/delete");
     for (const [label, token, status, code] of [
       ["admin orders anonymous", "", 401, "unauthorized"],
       ["admin orders buyer", "buyer", 403, "forbidden"],
