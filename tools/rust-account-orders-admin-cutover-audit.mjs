@@ -8,6 +8,7 @@ const RUNBOOK = "docs/rust-account-orders-admin-cutover-runbook.md";
 const RUST_MAIN = "rust-server/src/main.rs";
 const AUTH_SMOKE = "tools/rust-auth-me-shadow-smoke.mjs";
 const ORDER_SMOKE = "tools/rust-orders-write-smoke.mjs";
+const ROUTE_REHEARSAL = "tools/rust-account-route-rehearsal.mjs";
 
 const PREVIEW_ROUTES = [
   "/rust/auth/me",
@@ -46,6 +47,8 @@ const REQUIRED_MARKERS = [
   "Route Group Order",
   "Required Gates Per Route Group",
   "Nginx Cutover Shape",
+  "rehearse:rust-account-routes",
+  "must reject generic `/api`, wildcard `/api/admin`",
   "Post-Cutover Checks",
   "Rollback",
   "Do not add wildcard `/api/admin/` or generic `/api/` proxy to Rust",
@@ -62,7 +65,7 @@ function routeDeclaration(route) {
   return `"${route}"`;
 }
 
-function auditCutover({ runbook, rustMain, authSmoke, orderSmoke }) {
+function auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal }) {
   const errors = [];
   REQUIRED_MARKERS.forEach((marker) => assertIncludes(runbook, marker, RUNBOOK, errors));
   PREVIEW_ROUTES.forEach((route) => {
@@ -80,6 +83,15 @@ function auditCutover({ runbook, rustMain, authSmoke, orderSmoke }) {
     "/rust/briefs",
     "/rust/admin/orders",
   ].forEach((route) => assertIncludes(orderSmoke, route, ORDER_SMOKE, errors));
+  [
+    "auth-read",
+    "auth-write",
+    "orders-briefs",
+    "admin-orders",
+    "admin-users",
+    "admin-content",
+    "assertSafeLocations",
+  ].forEach((marker) => assertIncludes(routeRehearsal, marker, ROUTE_REHEARSAL, errors));
   if (/location\s+\/api\/\s+.*3001/s.test(runbook)) errors.push("runbook must not route generic /api/ to Rust");
   if (/location\s+\^~\s+\/api\/admin/.test(runbook)) errors.push("runbook must not route wildcard /api/admin/ to Rust");
   if (/password\s*=|token\s*=|BEGIN RSA/i.test(runbook)) errors.push("runbook must not contain secrets or env values");
@@ -92,11 +104,12 @@ function selfTest() {
   const rustMain = PREVIEW_ROUTES.map(routeDeclaration).join("\n");
   const authSmoke = ["/rust/auth/me", "/rust/admin/orders", "/rust/admin/users"].join("\n");
   const orderSmoke = ["/rust/orders", "/rust/briefs", "/rust/admin/orders"].join("\n");
-  const summary = auditCutover({ runbook, rustMain, authSmoke, orderSmoke });
+  const routeRehearsal = ["auth-read", "auth-write", "orders-briefs", "admin-orders", "admin-users", "admin-content", "assertSafeLocations"].join("\n");
+  const summary = auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal });
   if (summary.previewRoutes !== PREVIEW_ROUTES.length) throw new Error("self-test preview route count mismatch");
   let rejected = false;
   try {
-    auditCutover({ runbook: runbook.replace("Node remains authoritative", ""), rustMain, authSmoke, orderSmoke });
+    auditCutover({ runbook: runbook.replace("Node remains authoritative", ""), rustMain, authSmoke, orderSmoke, routeRehearsal });
   } catch (error) {
     rejected = /Node remains authoritative/.test(error.message);
   }
@@ -120,6 +133,7 @@ function main() {
     rustMain: readRequired(RUST_MAIN),
     authSmoke: readRequired(AUTH_SMOKE),
     orderSmoke: readRequired(ORDER_SMOKE),
+    routeRehearsal: readRequired(ROUTE_REHEARSAL),
   });
   console.log(
     `Rust account/orders/admin cutover audit passed: ${summary.previewRoutes} preview routes, ${summary.blockedRoutes} blocked public routes`

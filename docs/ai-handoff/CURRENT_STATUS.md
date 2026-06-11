@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust account/orders/admin route rehearsal guard:
+  - added `tools/rust-account-route-rehearsal.mjs` and `npm run rehearse:rust-account-routes`;
+  - it generates exact future Nginx `location = ...` snippets per route group and rejects generic `/api`, wildcard `/api/admin`, and blocked admin catalog/import/media/PIM routes;
+  - no production Nginx route or production data was changed.
 - Rust order/brief creation parity:
   - internal `/rust/orders` now updates buyer profile fields from created orders like the current Node `/api/orders` handler;
   - `tools/rust-orders-write-smoke.mjs` now starts temporary Node and Rust runtimes on the same temporary file-store and compares order creation, account side effects, and custom-print brief creation;

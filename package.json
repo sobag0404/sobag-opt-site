@@ -31,6 +31,7 @@
     "smoke:rust:auth-me": "node tools/rust-auth-me-shadow-smoke.mjs",
     "smoke:rust:orders-write": "node tools/rust-orders-write-smoke.mjs",
     "audit:rust-account-cutover": "node tools/rust-account-orders-admin-cutover-audit.mjs",
+    "rehearse:rust-account-routes": "node tools/rust-account-route-rehearsal.mjs",
     "audit:rust-ssr-cutover": "node tools/rust-ssr-cutover-audit.mjs",
     "audit:rust-migration-plan": "node tools/rust-auth-orders-admin-plan-audit.mjs",
     "audit:production-workflow": "node tools/production-workflow-audit.mjs",

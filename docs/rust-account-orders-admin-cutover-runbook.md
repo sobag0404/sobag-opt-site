@@ -73,6 +73,15 @@ Additional write-route requirements:
 
 Switch only one exact route group at a time. Keep generic `location /` on Node.
 
+Before editing Nginx, rehearse the exact locations locally:
+
+```powershell
+npm.cmd run rehearse:rust-account-routes -- --group auth-read
+npm.cmd run rehearse:rust-account-routes -- --group orders-briefs
+```
+
+The rehearsal prints exact `location = ...` blocks only. It must reject generic `/api`, wildcard `/api/admin`, and admin catalog/import/media/PIM locations until those later route groups are explicitly covered.
+
 Allowed future exact locations only after gates:
 
 - `location = /api/auth/me`
