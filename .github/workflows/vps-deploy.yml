@@ -96,4 +96,13 @@ jobs:
 
           pm2 save --force
           curl -fsS http://127.0.0.1:3000/api/health
+
+          mapfile -t releases < <(ls -1dt "$app_dir"/releases/* 2>/dev/null || true)
+          keep_current="$(readlink -f "$app_dir/current")"
+          keep_previous="${releases[1]:-}"
+          for old_release in "${releases[@]}"; do
+            if [ "$old_release" != "$keep_current" ] && [ "$old_release" != "$keep_previous" ]; then
+              rm -rf -- "$old_release"
+            fi
+          done
           REMOTE
