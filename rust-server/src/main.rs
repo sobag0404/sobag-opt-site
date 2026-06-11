@@ -2120,11 +2120,94 @@ fn render_page_head(title: &str) -> String {
 
 fn render_page_head_with_routes(title: &str, routes: &RenderRoutes) -> String {
     format!(
-        "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} | Sobag Opt</title><style>{}</style><script defer src=\"https://unpkg.com/htmx.org@1.9.12\"></script></head><body>{}",
+        "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} | Sobag Opt</title><style>{}</style><script defer src=\"https://unpkg.com/htmx.org@1.9.12\"></script>{}</head><body>{}",
         escape_html(title),
         "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-shell-top{border-bottom:1px solid #ddd;background:#f7f7f7}.rust-shell-top__inner,.rust-shell-header__inner{max-width:1180px;margin:0 auto;padding:8px 24px;display:flex;align-items:center;gap:18px}.rust-shell-top__inner{justify-content:center}.rust-shell-top a,.rust-shell-header a{color:#111;text-decoration:none;font-weight:700}.rust-shell-header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #ddd}.rust-shell-logo{display:flex;align-items:center;gap:12px;font-size:24px;font-weight:900;letter-spacing:1px}.rust-shell-logo span{display:grid;place-items:center;width:48px;height:48px;border-radius:10px;background:#111;color:#fff}.rust-shell-catalog,.rust-shell-cart{border-radius:8px;background:#111;color:#fff!important;padding:14px 18px}.rust-shell-search{flex:1;display:flex}.rust-shell-search input{width:100%;padding:14px 16px;border:1px solid #ddd;border-radius:12px;background:#f4f4f4}.rust-shell-actions{display:flex;gap:8px}.rust-shell-icon{border:1px solid #ccc;border-radius:8px;padding:12px}.rust-catalog,.rust-product,.rust-content-page{max-width:1180px;margin:0 auto;padding:24px}.rust-catalog-layout{display:grid;grid-template-columns:240px 1fr;gap:24px}.rust-filter-panel{border-right:1px solid #ddd;padding-right:16px}.rust-filter-group{border-top:1px solid #ddd;padding:14px 0}.rust-filter-group h2{font-size:16px;margin:0 0 10px}.rust-filter-option{display:flex;gap:8px;align-items:flex-start;margin:8px 0}.rust-filter-option input{margin-top:3px}.rust-filter-option span:last-child{color:#666}.rust-toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-clear-filters{border:1px solid #bbb;border-radius:6px;color:#111;padding:12px;text-decoration:none}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-pager{margin-top:18px}.rust-product-layout{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:28px}.rust-product-main-image,.rust-product-thumbs img{width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px;background:#eee}.rust-product-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.rust-product-meta{display:flex;flex-wrap:wrap;gap:8px}.rust-chip{border:1px solid #bbb;border-radius:999px;padding:6px 10px}.rust-variant-table{width:100%;border-collapse:collapse}.rust-variant-table th,.rust-variant-table td{border-bottom:1px solid #ddd;padding:10px;text-align:left}.rust-variant-qty{max-width:90px;padding:8px;border:1px solid #bbb;border-radius:6px}.rust-related{margin-top:28px}.rust-content-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}.rust-content-nav a{border:1px solid #bbb;border-radius:6px;padding:8px 10px;color:#111;text-decoration:none}.rust-content-hero{border-bottom:2px solid #111;padding-bottom:18px}.rust-content-hero h1{font-size:44px;line-height:1;margin:0 0 12px}.rust-content-panel{background:#f4f4f4;border:1px solid #ddd;border-radius:8px;margin-top:18px;padding:18px}.rust-content-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.rust-address{font-weight:700}@media(max-width:760px){.rust-shell-top__inner{display:none}.rust-shell-header__inner{flex-wrap:wrap}.rust-shell-search{order:3;flex-basis:100%}.rust-catalog-layout,.rust-product-layout{grid-template-columns:1fr}.rust-filter-panel{border-right:0;border-bottom:1px solid #ddd;padding-right:0}.rust-toolbar input,.rust-toolbar select,.rust-toolbar button{width:100%}}",
+        render_cart_bridge_script(),
         render_preview_shell_header(routes)
     )
+}
+
+fn render_cart_bridge_script() -> &'static str {
+    r#"<script defer>
+(function(){
+  function cartKey(){var user=localStorage.getItem("sobag.currentUser");return user?"sobag.cart."+user:"sobag.cart.guest";}
+  function readCart(){try{var data=JSON.parse(localStorage.getItem(cartKey())||"[]");return Array.isArray(data)?data:[]}catch(_){return[]}}
+  function writeCart(items){localStorage.setItem(cartKey(),JSON.stringify(items));}
+  function clampQty(value){var qty=Math.round(Number(value)||1);return Math.max(1,Math.min(99999,qty));}
+  function cartQty(items){return items.reduce(function(sum,pair){return sum+Number(pair&&pair[1]&&pair[1].qty||0)},0);}
+  function syncCart(items){if(!localStorage.getItem("sobag.currentUser"))return;fetch("/api/auth/me",{method:"PUT",credentials:"include",headers:{"content-type":"application/json"},body:JSON.stringify({cartItems:items})}).catch(function(){});}
+  function baseSkuFromSku(sku){var match=String(sku||"").match(/^opt_[0-9]+/i);return match?match[0]:String(sku||"");}
+  function parsePrice(value){return Number(String(value||"").replace(/[^0-9]/g,""))||0;}
+  function productContext(){
+    var title=document.querySelector(".rust-product-info h1");
+    var image=document.querySelector(".rust-product-main-image");
+    return {name:(title&&title.textContent.trim())||"",image:(image&&image.getAttribute("src"))||""};
+  }
+  function lineFromRow(row){
+    var cells=row?row.querySelectorAll("td"):[];
+    var sku=(cells[0]&&cells[0].textContent.trim())||"";
+    if(!sku)return null;
+    var ctx=productContext();
+    var baseSku=baseSkuFromSku(sku);
+    var variantName=ctx.name;
+    return {
+      key:baseSku+":"+sku,
+      productId:baseSku,
+      productName:variantName,
+      productImage:ctx.image,
+      qty:1,
+      variant:{sku:sku,name:variantName,type:(cells[1]&&cells[1].textContent.trim())||"",size:(cells[2]&&cells[2].textContent.trim())||"",material:"",price:parsePrice(cells[3]&&cells[3].textContent)}
+    };
+  }
+  function updateCartLink(items){var cartLink=document.querySelector(".rust-shell-cart");if(cartLink)cartLink.textContent="\u041A\u043E\u0440\u0437\u0438\u043D\u0430 "+cartQty(items);}
+  function ensureVariantButtons(){
+    var header=document.querySelector(".rust-variant-table thead tr");
+    if(header&&!header.querySelector("[data-rust-cart-th]")){
+      var th=document.createElement("th");
+      th.setAttribute("data-rust-cart-th","");
+      th.textContent="";
+      header.appendChild(th);
+    }
+    document.querySelectorAll(".rust-variant-table tbody tr").forEach(function(row){
+      if(row.querySelector("[data-rust-add-cart]"))return;
+      row.setAttribute("data-rust-variant-row","");
+      var cell=document.createElement("td");
+      var button=document.createElement("button");
+      button.type="button";
+      button.setAttribute("data-rust-add-cart","");
+      button.textContent="\u0412 \u043A\u043E\u0440\u0437\u0438\u043D\u0443";
+      cell.appendChild(button);
+      row.appendChild(cell);
+    });
+    updateCartLink(readCart());
+  }
+  document.addEventListener("DOMContentLoaded",ensureVariantButtons);
+  document.body&&document.body.addEventListener("htmx:afterSwap",ensureVariantButtons);
+  document.addEventListener("click",function(event){
+    var button=event.target.closest("[data-rust-add-cart]");
+    if(!button)return;
+    var row=button.closest("[data-rust-variant-row]");
+    var input=row&&row.querySelector(".rust-variant-qty");
+    var qty=clampQty(input&&input.value);
+    var line;
+    try{line=JSON.parse(button.getAttribute("data-cart-line")||"null");}catch(_){line=null;}
+    if(!line)line=lineFromRow(row);
+    if(!line||!line.variant||!line.variant.sku)return;
+    var key=button.getAttribute("data-cart-key")||line.key||line.variant.sku;
+    var items=readCart();
+    var existing=items.find(function(pair){return Array.isArray(pair)&&pair[0]===key;});
+    if(existing&&existing[1])existing[1].qty=clampQty(Number(existing[1].qty||0)+qty);
+    else{line.key=key;line.qty=qty;items.push([key,line]);}
+    writeCart(items);
+    syncCart(items);
+    updateCartLink(items);
+    var old=button.textContent;
+    button.textContent="\u0414\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043E";
+    setTimeout(function(){button.textContent=old;},1200);
+  });
+})();
+</script>"#
 }
 
 fn render_preview_shell_header(routes: &RenderRoutes) -> String {

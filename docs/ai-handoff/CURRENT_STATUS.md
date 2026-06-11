@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR product cart bridge:
+  - full Rust product pages now append add-to-cart buttons to variant rows client-side;
+  - the bridge writes current storefront-compatible `sobag.cart.guest` / `sobag.cart.<user>` localStorage entries;
+  - authenticated carts are synced through `/api/auth/me`, leaving Node fallback authoritative until full cutover;
+  - smoke/audit guard the `sobag.cart.guest` and `data-rust-add-cart` markers.
 - Rust SSR public-readiness guard:
   - Rust listing pages no longer render the service-only `Node fallback` link;
   - `tools/rust-ssr-smoke.mjs` rejects `Node fallback` on every Rust SSR candidate route;

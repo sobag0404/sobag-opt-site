@@ -47,6 +47,8 @@ curl -fsS http://127.0.0.1:3000/api/health
 
 Public Rust pages must not expose preview/debug branding such as `Rust Preview` or service labels such as `Node fallback` in page titles, links, or body text before any public route is switched.
 
+Product pages must keep cart compatibility before cutover: Rust SSR product pages include the cart bridge script that writes the same `sobag.cart.guest` / `sobag.cart.<user>` localStorage entries as the current storefront and syncs authenticated carts through `/api/auth/me`.
+
 From the local machine:
 
 ```powershell
