@@ -9,7 +9,7 @@ Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
 - branch: `main`
 - repo visibility: private
-- Deployment state: primary domain is on the VPS with HTTPS; keep the Vercel deployment/version context as a maintained fallback/reference path.
+- Deployment state: primary domain is on the VPS with HTTPS; Vercel deployment is disabled and no longer part of the working target.
 
 Production URLs:
 - Main: `https://sobag-shop.online/`
@@ -28,11 +28,11 @@ Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - VPS primary domain cutover is complete: `sobag-shop.online` and `www.sobag-shop.online` resolve to `77.239.107.164`, HTTPS is enabled by certbot/Nginx, and production smoke now targets `https://sobag-shop.online`;
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
-- VPS migration path now has an explicit filesystem store bridge for shared API data, while Vercel remains on Redis/KV fallback;
+- VPS migration path now has an explicit filesystem store bridge for shared API data; Vercel is not used for future deploy/verification;
 - VPS runtime path now has `server.mjs` for static clean URLs plus existing `/api/*` handlers;
 - VPS env readiness now has a safe local preflight script and offline self-test coverage;
 - VPS file-store backups now have a local helper and offline backup/restore self-test coverage;
-- VPS launch/cutover now has a step-by-step runbook with preflight, smoke, DNS cutover, rollback, backup, photo/catalog, and Vercel fallback checks;
+- VPS launch/cutover now has a step-by-step runbook with preflight, smoke, DNS cutover, rollback, backup, and photo/catalog checks;
 - Goal-mode UI invariant: product photos and category/collection/holiday photos should stay square 1:1; catalog home top return action should say `На главную`, while selected catalog pages should say `В каталог`;
 - Performance work has started with server-side catalog query/detail APIs, product modal detail hydration, catalog/search list rendering through compact query payloads, server-backed visible filter options, no-full-catalog bootstrap for successful server-query listing pages, smaller public query page size, and smaller local fallback pages;
 - Responsive product images now have frontend `<picture>` selection for stored AVIF/WebP variants; real migrated catalog validation is still pending.
@@ -41,6 +41,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- VPS-only deployment context:
+  - `tools/vercel-daily-deploy-gate.mjs` now always skips Vercel builds;
+  - handoff/deploy docs now say not to deploy or verify Vercel unless the user explicitly re-enables it;
+  - current code compatibility is left intact because the planned future direction is a separate no-Node migration.
 - Goal completion audit:
   - added `docs/goal-completion-audit.md`, `tools/goal-completion-audit.mjs`, and `npm run audit:goal-completion`;
   - it combines goal readiness, external input packets, and apply-plan coverage;
@@ -355,10 +359,10 @@ Completed most recently:
   - selected category/collection/holiday catalog pages now use one compact row with `В каталог`, title, product count, and sorting;
   - the old large heading/upper `КАТАЛОГ` area is hidden on listing pages;
   - product cards start much closer to the header while catalog home still keeps `На главную`.
-- Vercel fallback deploy throttling:
+- Vercel deploy disabled:
   - VPS remains the always-on deploy target after each green push to `main`;
   - `vercel.json` now uses `ignoreCommand` with `tools/vercel-daily-deploy-gate.mjs`;
-  - Vercel skips normal pushes by default and builds fallback only when commit message includes `[vercel]`, `[fallback]`, or `[force-vercel]`.
+  - Vercel skips all builds; VPS is the only active deployment target.
 - Vercel fallback API router fix:
   - `api-router.js` now statically imports every `server-routes/*` handler instead of requiring them through dynamic strings;
   - this keeps VPS and Vercel on the same handler map while letting Vercel trace and bundle the catch-all API route correctly.
@@ -446,7 +450,7 @@ Completed most recently:
   - added `server.mjs` to serve static files with clean URLs and dispatch the existing API handlers outside Vercel;
   - added npm scripts `start:vps` and `smoke:vps`;
   - added `tools/vps-server-smoke.mjs` and AutoFix coverage for `/`, `/catalog`, `/api/health`, `/api/catalog-query`, and `/api/catalog-detail` with file-store env;
-  - updated VPS/backend docs while keeping the Vercel Redis/KV fallback path unchanged.
+  - updated VPS/backend docs; Vercel deploy is now disabled and no longer verified.
 - Health/store status and catalog UI invariant slice:
   - `/api/health` now exposes safe `store.provider/configured` status without paths, URLs, tokens, or credentials;
   - file-store smoke verifies provider status and AutoFix includes a health store-status smoke;
@@ -455,7 +459,7 @@ Completed most recently:
 - VPS file-store bridge slice:
   - `api/_lib/store.js` supports explicit `SOBAG_STORE_PROVIDER=file` and `SOBAG_FILE_STORE_DIR`;
   - the file backend persists shared users, sessions with TTL, orders, saved carts, favorites, reviews, editable content, catalog payload/PIM sidecar, and import batches through the existing store API;
-  - Redis/KV remains the default provider for Vercel/fallback deployments;
+  - Redis/KV compatibility remains in the store layer, but future deploy/verification targets VPS only;
   - `.sobag-store/` is ignored, `docs/vps-migration-notes.md` documents the VPS path, and `tools/file-store-smoke.mjs` is included in AutoFix.
 - Smaller catalog page payload slice:
   - frontend `/api/catalog-query` requests now use `pageSize=48`, matching the server default instead of forcing 120 cards per page;
@@ -511,10 +515,10 @@ Completed most recently:
 - Production smoke post-deploy workflow slice:
   - added `.github/workflows/production-smoke.yml`;
   - workflow runs after successful `autofix-check` workflow runs caused by push to `main`;
-  - workflow can also be launched manually with a custom `base_url` for fallback/preview checks;
+  - workflow can also be launched manually with a custom production VPS `base_url`;
   - it uses Node 22 and runs `tools/production-smoke.mjs` directly, so no secrets or Vercel API are needed;
   - `tools/production-smoke.mjs` now supports `--retries` and `--retry-delay`;
-  - CI smoke uses `--timeout 15000 --retries 6 --retry-delay 20000` to tolerate async Vercel deploy timing;
+  - CI smoke uses `--timeout 15000 --retries 6 --retry-delay 20000` to tolerate VPS rollout timing;
   - roadmap now marks automated production smoke after deploy as done;
 - Production smoke automation slice:
   - added `tools/production-smoke.mjs`;

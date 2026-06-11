@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Production or fallback base URL"
+        description: "Production VPS base URL"
         required: false
         default: "https://sobag-shop.online"
 

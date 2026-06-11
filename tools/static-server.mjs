@@ -62,5 +62,5 @@ createServer((request, response) => {
   createReadStream(filePath).pipe(response);
 }).listen(port, host, () => {
   console.log(`Sobag static dev server: http://${host}:${port}`);
-  console.log("Use npm run dev:vercel only when Vercel API routes/env are needed.");
+  console.log("VPS-only mode: use npm run dev:static for UI work; dev:vercel is legacy.");
 });

@@ -12,12 +12,12 @@ Last updated: 2026-06-11
 - Путь к проекту: `C:\Users\SoBag\OneDrive\Документы\New project\sobag-opt-site`
 - Репозиторий: `https://github.com/sobag0404/sobag-opt-site`
 - Основная ветка: `main`
-- Production/preview URL: `https://sobag-shop.online`, fallback `https://sobag-opt-site.vercel.app`
-- Основной стек: static HTML/CSS/JS, Vercel API routes, Upstash Redis / Vercel KV-compatible storage.
-- Deployment state: primary domain is on the VPS with HTTPS; keep Vercel as the Redis/KV fallback path.
+- Production URL: `https://sobag-shop.online` on VPS `77.239.107.164`.
+- Основной стек: static HTML/CSS/JS + Node.js API on VPS; Vercel deployment is disabled and no longer part of the working target.
+- Deployment state: primary domain is on the VPS with HTTPS; do not deploy or verify Vercel unless the user explicitly re-enables it.
 - Где лежит основной код: `app.js`, `cart.js`, HTML pages in repo root, shared shell in `components/site-shell.js`, API in `api/`.
 - Где лежат тесты/проверки: `tools/autofix.mjs`, `tools/ui-smoke.spec.js`, `tools/audit_catalog.py`.
-- Локальный запуск: `npm run dev:static` для легкой верстки без API; `npm run dev:vercel` только для Vercel Functions/env проверок.
+- Локальный запуск: `npm run dev:static` для легкой верстки без API; `npm run dev:vercel` считать legacy-командой и не использовать без отдельного запроса.
 
 ## Current Product / Goal
 - Что это за проект: B2B-сайт Sobag Opt для оптовой продажи текстиля с каталогом, вариантами товаров, корзиной-КП, заявками, аккаунтами, ролями и админ-инструментами.
@@ -28,11 +28,12 @@ Last updated: 2026-06-11
 ## Current User Preferences
 - Язык ответов: русский.
 - Дизайн/стиль: дневная тема черно-бело-серая; ночная тема может использовать оранжевые акценты.
-- Ограничения: не использовать старый Tilda-сайт и его изображения; не коммитить большие папки фото/импорт-выводы; беречь лимит Vercel Hobby Functions.
+- Ограничения: не использовать старый Tilda-сайт и его изображения; не коммитить большие папки фото/импорт-выводы; не тратить Vercel, деплой только VPS.
 - Prompt/handoff preference: подробные промпты класть в repo docs/ai-handoff и пушить на GitHub; в чат отдавать версию не длиннее 4000 символов.
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-11: switched working deployment context to VPS-only. `tools/vercel-daily-deploy-gate.mjs` now always skips Vercel builds, and handoff docs say not to deploy or verify Vercel unless the user explicitly re-enables it.
 - Current pass 2026-06-11: added `docs/goal-completion-audit.md`, `tools/goal-completion-audit.mjs`, and `npm run audit:goal-completion`; it combines readiness, external packets, and apply-plan coverage as the final strict gate before claiming the four-upgrade goal complete.
 - Current pass 2026-06-10: added `docs/cwv-field-apply-plan.md`, `tools/cwv-field-apply-plan.mjs`, and `npm run plan:cwv-field`; after a strict real CWV field packet is available, it creates an ignored final performance verification plan without calling production APIs or changing server state.
 - Current pass 2026-06-10: added `docs/catalog-db-apply-plan.md`, `tools/catalog-db-apply-plan.mjs`, and `npm run plan:catalog-db`; after a strict catalog DB packet is available, it creates an ignored no-secret PostgreSQL rehearsal/cutover plan without connecting to DB or touching production env.
@@ -95,7 +96,7 @@ Last updated: 2026-06-11
 - Current pass 2026-06-10: simplified the catalog/favorites side cart per user feedback. The side panel no longer contains an order form; checkout/customer/company data entry now happens only on `/cart`. The side panel keeps mini-cart totals and a single `Оформить в корзине` CTA. The header cart button now shows current discount progress/discount info, the selected catalog layout gives more width to product cards by narrowing the side panel, and product card borders are lighter.
 - Current pass 2026-06-10: fixed order submission/admin visibility reliability and the catalog side-cart UI. Buyer/cart/saved-quote order submissions and order CRM actions no longer silently fall back to local-only records when the backend is unavailable; successful submit now requires `/api/orders` or `/api/admin/orders` to persist on the server. Admin pages now refresh after server session checks and require a server admin/manager session when the backend is available. The catalog/favorites side cart removed company/requisites fields, keeps only contact/delivery fields, has visible field borders, and has its own scrollable panel; filter label `Скидка по количеству` is now `Скидка`. `tools/vps-write-smoke.mjs` now covers guest order creation appearing in admin orders.
 - Current pass 2026-06-10: compacted selected catalog/category header after user screenshot. Category pages now hide the old `page-back`/large section heading and use one compact listing row with `В каталог`, category title, product count, and sort select. Product grid starts higher; Playwright visual check saved `test-results/catalog-compact-head-final.png`.
-- Current pass 2026-06-10: added Vercel fallback deploy throttling. VPS still deploys on every green push to `main`; Vercel Git auto-build is gated by `tools/vercel-daily-deploy-gate.mjs` through `vercel.json` `ignoreCommand`, skips normal pushes by default, and builds fallback only when commit message includes `[vercel]`, `[fallback]`, or `[force-vercel]`.
+- Current pass 2026-06-10/11: Vercel deploy is disabled by `tools/vercel-daily-deploy-gate.mjs`; VPS still deploys on every green push to `main`.
 - Current pass 2026-06-10: fixed Vercel fallback API bundling after the catch-all route split. `api-router.js` now uses static `require(...)` imports for `server-routes/*` so Vercel can trace and include handlers; VPS `server.mjs` still uses the same router.
 - Current pass 2026-06-10: cleaned up catalog listing UI per user screenshots. `catalog.html` now has one top return button: `На главную` on catalog home and `В каталог` on selected category/collection/holiday pages. The duplicate section return button was removed, the selected-listing top spacing was tightened, and the visible `#catalogSeoCopy` promo/SEO plaque under filters was disabled while keeping metadata/content checks intact. UI smoke now guards the home/category button labels and hidden plaque.
 - Current pass 2026-06-10: added a 10k+ catalog runtime performance slice. Public `/api/catalog-query` card payload no longer includes unused `galleryCount`; `tools/catalog-query-scale-smoke.mjs` now guards against detail/gallery fields in list payloads; public server-query cursor pages append only newly loaded cards instead of replacing the existing first-page DOM; product cards use `content-visibility` containment for long lists; Playwright smoke now verifies cursor pagination keeps the first-page card node stable.
@@ -150,7 +151,7 @@ Last updated: 2026-06-11
 - Current next task: continue remaining roadmap upgrades after the current CWV-readiness slice: real photo migration/WebP/AVIF validation after actual photo set/provider confirmation, later actual DB/storage split implementation when approved, and real Core Web Vitals audit after real catalog/photo growth.
 - SEO next step: real company/legal/contact details only after confirmed facts; Product/FAQ schema, editable catalog landing copy, and offline SEO/content audit are already covered.
 - Import/PIM next step: later DB/storage split for product, variant, image, taxonomy, and import-batch entities. The current compatible sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider are already implemented.
-- Deployment next step: VPS primary is live via HTTPS; after future pushes, verify `autofix-check`, `vps-deploy`, `production-smoke`; Vercel fallback is skipped by default and should be deployed intentionally, usually once per day, via commit message marker `[vercel]`.
+- Deployment next step: VPS primary is live via HTTPS; after future pushes, verify `autofix-check`, `vps-deploy`, `production-smoke`; do not deploy or verify Vercel.
 - Performance next step: real-catalog WebP/AVIF validation and Core Web Vitals audit after larger catalog growth.
 - Риски: не удалить старые товары без команды, не создать дубли по `baseSku`, не сломать текущий каталог, цены, варианты, реальные фото и импортный workflow.
 
@@ -175,7 +176,7 @@ Last updated: 2026-06-11
 - Current order persistence / side-cart UI verification: `node --check app.js`; `node --check cart.js`; `node --check tools/ui-smoke.spec.js`; `node --check tools/vps-write-smoke.mjs`; `npm.cmd run smoke:vps:write`; `npm.cmd run check`; `npm.cmd run ui:smoke` 13/13 after `dev:static`; Playwright visual/DOM check confirmed `.request-panel` scrolls to the submit button, company fields are absent, and form field borders are visible.
 - Current no side-order-form pass verification: `node --check app.js`; `git diff --check`; `npm.cmd run check`; `npm.cmd run ui:smoke` 13/13 after `dev:static`; Playwright visual/DOM check saved `test-results/catalog-no-side-form.png` and confirmed no `#requestForm`, `Оформить в корзине` CTA, discount info in header cart button, 280px side panel, and 1px light product-card borders.
 - Current VPS DNS/SSL cutover verification: authoritative REG.RU DNS returns `77.239.107.164` for `sobag-shop.online` and `www.sobag-shop.online`; certbot installed the Nginx certificate; `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` passed 4/4; GitHub `production-smoke` run `27258638138` passed with `PRODUCTION_BASE_URL=https://sobag-shop.online`.
-- Current Vercel fallback router fix verification: `node --check api-router.js`; `npm.cmd run check`; full `npm.cmd run ui:smoke` 13/13 after `dev:static`; post-deploy fallback smoke should be rerun against `https://sobag-opt-site.vercel.app`.
+- Current legacy router verification: `node --check api-router.js`; `npm.cmd run check`; full `npm.cmd run ui:smoke` 13/13 after `dev:static`. Vercel post-deploy smoke is no longer part of the workflow.
 - Current catalog UI cleanup verification: `node --check app.js`; `node --check tools/ui-smoke.spec.js`; `npm.cmd run check`; full `npm.cmd run ui:smoke` 13/13 after `dev:static`; Playwright visual position check saved `test-results/catalog-category-ui-check.png` and confirmed `В каталог`, hidden `#catalogSeoCopy`, and product grid moved up.
 - Current 10k+ catalog runtime pass verification: `node --check app.js`; `node --check api/_lib/catalog-query.js`; `node --check tools/catalog-query-scale-smoke.mjs`; `node --check tools/catalog-performance-audit.mjs`; `node --check tools/ui-smoke.spec.js`; `npm.cmd run smoke:catalog:scale`; `npm.cmd run audit:performance`; focused `npm.cmd run ui:smoke -- --grep "10k pages bounded"` after `dev:static`.
 - Current VPS launch runbook pass verification: `node --check tools/vps-release-audit.mjs`; `npm.cmd run audit:vps-release`; `npm.cmd run check`.

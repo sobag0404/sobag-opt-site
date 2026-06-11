@@ -1,6 +1,6 @@
 # Sobag Opt Roadmap Checklist
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Already Mostly Done
 
@@ -15,7 +15,7 @@ Last updated: 2026-06-10
 - [x] Cart as commercial proposal: save draft, restore, rename, XLSX/CSV export, print/PDF, send to manager.
 - [x] Buyer account basics: profile, companies/requisites, addresses, dedicated order tab with statuses/messages, favorites, saved carts.
 - [x] Admin/manager order pages with statuses, manager notes, customer profile links, and status history.
-- [x] Server-backed auth/orders/catalog/content through existing Vercel Functions and KV/Redis-compatible storage.
+- [x] Server-backed auth/orders/catalog/content through the shared API handlers; active production target is VPS only.
 - [x] Admin catalog tools: products, prices, import, content, users/roles, employees/manager access by email.
 - [x] Product import workflow and local importer.
 - [x] Basic SEO pages, sitemap, robots, Organization/CollectionPage/BreadcrumbList JSON-LD.
@@ -72,7 +72,7 @@ Last updated: 2026-06-10
    - [ ] Separate normalized database for products, variants, images, tags, and imports.
      - [x] First compatible sidecar payload in the current catalog storage shape: normalized products, variants, images, taxonomies, counts, and safe import batch summaries.
      - [x] Admin diagnostics/export endpoint for the PIM sidecar: summary/full/table views and CSV exports for products, variants, images, taxonomies, and import batches.
-     - [x] VPS storage bridge: explicit `SOBAG_STORE_PROVIDER=file` backend for shared data, catalog, content, import batches, and sessions, while Vercel stays on Redis/KV.
+     - [x] VPS storage bridge: explicit `SOBAG_STORE_PROVIDER=file` backend for shared data, catalog, content, import batches, and sessions; Vercel is no longer an active deploy target.
      - [x] Offline normalized PIM export for future DB import: products, variants, images, taxonomies, import-batches JSONL, and manifest.
      - [x] Offline image-variant export: normalized PIM export now writes `image-variants.jsonl` for the future PostgreSQL `image_variants` table when responsive image metadata exists.
      - [x] DB split contract bridge: PIM sidecar/export now includes product-taxonomy assignment rows and `tools/pim-db-contract-audit.mjs` validates the future product/variant/image/taxonomy/import-batch table contract offline.
@@ -153,17 +153,17 @@ Last updated: 2026-06-10
    - [ ] Core Web Vitals audit after real catalog growth.
 
 6. [planned] QA/security/ops:
-   - [x] VPS runtime path: `server.mjs` serves static clean URLs plus existing `/api/*` handlers, with file-store read/write smoke coverage and Vercel fallback preserved.
+   - [x] VPS runtime path: `server.mjs` serves static clean URLs plus existing `/api/*` handlers, with file-store read/write smoke coverage.
    - [x] VPS launch runbook: step-by-step preflight, launch, smoke, DNS cutover, rollback, backup, and fallback checks without touching production env/cache/user data.
    - [x] VPS DNS/SSL cutover: `sobag-shop.online` and `www.sobag-shop.online` resolve to `77.239.107.164`, certbot/Nginx HTTPS is active, `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online` passes, and repo variable `PRODUCTION_BASE_URL` targets the domain.
-   - [x] VPS release audit: offline check for required runtime files/scripts, Vercel fallback scripts, ignore rules, and forbidden tracked secret/local-output artifacts.
+   - [x] VPS release audit: offline check for required runtime files/scripts, ignore rules, and forbidden tracked secret/local-output artifacts.
    - [x] VPS env preflight: `tools/vps-preflight.mjs` checks Node 20+, file-store readiness, bootstrap admin env, and S3-compatible object-storage env without printing secrets; AutoFix covers the self-test fixture.
    - [x] VPS file-store backup/restore fixture: `tools/file-store-backup.mjs` copies only JSON store records with a manifest, supports guarded restore, and AutoFix covers the self-test.
    - [x] Stronger mojibake guard in AutoFix.
    - [x] Automated production smoke after deploy.
      - [x] Read-only production smoke script for `/`, `/catalog`, `/cart`, and `/api/health`, with offline self-test in AutoFix.
      - [x] Wire the live smoke into the post-deploy routine after push/deploy: GitHub Actions runs it after successful `autofix-check` on `main`, with manual fallback/preview dispatch support.
-   - [x] Vercel fallback deploy throttle: VPS deploys every green push; Vercel Git builds are skipped by default and run only when commit message includes `[vercel]`, `[fallback]`, or `[force-vercel]`.
+   - [x] Vercel deploy disabled: VPS deploys every green push; Vercel Git builds are always skipped by `tools/vercel-daily-deploy-gate.mjs`.
    - [x] Error monitoring/log review workflow.
      - [x] Structured server-side `api_error` logs in the shared API error handler with request ids.
      - [x] `tools/error-log-audit.mjs`, npm script `audit:errors`, AutoFix coverage, and `docs/error-log-review.md` runbook.

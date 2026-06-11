@@ -15,7 +15,7 @@ Use this prompt when starting the next goal-mode run for Sobag Opt.
 - production: https://sobag-shop.online
 - VPS: 77.239.107.164
 - текущая архитектура: static HTML/CSS/JS + Node.js API на VPS
-- Vercel не основная цель; держать только как старый fallback/reference, не деплоить без явной причины
+- Vercel исключен из рабочего контура: не деплоить и не проверять, активная цель только VPS; кодовую совместимость убрать позже в отдельной миграции без Node.js
 - P0/P1 commercial readiness уже закрыт: custom print request сохраняется на сервере, footer pages есть, privacy/consent разделены, карты не строятся по заглушкам, checkout ниже 30 000 ₽ заблокирован, mobile/header/qty/promo/skeleton/H1/collections исправлены
 
 Стартовый протокол:
