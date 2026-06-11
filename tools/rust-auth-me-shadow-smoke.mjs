@@ -248,6 +248,32 @@ function contentStateBody() {
   };
 }
 
+function reviewPatchSlice(response) {
+  return {
+    status: response.status,
+    deleted: response.payload.deleted,
+    error: response.payload.error,
+    review: response.payload.review
+      ? {
+          id: response.payload.review.id,
+          status: response.payload.review.status,
+          moderatedBy: response.payload.review.moderatedBy,
+        }
+      : response.payload.review,
+  };
+}
+
+function reviewListSlice(response) {
+  return {
+    status: response.status,
+    reviews: (response.payload.reviews || []).map((review) => ({
+      id: review.id,
+      status: review.status,
+      moderatedBy: review.moderatedBy || null,
+    })),
+  };
+}
+
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-auth-shadow-"));
   const nodePort = 53000 + Math.floor(Math.random() * 1000);
@@ -597,6 +623,39 @@ async function runSmoke(args) {
     if (contentReviews.status !== 200 || contentReviews.payload.reviews?.[0]?.id !== "REV-1") {
       throw new Error(`admin content reviews mismatch: ${contentReviews.status} ${JSON.stringify(contentReviews.payload)}`);
     }
+    await createFixtureStore(temp);
+    const nodePatchedReview = await requestJson(`http://127.0.0.1:${nodePort}/api/admin/content`, {
+      token: "content",
+      method: "PATCH",
+      body: { reviewId: "REV-1", status: "hidden" },
+    });
+    const nodeReviewsAfterPatch = await requestJson(`http://127.0.0.1:${nodePort}/api/admin/content?reviews=1`, { token: "admin" });
+    await createFixtureStore(temp);
+    const rustPatchedReview = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, {
+      token: "content",
+      method: "PATCH",
+      body: { reviewId: "REV-1", status: "hidden" },
+    });
+    const rustReviewsAfterPatch = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content?reviews=1`, { token: "admin" });
+    assertSame("admin review patch", reviewPatchSlice(nodePatchedReview), reviewPatchSlice(rustPatchedReview));
+    assertSame("admin reviews after patch", reviewListSlice(nodeReviewsAfterPatch), reviewListSlice(rustReviewsAfterPatch));
+    await createFixtureStore(temp);
+    const nodeDeletedReview = await requestJson(`http://127.0.0.1:${nodePort}/api/admin/content`, {
+      token: "admin",
+      method: "PATCH",
+      body: { reviewId: "REV-2", delete: true },
+    });
+    const nodeReviewsAfterDelete = await requestJson(`http://127.0.0.1:${nodePort}/api/admin/content?reviews=1`, { token: "admin" });
+    await createFixtureStore(temp);
+    const rustDeletedReview = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, {
+      token: "admin",
+      method: "PATCH",
+      body: { reviewId: "REV-2", delete: true },
+    });
+    const rustReviewsAfterDelete = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content?reviews=1`, { token: "admin" });
+    assertSame("admin review delete", reviewPatchSlice(nodeDeletedReview), reviewPatchSlice(rustDeletedReview));
+    assertSame("admin reviews after delete", reviewListSlice(nodeReviewsAfterDelete), reviewListSlice(rustReviewsAfterDelete));
+    await createFixtureStore(temp);
     const patchedReview = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, {
       token: "content",
       method: "PATCH",
