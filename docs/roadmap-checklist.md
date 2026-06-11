@@ -36,6 +36,7 @@ Last updated: 2026-06-11
 - [x] Rust buyer order message preview: `/rust/orders` now covers authenticated buyer PATCH comments in a temporary file-store, with ownership checks and internal CRM-note hiding; public `/api/orders` still stays on Node until cutover gates are green.
 - [x] Rust admin orders preview: `/rust/admin/orders` mirrors Node admin/manager order reads and covers temp-store status, manager assignment, manager note, customer/internal comment, history, and audit PATCH behavior; public `/api/admin/orders` still stays on Node until cutover gates are green.
 - [x] Rust admin users preview: `/rust/admin/users` mirrors Node admin/manager user/customer reads and covers temp-store invite/role/delete writes; public `/api/admin/users` still stays on Node until cutover gates are green.
+- [x] Rust admin content parity smoke: deploy shadow smoke now compares Node `/api/admin/content` and Rust `/rust/admin/content` PUT plus follow-up GET from identical temporary fixtures.
 - [x] Product reviews: authorized buyer form, rating/text, approved reviews in product modal, admin moderation and persistence through existing storage/API.
 - [x] Goal-mode UI invariant: product photos and category/collection/holiday photos render as square 1:1 previews; catalog home uses `На главную`, while selected catalog pages use `В каталог` for the top return action.
 - [x] Compact selected catalog header: category pages use one dense row with back button, title, count, and sorting, without the old large white heading area.
@@ -151,6 +152,7 @@ Last updated: 2026-06-11
      - [x] Rust account state write preview: internal `PUT /rust/auth/me` now also covers temporary cartItems, favoriteItems, savedCarts, and buyer review validation/writes with Node-compatible sanitizing and buyer-hidden internal saved-cart fields.
      - [x] Rust account state parity guard: `tools/rust-auth-me-shadow-smoke.mjs` now resets identical temp fixtures and compares Node vs Rust account-state PUT responses before any account route cutover.
      - [x] Rust admin content temp-store preview: internal `/rust/admin/content` supports admin/content GET and PUT against the Node-compatible content store, rejects buyer access and invalid payloads, and keeps public `/api/admin/content` on Node.
+     - [x] Rust admin content parity guard: `tools/rust-auth-me-shadow-smoke.mjs` now compares Node vs Rust content PUT count/persisted content/updatedBy before any admin content route cutover.
      - [x] Rust review moderation temp-store preview: internal `PATCH /rust/admin/content` supports approve/hide/delete review moderation with audit records in the temporary store, while public review moderation remains on Node.
      - [x] Rust buyer order PATCH preview: internal `/rust/orders` supports authenticated buyer customer-visible messages with ownership checks and no internal CRM-note leakage, while public `/api/orders` remains on Node.
      - [x] Rust orders temp-store write preview: internal `/rust/orders` can create an order in a temporary file-store, and deploy smoke verifies minimum-total rejection plus admin visibility without routing public `/api/orders` away from Node.

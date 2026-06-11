@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust admin content write parity smoke:
+  - `tools/rust-auth-me-shadow-smoke.mjs` now compares Node `/api/admin/content` and Rust `/rust/admin/content` PUT behavior from identical temporary content/store fixtures;
+  - the comparison checks update `count`, persisted `content`, and `updatedBy` through follow-up admin GET;
+  - public `/api/admin/content` still stays on Node and no production route/data cutover was made.
 - Rust account-state write parity smoke:
   - `tools/rust-auth-me-shadow-smoke.mjs` now compares Node `/api/auth/me` and Rust `/rust/auth/me` account-state PUT output from identical temporary file-store fixtures;
   - the comparison covers `cartItems`, `favoriteItems`, and `savedCarts` sanitizing, including hidden internal saved-cart comments for buyers;

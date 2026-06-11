@@ -237,6 +237,17 @@ function accountStateSlice(payload) {
   };
 }
 
+function contentStateBody() {
+  return {
+    content: {
+      brandName: "Updated Sobag",
+      contactsSchedule: "10-18",
+      footerPhone: "+7 901 879-41-62",
+      aboutLead: "Production preview",
+    },
+  };
+}
+
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-auth-shadow-"));
   const nodePort = 53000 + Math.floor(Math.random() * 1000);
@@ -530,6 +541,38 @@ async function runSmoke(args) {
     if (contentForbidden.status !== 403 || contentForbidden.payload.error !== "forbidden") {
       throw new Error(`admin content forbidden mismatch: ${contentForbidden.status} ${JSON.stringify(contentForbidden.payload)}`);
     }
+    const contentBody = contentStateBody();
+    await createFixtureStore(temp);
+    const nodeContentUpdate = await requestJson(`http://127.0.0.1:${nodePort}/api/admin/content`, {
+      token: "content",
+      method: "PUT",
+      body: contentBody,
+    });
+    const nodeContentAfter = await requestJson(`http://127.0.0.1:${nodePort}/api/admin/content`, { token: "admin" });
+    await createFixtureStore(temp);
+    const rustContentUpdate = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, {
+      token: "content",
+      method: "PUT",
+      body: contentBody,
+    });
+    const rustContentAfter = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, { token: "admin" });
+    if (nodeContentUpdate.status !== 200 || rustContentUpdate.status !== 200) {
+      throw new Error(`admin content parity status mismatch: node ${nodeContentUpdate.status}, rust ${rustContentUpdate.status}`);
+    }
+    assertSame(
+      "admin content put",
+      {
+        count: nodeContentUpdate.payload.count,
+        content: nodeContentAfter.payload.content,
+        updatedBy: nodeContentAfter.payload.updatedBy,
+      },
+      {
+        count: rustContentUpdate.payload.count,
+        content: rustContentAfter.payload.content,
+        updatedBy: rustContentAfter.payload.updatedBy,
+      },
+    );
+    await createFixtureStore(temp);
     const invalidContent = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, {
       token: "content",
       method: "PUT",
