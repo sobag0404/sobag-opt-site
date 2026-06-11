@@ -33,6 +33,7 @@ Last updated: 2026-06-11
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-11: added `docs/ai-handoff/RUST_MIGRATION_GOAL_PROMPT.md` with the staged no-Node migration goal: start Rust Axum read-only catalog API beside Node, verify in shadow mode, then switch only catalog query/detail routes before later SSR/HTMX and full Node removal.
 - Current pass 2026-06-11: completed the VPS PostgreSQL public catalog cutover. PostgreSQL is installed on VPS, one current store backup was kept, schema+seed were applied after rollback-only rehearsal, `SOBAG_CATALOG_SOURCE=postgres` is enabled in VPS shared env, and `/api/health` reports `catalogDb.enabled=true` / `configured=true`. Verified live storage/basic/performance smoke plus catalog/search/detail API checks.
 - Current pass 2026-06-11: added `docs/ai-handoff/POSTGRES_CUTOVER_GOAL_PROMPT.md` with the detailed VPS-only PostgreSQL cutover goal prompt. It keeps secrets out of Git/chat, requires rollback rehearsal before cutover, and reminds that the no-Node migration is a later separate stage.
 - Current pass 2026-06-11: switched working deployment context to VPS-only. `tools/vercel-daily-deploy-gate.mjs` now always skips Vercel builds, and handoff docs say not to deploy or verify Vercel unless the user explicitly re-enables it.

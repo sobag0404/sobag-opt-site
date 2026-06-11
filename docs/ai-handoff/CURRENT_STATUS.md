@@ -3,7 +3,7 @@
 Date: 2026-06-11
 
 Current deployed VPS release:
-- `20260611T064237Z-83b7b21`
+- `20260611T070603Z-065dcce`
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -42,6 +42,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust migration goal prompt:
+  - added `docs/ai-handoff/RUST_MIGRATION_GOAL_PROMPT.md`;
+  - it starts with a low-risk Rust Axum read-only catalog API beside Node;
+  - Redis, Meilisearch, MinIO/S3, and full Node removal are deferred until staged coverage and/or VPS upgrade.
 - VPS PostgreSQL public catalog cutover:
   - PostgreSQL is installed on VPS and seeded from the reviewed PIM migration bundle;
   - rollback-only rehearsal passed before applying schema+seed;
