@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Confirmed public contact details:
+  - static `contacts.html`, shared footer `components/site-shell.js`, and `defaultSiteContent` in `app.js` now use `+7 901 879-41-62`, `ip.burago@yandex.ru`, the Republic of Mordovia legal/production address, and the Kursk production branch;
+  - Yandex map widgets stay hidden with `data-map-pending` until exact Yandex URLs are confirmed;
+  - `npm.cmd run audit:content-readiness` reports `finalReady=true` and `pending=none`.
 - Rust catalog API production slice:
   - added `rust-server/` with Axum read-only catalog API for `/api/health-rust`, `/api/catalog-query`, and `/api/catalog-detail`;
   - added `tools/rust-catalog-shadow-smoke.mjs` and `npm run smoke:rust:shadow`;

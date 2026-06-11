@@ -109,6 +109,7 @@ Last updated: 2026-06-11
      - [x] Offline SEO/content audit: public pages and current default content are checked for stale test/prototype/Tilda/placeholder copy, fake contacts, required meta descriptions, catalog SEO copy, FAQ schema surface, `В каталог`, and editable category/collection/holiday descriptions.
      - [x] Public fallback phone is no longer a fake `+7 900...` number; unconfirmed phone output points users to contacts, and Organization JSON-LD omits `telephone` until a real number is configured.
      - [x] Content readiness guard: `tools/content-readiness-report.mjs` reports final contact/address readiness, rejects fake/old public contact data, and keeps unconfirmed phone/address values explicitly pending until real facts are provided.
+     - [x] Confirmed public contact details are published in static contacts/footer content and default site content: phone, email, legal address, and Kursk production branch; map widgets remain pending until exact Yandex URLs are confirmed.
      - [x] Final content packet validator: `docs/final-content-packet.md` and `tools/final-content-packet-audit.mjs` define and validate the local ignored packet for confirmed phone, company, legal/production addresses, schedule, and Yandex map URLs before publication.
      - [x] Final content apply plan: `docs/final-content-apply-plan.md` and `tools/final-content-apply-plan.mjs` build an ignored dry-run content patch from the strict final content packet without calling production APIs.
    - [x] Add Product/FAQ schema where appropriate.

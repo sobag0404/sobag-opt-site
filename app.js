@@ -329,9 +329,9 @@ const defaultSiteContent = {
     "Производственный цикл включает печать, раскрой, пошив, контроль качества, упаковку, маркировку и подготовку к отгрузке. Один принт можно выпускать в разных изделиях, размерах и материалах.",
   contactsPageTitle: "Контакты",
   contactsPageLead: "Свяжитесь с отделом опта, чтобы уточнить наличие, сроки запуска партии, упаковку, отгрузку и документы.",
-  contactsAddress: "Адрес производства и самовывоза согласуется с менеджером",
-  contactsLegalAddress: "Юридический адрес будет указан после подтверждения реквизитов",
-  contactsProductionAddress: "Адрес производства и самовывоза согласуется с менеджером",
+  contactsAddress: "Филиал / производство: г. Курск, ул. Литовская, д. 12",
+  contactsLegalAddress: "431815, Республика Мордовия, Атяшевский р-н, село Наборные Сыреси, ул. Крупской, д. 18",
+  contactsProductionAddress: "г. Курск, ул. Литовская, д. 12",
   contactsSchedule: "Пн-Пт, 10:00-18:00 по Москве",
   contactsMapButton: "показать на карте",
   howToOrderPageTitle: "Как оформить заказ",
@@ -361,8 +361,8 @@ const defaultSiteContent = {
   footerBrand: "SOBAG OPT",
   footerText: "B2B-каталог для оптовых заказов текстиля с принтами, производства под макет и поставок партиями.",
   footerSalesLabel: "Отдел опта",
-  footerEmail: "opt@sobag-shop.online",
-  footerPhone: "Телефон по запросу",
+  footerEmail: "ip.burago@yandex.ru",
+  footerPhone: "+7 901 879-41-62",
   footerCompanyTitle: "Компания",
   footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Согласие на обработку персональных данных|Пользовательское соглашение",
   footerClientsTitle: "Клиентам",
@@ -370,7 +370,7 @@ const defaultSiteContent = {
   footerPartnersTitle: "Партнерам",
   footerPartnersLinks: "Условия для бизнеса|Мы на маркетплейсах|Поддержка селлеров|Оптовые партии",
   footerContactsTitle: "Контакты",
-  footerAddress: "Адрес отгрузки согласуется с менеджером",
+  footerAddress: "Филиал / производство: г. Курск, ул. Литовская, д. 12",
   cartPageTitle: "Корзина",
   cartPageBackButton: "вернуться в каталог",
   cartPageEmptyTitle: "Корзина пока пустая",
@@ -1449,7 +1449,7 @@ function updateYandexMap(address, target = "") {
   const frame = document.querySelector(`#yandexMapFrame${suffix}`);
   const link = document.querySelector(`#yandexMapLink${suffix}`);
   const panel = frame?.closest(".map-panel") || link?.closest(".map-panel");
-  const available = hasConfirmedMapAddress(prepared);
+  const available = hasConfirmedMapAddress(prepared) && !panel?.hasAttribute("data-map-pending");
   panel?.classList.toggle("is-map-unavailable", !available);
   if (!available) {
     if (frame) frame.removeAttribute("src");
