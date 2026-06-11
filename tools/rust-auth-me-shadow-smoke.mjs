@@ -417,6 +417,44 @@ async function runSmoke(args) {
     }
     if (profile.payload.user?.inn !== "123456789012") throw new Error("profile inn sanitize mismatch");
 
+    const accountState = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, {
+      token: loginToken,
+      method: "PUT",
+      body: {
+        cartItems: [
+          ["line-1", { qty: 100000, variant: { sku: "sku-1", price: -5 } }],
+          { key: "bad", variant: {} },
+        ],
+        favoriteItems: ["p1", "p1", "", "p2"],
+        savedCarts: [{
+          id: "SC-1",
+          title: "Quote",
+          items: [["line-1", { variant: { sku: "sku-1" } }]],
+          status: "sent",
+          managerComment: "hidden",
+          commentHistory: [
+            { visibility: "customer", text: "visible" },
+            { visibility: "internal", text: "hidden" },
+          ],
+        }],
+      },
+    });
+    if (accountState.status !== 200) throw new Error(`account state status ${accountState.status}: ${JSON.stringify(accountState.payload)}`);
+    if (accountState.payload.cartItems?.[0]?.[1]?.qty !== 99999) throw new Error("cart qty sanitize mismatch");
+    if (accountState.payload.cartItems?.[0]?.[1]?.variant?.price !== 0) throw new Error("cart price sanitize mismatch");
+    if (JSON.stringify(accountState.payload.favoriteItems) !== JSON.stringify(["p1", "p2"])) throw new Error("favorites sanitize mismatch");
+    if (accountState.payload.savedCarts?.[0]?.managerComment) throw new Error("buyer saved cart leaked manager comment");
+    if (accountState.payload.savedCarts?.[0]?.commentHistory?.length !== 1) throw new Error("buyer saved cart leaked internal history");
+
+    const invalidBuyerReview = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, {
+      token: loginToken,
+      method: "PUT",
+      body: { review: { productId: "p1", baseSku: "opt_1", rating: 5, text: "bad" } },
+    });
+    if (invalidBuyerReview.status !== 400 || invalidBuyerReview.payload.error !== "invalid_review") {
+      throw new Error(`invalid buyer review mismatch: ${invalidBuyerReview.status} ${JSON.stringify(invalidBuyerReview.payload)}`);
+    }
+
     const logout = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/logout`, { token: loginToken, method: "POST" });
     if (logout.status !== 200 || !String(logout.headers.get("set-cookie") || "").includes("Max-Age=0")) {
       throw new Error(`logout mismatch: ${logout.status}`);

@@ -30,6 +30,10 @@ const STORE_KEY: &str = "sobag:store:v1";
 const CONTENT_KEY: &str = "sobag:content:v1";
 const DEFAULT_PAGE_SIZE: i64 = 48;
 const MAX_PAGE_SIZE: i64 = 120;
+const MAX_CART_LINES: usize = 500;
+const MAX_FAVORITES: usize = 5000;
+const MAX_SAVED_CARTS: usize = 50;
+const MAX_REVIEWS: usize = 5000;
 const FACET_GROUPS: &[(&str, &str, bool)] = &[
     ("category", "categories", true),
     ("collection", "collections", true),
@@ -453,6 +457,64 @@ mod ssr_tests {
             &json!({ "email": "missing@example.test" }),
         );
         assert_eq!(payload, json!({ "user": null }));
+    }
+
+    #[test]
+    fn sanitizes_auth_me_account_state_writes() {
+        let cart = sanitize_cart_items(&json!([
+            ["line-1", { "qty": 100000, "variant": { "sku": "sku-1", "price": -5 } }],
+            { "key": "bad", "variant": {} }
+        ]));
+        assert_eq!(cart.as_array().unwrap().len(), 1);
+        assert_eq!(cart[0][1]["qty"], 99999);
+        assert_eq!(cart[0][1]["variant"]["price"], 0.0);
+
+        let favorites = sanitize_favorite_items(&json!(["p1", "p1", "", "p2"]));
+        assert_eq!(favorites, json!(["p1", "p2"]));
+
+        let saved = sanitize_saved_carts_input(
+            &json!([{
+                "id": "SC-1",
+                "items": [["line-1", { "variant": { "sku": "sku-1" } }]],
+                "status": "sent",
+                "managerComment": "hidden",
+                "commentHistory": [
+                    { "visibility": "customer", "text": "visible" },
+                    { "visibility": "internal", "text": "hidden" }
+                ]
+            }]),
+            false,
+        );
+        assert_eq!(saved[0]["status"], "sent");
+        assert!(saved[0].get("managerComment").is_none());
+        assert_eq!(saved[0]["commentHistory"].as_array().unwrap().len(), 1);
+
+        let user = json!({ "email": "buyer@example.test", "name": "Buyer" });
+        let review = sanitize_review_value(
+            &json!({
+                "productId": "p1",
+                "baseSku": "opt_1",
+                "productName": "Pillow",
+                "rating": 7,
+                "text": "great product"
+            }),
+            &user,
+        )
+        .expect("review");
+        assert_eq!(review["rating"], 5);
+        assert_eq!(review["status"], "pending");
+    }
+
+    #[test]
+    fn stores_auth_me_account_state_by_user_email() {
+        let mut store = default_store_value();
+        set_store_nested_items(&mut store, "favorites", "buyer@example.test", json!(["p1"]));
+        assert_eq!(
+            store_nested_items(&store, "favorites", "buyer@example.test"),
+            json!(["p1"])
+        );
+        push_review_record(&mut store, json!({ "id": "REV-1" }));
+        assert_eq!(store["reviews"].as_array().unwrap().len(), 1);
     }
 
     #[test]
@@ -1378,6 +1440,33 @@ async fn auth_me_update_preview(
     if email.is_empty() {
         return Err(AppError::unauthorized("Нужно войти в аккаунт."));
     }
+    if has_object_key(&data, "cartItems") {
+        set_store_nested_items(
+            &mut store,
+            "carts",
+            &email,
+            sanitize_cart_items(data.get("cartItems").unwrap_or(&Value::Null)),
+        );
+    }
+    if has_object_key(&data, "favoriteItems") {
+        set_store_nested_items(
+            &mut store,
+            "favorites",
+            &email,
+            sanitize_favorite_items(data.get("favoriteItems").unwrap_or(&Value::Null)),
+        );
+    }
+    if has_object_key(&data, "savedCarts") {
+        set_store_nested_items(
+            &mut store,
+            "savedCarts",
+            &email,
+            sanitize_saved_carts_input(
+                data.get("savedCarts").unwrap_or(&Value::Null),
+                can_use_internal_saved_cart_fields(&user),
+            ),
+        );
+    }
     if let Some(profile) = data.get("profile").filter(|value| value.is_object()) {
         let profile = sanitize_profile_value(profile, &user);
         let users = ensure_store_users_mut(&mut store);
@@ -1389,10 +1478,26 @@ async fn auth_me_update_preview(
         }
         next.insert("updatedAt".to_string(), json!(Utc::now().to_rfc3339()));
         users.insert(email.clone(), Value::Object(next));
-        save_file_store_value(STORE_KEY, &store)
-            .await
-            .map_err(|error| AppError::internal(error.to_string()))?;
     }
+    if has_object_key(&data, "review") {
+        let Some(review) = sanitize_review_value(
+            data.get("review").unwrap_or(&Value::Null),
+            store
+                .get("users")
+                .and_then(Value::as_object)
+                .and_then(|users| users.get(&email))
+                .unwrap_or(&user),
+        ) else {
+            return Err(AppError::bad_request(
+                "invalid_review",
+                "Поставьте оценку и напишите отзыв от 5 символов.",
+            ));
+        };
+        push_review_record(&mut store, review);
+    }
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?;
     Ok((
         no_store_headers(),
         Json(auth_me_payload_from_values(&store, &json!({ "email": email }))),
@@ -2772,6 +2877,21 @@ fn push_audit_record(store: &mut Value, record: Value) {
     }
 }
 
+fn push_review_record(store: &mut Value, record: Value) {
+    if !store.is_object() {
+        *store = default_store_value();
+    }
+    let map = store.as_object_mut().expect("store object");
+    let reviews = map.entry("reviews").or_insert_with(|| json!([]));
+    if !reviews.is_array() {
+        *reviews = json!([]);
+    }
+    if let Some(items) = reviews.as_array_mut() {
+        items.insert(0, record);
+        items.truncate(MAX_REVIEWS);
+    }
+}
+
 fn valid_review_status(status: &str) -> bool {
     matches!(status, "pending" | "approved" | "hidden")
 }
@@ -2862,6 +2982,243 @@ fn sanitize_profile_value(profile: &Value, existing: &Value) -> Value {
         "packaging": text("packaging", 120),
         "orderComment": text("orderComment", 500)
     })
+}
+
+fn sanitize_cart_items(items: &Value) -> Value {
+    let lines = items
+        .as_array()
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(sanitize_cart_line_value)
+                .take(MAX_CART_LINES)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    Value::Array(lines)
+}
+
+fn sanitize_cart_line_value(entry: &Value) -> Option<Value> {
+    let (key_source, line) = if let Some(pair) = entry.as_array() {
+        (pair.first().unwrap_or(&Value::Null), pair.get(1).unwrap_or(&Value::Null))
+    } else {
+        (entry.get("key").unwrap_or(&Value::Null), entry)
+    };
+    if !line.is_object() {
+        return None;
+    }
+    let variant = line.get("variant").unwrap_or(&Value::Null);
+    let sku = clean_text(variant.get("sku"), 120)
+        .or_else(|| clean_text(line.get("variantSku"), 120))
+        .unwrap_or_default();
+    if sku.is_empty() {
+        return None;
+    }
+    let key = value_clean_string(key_source, 160)
+        .or_else(|| clean_text(line.get("key"), 160))
+        .unwrap_or_else(|| sku.clone());
+    let qty = clamp_i64(
+        line.get("qty").and_then(Value::as_f64).unwrap_or(1.0).round() as i64,
+        1,
+        99_999,
+    );
+    let price = variant
+        .get("price")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0)
+        .max(0.0);
+    let line_value = json!({
+        "key": clean_text(line.get("key"), 160).unwrap_or_else(|| key.clone()),
+        "productId": clean_text(line.get("productId"), 160).unwrap_or_default(),
+        "productName": clean_text(line.get("productName"), 220)
+            .or_else(|| clean_text(variant.get("name"), 220))
+            .unwrap_or_default(),
+        "productImage": clean_text(line.get("productImage"), 500).unwrap_or_default(),
+        "qty": qty,
+        "variant": {
+            "sku": sku,
+            "name": clean_text(variant.get("name"), 220).unwrap_or_default(),
+            "type": clean_text(variant.get("type"), 120).unwrap_or_default(),
+            "size": clean_text(variant.get("size"), 120).unwrap_or_default(),
+            "material": clean_text(variant.get("material"), 120).unwrap_or_default(),
+            "price": price
+        }
+    });
+    Some(json!([key, line_value]))
+}
+
+fn sanitize_favorite_items(items: &Value) -> Value {
+    let mut seen: Vec<String> = Vec::new();
+    let mut result: Vec<Value> = Vec::new();
+    if let Some(items) = items.as_array() {
+        for item in items {
+            let Some(value) = value_clean_string(item, 160) else {
+                continue;
+            };
+            if seen.iter().any(|seen| seen == &value) {
+                continue;
+            }
+            seen.push(value.clone());
+            result.push(json!(value));
+            if result.len() >= MAX_FAVORITES {
+                break;
+            }
+        }
+    }
+    Value::Array(result)
+}
+
+fn sanitize_saved_carts_input(items: &Value, include_internal: bool) -> Value {
+    let carts = items
+        .as_array()
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|cart| sanitize_saved_cart_input(cart, include_internal))
+                .take(MAX_SAVED_CARTS)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    Value::Array(carts)
+}
+
+fn sanitize_saved_cart_input(cart: &Value, include_internal: bool) -> Option<Value> {
+    if !cart.is_object() {
+        return None;
+    }
+    let entries = sanitize_cart_items(cart.get("items").unwrap_or(&Value::Null));
+    if entries.as_array().map(|items| items.is_empty()).unwrap_or(true) {
+        return None;
+    }
+    let now = Utc::now().to_rfc3339();
+    let created_at = clean_text(cart.get("createdAt"), 40)
+        .or_else(|| clean_text(cart.get("updatedAt"), 40))
+        .unwrap_or_else(|| now.clone());
+    let updated_at = clean_text(cart.get("updatedAt"), 40).unwrap_or_else(|| created_at.clone());
+    let mut history = cart
+        .get("commentHistory")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|entry| {
+                    let text = clean_text(entry.get("text"), 1000)?;
+                    let visibility = if entry
+                        .get("visibility")
+                        .and_then(Value::as_str)
+                        .map(|value| value == "internal")
+                        .unwrap_or(false)
+                    {
+                        "internal"
+                    } else {
+                        "customer"
+                    };
+                    if visibility == "internal" && !include_internal {
+                        return None;
+                    }
+                    Some(json!({
+                        "at": clean_text(entry.get("at"), 40).unwrap_or_else(|| now.clone()),
+                        "actor": clean_text(entry.get("actor"), 120).unwrap_or_default(),
+                        "role": clean_text(entry.get("role"), 40).unwrap_or_default(),
+                        "type": clean_text(entry.get("type"), 40).unwrap_or_else(|| "comment".to_string()),
+                        "visibility": visibility,
+                        "text": text
+                    }))
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    if history.len() > 20 {
+        history = history.split_off(history.len() - 20);
+    }
+    let mut saved = serde_json::Map::new();
+    saved.insert(
+        "id".to_string(),
+        json!(clean_text(cart.get("id"), 80).unwrap_or_else(|| format!("SC-{}", Utc::now().timestamp_millis()))),
+    );
+    saved.insert(
+        "title".to_string(),
+        json!(clean_text(cart.get("title"), 120).unwrap_or_else(|| "Сохраненная корзина".to_string())),
+    );
+    saved.insert("createdAt".to_string(), json!(created_at));
+    saved.insert("updatedAt".to_string(), json!(updated_at));
+    saved.insert("date".to_string(), json!(clean_text(cart.get("date"), 80).unwrap_or_default()));
+    saved.insert("items".to_string(), entries);
+    saved.insert("qty".to_string(), json!(non_negative_rounded_i64(cart.get("qty"))));
+    saved.insert("subtotal".to_string(), json!(non_negative_rounded_i64(cart.get("subtotal"))));
+    saved.insert("discount".to_string(), json!(non_negative_rounded_i64(cart.get("discount"))));
+    saved.insert("total".to_string(), json!(non_negative_rounded_i64(cart.get("total"))));
+    saved.insert(
+        "status".to_string(),
+        json!(if clean_text(cart.get("status"), 40).as_deref() == Some("sent") {
+            "sent"
+        } else {
+            "draft"
+        }),
+    );
+    saved.insert("sentAt".to_string(), json!(clean_text(cart.get("sentAt"), 40).unwrap_or_default()));
+    saved.insert(
+        "sentOrderId".to_string(),
+        json!(clean_text(cart.get("sentOrderId"), 80).unwrap_or_default()),
+    );
+    saved.insert(
+        "customerComment".to_string(),
+        json!(clean_text(cart.get("customerComment"), 1000)
+            .or_else(|| clean_text(cart.get("comment"), 1000))
+            .unwrap_or_default()),
+    );
+    saved.insert("commentHistory".to_string(), Value::Array(history));
+    if include_internal {
+        saved.insert(
+            "managerComment".to_string(),
+            json!(clean_text(cart.get("managerComment"), 1000).unwrap_or_default()),
+        );
+    }
+    Some(Value::Object(saved))
+}
+
+fn sanitize_review_value(input: &Value, user: &Value) -> Option<Value> {
+    if !input.is_object() {
+        return None;
+    }
+    let product_id = clean_text(input.get("productId"), 120)?;
+    let base_sku = clean_text(input.get("baseSku"), 120)?;
+    let product_name = clean_text(input.get("productName"), 200).unwrap_or_default();
+    let rating = clamp_i64(
+        input
+            .get("rating")
+            .and_then(Value::as_f64)
+            .unwrap_or(0.0)
+            .round() as i64,
+        1,
+        5,
+    );
+    let text = clean_text(input.get("text"), 1000)?;
+    if text.chars().count() < 5 {
+        return None;
+    }
+    let email = string_field(user, "email")?;
+    let author = string_field(user, "name")
+        .or_else(|| string_field(user, "company"))
+        .unwrap_or_else(|| email.clone());
+    let now = Utc::now();
+    Some(json!({
+        "id": format!("REV-{}", now.timestamp_millis()),
+        "productId": product_id,
+        "baseSku": base_sku,
+        "productName": product_name,
+        "rating": rating,
+        "text": text,
+        "status": "pending",
+        "userEmail": email,
+        "authorName": author,
+        "createdAt": now.to_rfc3339(),
+        "updatedAt": now.to_rfc3339()
+    }))
+}
+
+fn non_negative_rounded_i64(value: Option<&Value>) -> i64 {
+    std::cmp::max(0, value.and_then(Value::as_f64).unwrap_or(0.0).round() as i64)
 }
 
 fn digits_only(value: &str, limit: usize) -> String {
@@ -3217,6 +3574,21 @@ fn clean_text(value: Option<&Value>, limit: usize) -> Option<String> {
         .filter(|text| !text.is_empty())
 }
 
+fn value_clean_string(value: &Value, limit: usize) -> Option<String> {
+    let text = match value {
+        Value::String(text) => text.clone(),
+        Value::Number(number) => number.to_string(),
+        Value::Bool(flag) => flag.to_string(),
+        _ => String::new(),
+    };
+    let text = text.trim().chars().take(limit).collect::<String>();
+    if text.is_empty() {
+        None
+    } else {
+        Some(text)
+    }
+}
+
 fn valid_email(value: &str) -> bool {
     value.is_empty()
         || (value.contains('@')
@@ -3287,6 +3659,28 @@ fn store_nested_items(store: &Value, bucket: &str, email: &str) -> Value {
         .filter(|items| items.is_array())
         .cloned()
         .unwrap_or_else(|| json!([]))
+}
+
+fn set_store_nested_items(store: &mut Value, bucket: &str, email: &str, items: Value) {
+    if !store.is_object() {
+        *store = default_store_value();
+    }
+    let Some(map) = store.as_object_mut() else {
+        return;
+    };
+    let bucket_value = map.entry(bucket.to_string()).or_insert_with(|| json!({}));
+    if !bucket_value.is_object() {
+        *bucket_value = json!({});
+    }
+    if let Some(records) = bucket_value.as_object_mut() {
+        records.insert(
+            email.to_string(),
+            json!({
+                "items": items,
+                "updatedAt": Utc::now().to_rfc3339()
+            }),
+        );
+    }
 }
 
 fn user_orders(store: &Value, email: &str) -> Value {

@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust account state PUT preview:
+  - internal `PUT /rust/auth/me` now supports temporary `cartItems`, `favoriteItems`, `savedCarts`, and buyer review validation/writes in the Node-compatible file-store;
+  - cart lines, favorites, saved carts, internal saved-cart comments, and review payloads are sanitized to the current Node contract;
+  - Rust unit tests and `tools/rust-auth-me-shadow-smoke.mjs` cover account-state writes without routing public `/api/auth/me` away from Node;
+  - no production route/data cutover was made.
 - Rust buyer order message PATCH preview:
   - internal `/rust/orders` now supports authenticated buyer comments in the temporary Node-compatible file-store;
   - ownership is checked by `userEmail`/`customer.email`, empty comments are rejected, and buyer responses hide internal CRM notes;
