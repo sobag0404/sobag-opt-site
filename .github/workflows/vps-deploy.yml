@@ -25,7 +25,7 @@ jobs:
         )
       }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -84,6 +84,27 @@ jobs:
 
           cd "$release_dir"
           npm ci --omit=dev
+          rust_binary="$app_dir/shared/sobag-opt-rust"
+          rust_previous="$app_dir/shared/sobag-opt-rust.previous"
+
+          if [ -f rust-server/Cargo.toml ]; then
+            if command -v cargo >/dev/null 2>&1; then
+              cargo_bin="$(command -v cargo)"
+            elif [ -x "$HOME/.cargo/bin/cargo" ]; then
+              cargo_bin="$HOME/.cargo/bin/cargo"
+            else
+              echo "Rust cargo is required on VPS to build rust-server"
+              exit 1
+            fi
+            cargo() {
+              "$cargo_bin" "$@"
+            }
+            (
+              cd rust-server
+              cargo test --locked
+              cargo build --release --locked
+            )
+          fi
 
           ln -sfn "$release_dir" "$app_dir/current"
           printf '%s\n' "$release" > "$app_dir/current-release.txt"
@@ -96,6 +117,54 @@ jobs:
 
           pm2 save --force
           curl -fsS http://127.0.0.1:3000/api/health
+
+          if [ -f rust-server/Cargo.toml ]; then
+            if [ -x "$rust_binary" ]; then
+              cp -p "$rust_binary" "$rust_previous"
+            fi
+            install -m 755 rust-server/target/release/sobag-opt-rust "$rust_binary"
+            cat > /tmp/sobag-opt-rust.service <<'SERVICE'
+          [Unit]
+          Description=Sobag Opt Rust API
+          After=network.target postgresql.service
+
+          [Service]
+          User=sobag
+          WorkingDirectory=/opt/sobag-opt/current
+          EnvironmentFile=/opt/sobag-opt/shared/.env
+          Environment=SOBAG_RUST_BIND=127.0.0.1:3001
+          ExecStart=/opt/sobag-opt/shared/sobag-opt-rust
+          Restart=always
+          RestartSec=3
+          NoNewPrivileges=true
+          PrivateTmp=true
+
+          [Install]
+          WantedBy=multi-user.target
+          SERVICE
+            sudo mv /tmp/sobag-opt-rust.service /etc/systemd/system/sobag-opt-rust.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable sobag-opt-rust
+            if ! sudo systemctl restart sobag-opt-rust; then
+              echo "Rust restart failed; restoring previous binary"
+              if [ -x "$rust_previous" ]; then
+                install -m 755 "$rust_previous" "$rust_binary"
+                sudo systemctl restart sobag-opt-rust || true
+              fi
+              exit 1
+            fi
+            sleep 2
+            if ! curl -fsS http://127.0.0.1:3001/api/health-rust; then
+              echo "Rust health failed; restoring previous binary"
+              if [ -x "$rust_previous" ]; then
+                install -m 755 "$rust_previous" "$rust_binary"
+                sudo systemctl restart sobag-opt-rust || true
+                curl -fsS http://127.0.0.1:3001/api/health-rust || true
+              fi
+              exit 1
+            fi
+            node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001
+          fi
 
           mapfile -t releases < <(ls -1dt "$app_dir"/releases/* 2>/dev/null || true)
           keep_current="$(readlink -f "$app_dir/current")"

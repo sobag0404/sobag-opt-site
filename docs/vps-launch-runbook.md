@@ -140,3 +140,13 @@ node tools/image-metadata-audit.mjs --products local-import-output/products-with
 ```
 
 Raw/bulk фото и `local-import-output/` не добавлять в Git.
+
+## Rust Catalog Slice
+
+Current VPS keeps Node.js as the main runtime and runs Rust only for catalog read routes:
+
+- Node: `127.0.0.1:3000`
+- Rust systemd service: `sobag-opt-rust` on `127.0.0.1:3001`
+- Nginx Rust routes: `/api/catalog-query`, `/api/catalog-detail`
+
+Deploy is handled by `.github/workflows/vps-deploy.yml`: it builds `rust-server`, restarts the systemd service, verifies `/api/health-rust`, and runs shadow comparison against Node. Detailed rollback steps are in `docs/rust-deploy-runbook.md`.

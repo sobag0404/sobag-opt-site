@@ -26,7 +26,7 @@ Production URLs:
 
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
-- Rust migration first slice is live: `sobag-opt-rust` runs under systemd on VPS at `127.0.0.1:3001`, and Nginx routes only `/api/catalog-query` plus `/api/catalog-detail` to Rust; Node.js remains fallback for all other routes;
+- Rust migration first slice is live and deploy-automated: `sobag-opt-rust` runs under systemd on VPS at `127.0.0.1:3001`, Nginx routes only `/api/catalog-query` plus `/api/catalog-detail` to Rust, and `vps-deploy` now builds/restarts/verifies Rust with previous-binary rollback;
 - VPS primary domain cutover is complete: `sobag-shop.online` and `www.sobag-shop.online` resolve to `77.239.107.164`, HTTPS is enabled by certbot/Nginx, and production smoke now targets `https://sobag-shop.online`;
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - VPS migration path now has an explicit filesystem store bridge for shared API data; Vercel is not used for future deploy/verification;
@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust deploy automation:
+  - `.github/workflows/vps-deploy.yml` now runs `cargo test --locked`, `cargo build --release --locked`, installs the Rust binary, restarts `sobag-opt-rust`, verifies `/api/health-rust`, and runs Node-vs-Rust shadow comparison on VPS;
+  - failed Rust restart or health restores `/opt/sobag-opt/shared/sobag-opt-rust.previous` and fails the deploy instead of silently leaving broken Rust routes;
+  - `tools/vps-release-audit.mjs` now guards Rust files, `smoke:rust:shadow`, and the critical VPS deploy markers;
+  - added `docs/rust-deploy-runbook.md` with manual checks and Nginx route rollback to Node.
 - Confirmed public contact details:
   - static `contacts.html`, shared footer `components/site-shell.js`, and `defaultSiteContent` in `app.js` now use `+7 901 879-41-62`, `ip.burago@yandex.ru`, the Republic of Mordovia legal/production address, and the Kursk production branch;
   - Yandex map widgets stay hidden with `data-map-pending` until exact Yandex URLs are confirmed;

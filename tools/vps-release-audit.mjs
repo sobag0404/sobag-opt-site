@@ -18,9 +18,14 @@ const REQUIRED_FILES = [
   "tools/vps-write-smoke.mjs",
   "tools/file-store-backup.mjs",
   "tools/production-smoke.mjs",
+  "tools/rust-catalog-shadow-smoke.mjs",
   "docs/vps-migration-notes.md",
   "docs/vps-launch-runbook.md",
   "docs/deploy-checklist.md",
+  "docs/rust-deploy-runbook.md",
+  "rust-server/Cargo.toml",
+  "rust-server/Cargo.lock",
+  "rust-server/src/main.rs",
 ];
 
 const REQUIRED_SCRIPTS = {
@@ -38,9 +43,20 @@ const REQUIRED_SCRIPTS = {
   "export:pim": "tools/pim-export-normalized.mjs",
   "smoke:prod": "tools/production-smoke.mjs",
   "smoke:prod:self-test": "tools/production-smoke.mjs --self-test",
+  "smoke:rust:shadow": "tools/rust-catalog-shadow-smoke.mjs",
   check: "tools/autofix.mjs --check",
   "ui:smoke": "tools/ui-smoke.spec.js",
 };
+
+const REQUIRED_VPS_DEPLOY_MARKERS = [
+  "cargo test --locked",
+  "cargo build --release --locked",
+  "install -m 755 rust-server/target/release/sobag-opt-rust",
+  "sudo systemctl restart sobag-opt-rust",
+  "http://127.0.0.1:3001/api/health-rust",
+  "node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001",
+  "Rust health failed; restoring previous binary",
+];
 
 const REQUIRED_IGNORES = [
   ".env*",
@@ -88,7 +104,7 @@ function assertIncludes(haystack, needle, label) {
   if (!String(haystack || "").includes(needle)) throw new Error(`${label} must include ${needle}`);
 }
 
-function auditRelease({ packageJson, gitignore, trackedFiles }) {
+function auditRelease({ packageJson, gitignore, trackedFiles, vpsDeployWorkflow = "" }) {
   const errors = [];
   const scripts = packageJson.scripts || {};
 
@@ -115,6 +131,9 @@ function auditRelease({ packageJson, gitignore, trackedFiles }) {
   if (!trackedFiles.includes(".github/workflows/production-smoke.yml")) errors.push("production smoke workflow must stay tracked");
   if (!trackedFiles.includes("docs/vps-migration-notes.md")) errors.push("VPS migration notes must stay tracked");
   if (trackedFiles.some((file) => basename(file).toLocaleLowerCase("en-US") === ".env")) errors.push("tracked .env file is forbidden");
+  REQUIRED_VPS_DEPLOY_MARKERS.forEach((marker) => {
+    if (!vpsDeployWorkflow.includes(marker)) errors.push(`vps-deploy workflow missing Rust deploy marker: ${marker}`);
+  });
 
   if (errors.length) throw new Error(`VPS release audit failed:\n${errors.join("\n")}`);
   return {
@@ -130,6 +149,7 @@ function selfTest() {
     packageJson: { scripts: Object.fromEntries(Object.entries(REQUIRED_SCRIPTS).map(([name, expected]) => [name, `node ${expected}`])) },
     gitignore: REQUIRED_IGNORES.join("\n"),
     trackedFiles: ["server.mjs", ".github/workflows/production-smoke.yml", "docs/vps-migration-notes.md"],
+    vpsDeployWorkflow: REQUIRED_VPS_DEPLOY_MARKERS.join("\n"),
   });
   if (good.scripts !== Object.keys(REQUIRED_SCRIPTS).length) throw new Error("self-test script count mismatch");
   let rejected = false;
@@ -138,6 +158,7 @@ function selfTest() {
       packageJson: { scripts: Object.fromEntries(Object.entries(REQUIRED_SCRIPTS).map(([name, expected]) => [name, `node ${expected}`])) },
       gitignore: REQUIRED_IGNORES.join("\n"),
       trackedFiles: ["server.mjs", ".github/workflows/production-smoke.yml", "docs/vps-migration-notes.md", ".env"],
+      vpsDeployWorkflow: REQUIRED_VPS_DEPLOY_MARKERS.join("\n"),
     });
   } catch (error) {
     rejected = /forbidden tracked/.test(error.message);
@@ -153,7 +174,8 @@ function main() {
   }
   const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   const gitignore = readFileSync(join(root, ".gitignore"), "utf8");
-  const summary = auditRelease({ packageJson, gitignore, trackedFiles: gitTrackedFiles() });
+  const vpsDeployWorkflow = readFileSync(join(root, ".github/workflows/vps-deploy.yml"), "utf8");
+  const summary = auditRelease({ packageJson, gitignore, trackedFiles: gitTrackedFiles(), vpsDeployWorkflow });
   console.log(
     `VPS release audit passed: ${summary.files} files, ${summary.scripts} scripts, ${summary.ignores} ignore rules, ${summary.tracked} tracked files`
   );

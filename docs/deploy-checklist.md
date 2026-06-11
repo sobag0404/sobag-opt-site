@@ -36,6 +36,8 @@ npm.cmd run smoke:prod:performance -- --base-url https://sobag-shop.online
 npm.cmd run smoke:prod:storage -- --base-url https://sobag-shop.online
 ```
 
+Rust catalog API is deployed by the same VPS workflow: it runs `cargo test --locked`, builds `rust-server`, restarts `sobag-opt-rust`, checks `/api/health-rust`, and runs `npm run smoke:rust:shadow` equivalent on the VPS. If Rust restart/health fails, the workflow restores the previous Rust binary and fails the deploy.
+
 По умолчанию проверяются:
 
 - `https://sobag-shop.online/`
