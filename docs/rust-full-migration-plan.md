@@ -43,6 +43,7 @@ Current production stays on `https://sobag-shop.online`. Vercel is not an active
    - Migrate `GET /api/auth/me` first, then login/register/logout/profile writes.
    - Current status: Rust has compatibility helpers/tests for session cookie/key parsing, file-store wrapper/key handling, and Node PBKDF2 password verification; no auth route is switched yet.
    - Current status: internal `/rust/auth/me` preview can build the current read-only account payload from Node-compatible file-store/session data and deploy smoke checks the anonymous preview path.
+   - Current status: deploy-time auth shadow smoke starts temporary Node/Rust servers on a temporary file-store and compares anonymous, buyer, manager, content, and admin `auth/me` payloads before accepting the release.
 
 5. Orders and briefs:
    - Migrate cart order submission, custom print briefs, buyer order history, comments, and status visibility.

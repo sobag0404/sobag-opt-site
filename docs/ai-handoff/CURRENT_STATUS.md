@@ -56,6 +56,10 @@ Completed most recently:
   - internal `/rust/auth/me` builds the current `GET /api/auth/me` read-only payload from Node-compatible file-store/session records;
   - password hashes/salts are stripped, buyer-visible orders exclude internal CRM notes, and buyer saved carts exclude manager/internal comments;
   - the route is preview-only and is not routed from public `/api/auth/me`.
+- Rust `auth/me` shadow smoke:
+  - `tools/rust-auth-me-shadow-smoke.mjs` starts temporary Node/Rust servers with a temporary file-store and compares `/api/auth/me` vs `/rust/auth/me`;
+  - coverage includes anonymous, buyer, manager, content, and admin sessions, and rejects password-field leaks;
+  - VPS deploy runs it after Rust catalog and SSR smoke without touching production data.
 - Confirmed public contact details:
   - static `contacts.html`, shared footer `components/site-shell.js`, and `defaultSiteContent` in `app.js` now use `+7 901 879-41-62`, `ip.burago@yandex.ru`, the Republic of Mordovia legal/production address, and the Kursk production branch;
   - Yandex map widgets stay hidden with `data-map-pending` until exact Yandex URLs are confirmed;
