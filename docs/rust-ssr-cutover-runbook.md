@@ -55,6 +55,19 @@ npm.cmd run ui:smoke
 npm.cmd run smoke:prod -- --base-url https://sobag-shop.online
 ```
 
+## Route Rehearsal
+
+Before editing Nginx, generate the exact allowed `location = ...` blocks:
+
+```powershell
+npm run rehearse:rust-ssr-routes
+npm run rehearse:rust-ssr-routes -- --group catalog-pages
+npm run rehearse:rust-ssr-routes -- --group catalog-fragments
+npm run rehearse:rust-ssr-routes -- --group content-pages
+```
+
+The rehearsal must output only exact locations for the candidate paths and must reject generic `location /`, `/api`, `/api/admin`, cart, account, favorites, custom print, auth, orders, briefs, admin, and content-write routes.
+
 ## Nginx Cutover Shape
 
 Only add exact public page locations or a tightly scoped regex for the candidate paths. Keep the generic `location /` proxy to Node.

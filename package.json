@@ -33,6 +33,7 @@
     "audit:rust-account-cutover": "node tools/rust-account-orders-admin-cutover-audit.mjs",
     "rehearse:rust-account-routes": "node tools/rust-account-route-rehearsal.mjs",
     "audit:rust-ssr-cutover": "node tools/rust-ssr-cutover-audit.mjs",
+    "rehearse:rust-ssr-routes": "node tools/rust-ssr-route-rehearsal.mjs",
     "audit:rust-migration-plan": "node tools/rust-auth-orders-admin-plan-audit.mjs",
     "audit:production-workflow": "node tools/production-workflow-audit.mjs",
     "smoke:prod:self-test": "node tools/production-smoke.mjs --self-test",

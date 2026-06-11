@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR route cutover rehearsal guard:
+  - added `tools/rust-ssr-route-rehearsal.mjs` and `npm run rehearse:rust-ssr-routes`;
+  - it prints exact future Nginx `location = ...` snippets for catalog/search/product pages, fragments, and content pages;
+  - it rejects generic `location /`, API/admin routes, cart/account/favorites/custom, auth, orders, briefs, and content-write routes;
+  - no production Nginx route or production data was changed.
 - Rust SSR public-route readiness guard:
   - Rust page titles no longer expose `Rust Preview`;
   - `tools/rust-ssr-smoke.mjs` fails if any Rust SSR candidate page exposes preview/debug branding;

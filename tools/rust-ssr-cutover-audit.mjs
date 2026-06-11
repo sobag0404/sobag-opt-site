@@ -8,6 +8,7 @@ const root = process.cwd();
 const RUNBOOK = "docs/rust-ssr-cutover-runbook.md";
 const RUST_MAIN = "rust-server/src/main.rs";
 const SSR_SMOKE = "tools/rust-ssr-smoke.mjs";
+const SSR_REHEARSAL = "tools/rust-ssr-route-rehearsal.mjs";
 const VPS_DEPLOY = ".github/workflows/vps-deploy.yml";
 
 const PUBLIC_ROUTES = [
@@ -49,6 +50,7 @@ const REQUIRED_RUNBOOK_MARKERS = [
   "Do not edit production env, secrets, database data, file-store data, or user data",
   "node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001",
   "node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001",
+  "npm run rehearse:rust-ssr-routes",
 ];
 
 function assertIncludes(text, marker, label, errors) {
@@ -59,13 +61,14 @@ function routeDeclaration(route) {
   return `.route("${route}",`;
 }
 
-function auditRustSsrCutover({ runbook, rustMain, smoke, deploy }) {
+function auditRustSsrCutover({ runbook, rustMain, smoke, rehearsal, deploy }) {
   const errors = [];
 
   REQUIRED_RUNBOOK_MARKERS.forEach((marker) => assertIncludes(runbook, marker, RUNBOOK, errors));
   PUBLIC_ROUTES.forEach((route) => {
     assertIncludes(runbook, route, RUNBOOK, errors);
     assertIncludes(smoke, `"${route}`, SSR_SMOKE, errors);
+    assertIncludes(rehearsal, `"${route}"`, SSR_REHEARSAL, errors);
     assertIncludes(rustMain, routeDeclaration(route), RUST_MAIN, errors);
   });
   NODE_FALLBACK_ROUTES.forEach((route) => assertIncludes(runbook, route, RUNBOOK, errors));
@@ -77,6 +80,10 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, deploy }) {
   ].forEach((marker) => assertIncludes(deploy, marker, VPS_DEPLOY, errors));
   assertIncludes(smoke, "assertNotContains", SSR_SMOKE, errors);
   assertIncludes(smoke, "Rust Preview", SSR_SMOKE, errors);
+  assertIncludes(rehearsal, "assertSafeLocations", SSR_REHEARSAL, errors);
+  assertIncludes(rehearsal, "generic location / is forbidden", SSR_REHEARSAL, errors);
+  assertIncludes(rehearsal, "generic /api/admin prefix location is forbidden", SSR_REHEARSAL, errors);
+  assertIncludes(rehearsal, "proxy_pass http://127.0.0.1:3001", SSR_REHEARSAL, errors);
 
   if (/location\s+\/\s+.*3001/s.test(runbook)) {
     errors.push("runbook must not suggest routing generic location / to Rust");
@@ -95,6 +102,7 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, deploy }) {
 function selfTest() {
   const goodRouteDecls = PUBLIC_ROUTES.map((route) => routeDeclaration(route)).join("\n");
   const goodSmoke = `${PUBLIC_ROUTES.map((route) => `["${route}`, []).join("\n")}\nassertNotContains\nRust Preview`;
+  const goodRehearsal = `${PUBLIC_ROUTES.map((route) => `"${route}"`).join("\n")}\nassertSafeLocations\ngeneric location / is forbidden\ngeneric /api/admin prefix location is forbidden\nproxy_pass http://127.0.0.1:3001`;
   const goodRunbook = [...REQUIRED_RUNBOOK_MARKERS, ...PUBLIC_ROUTES, ...NODE_FALLBACK_ROUTES].join("\n");
   const goodDeploy = [
     "cargo test --locked",
@@ -105,6 +113,7 @@ function selfTest() {
     runbook: goodRunbook,
     rustMain: goodRouteDecls,
     smoke: goodSmoke,
+    rehearsal: goodRehearsal,
     deploy: goodDeploy,
   });
   if (summary.publicRoutes !== PUBLIC_ROUTES.length) throw new Error("self-test public route count mismatch");
@@ -115,6 +124,7 @@ function selfTest() {
       runbook: goodRunbook.replace("/cart", ""),
       rustMain: goodRouteDecls,
       smoke: goodSmoke,
+      rehearsal: goodRehearsal,
       deploy: goodDeploy,
     });
   } catch (error) {
@@ -139,6 +149,7 @@ function main() {
     runbook: readRequired(RUNBOOK),
     rustMain: readRequired(RUST_MAIN),
     smoke: readRequired(SSR_SMOKE),
+    rehearsal: readRequired(SSR_REHEARSAL),
     deploy: readRequired(VPS_DEPLOY),
   });
   console.log(`Rust SSR cutover audit passed: ${summary.publicRoutes} public routes, ${summary.fallbackRoutes} fallback routes`);
