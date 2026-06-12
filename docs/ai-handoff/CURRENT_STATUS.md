@@ -1,6 +1,6 @@
 # Current Status Snapshot
 
-Date: 2026-06-11
+Date: 2026-06-12
 
 Current deployed VPS release:
 - latest successful VPS deploy; verify with `/opt/sobag-opt/current-release.txt` on the server.
@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR listing-to-product browser readiness:
+  - Rust catalog/search cards now use normal navigation to product pages instead of an HTMX swap into a missing `#rustProduct` target;
+  - `tools/rust-ssr-browser-smoke.mjs` now verifies direct product add-to-cart plus catalog -> product -> cart and search -> product -> cart flows;
+  - `tools/rust-ssr-smoke.mjs` rejects the broken `hx-target="#rustProduct"` marker on candidate Rust SSR pages;
+  - `tools/rust-ssr-cutover-audit.mjs` now requires the browser-flow smoke markers before any public SSR page cutover.
 - Rust SSR browser smoke:
   - added `tools/rust-ssr-browser-smoke.mjs` and `npm run smoke:rust:ssr-browser`;
   - it opens a Rust product page, adds quantity 3, verifies `sobag.cart.guest` and Rust header cart count;

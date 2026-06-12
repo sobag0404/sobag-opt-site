@@ -1,6 +1,6 @@
 # Active Context
 
-Last updated: 2026-06-11
+Last updated: 2026-06-12
 
 ## Token-Saving Rule
 - Читать этот файл первым.
@@ -33,6 +33,7 @@ Last updated: 2026-06-11
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-12: tightened Rust SSR listing-to-product readiness before any public page cutover. Rust catalog/search cards now use normal product-page navigation instead of an HTMX swap into a missing `#rustProduct` target, `tools/rust-ssr-browser-smoke.mjs` now verifies direct product add-to-cart plus catalog/search -> product -> cart flows, `tools/rust-ssr-smoke.mjs` rejects the broken `hx-target="#rustProduct"` marker, and `tools/rust-ssr-cutover-audit.mjs` requires the browser-flow smoke markers.
 - Current pass 2026-06-11: added `tools/rust-ssr-browser-smoke.mjs` and `npm run smoke:rust:ssr-browser` for pre-cutover browser verification of Rust SSR product add-to-cart. It opens a Rust product page, adds quantity 3, verifies the storefront-compatible `sobag.cart.guest` line and Rust header cart count. `tools/autofix.mjs` syntax-checks the script, and `tools/vps-release-audit.mjs` requires it.
 - Current pass 2026-06-11: Rust SSR product cart bridge is added before any page cutover. Full Rust product pages now include a small cart bridge that appends add-to-cart buttons to variant rows, writes the current storefront-compatible `sobag.cart.guest` / `sobag.cart.<user>` localStorage entries, updates the Rust header cart count, and syncs authenticated carts through `/api/auth/me`. `tools/rust-ssr-smoke.mjs` and `tools/rust-ssr-cutover-audit.mjs` guard the bridge markers.
 - Current pass 2026-06-11: Rust SSR public-readiness guard is tightened before any page cutover. Rust listing pages no longer render the service-only `Node fallback` link, `tools/rust-ssr-smoke.mjs` rejects `Node fallback` on every Rust SSR candidate route, and `tools/rust-ssr-cutover-audit.mjs` guards against reintroducing the label in templates/smoke.

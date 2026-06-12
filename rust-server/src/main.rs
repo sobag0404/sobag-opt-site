@@ -4413,10 +4413,8 @@ fn render_card_with_routes(product: &CatalogCard, routes: &RenderRoutes) -> Stri
         product.image.as_str()
     };
     format!(
-        "<article class=\"rust-card\"><a href=\"{}?baseSku={}\" hx-get=\"{}?baseSku={}\" hx-target=\"#rustProduct\" hx-swap=\"innerHTML\"><img loading=\"lazy\" src=\"{}\" alt=\"{}\"></a><div class=\"rust-card__body\"><small>{}</small><h2>{}</h2><p>{}</p><div class=\"rust-card__price\">от {} ₽</div></div></article>",
+        "<article class=\"rust-card\"><a href=\"{}?baseSku={}\"><img loading=\"lazy\" src=\"{}\" alt=\"{}\"></a><div class=\"rust-card__body\"><small>{}</small><h2>{}</h2><p>{}</p><div class=\"rust-card__price\">от {} ₽</div></div></article>",
         routes.product_path,
-        url_encode(&product.base_sku),
-        routes.product_fragment_path,
         url_encode(&product.base_sku),
         escape_attr(image),
         escape_attr(&product.name),

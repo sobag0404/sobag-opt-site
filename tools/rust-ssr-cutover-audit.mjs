@@ -8,6 +8,7 @@ const root = process.cwd();
 const RUNBOOK = "docs/rust-ssr-cutover-runbook.md";
 const RUST_MAIN = "rust-server/src/main.rs";
 const SSR_SMOKE = "tools/rust-ssr-smoke.mjs";
+const SSR_BROWSER_SMOKE = "tools/rust-ssr-browser-smoke.mjs";
 const SSR_REHEARSAL = "tools/rust-ssr-route-rehearsal.mjs";
 const VPS_DEPLOY = ".github/workflows/vps-deploy.yml";
 
@@ -49,6 +50,7 @@ const REQUIRED_RUNBOOK_MARKERS = [
   "Rollback",
   "Do not edit production env, secrets, database data, file-store data, or user data",
   "node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001",
+  "node tools/rust-ssr-browser-smoke.mjs --base http://127.0.0.1:3001",
   "node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001",
   "npm run rehearse:rust-ssr-routes",
 ];
@@ -61,7 +63,7 @@ function routeDeclaration(route) {
   return `.route("${route}",`;
 }
 
-function auditRustSsrCutover({ runbook, rustMain, smoke, rehearsal, deploy }) {
+function auditRustSsrCutover({ runbook, rustMain, smoke, browserSmoke, rehearsal, deploy }) {
   const errors = [];
 
   REQUIRED_RUNBOOK_MARKERS.forEach((marker) => assertIncludes(runbook, marker, RUNBOOK, errors));
@@ -83,6 +85,11 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, rehearsal, deploy }) {
   assertIncludes(smoke, "Node fallback", SSR_SMOKE, errors);
   assertIncludes(smoke, "sobag.cart.guest", SSR_SMOKE, errors);
   assertIncludes(smoke, "data-rust-add-cart", SSR_SMOKE, errors);
+  assertIncludes(browserSmoke, "/catalog?pageSize=2", SSR_BROWSER_SMOKE, errors);
+  assertIncludes(browserSmoke, "/search?q=", SSR_BROWSER_SMOKE, errors);
+  assertIncludes(browserSmoke, "waitForURL(/\\/product\\?baseSku=/)", SSR_BROWSER_SMOKE, errors);
+  assertIncludes(browserSmoke, "sobag.cart.guest", SSR_BROWSER_SMOKE, errors);
+  assertIncludes(browserSmoke, "data-rust-add-cart", SSR_BROWSER_SMOKE, errors);
   assertIncludes(rehearsal, "assertSafeLocations", SSR_REHEARSAL, errors);
   assertIncludes(rehearsal, "generic location / is forbidden", SSR_REHEARSAL, errors);
   assertIncludes(rehearsal, "generic /api/admin prefix location is forbidden", SSR_REHEARSAL, errors);
@@ -97,6 +104,9 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, rehearsal, deploy }) {
   if (rustMain.includes("Node fallback")) {
     errors.push("Rust SSR templates must not expose Node fallback links");
   }
+  if (rustMain.includes('hx-target="#rustProduct"')) {
+    errors.push("Rust catalog cards must use normal product-page navigation before public SSR cutover");
+  }
   if (/api\/admin\/\*/.test(rustMain)) {
     errors.push("Rust SSR cutover must not add public admin wildcard routes");
   }
@@ -108,6 +118,7 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, rehearsal, deploy }) {
 function selfTest() {
   const goodRouteDecls = PUBLIC_ROUTES.map((route) => routeDeclaration(route)).join("\n");
   const goodSmoke = `${PUBLIC_ROUTES.map((route) => `["${route}`, []).join("\n")}\nassertNotContains\nRust Preview\nNode fallback\nsobag.cart.guest\ndata-rust-add-cart`;
+  const goodBrowserSmoke = "/catalog?pageSize=2\n/search?q=\nwaitForURL(/\\/product\\?baseSku=/)\nsobag.cart.guest\ndata-rust-add-cart";
   const goodRehearsal = `${PUBLIC_ROUTES.map((route) => `"${route}"`).join("\n")}\nassertSafeLocations\ngeneric location / is forbidden\ngeneric /api/admin prefix location is forbidden\nproxy_pass http://127.0.0.1:3001`;
   const goodRunbook = [...REQUIRED_RUNBOOK_MARKERS, ...PUBLIC_ROUTES, ...NODE_FALLBACK_ROUTES].join("\n");
   const goodDeploy = [
@@ -119,6 +130,7 @@ function selfTest() {
     runbook: goodRunbook,
     rustMain: goodRouteDecls,
     smoke: goodSmoke,
+    browserSmoke: goodBrowserSmoke,
     rehearsal: goodRehearsal,
     deploy: goodDeploy,
   });
@@ -130,6 +142,7 @@ function selfTest() {
       runbook: goodRunbook.replace("/cart", ""),
       rustMain: goodRouteDecls,
       smoke: goodSmoke,
+      browserSmoke: goodBrowserSmoke,
       rehearsal: goodRehearsal,
       deploy: goodDeploy,
     });
@@ -155,6 +168,7 @@ function main() {
     runbook: readRequired(RUNBOOK),
     rustMain: readRequired(RUST_MAIN),
     smoke: readRequired(SSR_SMOKE),
+    browserSmoke: readRequired(SSR_BROWSER_SMOKE),
     rehearsal: readRequired(SSR_REHEARSAL),
     deploy: readRequired(VPS_DEPLOY),
   });

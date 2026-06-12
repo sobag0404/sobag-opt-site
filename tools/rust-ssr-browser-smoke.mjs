@@ -27,34 +27,58 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+async function assertCartLine(page, expectedQty) {
+  const result = await page.evaluate(() => {
+    const cart = JSON.parse(localStorage.getItem("sobag.cart.guest") || "[]");
+    return {
+      cart,
+      header: document.querySelector(".rust-shell-cart")?.textContent || "",
+    };
+  });
+  assert(Array.isArray(result.cart), "cart should be an array");
+  assert(result.cart.length === 1, `cart should contain one line, got ${result.cart.length}`);
+  const [key, line] = result.cart[0] || [];
+  assert(typeof key === "string" && key.includes("opt_"), "cart key should include product SKU");
+  assert(line?.qty === expectedQty, `cart qty should be ${expectedQty}, got ${line?.qty}`);
+  assert(line?.variant?.sku, "cart line variant SKU is missing");
+  assert(line?.productId, "cart line productId is missing");
+  assert(line?.productName, "cart line productName is missing");
+  assert(line?.productImage, "cart line productImage is missing");
+  assert(result.header.includes(String(expectedQty)), `cart header did not update: ${result.header}`);
+  return line.variant.sku;
+}
+
+async function addFirstVariantToCart(page, qty) {
+  await page.evaluate(() => localStorage.removeItem("sobag.cart.guest"));
+  await page.locator(".rust-variant-qty").first().fill(String(qty));
+  await page.locator("[data-rust-add-cart]").first().click();
+  return assertCartLine(page, qty);
+}
+
+async function verifyListingToProductFlow(page, args, path, label) {
+  await page.goto(`${args.base}${path}`, { waitUntil: "domcontentloaded" });
+  await page.locator(".rust-card a").first().click();
+  await page.waitForURL(/\/product\?baseSku=/);
+  await page.locator(".rust-product").waitFor();
+  await page.locator("[data-rust-add-cart]").first().waitFor();
+  const sku = await addFirstVariantToCart(page, 2);
+  console.log(`OK ${label} -> product cart: ${sku}`);
+}
+
 async function main() {
   const args = parseArgs();
   const browser = await chromium.launch({ headless: !args.headed });
   try {
     const page = await browser.newPage();
     page.setDefaultTimeout(args.timeout);
+
     await page.goto(`${args.base}/product?baseSku=${encodeURIComponent(args.product)}`, { waitUntil: "domcontentloaded" });
-    await page.evaluate(() => localStorage.removeItem("sobag.cart.guest"));
-    await page.locator(".rust-variant-qty").first().fill("3");
-    await page.locator("[data-rust-add-cart]").first().click();
-    const result = await page.evaluate(() => {
-      const cart = JSON.parse(localStorage.getItem("sobag.cart.guest") || "[]");
-      return {
-        cart,
-        header: document.querySelector(".rust-shell-cart")?.textContent || "",
-      };
-    });
-    assert(Array.isArray(result.cart), "cart should be an array");
-    assert(result.cart.length === 1, `cart should contain one line, got ${result.cart.length}`);
-    const [key, line] = result.cart[0] || [];
-    assert(typeof key === "string" && key.includes("opt_"), "cart key should include product SKU");
-    assert(line?.qty === 3, `cart qty should be 3, got ${line?.qty}`);
-    assert(line?.variant?.sku, "cart line variant SKU is missing");
-    assert(line?.productId, "cart line productId is missing");
-    assert(line?.productName, "cart line productName is missing");
-    assert(line?.productImage, "cart line productImage is missing");
-    assert(/Корзина\s+3/.test(result.header), `cart header did not update: ${result.header}`);
-    console.log(`Rust SSR browser smoke passed: ${line.variant.sku}`);
+    const directSku = await addFirstVariantToCart(page, 3);
+    console.log(`OK direct product cart: ${directSku}`);
+
+    await verifyListingToProductFlow(page, args, "/catalog?pageSize=2", "catalog");
+    await verifyListingToProductFlow(page, args, `/search?q=${encodeURIComponent(args.product)}&pageSize=2`, "search");
+    console.log("Rust SSR browser smoke passed");
   } finally {
     await browser.close();
   }

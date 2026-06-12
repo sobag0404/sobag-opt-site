@@ -86,6 +86,7 @@ async function main() {
     needles.forEach((needle) => assertContains(text, needle, path));
     assertNotContains(text, "Rust Preview", path);
     assertNotContains(text, "Node fallback", path);
+    assertNotContains(text, "hx-target=\"#rustProduct\"", path);
     console.log(`OK ${path}`);
   }
   const authPreview = await getJson(args.base, "/rust/auth/me", args.timeout);
