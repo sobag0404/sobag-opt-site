@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust admin orders cutover smoke:
+  - added `tools/rust-admin-orders-cutover-smoke.mjs` and `npm run smoke:rust:admin-orders-cutover`;
+  - the smoke uses a temporary shared file-store and local proxy to simulate exact public `/api/admin/orders` route cutover to Rust;
+  - it verifies admin/manager reads and PATCH updates through Rust, Node account fallback seeing safe buyer-visible order state, access/validation guards, and unrelated Node fallback APIs;
+  - VPS deploy now runs it after the orders/briefs cutover smoke and before accepting the Rust release.
 - Rust orders/briefs production cutover:
   - production Nginx now routes exact `/api/orders` and `/api/briefs` to Rust;
   - Node remains fallback for `/`, `/cart`, account/auth, admin, content writes, and non-switched routes;
