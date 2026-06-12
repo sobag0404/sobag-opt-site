@@ -151,6 +151,7 @@ Last updated: 2026-06-12
      - [x] Rust product cart bridge: full Rust product pages append add-to-cart buttons to variant rows and write the same localStorage cart contract as the current storefront, with authenticated cart sync through `/api/auth/me`.
      - [x] Rust SSR browser smoke: `npm run smoke:rust:ssr-browser` verifies product add-to-cart writes the current cart contract before any public page cutover.
      - [x] Rust SSR listing-to-product smoke: Rust catalog/search cards use normal product-page navigation, and the browser smoke verifies catalog/search -> product -> cart flows before any public page cutover.
+     - [x] Rust SSR mojibake guard: SSR smoke now rejects typical mojibake sequences on all candidate Rust SSR pages before public cutover.
      - [x] Rust SSR production catalog cutover: exact `/catalog`, `/search`, `/product`, `/catalog-fragment`, `/search-fragment`, and `/product-fragment` routes now run through Rust on the VPS, with Node fallback preserved for the rest of the site.
      - [x] Rust SSR shell parity preview: internal Rust SSR pages now include a sticky commerce header with top links, logo, catalog link, search form, account/favorites links, and cart link before any public route cutover.
      - [x] Rust SSR public-route readiness guard: page titles no longer expose `Rust Preview`, and SSR smoke/audit reject preview/debug branding on candidate public routes.

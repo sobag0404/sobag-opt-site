@@ -51,6 +51,23 @@ function assertNotContains(text, needle, label) {
   if (text.includes(needle)) throw new Error(`${label} must not expose ${needle}`);
 }
 
+const MOJIBAKE_MARKERS = [
+  "\u0420\u0459",
+  "\u0420\u040F",
+  "\u0420\u0401",
+  "\u0421\u0453",
+  "\u0421\u201A",
+  "\u0432\u0402",
+  "\u0432\u201A",
+  "\u0420\u0098",
+  "\uFFFD",
+];
+
+function assertNoMojibake(text, label) {
+  const marker = MOJIBAKE_MARKERS.find((item) => text.includes(item));
+  if (marker) throw new Error(`${label} contains mojibake marker ${JSON.stringify(marker)}`);
+}
+
 async function main() {
   const args = parseArgs();
   const checks = [
@@ -87,6 +104,7 @@ async function main() {
     assertNotContains(text, "Rust Preview", path);
     assertNotContains(text, "Node fallback", path);
     assertNotContains(text, "hx-target=\"#rustProduct\"", path);
+    assertNoMojibake(text, path);
     console.log(`OK ${path}`);
   }
   const authPreview = await getJson(args.base, "/rust/auth/me", args.timeout);

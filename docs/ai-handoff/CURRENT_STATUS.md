@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR mojibake guard:
+  - `tools/rust-ssr-smoke.mjs` now rejects typical mojibake sequences without flagging normal Cyrillic;
+  - `tools/rust-ssr-cutover-audit.mjs` requires the guard before public SSR cutover;
+  - verified against the VPS Rust runtime through an SSH tunnel with `npm run smoke:rust:ssr` and `npm run smoke:rust:ssr-browser`.
 - Rust SSR production catalog cutover:
   - Nginx exact routes `/catalog`, `/search`, `/product`, `/catalog-fragment`, `/search-fragment`, and `/product-fragment` now proxy to `sobag_opt_rust`;
   - generic `location /`, `/cart`, `/account`, auth, orders, admin, content writes, and non-switched pages remain on Node fallback;

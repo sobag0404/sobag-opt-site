@@ -83,6 +83,8 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, browserSmoke, rehearsal
   assertIncludes(smoke, "assertNotContains", SSR_SMOKE, errors);
   assertIncludes(smoke, "Rust Preview", SSR_SMOKE, errors);
   assertIncludes(smoke, "Node fallback", SSR_SMOKE, errors);
+  assertIncludes(smoke, "MOJIBAKE_MARKERS", SSR_SMOKE, errors);
+  assertIncludes(smoke, "assertNoMojibake", SSR_SMOKE, errors);
   assertIncludes(smoke, "sobag.cart.guest", SSR_SMOKE, errors);
   assertIncludes(smoke, "data-rust-add-cart", SSR_SMOKE, errors);
   assertIncludes(browserSmoke, "/catalog?pageSize=2", SSR_BROWSER_SMOKE, errors);
@@ -117,7 +119,7 @@ function auditRustSsrCutover({ runbook, rustMain, smoke, browserSmoke, rehearsal
 
 function selfTest() {
   const goodRouteDecls = PUBLIC_ROUTES.map((route) => routeDeclaration(route)).join("\n");
-  const goodSmoke = `${PUBLIC_ROUTES.map((route) => `["${route}`, []).join("\n")}\nassertNotContains\nRust Preview\nNode fallback\nsobag.cart.guest\ndata-rust-add-cart`;
+  const goodSmoke = `${PUBLIC_ROUTES.map((route) => `["${route}`, []).join("\n")}\nassertNotContains\nRust Preview\nNode fallback\nMOJIBAKE_MARKERS\nassertNoMojibake\nsobag.cart.guest\ndata-rust-add-cart`;
   const goodBrowserSmoke = "/catalog?pageSize=2\n/search?q=\nwaitForURL(/\\/product\\?baseSku=/)\nsobag.cart.guest\ndata-rust-add-cart";
   const goodRehearsal = `${PUBLIC_ROUTES.map((route) => `"${route}"`).join("\n")}\nassertSafeLocations\ngeneric location / is forbidden\ngeneric /api/admin prefix location is forbidden\nproxy_pass http://127.0.0.1:3001`;
   const goodRunbook = [...REQUIRED_RUNBOOK_MARKERS, ...PUBLIC_ROUTES, ...NODE_FALLBACK_ROUTES].join("\n");
