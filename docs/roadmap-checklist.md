@@ -46,6 +46,7 @@ Last updated: 2026-06-12
 - [x] Rust orders/briefs production cutover: production Nginx now routes exact `/api/orders` and `/api/briefs` to Rust, while auth/account/admin/generic routes remain on Node fallback; rollback backup is on the VPS.
 - [x] Rust admin orders preview: `/rust/admin/orders` mirrors Node admin/manager order reads and covers temp-store status, manager assignment, manager note, customer/internal comment, history, and audit PATCH behavior; public `/api/admin/orders` still stays on Node until cutover gates are green.
 - [x] Rust admin orders cutover smoke: `tools/rust-admin-orders-cutover-smoke.mjs` simulates exact `/api/admin/orders` route cutover on a temporary shared file-store, verifies Rust admin/manager read+PATCH, Node account fallback visibility, access guards, validation guards, and unrelated Node fallback APIs.
+- [x] Rust admin orders production cutover: production Nginx now routes exact `/api/admin/orders` to Rust, while auth/account/admin users/content/catalog/import/media/generic routes remain on Node fallback; rollback backup is on the VPS.
 - [x] Rust admin users preview: `/rust/admin/users` mirrors Node admin/manager user/customer reads and covers temp-store invite/role/delete writes; public `/api/admin/users` still stays on Node until cutover gates are green.
 - [x] Rust admin content parity smoke: deploy shadow smoke now compares Node `/api/admin/content` and Rust `/rust/admin/content` PUT plus follow-up GET from identical temporary fixtures.
 - [x] Rust review moderation parity smoke: deploy shadow smoke now compares Node `/api/admin/content` and Rust `/rust/admin/content` PATCH approve/delete plus follow-up review lists from identical temporary fixtures.
@@ -186,6 +187,7 @@ Last updated: 2026-06-12
     - [x] Rust orders/briefs cutover smoke: `tools/rust-orders-briefs-cutover-smoke.mjs` simulates the future exact `/api/orders` and `/api/briefs` Nginx route switch, keeps admin/account/health on Node fallback, and proves Rust-created orders/briefs remain visible to Node admin/account flows.
     - [x] Rust orders/briefs production route switch: exact `/api/orders` and `/api/briefs` are live on Rust after no-write public validation; Node remains fallback for auth/account/admin and other non-switched APIs.
     - [x] Rust admin orders cutover smoke: `tools/rust-admin-orders-cutover-smoke.mjs` simulates the future exact `/api/admin/orders` route switch, keeps auth/account/health on Node fallback, and proves Rust admin updates remain visible safely to buyer account flows.
+    - [x] Rust admin orders production route switch: exact `/api/admin/orders` is live on Rust after no-write public validation; Node remains fallback for auth/account/admin users/content/catalog/import/media and other non-switched APIs.
      - [x] Migrate frontend catalog list/product modal to the new smaller API payloads.
        - [x] Product modal now hydrates public product detail from `/api/catalog-detail` with static/local fallback.
        - [x] Catalog/search list rendering now uses `/api/catalog-query` compact cards and cursor pagination with local fallback.
