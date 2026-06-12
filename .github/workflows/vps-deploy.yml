@@ -193,6 +193,7 @@ jobs:
             node tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin "$rust_binary"
             node tools/rust-admin-orders-cutover-smoke.mjs --rust-bin "$rust_binary"
             node tools/rust-admin-users-cutover-smoke.mjs --rust-bin "$rust_binary"
+            node tools/rust-admin-content-cutover-smoke.mjs --rust-bin "$rust_binary"
             rm -rf -- "$rust_target_dir/debug"
           fi
 

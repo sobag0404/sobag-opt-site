@@ -51,7 +51,7 @@ These routes must not be exposed as public `/api/*` routes until the matching cu
 
 ## Current Candidate
 
-Candidate 1 is the full account-state route: `GET` and `PUT /api/auth/me`. Candidate 3, orders/briefs writes, has already been switched in production as exact `/api/orders` and `/api/briefs` Nginx routes after temporary-store cutover smoke and no-write public validation. Admin order read/update and admin users/employees have also been switched in production as exact `/api/admin/orders` and `/api/admin/users` after their cutover smokes and no-write public validation. The next write/admin candidate is admin content, but only after its own exact-route cutover smoke and rollback gate.
+Candidate 1 is the full account-state route: `GET` and `PUT /api/auth/me`. Candidate 3, orders/briefs writes, has already been switched in production as exact `/api/orders` and `/api/briefs` Nginx routes after temporary-store cutover smoke and no-write public validation. Admin order read/update and admin users/employees have also been switched in production as exact `/api/admin/orders` and `/api/admin/users` after their cutover smokes and no-write public validation. The next write/admin candidate is admin content, but only after `tools/rust-admin-content-cutover-smoke.mjs` is green on the VPS and rollback is ready.
 
 Reason: public `/api/auth/me` is one URL for both account reads and account-state writes. A simple exact Nginx route cannot safely switch only `GET` while leaving `PUT` on Node. Before switching it, `tools/rust-auth-me-shadow-smoke.mjs` must compare Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, expired sessions, profile updates, cart/favorite/saved-cart writes, buyer review validation, no password fields, no buyer-hidden internal fields, and unsupported `POST`/`DELETE` staying `405` on both runtimes. Public `/api/auth/me` still stays on Node until the full `GET+PUT` exact route is intentionally applied and rollback is ready.
 
@@ -67,6 +67,7 @@ Before any route group switch:
 - `node tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `node tools/rust-admin-orders-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `node tools/rust-admin-users-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
+- `node tools/rust-admin-content-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `npm.cmd run check`
 - `npm.cmd run ui:smoke` when UI/API behavior is touched
 - `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online`
@@ -102,6 +103,8 @@ Before a public `/api/orders` and `/api/briefs` switch, run `tools/rust-orders-b
 Before a public `/api/admin/orders` switch, run `tools/rust-admin-orders-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates exact route-level cutover for only `/api/admin/orders`, verifies admin/manager reads and PATCH updates through Rust, verifies Node fallback `/api/auth/me` sees the safe customer-visible order update without internal CRM leakage, verifies access/validation guards, and verifies unrelated APIs still fall back to Node.
 
 Before a public `/api/admin/users` switch, run `tools/rust-admin-users-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates exact route-level cutover for only `/api/admin/users`, verifies admin/manager list/detail reads, employee invite/role/delete writes through Rust, verifies Node fallback `/api/auth/me` sees Rust-created employee state, verifies access/validation/admin-lock guards, and verifies unrelated APIs still fall back to Node.
+
+Before a public `/api/admin/content` switch, run `tools/rust-admin-content-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates exact route-level cutover for only `/api/admin/content`, verifies admin/content reads and content writes through Rust, verifies Node fallback `/api/content` sees the updated content, verifies review moderation hide/delete, verifies access/validation guards, and verifies unrelated APIs still fall back to Node.
 
 Allowed future exact locations only after gates:
 

@@ -12,6 +12,7 @@ const ORDER_SMOKE = "tools/rust-orders-write-smoke.mjs";
 const ORDER_CUTOVER_SMOKE = "tools/rust-orders-briefs-cutover-smoke.mjs";
 const ADMIN_ORDER_CUTOVER_SMOKE = "tools/rust-admin-orders-cutover-smoke.mjs";
 const ADMIN_USERS_CUTOVER_SMOKE = "tools/rust-admin-users-cutover-smoke.mjs";
+const ADMIN_CONTENT_CUTOVER_SMOKE = "tools/rust-admin-content-cutover-smoke.mjs";
 const ROUTE_REHEARSAL = "tools/rust-account-route-rehearsal.mjs";
 
 const PREVIEW_ROUTES = [
@@ -76,7 +77,7 @@ function routeDeclaration(route) {
   return `"${route}"`;
 }
 
-function auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, orderSmoke, orderCutoverSmoke, adminOrderCutoverSmoke, adminUsersCutoverSmoke, routeRehearsal }) {
+function auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, orderSmoke, orderCutoverSmoke, adminOrderCutoverSmoke, adminUsersCutoverSmoke, adminContentCutoverSmoke, routeRehearsal }) {
   const errors = [];
   REQUIRED_MARKERS.forEach((marker) => assertIncludes(runbook, marker, RUNBOOK, errors));
   PREVIEW_ROUTES.forEach((route) => {
@@ -140,6 +141,16 @@ function auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, orderSmo
     "unrelated API remains Node fallback",
   ].forEach((marker) => assertIncludes(adminUsersCutoverSmoke, marker, ADMIN_USERS_CUTOVER_SMOKE, errors));
   [
+    "routeTarget",
+    "/api/admin/content",
+    "/rust/admin/content",
+    "GET /api/admin/content through Rust",
+    "Node content fallback sees Rust content update",
+    "PATCH /api/admin/content reviews through Rust",
+    "admin content guards through Rust",
+    "unrelated API remains Node fallback",
+  ].forEach((marker) => assertIncludes(adminContentCutoverSmoke, marker, ADMIN_CONTENT_CUTOVER_SMOKE, errors));
+  [
     "auth-me",
     "GET+PUT",
     "auth-write",
@@ -165,12 +176,13 @@ function selfTest() {
   const orderCutoverSmoke = ["routeTarget", "/api/orders", "/api/briefs", "/rust/orders", "/rust/briefs", "Node admin fallback sees Rust-created order", "Node account fallback sees Rust order side effects", "Node admin fallback sees Rust-created brief", "unrelated API remains Node fallback"].join("\n");
   const adminOrderCutoverSmoke = ["routeTarget", "/api/admin/orders", "/rust/admin/orders", "GET /api/admin/orders through Rust", "PATCH /api/admin/orders through Rust", "Node account fallback sees safe Rust admin update", "admin orders guards through Rust", "unrelated API remains Node fallback"].join("\n");
   const adminUsersCutoverSmoke = ["routeTarget", "/api/admin/users", "/rust/admin/users", "GET /api/admin/users through Rust", "POST /api/admin/users through Rust", "PATCH/DELETE /api/admin/users through Rust", "Node account fallback sees Rust-created employee", "admin users guards through Rust", "unrelated API remains Node fallback"].join("\n");
+  const adminContentCutoverSmoke = ["routeTarget", "/api/admin/content", "/rust/admin/content", "GET /api/admin/content through Rust", "Node content fallback sees Rust content update", "PATCH /api/admin/content reviews through Rust", "admin content guards through Rust", "unrelated API remains Node fallback"].join("\n");
   const routeRehearsal = ["auth-me", "GET+PUT", "auth-write", "orders-briefs", "admin-orders", "admin-users", "admin-content", "assertSafeLocations"].join("\n");
-  const summary = auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, orderSmoke, orderCutoverSmoke, adminOrderCutoverSmoke, adminUsersCutoverSmoke, routeRehearsal });
+  const summary = auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, orderSmoke, orderCutoverSmoke, adminOrderCutoverSmoke, adminUsersCutoverSmoke, adminContentCutoverSmoke, routeRehearsal });
   if (summary.previewRoutes !== PREVIEW_ROUTES.length) throw new Error("self-test preview route count mismatch");
   let rejected = false;
   try {
-    auditCutover({ runbook: runbook.replace("Node remains authoritative", ""), rustMain, authSmoke, authCutoverSmoke, orderSmoke, orderCutoverSmoke, adminOrderCutoverSmoke, adminUsersCutoverSmoke, routeRehearsal });
+    auditCutover({ runbook: runbook.replace("Node remains authoritative", ""), rustMain, authSmoke, authCutoverSmoke, orderSmoke, orderCutoverSmoke, adminOrderCutoverSmoke, adminUsersCutoverSmoke, adminContentCutoverSmoke, routeRehearsal });
   } catch (error) {
     rejected = /Node remains authoritative/.test(error.message);
   }
@@ -198,6 +210,7 @@ function main() {
     orderCutoverSmoke: readRequired(ORDER_CUTOVER_SMOKE),
     adminOrderCutoverSmoke: readRequired(ADMIN_ORDER_CUTOVER_SMOKE),
     adminUsersCutoverSmoke: readRequired(ADMIN_USERS_CUTOVER_SMOKE),
+    adminContentCutoverSmoke: readRequired(ADMIN_CONTENT_CUTOVER_SMOKE),
     routeRehearsal: readRequired(ROUTE_REHEARSAL),
   });
   console.log(

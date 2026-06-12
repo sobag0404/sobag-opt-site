@@ -36,6 +36,7 @@
     "smoke:rust:orders-briefs-cutover": "node tools/rust-orders-briefs-cutover-smoke.mjs",
     "smoke:rust:admin-orders-cutover": "node tools/rust-admin-orders-cutover-smoke.mjs",
     "smoke:rust:admin-users-cutover": "node tools/rust-admin-users-cutover-smoke.mjs",
+    "smoke:rust:admin-content-cutover": "node tools/rust-admin-content-cutover-smoke.mjs",
     "audit:rust-account-cutover": "node tools/rust-account-orders-admin-cutover-audit.mjs",
     "rehearse:rust-account-routes": "node tools/rust-account-route-rehearsal.mjs",
     "audit:rust-ssr-cutover": "node tools/rust-ssr-cutover-audit.mjs",
