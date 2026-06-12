@@ -12,6 +12,7 @@ Currently switched to Rust in production:
 
 - `/api/catalog-query`
 - `/api/catalog-detail`
+- `/api/auth/me`
 - `/api/orders`
 - `/api/briefs`
 - `/api/admin/orders`
@@ -20,7 +21,7 @@ Currently switched to Rust in production:
 
 Do not switch these route groups yet:
 
-- auth/account: `/api/auth/me`, `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`
+- auth session writes: `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`
 - admin catalog/PIM/media/import: `/api/admin/catalog`, `/api/admin/pim`, `/api/admin/product-images`, `/api/admin/import-batches`
 
 ## Internal Rust Preview Routes
@@ -51,9 +52,9 @@ These routes must not be exposed as public `/api/*` routes until the matching cu
 
 ## Current Candidate
 
-Candidate 1 is the full account-state route: `GET` and `PUT /api/auth/me`. Candidate 3, orders/briefs writes, has already been switched in production as exact `/api/orders` and `/api/briefs` Nginx routes after temporary-store cutover smoke and no-write public validation. Admin order read/update, admin users/employees, and admin content/review moderation have also been switched in production as exact `/api/admin/orders`, `/api/admin/users`, and `/api/admin/content` after their cutover smokes and no-write public validation. The next admin candidates are admin catalog/import/media/PIM, but only after separate route-specific smokes and rollback gates.
+Candidate 1 is the full account-state route `GET` and `PUT /api/auth/me`, and it is switched in production as an exact Nginx route after temporary-store cutover smoke and no-write public validation. Candidate 3, orders/briefs writes, has already been switched in production as exact `/api/orders` and `/api/briefs` Nginx routes. Admin order read/update, admin users/employees, and admin content/review moderation have also been switched in production as exact `/api/admin/orders`, `/api/admin/users`, and `/api/admin/content`. The next auth candidate is session writes (`/api/auth/login`, `/api/auth/register`, `/api/auth/logout`) only after a separate exact-route cutover smoke and rollback gate.
 
-Reason: public `/api/auth/me` is one URL for both account reads and account-state writes. A simple exact Nginx route cannot safely switch only `GET` while leaving `PUT` on Node. Before switching it, `tools/rust-auth-me-shadow-smoke.mjs` must compare Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, expired sessions, profile updates, cart/favorite/saved-cart writes, buyer review validation, no password fields, no buyer-hidden internal fields, and unsupported `POST`/`DELETE` staying `405` on both runtimes. Public `/api/auth/me` still stays on Node until the full `GET+PUT` exact route is intentionally applied and rollback is ready.
+Reason: public `/api/auth/me` is one URL for both account reads and account-state writes. A simple exact Nginx route could not safely switch only `GET` while leaving `PUT` on Node. Before it was switched, `tools/rust-auth-me-shadow-smoke.mjs` compared Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, expired sessions, profile updates, cart/favorite/saved-cart writes, buyer review validation, no password fields, no buyer-hidden internal fields, and unsupported `POST`/`DELETE` staying `405` on both runtimes. Public `/api/auth/me` is now switched only as the full `GET+PUT` exact route with rollback backup.
 
 ## Required Gates Per Route Group
 

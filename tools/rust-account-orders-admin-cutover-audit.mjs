@@ -28,6 +28,7 @@ const PREVIEW_ROUTES = [
 ];
 
 const SWITCHED_PUBLIC_ROUTES = [
+  "/api/auth/me",
   "/api/orders",
   "/api/briefs",
   "/api/admin/orders",
@@ -36,7 +37,6 @@ const SWITCHED_PUBLIC_ROUTES = [
 ];
 
 const DO_NOT_SWITCH_YET = [
-  "/api/auth/me",
   "/api/auth/login",
   "/api/auth/register",
   "/api/auth/logout",
