@@ -38,8 +38,8 @@ These routes must not be exposed as public `/api/*` routes until the matching cu
 
 ## Route Group Order
 
-1. Auth/account read: `GET /api/auth/me`
-2. Auth writes: login, register, logout, profile update
+1. Auth/account state: `GET+PUT /api/auth/me`
+2. Auth session writes: login, register, logout
 3. Orders/briefs writes
 4. Admin orders read/update
 5. Admin users/employees
@@ -48,9 +48,9 @@ These routes must not be exposed as public `/api/*` routes until the matching cu
 
 ## Current Candidate
 
-Candidate 1 is auth/account read only: `GET /api/auth/me`.
+Candidate 1 is the full account-state route: `GET` and `PUT /api/auth/me`.
 
-Before switching it, `tools/rust-auth-me-shadow-smoke.mjs` must compare Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, and expired sessions, verify no password fields leak, and verify unsupported `POST`/`DELETE` stay `405` on both runtimes. Public `/api/auth/me` still stays on Node until the exact Nginx route is intentionally applied and rollback is ready.
+Reason: public `/api/auth/me` is one URL for both account reads and account-state writes. A simple exact Nginx route cannot safely switch only `GET` while leaving `PUT` on Node. Before switching it, `tools/rust-auth-me-shadow-smoke.mjs` must compare Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, expired sessions, profile updates, cart/favorite/saved-cart writes, buyer review validation, no password fields, no buyer-hidden internal fields, and unsupported `POST`/`DELETE` staying `405` on both runtimes. Public `/api/auth/me` still stays on Node until the full `GET+PUT` exact route is intentionally applied and rollback is ready.
 
 ## Required Gates Per Route Group
 
@@ -82,11 +82,11 @@ Switch only one exact route group at a time. Keep generic `location /` on Node.
 Before editing Nginx, rehearse the exact locations locally:
 
 ```powershell
-npm.cmd run rehearse:rust-account-routes -- --group auth-read
+npm.cmd run rehearse:rust-account-routes -- --group auth-me
 npm.cmd run rehearse:rust-account-routes -- --group orders-briefs
 ```
 
-The rehearsal prints exact `location = ...` blocks only. It must reject generic `/api`, wildcard `/api/admin`, and admin catalog/import/media/PIM locations until those later route groups are explicitly covered.
+The rehearsal prints exact `location = ...` blocks only. For `/api/auth/me`, the rehearsal must label the group as `GET+PUT` because `GET`-only Nginx cutover is unsafe for the current shared URL. It must reject generic `/api`, wildcard `/api/admin`, and admin catalog/import/media/PIM locations until those later route groups are explicitly covered.
 
 Allowed future exact locations only after gates:
 

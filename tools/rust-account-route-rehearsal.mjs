@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 const ROUTE_GROUPS = {
-  "auth-read": {
+  "auth-me": {
     publicRoutes: ["/api/auth/me"],
     rustRoutes: ["/rust/auth/me"],
+    methods: ["GET", "PUT"],
   },
   "auth-write": {
     publicRoutes: ["/api/auth/login", "/api/auth/register", "/api/auth/logout"],
@@ -87,7 +88,7 @@ function renderSnippet(group = "all") {
     if (spec.publicRoutes.length !== spec.rustRoutes.length) {
       throw new Error(`Route count mismatch for ${name}`);
     }
-    blocks.push(`# Rust rehearsal group: ${name}`);
+    blocks.push(`# Rust rehearsal group: ${name}${spec.methods ? ` (${spec.methods.join("+")})` : ""}`);
     for (let index = 0; index < spec.publicRoutes.length; index += 1) {
       blocks.push(renderLocation(spec.publicRoutes[index], spec.rustRoutes[index]));
     }
@@ -101,6 +102,7 @@ function selfTest() {
   const all = renderSnippet("all");
   for (const group of Object.keys(ROUTE_GROUPS)) renderSnippet(group);
   if (!all.includes("location = /api/auth/me")) throw new Error("auth/me location missing");
+  if (!all.includes("auth-me (GET+PUT)")) throw new Error("auth/me rehearsal must document GET+PUT coupling");
   if (!all.includes("proxy_pass http://127.0.0.1:3001/rust/orders;")) throw new Error("orders rust proxy missing");
   let rejected = false;
   try {

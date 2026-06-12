@@ -305,10 +305,10 @@ async function runSmoke(args) {
       const nodeResponse = await requestJson(`http://127.0.0.1:${nodePort}/api/auth/me`, { token: "buyer", method });
       const rustResponse = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, { token: "buyer", method });
       if (nodeResponse.status !== 405 || rustResponse.status !== 405) {
-        throw new Error(`auth-read ${method} method mismatch: node ${nodeResponse.status}, rust ${rustResponse.status}`);
+        throw new Error(`auth-me ${method} method mismatch: node ${nodeResponse.status}, rust ${rustResponse.status}`);
       }
     }
-    console.log("OK auth-read candidate method guards");
+    console.log("OK auth-me unsupported method guards");
     for (const [label, token] of [
       ["admin orders admin", "admin"],
       ["admin orders manager", "manager"],

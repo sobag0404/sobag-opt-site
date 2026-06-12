@@ -46,7 +46,9 @@ const REQUIRED_MARKERS = [
   "Internal Rust Preview Routes",
   "Route Group Order",
   "Current Candidate",
-  "Candidate 1 is auth/account read only",
+  "Candidate 1 is the full account-state route",
+  "GET+PUT",
+  "GET` while leaving `PUT` on Node",
   "Required Gates Per Route Group",
   "Nginx Cutover Shape",
   "rehearse:rust-account-routes",
@@ -77,7 +79,7 @@ function auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal
   DO_NOT_SWITCH_YET.forEach((route) => assertIncludes(runbook, route, RUNBOOK, errors));
   [
     "/rust/auth/me",
-    "auth-read candidate method guards",
+    "auth-me unsupported method guards",
     "POST",
     "DELETE",
     "/rust/admin/orders",
@@ -89,7 +91,8 @@ function auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal
     "/rust/admin/orders",
   ].forEach((route) => assertIncludes(orderSmoke, route, ORDER_SMOKE, errors));
   [
-    "auth-read",
+    "auth-me",
+    "GET+PUT",
     "auth-write",
     "orders-briefs",
     "admin-orders",
@@ -107,9 +110,9 @@ function auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal
 function selfTest() {
   const runbook = [...REQUIRED_MARKERS, ...PREVIEW_ROUTES, ...DO_NOT_SWITCH_YET].join("\n");
   const rustMain = PREVIEW_ROUTES.map(routeDeclaration).join("\n");
-  const authSmoke = ["/rust/auth/me", "auth-read candidate method guards", "POST", "DELETE", "/rust/admin/orders", "/rust/admin/users"].join("\n");
+  const authSmoke = ["/rust/auth/me", "auth-me unsupported method guards", "POST", "DELETE", "/rust/admin/orders", "/rust/admin/users"].join("\n");
   const orderSmoke = ["/rust/orders", "/rust/briefs", "/rust/admin/orders"].join("\n");
-  const routeRehearsal = ["auth-read", "auth-write", "orders-briefs", "admin-orders", "admin-users", "admin-content", "assertSafeLocations"].join("\n");
+  const routeRehearsal = ["auth-me", "GET+PUT", "auth-write", "orders-briefs", "admin-orders", "admin-users", "admin-content", "assertSafeLocations"].join("\n");
   const summary = auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal });
   if (summary.previewRoutes !== PREVIEW_ROUTES.length) throw new Error("self-test preview route count mismatch");
   let rejected = false;

@@ -43,6 +43,10 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust auth/account cutover guard:
+  - `/api/auth/me` is now treated as one coupled `GET+PUT` route because `GET`-only Nginx exact cutover would also intercept `PUT /api/auth/me` and break profile/cart/favorites/saved-cart writes;
+  - `tools/rust-account-route-rehearsal.mjs` now emits `auth-me (GET+PUT)`;
+  - `docs/rust-account-orders-admin-cutover-runbook.md` and `tools/rust-account-orders-admin-cutover-audit.mjs` require the method-coupling guard before any public auth/account route switch.
 - Rust SSR production content-page cutover:
   - Nginx exact routes `/about`, `/business`, `/marketplaces`, `/contacts`, `/how-to-order`, `/delivery`, `/payment`, `/returns`, `/seller-support`, and `/wholesale` now proxy to `sobag_opt_rust`;
   - Node remains fallback for `/`, `/cart`, `/account`, auth, orders, admin, content writes, and non-switched pages;
