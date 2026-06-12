@@ -26,6 +26,7 @@ const REQUIRED_FILES = [
   "tools/rust-auth-me-shadow-smoke.mjs",
   "tools/rust-auth-me-cutover-smoke.mjs",
   "tools/rust-orders-write-smoke.mjs",
+  "tools/rust-orders-briefs-cutover-smoke.mjs",
   "tools/rust-account-orders-admin-cutover-audit.mjs",
   "tools/rust-auth-orders-admin-plan-audit.mjs",
   "docs/vps-migration-notes.md",
@@ -61,6 +62,7 @@ const REQUIRED_SCRIPTS = {
   "smoke:rust:auth-me": "tools/rust-auth-me-shadow-smoke.mjs",
   "smoke:rust:auth-me-cutover": "tools/rust-auth-me-cutover-smoke.mjs",
   "smoke:rust:orders-write": "tools/rust-orders-write-smoke.mjs",
+  "smoke:rust:orders-briefs-cutover": "tools/rust-orders-briefs-cutover-smoke.mjs",
   "audit:rust-account-cutover": "tools/rust-account-orders-admin-cutover-audit.mjs",
   "audit:rust-ssr-cutover": "tools/rust-ssr-cutover-audit.mjs",
   "rehearse:rust-ssr-routes": "tools/rust-ssr-route-rehearsal.mjs",
@@ -84,6 +86,7 @@ const REQUIRED_VPS_DEPLOY_MARKERS = [
   "node tools/rust-auth-me-shadow-smoke.mjs --rust-bin \"$rust_binary\"",
   "node tools/rust-auth-me-cutover-smoke.mjs --rust-bin \"$rust_binary\"",
   "node tools/rust-orders-write-smoke.mjs --rust-bin \"$rust_binary\"",
+  "node tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin \"$rust_binary\"",
   "rm -rf -- \"$rust_target_dir/debug\"",
   "Rust health failed; restoring previous binary",
 ];
