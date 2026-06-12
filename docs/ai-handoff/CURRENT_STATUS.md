@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust auth/account cutover smoke:
+  - added `tools/rust-auth-me-cutover-smoke.mjs` and `npm run smoke:rust:auth-me-cutover`;
+  - the smoke uses a temporary shared file-store and a local proxy that keeps login/register/logout on Node while routing `GET+PUT /api/auth/me` through Rust;
+  - it verifies Node fallback can read Rust-written profile/cart/favorites/saved-cart state and unrelated APIs remain on Node;
+  - VPS deploy now runs it after `tools/rust-auth-me-shadow-smoke.mjs` and before order-write smoke.
 - Rust auth/account cutover guard:
   - `/api/auth/me` is now treated as one coupled `GET+PUT` route because `GET`-only Nginx exact cutover would also intercept `PUT /api/auth/me` and break profile/cart/favorites/saved-cart writes;
   - `tools/rust-account-route-rehearsal.mjs` now emits `auth-me (GET+PUT)`;

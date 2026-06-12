@@ -31,6 +31,7 @@
     "smoke:rust:ssr-browser": "node tools/rust-ssr-browser-smoke.mjs",
     "smoke:rust:public-routes": "node tools/rust-public-route-smoke.mjs",
     "smoke:rust:auth-me": "node tools/rust-auth-me-shadow-smoke.mjs",
+    "smoke:rust:auth-me-cutover": "node tools/rust-auth-me-cutover-smoke.mjs",
     "smoke:rust:orders-write": "node tools/rust-orders-write-smoke.mjs",
     "audit:rust-account-cutover": "node tools/rust-account-orders-admin-cutover-audit.mjs",
     "rehearse:rust-account-routes": "node tools/rust-account-route-rehearsal.mjs",

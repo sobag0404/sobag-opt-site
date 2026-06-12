@@ -59,6 +59,7 @@ Before any route group switch:
 - `cargo fmt --check`
 - `cargo test --locked`
 - `node tools/rust-auth-me-shadow-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
+- `node tools/rust-auth-me-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `node tools/rust-orders-write-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `npm.cmd run check`
 - `npm.cmd run ui:smoke` when UI/API behavior is touched
@@ -87,6 +88,8 @@ npm.cmd run rehearse:rust-account-routes -- --group orders-briefs
 ```
 
 The rehearsal prints exact `location = ...` blocks only. For `/api/auth/me`, the rehearsal must label the group as `GET+PUT` because `GET`-only Nginx cutover is unsafe for the current shared URL. It must reject generic `/api`, wildcard `/api/admin`, and admin catalog/import/media/PIM locations until those later route groups are explicitly covered.
+
+Before a public `/api/auth/me` switch, run `tools/rust-auth-me-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates the exact future routing shape, keeps login/register/logout on Node, routes only `GET+PUT /api/auth/me` to Rust, verifies Node can read the Rust-written account state, and verifies unrelated APIs still fall back to Node.
 
 Allowed future exact locations only after gates:
 

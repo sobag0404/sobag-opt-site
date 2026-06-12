@@ -7,6 +7,7 @@ const root = process.cwd();
 const RUNBOOK = "docs/rust-account-orders-admin-cutover-runbook.md";
 const RUST_MAIN = "rust-server/src/main.rs";
 const AUTH_SMOKE = "tools/rust-auth-me-shadow-smoke.mjs";
+const AUTH_CUTOVER_SMOKE = "tools/rust-auth-me-cutover-smoke.mjs";
 const ORDER_SMOKE = "tools/rust-orders-write-smoke.mjs";
 const ROUTE_REHEARSAL = "tools/rust-account-route-rehearsal.mjs";
 
@@ -69,7 +70,7 @@ function routeDeclaration(route) {
   return `"${route}"`;
 }
 
-function auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal }) {
+function auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, orderSmoke, routeRehearsal }) {
   const errors = [];
   REQUIRED_MARKERS.forEach((marker) => assertIncludes(runbook, marker, RUNBOOK, errors));
   PREVIEW_ROUTES.forEach((route) => {
@@ -85,6 +86,15 @@ function auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal
     "/rust/admin/orders",
     "/rust/admin/users",
   ].forEach((route) => assertIncludes(authSmoke, route, AUTH_SMOKE, errors));
+  [
+    "routeTarget",
+    "/api/auth/me",
+    "/rust/auth/me",
+    "Node fallback reads Rust-auth state",
+    "GET /api/auth/me through Rust",
+    "PUT /api/auth/me through Rust",
+    "non-auth API remains Node fallback",
+  ].forEach((marker) => assertIncludes(authCutoverSmoke, marker, AUTH_CUTOVER_SMOKE, errors));
   [
     "/rust/orders",
     "/rust/briefs",
@@ -111,9 +121,10 @@ function selfTest() {
   const runbook = [...REQUIRED_MARKERS, ...PREVIEW_ROUTES, ...DO_NOT_SWITCH_YET].join("\n");
   const rustMain = PREVIEW_ROUTES.map(routeDeclaration).join("\n");
   const authSmoke = ["/rust/auth/me", "auth-me unsupported method guards", "POST", "DELETE", "/rust/admin/orders", "/rust/admin/users"].join("\n");
+  const authCutoverSmoke = ["routeTarget", "/api/auth/me", "/rust/auth/me", "Node fallback reads Rust-auth state", "GET /api/auth/me through Rust", "PUT /api/auth/me through Rust", "non-auth API remains Node fallback"].join("\n");
   const orderSmoke = ["/rust/orders", "/rust/briefs", "/rust/admin/orders"].join("\n");
   const routeRehearsal = ["auth-me", "GET+PUT", "auth-write", "orders-briefs", "admin-orders", "admin-users", "admin-content", "assertSafeLocations"].join("\n");
-  const summary = auditCutover({ runbook, rustMain, authSmoke, orderSmoke, routeRehearsal });
+  const summary = auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, orderSmoke, routeRehearsal });
   if (summary.previewRoutes !== PREVIEW_ROUTES.length) throw new Error("self-test preview route count mismatch");
   let rejected = false;
   try {
@@ -140,6 +151,7 @@ function main() {
     runbook: readRequired(RUNBOOK),
     rustMain: readRequired(RUST_MAIN),
     authSmoke: readRequired(AUTH_SMOKE),
+    authCutoverSmoke: readRequired(AUTH_CUTOVER_SMOKE),
     orderSmoke: readRequired(ORDER_SMOKE),
     routeRehearsal: readRequired(ROUTE_REHEARSAL),
   });

@@ -188,6 +188,7 @@ jobs:
             . "$app_dir/shared/.env"
             set +a
             node tools/rust-auth-me-shadow-smoke.mjs --rust-bin "$rust_binary"
+            node tools/rust-auth-me-cutover-smoke.mjs --rust-bin "$rust_binary"
             node tools/rust-orders-write-smoke.mjs --rust-bin "$rust_binary"
             rm -rf -- "$rust_target_dir/debug"
           fi
