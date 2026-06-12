@@ -32,6 +32,7 @@ const SWITCHED_PUBLIC_ROUTES = [
   "/api/briefs",
   "/api/admin/orders",
   "/api/admin/users",
+  "/api/admin/content",
 ];
 
 const DO_NOT_SWITCH_YET = [
@@ -39,7 +40,6 @@ const DO_NOT_SWITCH_YET = [
   "/api/auth/login",
   "/api/auth/register",
   "/api/auth/logout",
-  "/api/admin/content",
   "/api/admin/catalog",
   "/api/admin/pim",
   "/api/admin/product-images",

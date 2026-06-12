@@ -16,11 +16,11 @@ Currently switched to Rust in production:
 - `/api/briefs`
 - `/api/admin/orders`
 - `/api/admin/users`
+- `/api/admin/content`
 
 Do not switch these route groups yet:
 
 - auth/account: `/api/auth/me`, `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`
-- admin content: `/api/admin/content`
 - admin catalog/PIM/media/import: `/api/admin/catalog`, `/api/admin/pim`, `/api/admin/product-images`, `/api/admin/import-batches`
 
 ## Internal Rust Preview Routes
@@ -51,7 +51,7 @@ These routes must not be exposed as public `/api/*` routes until the matching cu
 
 ## Current Candidate
 
-Candidate 1 is the full account-state route: `GET` and `PUT /api/auth/me`. Candidate 3, orders/briefs writes, has already been switched in production as exact `/api/orders` and `/api/briefs` Nginx routes after temporary-store cutover smoke and no-write public validation. Admin order read/update and admin users/employees have also been switched in production as exact `/api/admin/orders` and `/api/admin/users` after their cutover smokes and no-write public validation. The next write/admin candidate is admin content, but only after `tools/rust-admin-content-cutover-smoke.mjs` is green on the VPS and rollback is ready.
+Candidate 1 is the full account-state route: `GET` and `PUT /api/auth/me`. Candidate 3, orders/briefs writes, has already been switched in production as exact `/api/orders` and `/api/briefs` Nginx routes after temporary-store cutover smoke and no-write public validation. Admin order read/update, admin users/employees, and admin content/review moderation have also been switched in production as exact `/api/admin/orders`, `/api/admin/users`, and `/api/admin/content` after their cutover smokes and no-write public validation. The next admin candidates are admin catalog/import/media/PIM, but only after separate route-specific smokes and rollback gates.
 
 Reason: public `/api/auth/me` is one URL for both account reads and account-state writes. A simple exact Nginx route cannot safely switch only `GET` while leaving `PUT` on Node. Before switching it, `tools/rust-auth-me-shadow-smoke.mjs` must compare Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, expired sessions, profile updates, cart/favorite/saved-cart writes, buyer review validation, no password fields, no buyer-hidden internal fields, and unsupported `POST`/`DELETE` staying `405` on both runtimes. Public `/api/auth/me` still stays on Node until the full `GET+PUT` exact route is intentionally applied and rollback is ready.
 
@@ -106,7 +106,7 @@ Before a public `/api/admin/users` switch, run `tools/rust-admin-users-cutover-s
 
 Before a public `/api/admin/content` switch, run `tools/rust-admin-content-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates exact route-level cutover for only `/api/admin/content`, verifies admin/content reads and content writes through Rust, verifies Node fallback `/api/content` sees the updated content, verifies review moderation hide/delete, verifies access/validation guards, and verifies unrelated APIs still fall back to Node.
 
-Allowed future exact locations only after gates:
+Allowed exact locations after their gates:
 
 - `location = /api/auth/me`
 - `location = /api/auth/login`
