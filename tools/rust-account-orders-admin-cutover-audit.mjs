@@ -24,13 +24,16 @@ const PREVIEW_ROUTES = [
   "/rust/admin/content",
 ];
 
+const SWITCHED_PUBLIC_ROUTES = [
+  "/api/orders",
+  "/api/briefs",
+];
+
 const DO_NOT_SWITCH_YET = [
   "/api/auth/me",
   "/api/auth/login",
   "/api/auth/register",
   "/api/auth/logout",
-  "/api/orders",
-  "/api/briefs",
   "/api/admin/orders",
   "/api/admin/users",
   "/api/admin/content",
@@ -78,6 +81,7 @@ function auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, orderSmo
     assertIncludes(runbook, route, RUNBOOK, errors);
     assertIncludes(rustMain, routeDeclaration(route), RUST_MAIN, errors);
   });
+  SWITCHED_PUBLIC_ROUTES.forEach((route) => assertIncludes(runbook, route, RUNBOOK, errors));
   DO_NOT_SWITCH_YET.forEach((route) => assertIncludes(runbook, route, RUNBOOK, errors));
   [
     "/rust/auth/me",
@@ -130,7 +134,7 @@ function auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, orderSmo
 }
 
 function selfTest() {
-  const runbook = [...REQUIRED_MARKERS, ...PREVIEW_ROUTES, ...DO_NOT_SWITCH_YET].join("\n");
+  const runbook = [...REQUIRED_MARKERS, ...PREVIEW_ROUTES, ...SWITCHED_PUBLIC_ROUTES, ...DO_NOT_SWITCH_YET].join("\n");
   const rustMain = PREVIEW_ROUTES.map(routeDeclaration).join("\n");
   const authSmoke = ["/rust/auth/me", "auth-me unsupported method guards", "POST", "DELETE", "/rust/admin/orders", "/rust/admin/users"].join("\n");
   const authCutoverSmoke = ["routeTarget", "/api/auth/me", "/rust/auth/me", "Node fallback reads Rust-auth state", "GET /api/auth/me through Rust", "PUT /api/auth/me through Rust", "non-auth API remains Node fallback"].join("\n");
