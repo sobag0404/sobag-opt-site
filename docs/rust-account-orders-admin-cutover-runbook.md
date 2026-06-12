@@ -65,6 +65,7 @@ Before any route group switch:
 - `node tools/rust-orders-write-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `node tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `node tools/rust-admin-orders-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
+- `node tools/rust-admin-users-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `npm.cmd run check`
 - `npm.cmd run ui:smoke` when UI/API behavior is touched
 - `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online`
@@ -98,6 +99,8 @@ Before a public `/api/auth/me` switch, run `tools/rust-auth-me-cutover-smoke.mjs
 Before a public `/api/orders` and `/api/briefs` switch, run `tools/rust-orders-briefs-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates exact route-level cutover for only `/api/orders` and `/api/briefs`, verifies order and brief creation through Rust, verifies Node fallback `/api/admin/orders` sees the created records, verifies Node fallback `/api/auth/me` sees order profile side effects, and verifies unrelated APIs still fall back to Node.
 
 Before a public `/api/admin/orders` switch, run `tools/rust-admin-orders-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates exact route-level cutover for only `/api/admin/orders`, verifies admin/manager reads and PATCH updates through Rust, verifies Node fallback `/api/auth/me` sees the safe customer-visible order update without internal CRM leakage, verifies access/validation guards, and verifies unrelated APIs still fall back to Node.
+
+Before a public `/api/admin/users` switch, run `tools/rust-admin-users-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates exact route-level cutover for only `/api/admin/users`, verifies admin/manager list/detail reads, employee invite/role/delete writes through Rust, verifies Node fallback `/api/auth/me` sees Rust-created employee state, verifies access/validation/admin-lock guards, and verifies unrelated APIs still fall back to Node.
 
 Allowed future exact locations only after gates:
 
