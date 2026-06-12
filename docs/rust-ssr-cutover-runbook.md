@@ -1,8 +1,8 @@
 # Rust SSR Cutover Runbook
 
-Last updated: 2026-06-11
+Last updated: 2026-06-12
 
-Purpose: prepare the future Nginx switch of public SSR pages from Node/static to Rust Axum without removing Node or touching production data.
+Purpose: guide and document the Nginx switch of public SSR pages from Node/static to Rust Axum without removing Node or touching production data.
 
 ## Scope
 
@@ -31,6 +31,25 @@ Existing Rust API routes stay unchanged:
 - `/api/catalog-detail`
 
 Node remains fallback for cart, auth, orders, account, admin, import/PIM, content writes, and any route not explicitly switched.
+
+## Current Production State
+
+Applied on 2026-06-12:
+
+- `/catalog`
+- `/search`
+- `/product`
+- `/catalog-fragment`
+- `/search-fragment`
+- `/product-fragment`
+
+These exact routes are routed by Nginx to `sobag_opt_rust` on the VPS. The generic `location /` still proxies to Node, and content pages still remain on Node/static until their separate cutover gate is run.
+
+Rollback backup created on the VPS:
+
+```bash
+/etc/nginx/sites-available/sobag-opt.pre-rust-ssr-20260612065616
+```
 
 ## Required Pre-Cutover Gates
 

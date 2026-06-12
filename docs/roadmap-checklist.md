@@ -28,7 +28,7 @@ Last updated: 2026-06-12
 - [x] P1 commercial UX polish: compact mobile header, balanced responsive hero H1, product modal quantity starts at 1 while still allowing 0, inactive promo field with honest manager note, and compact catalog collection list with show-more.
 - [x] Smoke tests and autofix checks.
 - [x] Separate search results page: `/search?q=...`, result count, suggestions, quick filters, exact SKU priority, production check.
-- [x] Rust public-path SSR alias preview: Rust now serves internal `/catalog`, `/search`, `/product`, and fragment aliases on port 3001 for future Nginx cutover testing, while production public routing still stays on the current storefront.
+- [x] Rust public-path SSR catalog cutover: production Nginx now routes exact `/catalog`, `/search`, `/product`, and fragment aliases to Rust, while Node remains fallback for generic pages, cart/account/auth/orders/admin, and content writes.
 - [x] Rust content-page alias preview: Rust now serves public-path aliases for about/business/contacts/footer informational pages on port 3001 for future Nginx cutover testing, while production public routing still stays on the current storefront.
 - [x] Rust SSR cutover guard: `docs/rust-ssr-cutover-runbook.md` and `tools/rust-ssr-cutover-audit.mjs` define/check the exact pre-cutover gates, public candidate paths, Node fallback exclusions, and rollback rules before any Nginx SSR page switch.
 - [x] Rust SSR public-route readiness guard: Rust SSR page titles no longer expose `Rust Preview`, and `tools/rust-ssr-smoke.mjs`/`tools/rust-ssr-cutover-audit.mjs` fail if preview/debug branding appears before public page cutover.
@@ -151,6 +151,7 @@ Last updated: 2026-06-12
      - [x] Rust product cart bridge: full Rust product pages append add-to-cart buttons to variant rows and write the same localStorage cart contract as the current storefront, with authenticated cart sync through `/api/auth/me`.
      - [x] Rust SSR browser smoke: `npm run smoke:rust:ssr-browser` verifies product add-to-cart writes the current cart contract before any public page cutover.
      - [x] Rust SSR listing-to-product smoke: Rust catalog/search cards use normal product-page navigation, and the browser smoke verifies catalog/search -> product -> cart flows before any public page cutover.
+     - [x] Rust SSR production catalog cutover: exact `/catalog`, `/search`, `/product`, `/catalog-fragment`, `/search-fragment`, and `/product-fragment` routes now run through Rust on the VPS, with Node fallback preserved for the rest of the site.
      - [x] Rust SSR shell parity preview: internal Rust SSR pages now include a sticky commerce header with top links, logo, catalog link, search form, account/favorites links, and cart link before any public route cutover.
      - [x] Rust SSR public-route readiness guard: page titles no longer expose `Rust Preview`, and SSR smoke/audit reject preview/debug branding on candidate public routes.
      - [x] Rust SSR route rehearsal guard: `npm run rehearse:rust-ssr-routes` prints safe exact-location Nginx snippets per SSR route group and rejects dangerous broad/API/account/admin routes.

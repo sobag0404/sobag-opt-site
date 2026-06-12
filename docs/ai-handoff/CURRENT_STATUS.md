@@ -26,7 +26,7 @@ Production URLs:
 
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
-- Rust migration first slice is live and deploy-automated: `sobag-opt-rust` runs under systemd on VPS at `127.0.0.1:3001`, Nginx routes only `/api/catalog-query` plus `/api/catalog-detail` to Rust, and `vps-deploy` now builds/restarts/verifies Rust with previous-binary rollback;
+- Rust migration is live in staged mode: `sobag-opt-rust` runs under systemd on VPS at `127.0.0.1:3001`; Nginx routes `/api/catalog-query`, `/api/catalog-detail`, and exact SSR catalog/search/product routes to Rust; Node remains fallback for generic pages, cart, account, auth, orders, admin, and content writes;
 - VPS primary domain cutover is complete: `sobag-shop.online` and `www.sobag-shop.online` resolve to `77.239.107.164`, HTTPS is enabled by certbot/Nginx, and production smoke now targets `https://sobag-shop.online`;
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - VPS migration path now has an explicit filesystem store bridge for shared API data; Vercel is not used for future deploy/verification;
@@ -43,6 +43,12 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR production catalog cutover:
+  - Nginx exact routes `/catalog`, `/search`, `/product`, `/catalog-fragment`, `/search-fragment`, and `/product-fragment` now proxy to `sobag_opt_rust`;
+  - generic `location /`, `/cart`, `/account`, auth, orders, admin, content writes, and non-switched pages remain on Node fallback;
+  - rollback backup on the VPS: `/etc/nginx/sites-available/sobag-opt.pre-rust-ssr-20260612065616`;
+  - verified from VPS: production smoke 4/4, public SSR routes contain Rust markup, `/cart` remains Node, and `nginx -t` passed;
+  - local browser smoke against the public domain is blocked by the current tool network sandbox, but Rust browser smoke passed through an SSH tunnel before cutover.
 - Rust SSR listing-to-product browser readiness:
   - Rust catalog/search cards now use normal navigation to product pages instead of an HTMX swap into a missing `#rustProduct` target;
   - `tools/rust-ssr-browser-smoke.mjs` now verifies direct product add-to-cart plus catalog -> product -> cart and search -> product -> cart flows;
