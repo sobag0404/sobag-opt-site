@@ -42,13 +42,24 @@ Applied on 2026-06-12:
 - `/catalog-fragment`
 - `/search-fragment`
 - `/product-fragment`
+- `/about`
+- `/business`
+- `/marketplaces`
+- `/contacts`
+- `/how-to-order`
+- `/delivery`
+- `/payment`
+- `/returns`
+- `/seller-support`
+- `/wholesale`
 
-These exact routes are routed by Nginx to `sobag_opt_rust` on the VPS. The generic `location /` still proxies to Node, and content pages still remain on Node/static until their separate cutover gate is run.
+These exact routes are routed by Nginx to `sobag_opt_rust` on the VPS. The generic `location /` still proxies to Node.
 
 Rollback backup created on the VPS:
 
 ```bash
 /etc/nginx/sites-available/sobag-opt.pre-rust-ssr-20260612065616
+/etc/nginx/sites-available/sobag-opt.pre-rust-content-ssr-20260612075815
 ```
 
 ## Required Pre-Cutover Gates
@@ -129,6 +140,7 @@ Then run:
 ```powershell
 npm.cmd run smoke:prod -- --base-url https://sobag-shop.online
 npm.cmd run ui:smoke
+npm.cmd run smoke:rust:public-routes -- --base https://sobag-shop.online
 ```
 
 ## Rollback

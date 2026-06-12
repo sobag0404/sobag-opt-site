@@ -26,7 +26,7 @@ Production URLs:
 
 Current focus:
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
-- Rust migration is live in staged mode: `sobag-opt-rust` runs under systemd on VPS at `127.0.0.1:3001`; Nginx routes `/api/catalog-query`, `/api/catalog-detail`, and exact SSR catalog/search/product routes to Rust; Node remains fallback for generic pages, cart, account, auth, orders, admin, and content writes;
+- Rust migration is live in staged mode: `sobag-opt-rust` runs under systemd on VPS at `127.0.0.1:3001`; Nginx routes `/api/catalog-query`, `/api/catalog-detail`, exact SSR catalog/search/product routes, fragments, and simple content pages to Rust; Node remains fallback for generic root, cart, account, auth, orders, admin, content writes, and non-switched pages;
 - VPS primary domain cutover is complete: `sobag-shop.online` and `www.sobag-shop.online` resolve to `77.239.107.164`, HTTPS is enabled by certbot/Nginx, and production smoke now targets `https://sobag-shop.online`;
 - Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
 - VPS migration path now has an explicit filesystem store bridge for shared API data; Vercel is not used for future deploy/verification;
@@ -43,6 +43,11 @@ Current focus:
 - QA/Ops current checklist items are done: automated read-only production smoke after successful `autofix-check` pushes to `main`, manual fallback/preview dispatch, periodic static API access audit through AutoFix/weekly GitHub Actions, and lightweight structured API error-log review workflow.
 
 Completed most recently:
+- Rust SSR production content-page cutover:
+  - Nginx exact routes `/about`, `/business`, `/marketplaces`, `/contacts`, `/how-to-order`, `/delivery`, `/payment`, `/returns`, `/seller-support`, and `/wholesale` now proxy to `sobag_opt_rust`;
+  - Node remains fallback for `/`, `/cart`, `/account`, auth, orders, admin, content writes, and non-switched pages;
+  - rollback backup on the VPS: `/etc/nginx/sites-available/sobag-opt.pre-rust-content-ssr-20260612075815`;
+  - added `tools/rust-public-route-smoke.mjs` / `npm run smoke:rust:public-routes` to verify public Rust markers, no preview labels/mojibake, and Node fallback routes.
 - Rust SSR mojibake guard:
   - `tools/rust-ssr-smoke.mjs` now rejects typical mojibake sequences without flagging normal Cyrillic;
   - `tools/rust-ssr-cutover-audit.mjs` requires the guard before public SSR cutover;

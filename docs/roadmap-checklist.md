@@ -29,7 +29,7 @@ Last updated: 2026-06-12
 - [x] Smoke tests and autofix checks.
 - [x] Separate search results page: `/search?q=...`, result count, suggestions, quick filters, exact SKU priority, production check.
 - [x] Rust public-path SSR catalog cutover: production Nginx now routes exact `/catalog`, `/search`, `/product`, and fragment aliases to Rust, while Node remains fallback for generic pages, cart/account/auth/orders/admin, and content writes.
-- [x] Rust content-page alias preview: Rust now serves public-path aliases for about/business/contacts/footer informational pages on port 3001 for future Nginx cutover testing, while production public routing still stays on the current storefront.
+- [x] Rust content-page production cutover: production Nginx now routes exact about/business/contacts/footer informational pages to Rust, while Node remains fallback for root, cart/account/auth/orders/admin/content writes, and non-switched pages.
 - [x] Rust SSR cutover guard: `docs/rust-ssr-cutover-runbook.md` and `tools/rust-ssr-cutover-audit.mjs` define/check the exact pre-cutover gates, public candidate paths, Node fallback exclusions, and rollback rules before any Nginx SSR page switch.
 - [x] Rust SSR public-route readiness guard: Rust SSR page titles no longer expose `Rust Preview`, and `tools/rust-ssr-smoke.mjs`/`tools/rust-ssr-cutover-audit.mjs` fail if preview/debug branding appears before public page cutover.
 - [x] Rust SSR public-readiness guard: candidate Rust SSR pages no longer expose the service-only `Node fallback` label, and smoke/audit fail if it returns.
@@ -156,7 +156,8 @@ Last updated: 2026-06-12
      - [x] Rust SSR shell parity preview: internal Rust SSR pages now include a sticky commerce header with top links, logo, catalog link, search form, account/favorites links, and cart link before any public route cutover.
      - [x] Rust SSR public-route readiness guard: page titles no longer expose `Rust Preview`, and SSR smoke/audit reject preview/debug branding on candidate public routes.
      - [x] Rust SSR route rehearsal guard: `npm run rehearse:rust-ssr-routes` prints safe exact-location Nginx snippets per SSR route group and rejects dangerous broad/API/account/admin routes.
-     - [x] Rust content page preview slice: internal `/rust/pages/:slug` templates render the editable content-page set from file-store content when available, with safe defaults and deploy-time SSR smoke coverage, while public routes still use Node/static fallback.
+     - [x] Rust content page cutover: internal `/rust/pages/:slug` templates and public aliases render the editable content-page set from file-store content when available, and production exact content routes now run through Rust with Node fallback preserved.
+     - [x] Rust public route smoke: `npm run smoke:rust:public-routes` verifies production Rust markers for catalog/search/product/content pages, rejects preview labels/mojibake, and confirms Node fallback for `/` and `/cart`.
      - [x] Full Rust migration plan: `docs/rust-full-migration-plan.md` defines the staged Axum + SSR/HTMX + PostgreSQL + Redis/Meilisearch/S3-compatible path, parallel-agent split, gates, and rollback rules.
      - [x] Rust auth/orders/admin migration plan: `docs/rust-auth-orders-admin-migration-plan.md` freezes session, PBKDF2, roles, order, brief, admin, content, review, test, route cutover, and rollback contracts; AutoFix audits it via `tools/rust-auth-orders-admin-plan-audit.mjs`.
      - [x] Rust account route cutover rehearsal: `npm run rehearse:rust-account-routes` prints safe exact-location Nginx snippets for one route group at a time and is guarded by AutoFix self-test.
