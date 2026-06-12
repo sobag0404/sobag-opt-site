@@ -49,6 +49,7 @@ Last updated: 2026-06-12
 - [x] Rust admin orders production cutover: production Nginx now routes exact `/api/admin/orders` to Rust, while auth/account/admin users/content/catalog/import/media/generic routes remain on Node fallback; rollback backup is on the VPS.
 - [x] Rust admin users preview: `/rust/admin/users` mirrors Node admin/manager user/customer reads and covers temp-store invite/role/delete writes; public `/api/admin/users` still stays on Node until cutover gates are green.
 - [x] Rust admin users cutover smoke: `tools/rust-admin-users-cutover-smoke.mjs` simulates exact `/api/admin/users` route cutover on a temporary shared file-store, verifies Rust list/detail/invite/role/delete, Node account fallback visibility, access guards, validation guards, admin lock, and unrelated Node fallback APIs.
+- [x] Rust admin users production cutover: production Nginx now routes exact `/api/admin/users` to Rust, while auth/account/admin content/catalog/import/media/generic routes remain on Node fallback; rollback backup is on the VPS.
 - [x] Rust admin content parity smoke: deploy shadow smoke now compares Node `/api/admin/content` and Rust `/rust/admin/content` PUT plus follow-up GET from identical temporary fixtures.
 - [x] Rust review moderation parity smoke: deploy shadow smoke now compares Node `/api/admin/content` and Rust `/rust/admin/content` PATCH approve/delete plus follow-up review lists from identical temporary fixtures.
 - [x] Product reviews: authorized buyer form, rating/text, approved reviews in product modal, admin moderation and persistence through existing storage/API.
@@ -190,6 +191,7 @@ Last updated: 2026-06-12
     - [x] Rust admin orders cutover smoke: `tools/rust-admin-orders-cutover-smoke.mjs` simulates the future exact `/api/admin/orders` route switch, keeps auth/account/health on Node fallback, and proves Rust admin updates remain visible safely to buyer account flows.
     - [x] Rust admin orders production route switch: exact `/api/admin/orders` is live on Rust after no-write public validation; Node remains fallback for auth/account/admin users/content/catalog/import/media and other non-switched APIs.
     - [x] Rust admin users cutover smoke: `tools/rust-admin-users-cutover-smoke.mjs` simulates the future exact `/api/admin/users` route switch, keeps auth/account/health on Node fallback, and proves Rust employee writes remain visible to Node account flows.
+    - [x] Rust admin users production route switch: exact `/api/admin/users` is live on Rust after no-write public validation; Node remains fallback for auth/account/admin content/catalog/import/media and other non-switched APIs.
      - [x] Migrate frontend catalog list/product modal to the new smaller API payloads.
        - [x] Product modal now hydrates public product detail from `/api/catalog-detail` with static/local fallback.
        - [x] Catalog/search list rendering now uses `/api/catalog-query` compact cards and cursor pagination with local fallback.

@@ -15,11 +15,12 @@ Currently switched to Rust in production:
 - `/api/orders`
 - `/api/briefs`
 - `/api/admin/orders`
+- `/api/admin/users`
 
 Do not switch these route groups yet:
 
 - auth/account: `/api/auth/me`, `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`
-- admin users/content: `/api/admin/users`, `/api/admin/content`
+- admin content: `/api/admin/content`
 - admin catalog/PIM/media/import: `/api/admin/catalog`, `/api/admin/pim`, `/api/admin/product-images`, `/api/admin/import-batches`
 
 ## Internal Rust Preview Routes
@@ -50,7 +51,7 @@ These routes must not be exposed as public `/api/*` routes until the matching cu
 
 ## Current Candidate
 
-Candidate 1 is the full account-state route: `GET` and `PUT /api/auth/me`. Candidate 3, orders/briefs writes, has already been switched in production as exact `/api/orders` and `/api/briefs` Nginx routes after temporary-store cutover smoke and no-write public validation. Admin order read/update has also been switched in production as exact `/api/admin/orders` after its cutover smoke and no-write public validation. The next write/admin candidate is admin users or admin content, but only after its own exact-route cutover smoke and rollback gate.
+Candidate 1 is the full account-state route: `GET` and `PUT /api/auth/me`. Candidate 3, orders/briefs writes, has already been switched in production as exact `/api/orders` and `/api/briefs` Nginx routes after temporary-store cutover smoke and no-write public validation. Admin order read/update and admin users/employees have also been switched in production as exact `/api/admin/orders` and `/api/admin/users` after their cutover smokes and no-write public validation. The next write/admin candidate is admin content, but only after its own exact-route cutover smoke and rollback gate.
 
 Reason: public `/api/auth/me` is one URL for both account reads and account-state writes. A simple exact Nginx route cannot safely switch only `GET` while leaving `PUT` on Node. Before switching it, `tools/rust-auth-me-shadow-smoke.mjs` must compare Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, expired sessions, profile updates, cart/favorite/saved-cart writes, buyer review validation, no password fields, no buyer-hidden internal fields, and unsupported `POST`/`DELETE` staying `405` on both runtimes. Public `/api/auth/me` still stays on Node until the full `GET+PUT` exact route is intentionally applied and rollback is ready.
 
