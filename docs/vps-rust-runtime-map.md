@@ -67,10 +67,10 @@ Next.js runtime is not present. Cleanup targets the old Vercel serverless/deploy
 - Do not install Visual Studio/MSVC Build Tools or switch Rust toolchains without explicit user approval.
 - Local options: install MSVC Build Tools for the default `*-pc-windows-msvc` toolchain, or use a Rust GNU toolchain if the project accepts it.
 - VPS/Linux Rust verification remains the release path for this target state until local Windows toolchain is fixed.
-- Linux/VPS command: `cd rust-server && cargo fmt --check && cargo check --locked && cargo test --locked`, then the existing VPS deploy smokes before route cutover. `cargo check --locked && cargo test --locked` passed on the current VPS release as the `sobag` user; `cargo fmt --check` passes in the current repo and will be enforced after the next deploy refreshes the VPS release source.
-- CI verification path: `.github/workflows/rust-check.yml` runs `cargo check --locked` on Ubuntu without secrets or deploy steps.
+- Linux/VPS command: `cd rust-server && cargo fmt --check && cargo check --locked && cargo test --locked`, then the existing VPS deploy smokes before route cutover. This passed on deployed VPS release `20260615Tmanual-427f171` as part of the manual deploy, followed by `cargo build --release --locked`.
+- CI verification path: `.github/workflows/rust-check.yml` runs `cargo fmt --check`, `cargo check --locked`, and `cargo test --locked` on Ubuntu without secrets or deploy steps.
 - Production cookie guard: the VPS deploy-generated Node start script and Rust systemd unit both set `NODE_ENV=production`, so session cookies include the production `Secure` attribute when the deploy path is used.
-- Formatting gate: local repo Rust sources pass `cargo fmt --check`; `.github/workflows/rust-check.yml` includes the same no-secret Ubuntu formatting gate before `cargo check --locked`. The currently deployed VPS release source predates the formatting split and reports fmt drift, so the next deploy should refresh it from the current repo before making fmt a VPS release assertion.
+- Formatting gate: local repo and deployed VPS release `20260615Tmanual-427f171` pass `cargo fmt --check`; `.github/workflows/rust-check.yml` includes the same no-secret Ubuntu formatting gate before `cargo check --locked`.
 - Local audit command: `npm run audit:rust-local-env` verifies Rust files, CI workflow guardrails, and records the Windows linker blocker without failing normal `npm run check`.
 
 ## Modularity / Cutover Inputs

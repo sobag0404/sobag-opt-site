@@ -1,9 +1,10 @@
 # Current Status Snapshot
 
-Date: 2026-06-12
+Date: 2026-06-15
 
 Current deployed VPS release:
-- latest successful VPS deploy; verify with `/opt/sobag-opt/current-release.txt` on the server.
+- `20260615Tmanual-427f171` is active on `sobag-shop.online`; `/opt/sobag-opt/current` points to `/opt/sobag-opt/releases/20260615Tmanual-427f171`.
+- Rollback release kept on VPS: `/opt/sobag-opt/releases/20260612T123649Z-6c76c30`.
 
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
@@ -25,6 +26,7 @@ Production URLs:
 - Health: `https://sobag-shop.online/api/health`
 
 Current focus:
+- Latest manual VPS deploy refreshed Node/Rust runtime from commit `427f171`: Node health, Rust health, production smoke, production storage smoke, production performance smoke, Rust cargo fmt/check/test/build, and Rust route/cutover smokes passed on the VPS. GitHub Actions push run still completed with no jobs/logs; treat that as a CI platform/workflow-run investigation item, not a production health failure.
 - Current readiness pass has real no-secret packets ready for VPS/Rust cutover, final public content, object storage, and catalog DB test rehearsal. Strict goal-inputs still blocks only on the CWV field audit packet after post-migration measurement.
 - Current VPS storage status: retired `vercel-blob` provider alias was removed from the live VPS env and replaced with S3-compatible MinIO on the VPS. Public no-secret coordinates are endpoint `https://sobag-shop.online`, bucket `sobag-products`, public base `https://sobag-shop.online/sobag-products`, region `us-east-1`, path-style mode. Secrets remain only on the VPS. Product photos were migrated to object storage, `data/products-live.json` carries square responsive WebP/AVIF metadata, and production PostgreSQL catalog image rows were updated with rollback backup `/tmp/sobag-catalog-db-photo-backup.json`. Remaining readiness blocker is CWV field audit.
 - Current readiness pass expanded `docs/vps-rust-cutover-input-packet.md`, `tools/goal-inputs-packet-template.mjs`, and `tools/vps-rust-cutover-packet-audit.mjs`; ignored local packet files live under `local-import-output/` and must stay out of Git/chat when they contain operator-specific data.

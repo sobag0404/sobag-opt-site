@@ -2,7 +2,7 @@
 
 Generated: 2026-06-15T15:12:26+00:00
 Project: sobag-opt-site
-Git: `main` / `1649954`
+Git: `main` / `427f171`
 
 ## 1. Executive Summary
 
@@ -211,11 +211,11 @@ Git: `main` / `1649954`
 1. P1 PROD-002: Real external input packets are incomplete. Файл/область: local-import-output/cwv-field-audit-packet.json. Рекомендация: Collect the real packets locally, keep secrets out of Git/chat, then run strict goal completion/readiness audits.
 
 Next implementation packet for VPS-only/Rust transition:
-1. Run real product-photo migration gates against the confirmed photo source and the S3-compatible VPS/MinIO target; keep secrets out of Git/chat.
-2. Fill `local-import-output/cwv-field-audit-packet.json` only from real post-migration field measurements, then run strict goal-input/readiness gates.
-3. Keep Vercel/Next absent from active runtime/deploy, rerun VPS release/storage/error/smoke audits, and do not reintroduce Vercel Blob/provider aliases.
-4. Re-verify Rust on Linux/VPS/CI with `cd rust-server && cargo fmt --check && cargo check --locked && cargo test --locked`; local Windows MSVC `link.exe` blocker is environment-only until toolchain is installed.
-5. Continue only small modularity slices when touching related code; remaining ARCH-001 is P2 ownership debt.
+1. Fill `local-import-output/cwv-field-audit-packet.json` only from real post-migration field measurements, then run strict goal-input/readiness gates.
+2. Monitor VPS release `20260615Tmanual-427f171` on `sobag-shop.online`: production smoke, storage smoke, performance smoke, Node health, Rust health, and rollback readiness.
+3. Investigate GitHub Actions runs that finish with no jobs/logs; do not weaken VPS-only gates or secret handling.
+4. Keep Vercel/Next absent from active runtime/deploy, rerun VPS release/storage/error/smoke audits, and do not reintroduce Vercel Blob/provider aliases.
+5. Continue only small modularity/functional slices when they do not slow the Rust/VPS critical path.
 
 P0/P1 рекомендации:
 - P1 PROD-002: PROD-002: Collect the real packets locally, keep secrets out of Git/chat, then run strict goal completion/readiness audits.
