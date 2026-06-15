@@ -137,12 +137,12 @@ jobs:
           ln -sfn "$release_dir" "$app_dir/current"
           printf '%s\n' "$release" > "$app_dir/current-release.txt"
           cat > "$app_dir/shared/start.sh" <<START_SCRIPT
-#!/usr/bin/env bash
-set -euo pipefail
-cd "$app_dir/current"
-export NODE_ENV=production
-exec node server.mjs
-START_SCRIPT
+          #!/usr/bin/env bash
+          set -euo pipefail
+          cd "$app_dir/current"
+          export NODE_ENV=production
+          exec node server.mjs
+          START_SCRIPT
           chmod 755 "$app_dir/shared/start.sh"
 
           if pm2 describe sobag-opt >/dev/null 2>&1; then

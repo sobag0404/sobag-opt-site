@@ -1,8 +1,8 @@
 # Project Readiness Report
 
-Generated: 2026-06-15T15:12:26+00:00
+Generated: 2026-06-15T15:41:15+00:00
 Project: sobag-opt-site
-Git: `main` / `427f171`
+Git: `main` / `5ece96d`
 
 ## 1. Executive Summary
 
@@ -211,9 +211,9 @@ Git: `main` / `427f171`
 1. P1 PROD-002: Real external input packets are incomplete. Файл/область: local-import-output/cwv-field-audit-packet.json. Рекомендация: Collect the real packets locally, keep secrets out of Git/chat, then run strict goal completion/readiness audits.
 
 Next implementation packet for VPS-only/Rust transition:
-1. Fill `local-import-output/cwv-field-audit-packet.json` only from real post-migration field measurements, then run strict goal-input/readiness gates.
-2. Monitor VPS release `20260615Tmanual-427f171` on `sobag-shop.online`: production smoke, storage smoke, performance smoke, Node health, Rust health, and rollback readiness.
-3. Investigate GitHub Actions runs that finish with no jobs/logs; do not weaken VPS-only gates or secret handling.
+1. Fill `local-import-output/cwv-field-audit-packet.json` only from real post-migration field measurements after realistic 10k+ catalog scale, then run strict goal-input/readiness gates.
+2. Resolve the GitHub Actions billing/spending-limit blocker, then rerun `autofix-check`, `rust-check`, and `vps-deploy`; do not weaken VPS-only gates or secret handling.
+3. Monitor VPS release `20260615Tmanual-427f171` on `sobag-shop.online`: production smoke, storage smoke, performance smoke, Node health, Rust health, and rollback readiness.
 4. Keep Vercel/Next absent from active runtime/deploy, rerun VPS release/storage/error/smoke audits, and do not reintroduce Vercel Blob/provider aliases.
 5. Continue only small modularity/functional slices when they do not slow the Rust/VPS critical path.
 
@@ -254,10 +254,7 @@ P0/P1 рекомендации:
 - `docs/project-readiness-agent.md`
 - `docs/vps-rust-runtime-map.md`
 - Git working tree status:
-  - ` M reports/project-readiness/latest-chat.md`
-  - ` M reports/project-readiness/latest.md`
-  - ` M rust-server/src/main.rs`
-  - ` M tools/vps-release-audit.mjs`
+  - ` M .github/workflows/vps-deploy.yml`
 - Diff/PR URL: unavailable in local repository context.
 
 ## 9. Limitations
