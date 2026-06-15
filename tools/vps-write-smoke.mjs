@@ -68,6 +68,20 @@ try {
   assert(adminLogin.payload.user?.role === "admin", "bootstrap admin should login");
   assert(adminLogin.cookie, "admin login should set session cookie");
 
+  const reservedRegister = await request(baseUrl, "/api/auth/register", {
+    method: "POST",
+    allowFailure: true,
+    body: {
+      email: "admin@sobag",
+      password: "buyer-pass",
+      name: "Reserved Admin",
+      phone: "+79990000002",
+      personalDataConsent: true,
+    },
+  });
+  assert(reservedRegister.response.status === 409, "reserved bootstrap email should not self-register");
+  assert(reservedRegister.payload.error === "reserved_email", "reserved bootstrap email should return reserved_email");
+
   const contentSave = await request(baseUrl, "/api/admin/content", {
     method: "PUT",
     cookie: adminLogin.cookie,

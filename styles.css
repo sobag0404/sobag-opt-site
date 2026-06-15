@@ -341,6 +341,16 @@ a {
   font-weight: 900;
 }
 
+#accountButton.account-login-button {
+  width: 48px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+#accountButton.account-login-button span {
+  display: none;
+}
+
 .icon-button,
 .favorite-button {
   position: relative;

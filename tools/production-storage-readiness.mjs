@@ -74,9 +74,12 @@ function analyzeHealth(payload, args) {
 
   const objectStorage = payload?.objectStorage || {};
   const catalogDb = payload?.catalogDb || {};
+  const objectStorageSupported = objectStorage.supported !== false && objectStorage.provider === "s3-compatible";
   if (!objectStorage.configured) warnings.push(`object storage ${objectStorage.provider || "unknown"} is not configured`);
+  if (!objectStorageSupported) warnings.push(`object storage ${objectStorage.provider || "unknown"} is not supported`);
   if (objectStorage.provider === "s3-compatible" && !objectStorage.publicUrlConfigured) warnings.push("S3-compatible public URL is not configured");
   if (args.requireObjectStorage && !objectStorage.configured) errors.push("object storage is required but not configured");
+  if (args.requireObjectStorage && !objectStorageSupported) errors.push("object storage is required but provider is not supported");
   if (args.requireObjectStorage && objectStorage.provider === "s3-compatible" && !objectStorage.publicUrlConfigured) {
     errors.push("S3-compatible public URL is required but not configured");
   }
@@ -87,7 +90,7 @@ function analyzeHealth(payload, args) {
 
   return {
     ok: errors.length === 0,
-    readyForPhotoCutover: Boolean(objectStorage.configured && (objectStorage.provider !== "s3-compatible" || objectStorage.publicUrlConfigured)),
+    readyForPhotoCutover: Boolean(objectStorageSupported && objectStorage.configured && objectStorage.publicUrlConfigured),
     readyForCatalogDbCutover: Boolean(catalogDb.enabled && catalogDb.configured),
     provider: objectStorage.provider || "",
     store: payload.store || {},
@@ -138,12 +141,36 @@ async function selfTest() {
       ok: true,
       storage: "ready",
       store: { provider: "redis", configured: true },
-      objectStorage: { provider: "vercel-blob", configured: false },
+      objectStorage: { provider: "s3-compatible", configured: false, publicUrlConfigured: false },
       catalogDb: { enabled: false, configured: false },
     },
     (baseUrl) => runStorageReadiness(baseUrl, { timeoutMs: 1000 })
   );
   assert(pending.ok && !pending.readyForPhotoCutover && pending.warnings.length >= 2, "pending fixture should warn without failing");
+
+  const unsupported = await withFixture(
+    {
+      ok: true,
+      storage: "ready",
+      store: { provider: "redis", configured: true },
+      objectStorage: { provider: "vercel-blob", configured: true, publicUrlConfigured: true, supported: false },
+      catalogDb: { enabled: true, configured: true },
+    },
+    (baseUrl) => runStorageReadiness(baseUrl, { timeoutMs: 1000 })
+  );
+  assert(unsupported.ok && !unsupported.readyForPhotoCutover, "unsupported storage provider must not be ready for photo cutover");
+
+  const unsupportedStrict = await withFixture(
+    {
+      ok: true,
+      storage: "ready",
+      store: { provider: "redis", configured: true },
+      objectStorage: { provider: "vercel-blob", configured: true, publicUrlConfigured: true, supported: false },
+      catalogDb: { enabled: true, configured: true },
+    },
+    (baseUrl) => runStorageReadiness(baseUrl, { timeoutMs: 1000, requireObjectStorage: true })
+  );
+  assert(!unsupportedStrict.ok && unsupportedStrict.errors.some((item) => item.includes("not supported")), "strict storage readiness must reject unsupported providers");
 }
 
 async function main() {

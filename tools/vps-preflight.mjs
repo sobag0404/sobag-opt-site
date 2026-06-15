@@ -28,8 +28,8 @@ if (selfTest) {
   });
 }
 
-const { objectStorageStatus } = require("../api/_lib/object-storage.js");
-const { storeStatus } = require("../api/_lib/store.js");
+const { objectStorageStatus } = require("../server-routes/_lib/object-storage.js");
+const { storeStatus } = require("../server-routes/_lib/store.js");
 
 function envText(name) {
   return String(process.env[name] || "").trim();

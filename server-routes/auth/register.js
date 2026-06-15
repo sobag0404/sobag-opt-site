@@ -11,6 +11,10 @@ module.exports = async function handler(req, res) {
     const name = String(data.name || "").trim();
     const phone = normalizePhone(data.phone);
 
+    if (email === "admin@sobag" || email === normalizeEmail(process.env.SOBAG_ADMIN_EMAIL)) {
+      return sendJson(res, 409, { error: "reserved_email", message: "Reserved administrator email." });
+    }
+
     if (!isValidEmail(email)) return sendJson(res, 400, { error: "invalid_email", message: "Проверьте email." });
     if (!password || password.length < 6) return sendJson(res, 400, { error: "weak_password", message: "Пароль должен быть не короче 6 символов." });
     if (!name || !phone) return sendJson(res, 400, { error: "missing_profile", message: "Укажите имя и телефон." });

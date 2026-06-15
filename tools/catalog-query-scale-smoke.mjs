@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 
 const require = createRequire(import.meta.url);
-const { findProductDetail, paramsToQuery, queryCatalog } = require("../api/_lib/catalog-query.js");
+const { findProductDetail, paramsToQuery, queryCatalog } = require("../server-routes/_lib/catalog-query.js");
 
 const root = process.cwd();
 const liveProducts = JSON.parse(readFileSync(join(root, "data", "products-live.json"), "utf8"));

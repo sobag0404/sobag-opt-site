@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 
 const require = createRequire(import.meta.url);
-const { buildCatalogPim } = require("../api/_lib/pim.js");
+const { buildCatalogPim } = require("../server-routes/_lib/pim.js");
 
 const root = process.cwd();
 const products = JSON.parse(readFileSync(join(root, "data", "products-live.json"), "utf8"));

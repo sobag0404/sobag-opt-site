@@ -79,7 +79,17 @@ function auditPacketFile(path, { strict = false } = {}) {
   if (!existsSync(resolved)) {
     return { ok: !strict, ready: false, missing: true, errors: strict ? [`missing ${path}`] : [], warnings: [`${path} is not created yet`] };
   }
-  return { ...validatePacket(JSON.parse(readFileSync(resolved, "utf8"))), missing: false };
+  const parsed = JSON.parse(readFileSync(resolved, "utf8"));
+  if (parsed.template === true) {
+    return {
+      ok: !strict,
+      ready: false,
+      missing: false,
+      errors: strict ? [`${path} is still a template`] : [],
+      warnings: [`${path} is a starter template; fill real field measurements before strict gates`],
+    };
+  }
+  return { ...validatePacket(parsed), missing: false };
 }
 
 function selfTest() {

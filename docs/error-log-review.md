@@ -34,13 +34,13 @@ Review logs when any of these happens:
 - `/api/health` returns non-ready storage;
 - a manager/admin reports an API action failure;
 - a buyer reports failed checkout, saved proposal, login, or product review submission;
-- Vercel dashboard shows elevated function errors.
+- VPS/systemd/PM2/Nginx logs show elevated API errors.
 
 ## Review Steps
 
 1. Open the failed GitHub Actions run first.
 2. Note the route, HTTP status, and any request id in the failure output.
-3. Open Vercel Function logs for the matching deploy and timeframe.
+3. Open VPS application/reverse-proxy logs for the matching deploy and timeframe.
 4. Filter/search for `api_error`.
 5. Match by `requestId` when available, otherwise by `path`, `method`, and timestamp.
 6. Classify the issue as `storage/env`, `auth/access`, `catalog/import`, `content`, `orders/CRM`, `frontend smoke`, or `unknown`.

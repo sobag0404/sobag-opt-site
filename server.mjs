@@ -8,6 +8,9 @@ import { pathToFileURL } from "node:url";
 const require = createRequire(import.meta.url);
 const root = resolve(process.cwd());
 const { handleApiRequest } = require("./api-router");
+const publicRootFiles = new Set(["index.html", "app.js", "cart.js", "styles.css", "favicon.ico"]);
+const publicRootExtensions = new Set([".html", ".ico", ".png", ".svg", ".webp", ".jpg", ".jpeg"]);
+const publicDirectories = new Set(["assets", "components", "templates"]);
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
@@ -68,8 +71,31 @@ function isInsideRoot(filePath) {
   return prepared === root || prepared.startsWith(`${root}${sep}`);
 }
 
+function isPublicStaticPath(candidate) {
+  const normalized = String(candidate || "").replace(/\\/g, "/").replace(/^\/+/, "");
+  if (!normalized || normalized.includes("\0")) return false;
+  const segments = normalized.split("/");
+  if (segments.some((segment) => !segment || segment === "." || segment === "..")) return false;
+  if (normalized === "data/products-live.json") return true;
+  const [topLevel] = segments;
+  if (publicDirectories.has(topLevel)) return true;
+  if (normalized.includes("/")) return false;
+  if (publicRootFiles.has(normalized)) return true;
+  return publicRootExtensions.has(extname(normalized).toLowerCase()) && !normalized.startsWith(".");
+}
+
+function safeDecodePathname(pathname) {
+  try {
+    return decodeURIComponent(pathname || "/");
+  } catch {
+    return "";
+  }
+}
+
 function resolveStaticFile(pathname) {
-  const cleanPath = decodeURIComponent(pathname || "/").replace(/^\/+/, "");
+  const decodedPath = safeDecodePathname(pathname);
+  if (!decodedPath) return undefined;
+  const cleanPath = decodedPath.replace(/^\/+/, "");
   const candidates = [];
   if (!cleanPath) {
     candidates.push("index.html");
@@ -79,6 +105,7 @@ function resolveStaticFile(pathname) {
     candidates.push(join(cleanPath, "index.html"));
   }
   return candidates
+    .filter(isPublicStaticPath)
     .map((candidate) => resolve(root, candidate))
     .find((filePath) => isInsideRoot(filePath) && existsSync(filePath) && statSync(filePath).isFile());
 }

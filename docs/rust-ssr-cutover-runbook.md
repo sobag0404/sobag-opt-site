@@ -99,7 +99,7 @@ npm run rehearse:rust-ssr-routes -- --group catalog-fragments
 npm run rehearse:rust-ssr-routes -- --group content-pages
 ```
 
-The rehearsal must output only exact locations for the candidate paths and must reject generic `location /`, `/api`, `/api/admin`, cart, account, favorites, custom print, auth, orders, briefs, admin, and content-write routes.
+The rehearsal must output only exact locations for the candidate page paths and must reject generic `location /`, cart, account, favorites, custom print, and content-write routes. Do not add or change API exact-route cutovers as part of the SSR page cutover; existing account/orders/admin API cutovers are governed by `docs/rust-account-orders-admin-cutover-runbook.md`.
 
 ## Nginx Cutover Shape
 
@@ -118,9 +118,7 @@ Do not route these to Rust yet:
 - `/favorites`
 - `/custom`
 - `/api/auth/*`
-- `/api/orders`
-- `/api/briefs`
-- `/api/admin/*`
+- API route cutovers not listed in this SSR runbook. Existing exact `/api/orders`, `/api/briefs`, and `/api/admin/*` cutovers are controlled by `docs/rust-account-orders-admin-cutover-runbook.md`.
 - `/api/content`
 
 ## Post-Cutover Checks

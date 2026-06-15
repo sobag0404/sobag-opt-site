@@ -16,7 +16,7 @@ Output:
 local-import-output/catalog-db-apply-plan.json
 ```
 
-The command does not connect to PostgreSQL, does not read env secrets, and does not change VPS/Vercel env. It writes only public packet facts, env names, guardrails, offline commands, rollback-rehearsal commands, and approved-cutover checks.
+The command does not connect to PostgreSQL, does not read env secrets, and does not change VPS env. It writes only public packet facts, env names, guardrails, offline commands, rollback-rehearsal commands, and approved-cutover checks.
 
 Planned env names:
 

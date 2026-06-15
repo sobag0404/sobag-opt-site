@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { loadCatalogProducts, loadPublicCatalog, publicReviews, reviewsForProducts } = require("../api/_lib/catalog-source.js");
+const { loadCatalogProducts, loadPublicCatalog, publicReviews, reviewsForProducts } = require("../server-routes/_lib/catalog-source.js");
 
 async function smokeStaticFallback() {
   const catalog = await loadCatalogProducts();

@@ -6,7 +6,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { buildCatalogPim } = require("../api/_lib/pim.js");
+const { buildCatalogPim } = require("../server-routes/_lib/pim.js");
 
 const root = process.cwd();
 const DEFAULT_OUT = "local-import-output/pim-postgres-seed.sql";

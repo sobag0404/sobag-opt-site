@@ -22,7 +22,10 @@ jobs:
   smoke:
     if: >-
       ${{
-          github.event_name == 'workflow_dispatch' ||
+          (
+            github.event_name == 'workflow_dispatch' &&
+            github.ref_name == 'main'
+          ) ||
         (
           github.event.workflow_run.conclusion == 'success' &&
           github.event.workflow_run.head_branch == 'main'
@@ -37,6 +40,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Validate production smoke target
+        env:
+          SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}
+        run: |
+          case "$SOBAG_PRODUCTION_BASE_URL" in
+            https://sobag-shop.online|https://sobag-shop.online/*)
+              ;;
+            *)
+              echo "Production smoke base URL must stay on sobag-shop.online"
+              exit 1
+              ;;
+          esac
       - name: Run read-only production smoke
         env:
           SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}

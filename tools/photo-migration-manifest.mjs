@@ -50,7 +50,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     products: join(root, "data", "products-live.json"),
     photos: "",
     out: join(root, DEFAULT_OUT),
-    provider: process.env.SOBAG_OBJECT_STORAGE_PROVIDER || "vercel-blob",
+    provider: process.env.SOBAG_OBJECT_STORAGE_PROVIDER || "s3-compatible",
     responsive: false,
     variantWidths: DEFAULT_VARIANT_WIDTHS,
     variantFormats: DEFAULT_VARIANT_FORMATS,
@@ -77,7 +77,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
 Options:
   --out <path>                 Manifest path. Default: ${DEFAULT_OUT}
-  --provider <name>            Target provider label: vercel-blob or s3-compatible.
+  --provider <name>            Target provider label: s3-compatible.
   --responsive                 Plan WebP/AVIF variants.
   --variant-widths 480,960     Responsive widths.
   --variant-formats webp,avif  Responsive formats.

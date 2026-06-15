@@ -1,6 +1,6 @@
 # Object Storage Apply Plan
 
-Last updated: 2026-06-10
+Last updated: 2026-06-15
 
 Use this only after `local-import-output/object-storage-env-packet.json` contains confirmed provider facts and passes strict audit.
 
@@ -16,7 +16,7 @@ Output:
 local-import-output/object-storage-apply-plan.json
 ```
 
-The command does not call production APIs, does not read env secrets, and does not change VPS/Vercel env. It writes only env names, public provider config preview, guardrails, and the next commands for a safe photo-storage cutover.
+The command does not call production APIs, does not read env secrets, and does not change VPS env. It writes only env names, public provider config preview, guardrails, and the next commands for a safe photo-storage cutover.
 
 For S3-compatible VPS/MinIO/R2 it plans:
 
@@ -28,7 +28,7 @@ For S3-compatible VPS/MinIO/R2 it plans:
 - `SOBAG_S3_FORCE_PATH_STYLE`
 - secret env names only: `SOBAG_S3_ACCESS_KEY_ID`, `SOBAG_S3_SECRET_ACCESS_KEY`, optional `SOBAG_S3_SESSION_TOKEN`
 
-For Vercel Blob it plans `SOBAG_OBJECT_STORAGE_PROVIDER` and the secret env name `BLOB_READ_WRITE_TOKEN` only.
+Vercel Blob is not an active provider. Use S3-compatible storage only.
 
 After provider env is explicitly approved and configured:
 

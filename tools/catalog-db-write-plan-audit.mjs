@@ -5,8 +5,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { buildCatalogPim } = require("../api/_lib/pim.js");
-const { buildCatalogWriteStatements } = require("../api/_lib/catalog-db-write.js");
+const { buildCatalogPim } = require("../server-routes/_lib/pim.js");
+const { buildCatalogWriteStatements } = require("../server-routes/_lib/catalog-db-write.js");
 
 const root = process.cwd();
 const TABLES = ["products", "variants", "images", "image_variants", "taxonomies", "product_taxonomies", "import_batches", "import_batch_rows"];

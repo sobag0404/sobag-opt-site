@@ -1,0 +1,36 @@
+name: rust-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cargo-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Rust toolchain
+        run: cargo --version
+
+      - name: Cargo metadata
+        working-directory: rust-server
+        run: cargo metadata --locked --format-version 1 --no-deps
+
+      - name: Cargo fmt
+        working-directory: rust-server
+        run: cargo fmt --check
+
+      - name: Cargo check
+        working-directory: rust-server
+        run: cargo check --locked
+
+      - name: Cargo test
+        working-directory: rust-server
+        run: cargo test --locked

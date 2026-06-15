@@ -1,10 +1,19 @@
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { createObjectStorageAdapter, objectStorageStatus } = require("../api/_lib/object-storage.js");
+const { createObjectStorageAdapter, objectStorageStatus } = require("../server-routes/_lib/object-storage.js");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function assertThrows(fn, message) {
+  try {
+    fn();
+  } catch {
+    return;
+  }
+  throw new Error(message);
 }
 
 const savedEnv = {};
@@ -76,6 +85,8 @@ try {
   const status = objectStorageStatus("s3-compatible");
   assert(status.configured === true, "S3 status should be configured when required env is present");
   assert(status.publicUrlConfigured === true, "S3 status should expose public URL readiness only as a boolean");
+  assert(objectStorageStatus("vercel-blob").supported === false, "Vercel Blob must not be a supported provider");
+  assertThrows(() => createObjectStorageAdapter("vercel-blob"), "Vercel Blob adapter creation must fail");
 
   const adapter = createObjectStorageAdapter("s3-compatible");
   const uploaded = await adapter.upload({

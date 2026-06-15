@@ -3,6 +3,7 @@ import { auditPacketFile as auditFinalContentPacket } from "./final-content-pack
 import { auditPacketFile as auditObjectStoragePacket } from "./object-storage-env-packet-audit.mjs";
 import { auditPacketFile as auditCatalogDbPacket } from "./catalog-db-env-packet-audit.mjs";
 import { auditPacketFile as auditCwvPacket } from "./cwv-field-audit-packet.mjs";
+import { auditPacketFile as auditVpsRustCutoverPacket } from "./vps-rust-cutover-packet-audit.mjs";
 
 const PACKETS = [
   {
@@ -28,6 +29,12 @@ const PACKETS = [
     label: "Performance/Core Web Vitals field audit",
     path: "local-import-output/cwv-field-audit-packet.json",
     audit: auditCwvPacket,
+  },
+  {
+    key: "vpsRustCutover",
+    label: "VPS/Rust cutover no-secret packet",
+    path: "local-import-output/vps-rust-cutover-packet.json",
+    audit: auditVpsRustCutoverPacket,
   },
 ];
 
@@ -66,7 +73,7 @@ function buildGoalInputsReport({ strict = false } = {}) {
 
 function selfTest() {
   const report = buildGoalInputsReport({ strict: false });
-  if (!Array.isArray(report.packets) || report.packets.length !== 4) throw new Error("goal inputs report must contain 4 packets");
+  if (!Array.isArray(report.packets) || report.packets.length !== 5) throw new Error("goal inputs report must contain 5 packets");
   if (!report.packets.every((packet) => packet.path.startsWith("local-import-output/"))) {
     throw new Error("goal input packets must stay in ignored local-import-output");
   }

@@ -7,6 +7,7 @@ import { buildGoalInputsReport } from "./goal-inputs-packet-audit.mjs";
 const OUTPUT_DIR = "local-import-output";
 const templates = {
   "final-content-packet.json": {
+    template: true,
     companyName: "TODO: confirmed legal/company name",
     footerEmail: "opt@sobag-shop.online",
     footerPhone: "+7 TODO",
@@ -18,6 +19,7 @@ const templates = {
     contactsProductionMapUrl: "https://yandex.ru/maps/?text=TODO",
   },
   "object-storage-env-packet.json": {
+    template: true,
     provider: "s3-compatible",
     endpoint: "https://TODO-storage-endpoint",
     bucket: "TODO-bucket",
@@ -28,6 +30,7 @@ const templates = {
     corsConfirmed: false,
   },
   "catalog-db-env-packet.json": {
+    template: true,
     provider: "postgres",
     databaseKind: "test",
     hostClass: "managed-or-vps",
@@ -40,6 +43,7 @@ const templates = {
     runtimeToggleApproved: false,
   },
   "cwv-field-audit-packet.json": {
+    template: true,
     baseUrl: "https://sobag-shop.online",
     catalogProducts: 10000,
     imageMigrationReady: false,
@@ -53,6 +57,53 @@ const templates = {
       { path: "/cart", lcpMs: 0, cls: 0, inpMs: 0, tbtMs: 0, firstPageApiKb: 0, usesWebpOrAvif: false },
       { path: "/product-modal?sku=TODO", lcpMs: 0, cls: 0, inpMs: 0, tbtMs: 0, firstPageApiKb: 0, usesWebpOrAvif: true },
     ],
+  },
+  "vps-rust-cutover-packet.json": {
+    template: true,
+    domain: "sobag-shop.online",
+    vpsIp: "77.239.107.164",
+    vpsHostAlias: "sobag-vps",
+    healthUrl: "https://sobag-shop.online/api/health",
+    sshHostEnvName: "VPS_HOST",
+    sshUserEnvName: "VPS_USER",
+    sshKeyEnvName: "VPS_SSH_KEY",
+    credentialAccessMode: "ssh-key-or-secret-store",
+    credentialRotationRequired: true,
+    passwordStoredInRepo: false,
+    passwordPrintedInLogs: false,
+    sshUser: "root",
+    serverSidePreparationApproved: true,
+    serverSidePreparationScope: "inventory-backup-quarantine-systemd-nginx-deploy-prep",
+    externalApprovalRef: "confirmed-in-current-work-chat-2026-06-15-no-secret",
+    linuxDistro: "TODO: Ubuntu/Debian release on VPS",
+    appDir: "/opt/sobag-opt",
+    deployPath: "/opt/sobag-opt",
+    nodeServiceName: "sobag-opt",
+    rustServiceName: "sobag-opt-rust",
+    rustBinaryPath: "/opt/sobag-opt/shared/sobag-opt-rust",
+    rustServicePath: "/etc/systemd/system/sobag-opt-rust.service",
+    rustHealthUrl: "http://127.0.0.1:3001/api/health-rust",
+    databaseUrlEnvName: "DATABASE_URL",
+    sessionSecretEnvName: "SOBAG_SESSION_SECRET",
+    jwtSecretEnvName: "SOBAG_JWT_SECRET",
+    allowedOriginsEnvName: "SOBAG_ALLOWED_ORIGINS",
+    adminBootstrapEmailEnvName: "SOBAG_ADMIN_EMAIL",
+    adminBootstrapPasswordEnvName: "SOBAG_ADMIN_PASSWORD",
+    adminBootstrapReservedEmailGuard: true,
+    backupPath: "/opt/sobag-opt/shared/backups",
+    objectStorage: {
+      provider: "s3-compatible",
+      endpointEnvName: "SOBAG_S3_ENDPOINT",
+      bucketEnvName: "SOBAG_S3_BUCKET",
+      regionEnvName: "SOBAG_S3_REGION",
+      accessKeyIdEnvName: "SOBAG_S3_ACCESS_KEY_ID",
+      secretAccessKeyEnvName: "SOBAG_S3_SECRET_ACCESS_KEY",
+      publicBaseUrlEnvName: "SOBAG_S3_PUBLIC_BASE_URL",
+    },
+    rollbackCommand: "sudo nginx -t && sudo systemctl reload nginx",
+    requiredChecks: ["npm.cmd run check", "python tools/project_readiness_agent/run.py", "cd rust-server && cargo check --locked"],
+    productionCutoverApproved: false,
+    printsSecrets: false,
   },
 };
 
@@ -88,13 +139,13 @@ function selfTest() {
   const dir = mkdtempSync(join(tmpdir(), "sobag-goal-inputs-"));
   try {
     const result = writeTemplates({ outDir: dir });
-    if (result.written.length !== 4) throw new Error("template writer must create 4 packet files");
+    if (result.written.length !== 5) throw new Error("template writer must create 5 packet files");
     const sample = JSON.parse(readFileSync(join(dir, "catalog-db-env-packet.json"), "utf8"));
     if (sample.productionCredentials !== false || sample.runtimeToggleApproved !== false) {
       throw new Error("catalog DB template must keep production credentials/toggle disabled");
     }
     const second = writeTemplates({ outDir: dir });
-    if (second.skipped.length !== 4) throw new Error("template writer must not overwrite without --force");
+    if (second.skipped.length !== 5) throw new Error("template writer must not overwrite without --force");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

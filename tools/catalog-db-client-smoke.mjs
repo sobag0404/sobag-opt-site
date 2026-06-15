@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { catalogDbEnabled, catalogDbStatus, getCatalogDbClient } = require("../api/_lib/catalog-db-client.js");
+const { catalogDbEnabled, catalogDbStatus, getCatalogDbClient } = require("../server-routes/_lib/catalog-db-client.js");
 
 function main() {
   assert.equal(catalogDbEnabled({}), false);

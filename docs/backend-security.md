@@ -1,7 +1,7 @@
 # Backend and Security Setup
 
-This project now has a Vercel API layer for accounts, roles, sessions, orders, the shared product catalog, and shared editable page content.
-For VPS, `server.mjs` can serve the static files and dispatch the same `/api/*` handlers without Vercel.
+This project now uses the VPS Node API layer for accounts, roles, sessions, orders, the shared product catalog, and shared editable page content.
+`server.mjs` serves the static files and dispatches `/api/*` through `api-router.js` and `server-routes/`.
 
 ## What Moved Server-Side
 
@@ -18,14 +18,14 @@ For VPS, `server.mjs` can serve the static files and dispatch the same `/api/*` 
 
 The old `localStorage` flow still exists as a prototype fallback so the site remains usable until production storage is connected or an admin is not signed into a server session.
 
-## Required Vercel Environment Variables
+## Required Environment Variables
 
-Create an Upstash Redis database or Vercel KV-compatible Redis storage, then add these variables in Vercel:
+Create an Upstash Redis database or compatible Redis storage, then add these variables to the active VPS/runtime environment:
 
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 
-or the Vercel KV aliases:
+or compatible aliases:
 
 - `KV_REST_API_URL`
 - `KV_REST_API_TOKEN`
@@ -48,7 +48,7 @@ For a VPS deployment that should not depend on Vercel KV/Upstash, the same API s
 
 The directory must be writable by the Node process and backed up regularly. It stores shared users, sessions, orders, saved carts, reviews, editable content, catalog payload, PIM sidecar, and import batches. Keep it outside the Git checkout; local `.sobag-store/` is ignored for development.
 
-Do not enable the file provider on Vercel. Keep Vercel on the Redis/KV variables above so the fallback deployment path remains unchanged.
+Vercel is not an active runtime target. Keep local file-store data outside the Git checkout and back it up before deploys/imports.
 
 ## Health Check
 
@@ -80,7 +80,7 @@ It sends only public `GET` requests to `/`, `/catalog`, `/cart`, and `/api/healt
 Use `npm run smoke:prod:self-test` for the offline fixture check that is also covered by AutoFix.
 
 GitHub Actions also runs `.github/workflows/production-smoke.yml` after a successful `autofix-check` push to `main`.
-The workflow uses the same read-only script with retries, because Vercel deploys can finish asynchronously after GitHub push.
+The workflow uses the same read-only script with retries against the VPS production URL.
 
 ## AutoFix
 

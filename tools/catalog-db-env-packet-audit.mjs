@@ -59,7 +59,23 @@ function auditPacketFile(path, { strict = false } = {}) {
     return { ok: !strict, ready: false, missing: true, errors: strict ? [`missing ${path}`] : [], warnings: [`${path} is not created yet`] };
   }
   const parsed = JSON.parse(readFileSync(resolved, "utf8"));
-  return { ...validatePacket(parsed), missing: false };
+  if (parsed.template === true) {
+    return {
+      ok: !strict,
+      ready: false,
+      missing: false,
+      errors: strict ? [`${path} is still a template`] : [],
+      warnings: [`${path} is a starter template; fill real no-secret values before strict gates`],
+    };
+  }
+  const result = validatePacket(parsed);
+  if (strict) {
+    if (parsed.schemaApplied !== true) result.errors.push("schemaApplied must be true in strict mode");
+    if (parsed.rollbackRehearsalConfirmed !== true) result.errors.push("rollbackRehearsalConfirmed must be true in strict mode");
+  }
+  result.ok = result.errors.length === 0;
+  result.ready = result.errors.length === 0;
+  return { ...result, missing: false };
 }
 
 function selfTest() {

@@ -69,7 +69,7 @@ function findForbidden(text, label, errors) {
 function extractDefaultSiteContent(appText) {
   const start = appText.indexOf("const defaultSiteContent = {");
   const end = appText.indexOf("const siteTextFields =", start);
-  if (start < 0 || end < 0) throw new Error("app.js: defaultSiteContent block not found");
+  if (start < 0 || end < 0) throw new Error("app data: defaultSiteContent block not found");
   return appText.slice(start, end);
 }
 
@@ -116,8 +116,8 @@ function auditContent(files, appText, productRows = []) {
   assertIncludes(businessHtml, "data-faq-schema", "business.html", errors);
 
   const defaultContent = extractDefaultSiteContent(appText);
-  findForbidden(defaultContent, "app.js defaultSiteContent", errors);
-  assertIncludes(defaultContent, 'catalogBackButton: "В каталог"', "app.js defaultSiteContent", errors);
+  findForbidden(defaultContent, "app data defaultSiteContent", errors);
+  assertIncludes(defaultContent, 'catalogBackButton: "В каталог"', "app data defaultSiteContent", errors);
 
   [
     ["catalogCategories", 6],
@@ -125,7 +125,7 @@ function auditContent(files, appText, productRows = []) {
     ["catalogHolidays", 6],
   ].forEach(([block, minimum]) => {
     const count = countDescriptions(block, appText);
-    if (count < minimum) errors.push(`app.js ${block} needs at least ${minimum} SEO descriptions`);
+    if (count < minimum) errors.push(`app data ${block} needs at least ${minimum} SEO descriptions`);
   });
 
   [
@@ -135,7 +135,7 @@ function auditContent(files, appText, productRows = []) {
   ].forEach(([productKey, block]) => {
     const configured = extractNamedItems(block, appText);
     const missing = taxonomyValues(productRows, productKey).filter((name) => !configured.has(name));
-    if (missing.length) errors.push(`app.js ${block} missing SEO entries for current catalog: ${missing.join(", ")}`);
+    if (missing.length) errors.push(`app data ${block} missing SEO entries for current catalog: ${missing.join(", ")}`);
   });
 
   if (errors.length) throw new Error(`SEO content audit failed:\n${errors.join("\n")}`);
@@ -192,7 +192,7 @@ function main() {
     PUBLIC_PAGES.filter((file) => existsSync(join(root, file))).map((file) => [file, readProjectFile(file)])
   );
   const productRows = existsSync(join(root, "data/products-live.json")) ? JSON.parse(readProjectFile("data/products-live.json")) : [];
-  const summary = auditContent(files, readProjectFile("app.js"), productRows);
+  const summary = auditContent(files, readProjectFile("components/app-data.js"), productRows);
   console.log(
     `SEO content audit passed: ${summary.pages} pages, ${summary.categoryDescriptions} categories, ${summary.collectionDescriptions} collections, ${summary.holidayDescriptions} holidays`
   );

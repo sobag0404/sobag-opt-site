@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { findProductDetailFromDb, queryCatalogFromDb } = require("../api/_lib/catalog-db-source.js");
+const { findProductDetailFromDb, queryCatalogFromDb } = require("../server-routes/_lib/catalog-db-source.js");
 
 function decodeCursor(value) {
   return Number(Buffer.from(String(value || ""), "base64url").toString("utf8"));

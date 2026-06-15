@@ -1,10 +1,14 @@
-const MIN_CART_TOTAL = 30000;
-const CURRENT_USER_KEY = "sobag.currentUser";
-const USERS_KEY = "sobag.users";
-const ORDERS_KEY = "sobag.orders.v1";
-const THEME_KEY = "sobag.theme.v1";
-const SAVED_CARTS_GUEST_KEY = "sobag.savedCarts.guest";
-const SAVED_CARTS_PREFIX = "sobag.savedCarts.";
+﻿const { formatMoney, buttonLabel, escapeHtml } = window.SobagAppUtils || {};
+if (!window.SobagAppUtils) throw new Error("components/app-utils.js must load before cart.js");
+
+const { uniqueTextList, imageAttrs, prefersReducedMotion, pulseNode, setTextWithPop, routeKey, navigateWithinSite } = window.SobagCartUtils || {};
+if (!window.SobagCartUtils) throw new Error("components/cart-utils.js must load before cart.js");
+
+const { MIN_CART_TOTAL, CURRENT_USER_KEY, USERS_KEY, ORDERS_KEY, THEME_KEY, SAVED_CARTS_GUEST_KEY, SAVED_CARTS_PREFIX, PROTOTYPE_PRODUCT_IDS: PROTOTYPE_PRODUCT_ID_LIST } = window.SobagCartData || {};
+const { quantityTiers, basketDiscountTiers, promoCodes, promoUnavailableText, CART_CONTENT_KEY, defaultCartContent } = window.SobagCartData || {};
+if (!window.SobagCartData) throw new Error("components/cart-data.js must load before cart.js");
+const PROTOTYPE_PRODUCT_IDS = new Set(PROTOTYPE_PRODUCT_ID_LIST || []);
+
 function getCartKey() {
   const user = localStorage.getItem(CURRENT_USER_KEY);
   return user ? `sobag.cart.${user}` : "sobag.cart.guest";
@@ -13,81 +17,6 @@ function getSavedCartsKey() {
   const user = localStorage.getItem(CURRENT_USER_KEY);
   return user ? `${SAVED_CARTS_PREFIX}${user}` : SAVED_CARTS_GUEST_KEY;
 }
-const PROTOTYPE_PRODUCT_IDS = new Set([
-  "aurora-cats",
-  "pixel-quest",
-  "winter-gift",
-  "brand-line",
-  "army-supply",
-  "cooler-love",
-  "meme-cloud",
-  "march-bloom",
-  "teacher-pattern",
-  "space-luggage",
-  "anime-cover",
-  "shoe-cyber",
-  "shoe-flower",
-  "cooler-brand",
-  "cooler-newyear",
-  "plaid-animal",
-  "plaid-meme",
-  "name-stars",
-]);
-
-const quantityTiers = [
-  { qty: 30, discount: 3 },
-  { qty: 70, discount: 7 },
-  { qty: 150, discount: 12 },
-  { qty: 300, discount: 18 },
-];
-const basketDiscountTiers = [
-  { amount: MIN_CART_TOTAL, discount: 5 },
-  { amount: 70000, discount: 7 },
-  { amount: 150000, discount: 12 },
-  { amount: 300000, discount: 18 },
-];
-
-const promoCodes = {};
-const promoUnavailableText = "Промокод согласует менеджер при подтверждении заказа.";
-
-const CART_CONTENT_KEY = "sobag.siteContent.v1";
-const defaultCartContent = {
-  brandName: "Sobag Opt",
-  brandLogo: "",
-  toplinePrimary: "Оптовые партии от 30 000 ₽",
-  toplineSecondary: "Печать и пошив под заказ",
-  toplineTertiary: "Каталог для селлеров и магазинов",
-  navCatalogButton: "каталог",
-  navBusinessButton: "условия для бизнеса",
-  navMarketplacesButton: "мы на маркетплейсах",
-  navAboutButton: "о компании",
-  navContactsButton: "контакты",
-  cartButton: "корзина",
-  footerBrand: "SOBAG OPT",
-  footerText: "B2B-каталог для оптовых заказов текстиля с принтами, производства под макет и поставок партиями.",
-  footerSalesLabel: "Отдел опта",
-  footerEmail: "opt@sobag-shop.online",
-  footerPhone: "+7 900 123-45-67",
-  footerCompanyTitle: "Компания",
-  footerCompanyLinks: "О компании|Контакты|Политика конфиденциальности|Согласие на обработку персональных данных|Пользовательское соглашение",
-  footerClientsTitle: "Клиентам",
-  footerClientsLinks: "Как оформить заказ|Доставка товара|Оплата товара|Возврат товара|Изделия с вашим принтом",
-  footerPartnersTitle: "Партнерам",
-  footerPartnersLinks: "Условия для бизнеса|Мы на маркетплейсах|Поддержка селлеров|Оптовые партии",
-  footerContactsTitle: "Контакты",
-  footerAddress: "Адрес отгрузки согласуется с менеджером",
-  cartPageTitle: "Корзина",
-  cartPageBackButton: "вернуться в каталог",
-  cartPageEmptyTitle: "Корзина пока пустая",
-  cartPageEmptyText: "Добавьте товары из каталога, чтобы увидеть расчет оптовой скидки.",
-  cartDiscountTitle: "Скидка",
-  cartPromoTitle: "Промокод",
-  cartPromoPlaceholder: "Введите промокод",
-  cartPromoButton: "применить",
-  cartCheckoutButton: "оформить заказ",
-  checkoutTitle: "Контакты покупателя",
-  checkoutSubmitButton: "отправить заказ",
-};
 
 const state = {
   cart: new Map(cleanCartEntries(JSON.parse(localStorage.getItem(getCartKey()) || "[]"))),
@@ -131,79 +60,6 @@ function syncPromoAvailability() {
     state.promo = "";
     if (nodes.promoHint) nodes.promoHint.textContent = promoUnavailableText;
   }
-}
-
-function formatMoney(value) {
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: "RUB",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function buttonLabel(text) {
-  return String(text || "").trim().toLocaleUpperCase("ru-RU");
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-function uniqueTextList(values, limit = 10, itemLimit = 240) {
-  return [
-    ...new Set(
-      (Array.isArray(values) ? values : [])
-        .map((item) => String(item || "").trim().slice(0, itemLimit))
-        .filter(Boolean)
-    ),
-  ].slice(0, limit);
-}
-
-function imageAttrs(width, height, loading = "lazy") {
-  return `width="${width}" height="${height}" loading="${loading}" decoding="async"`;
-}
-
-function prefersReducedMotion() {
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
-}
-
-function pulseNode(node, className = "is-pop") {
-  if (!node || prefersReducedMotion()) return;
-  node.classList.remove(className);
-  void node.offsetWidth;
-  node.classList.add(className);
-}
-
-function setTextWithPop(node, value) {
-  if (!node) return;
-  const next = String(value);
-  const changed = node.dataset.motionValue !== undefined && node.dataset.motionValue !== next;
-  node.textContent = next;
-  node.dataset.motionValue = next;
-  if (changed) pulseNode(node);
-}
-
-function routeKey(pathname = window.location.pathname) {
-  const cleanPath = pathname.replace(/\/+$/, "");
-  const lastPart = cleanPath.split("/").filter(Boolean).pop() || "index";
-  return lastPart.replace(/\.html$/i, "") || "index";
-}
-
-function navigateWithinSite(url) {
-  const targetUrl = new URL(url, window.location.href);
-  if (targetUrl.origin !== window.location.origin) {
-    window.location.href = targetUrl.href;
-    return;
-  }
-  if (routeKey(targetUrl.pathname) === routeKey(window.location.pathname)) {
-    if (targetUrl.hash) document.querySelector(targetUrl.hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    return;
-  }
-  window.location.href = targetUrl.href;
 }
 
 function ensureFieldError(field) {
@@ -702,44 +558,6 @@ function showToast(message) {
   nodes.toast.classList.add("is-visible");
   window.clearTimeout(showToast.timer);
   showToast.timer = window.setTimeout(() => nodes.toast.classList.remove("is-visible"), 3000);
-}
-
-function downloadCsv(fileName, rows) {
-  const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(";")).join("\n");
-  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = fileName;
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
-
-const XLSX_CDN_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
-let xlsxLoadPromise = null;
-
-function ensureXlsxLibrary() {
-  if (window.XLSX) return Promise.resolve(true);
-  if (!xlsxLoadPromise) {
-    xlsxLoadPromise = new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = XLSX_CDN_URL;
-      script.defer = true;
-      script.onload = () => resolve(Boolean(window.XLSX));
-      script.onerror = () => resolve(false);
-      document.head.appendChild(script);
-    });
-  }
-  return xlsxLoadPromise;
-}
-
-async function downloadRowsXlsx(rows, fileName, sheetName = "КП") {
-  if (!(await ensureXlsxLibrary())) return false;
-  const workbook = XLSX.utils.book_new();
-  const sheet = XLSX.utils.aoa_to_sheet(rows);
-  sheet["!cols"] = [{ wch: 28 }, { wch: 34 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
-  XLSX.utils.book_append_sheet(workbook, sheet, sheetName.slice(0, 31));
-  XLSX.writeFile(workbook, fileName);
-  return true;
 }
 
 function cartQuoteRows() {

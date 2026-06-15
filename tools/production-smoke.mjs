@@ -279,7 +279,7 @@ async function createSelfTestServer() {
   const server = createServer((req, res) => {
     if (req.url === "/api/health") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: true, storage: "ready", objectStorage: { provider: "vercel-blob", configured: false } }));
+      res.end(JSON.stringify({ ok: true, storage: "ready", objectStorage: { provider: "s3-compatible", configured: false } }));
       return;
     }
     const pages = new Map([

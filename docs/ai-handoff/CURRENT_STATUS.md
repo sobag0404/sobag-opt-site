@@ -25,10 +25,16 @@ Production URLs:
 - Health: `https://sobag-shop.online/api/health`
 
 Current focus:
+- Current readiness pass has real no-secret packets ready for VPS/Rust cutover, final public content, object storage, and catalog DB test rehearsal. Strict goal-inputs still blocks only on the CWV field audit packet after post-migration measurement.
+- Current VPS storage status: retired `vercel-blob` provider alias was removed from the live VPS env and replaced with S3-compatible MinIO on the VPS. Public no-secret coordinates are endpoint `https://sobag-shop.online`, bucket `sobag-products`, public base `https://sobag-shop.online/sobag-products`, region `us-east-1`, path-style mode. Secrets remain only on the VPS. Product photos were migrated to object storage, `data/products-live.json` carries square responsive WebP/AVIF metadata, and production PostgreSQL catalog image rows were updated with rollback backup `/tmp/sobag-catalog-db-photo-backup.json`. Remaining readiness blocker is CWV field audit.
+- Current readiness pass expanded `docs/vps-rust-cutover-input-packet.md`, `tools/goal-inputs-packet-template.mjs`, and `tools/vps-rust-cutover-packet-audit.mjs`; ignored local packet files live under `local-import-output/` and must stay out of Git/chat when they contain operator-specific data.
+- Current readiness work added a no-secret VPS/Rust cutover packet template/audit, split Rust test modules out of `rust-server/src/main.rs`, moved browser utilities/data/content/product/account/admin helpers to `components/app-utils.js`, `components/app-data.js`, `components/app-content-utils.js`, `components/app-product-utils.js`, `components/app-account.js`, and `components/app-admin.js`, and split cart defaults/helpers to `components/cart-data.js` / `components/cart-utils.js`; browser `app.js` is below the 5000-line architecture threshold, with remaining frontend modularity debt limited to smaller state/render/route slices.
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
 - Rust migration is live in staged mode: `sobag-opt-rust` runs under systemd on VPS at `127.0.0.1:3001`; Nginx routes `/api/catalog-query`, `/api/catalog-detail`, exact `/api/auth/me`, `/api/orders`, `/api/briefs`, `/api/admin/orders`, `/api/admin/users`, `/api/admin/content`, exact SSR catalog/search/product routes, fragments, and simple content pages to Rust; Node remains fallback for generic root, cart, login/register/logout, admin catalog/import/media, and non-switched pages;
 - VPS primary domain cutover is complete: `sobag-shop.online` and `www.sobag-shop.online` resolve to `77.239.107.164`, HTTPS is enabled by certbot/Nginx, and production smoke now targets `https://sobag-shop.online`;
-- Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, Vercel Blob provider, and S3-compatible provider slices;
+- Current cutover input: domain `sobag-shop.online`, VPS IP `77.239.107.164`, SSH user `root`. Server-side nginx/systemd preparation is allowed after inventory and backup/quarantine, but credentials must stay out of repo/docs/prompts/logs; safe public-key SSH works and initial VPS inventory/Linux Rust verification has been completed.
+- Current server hardening: `server.mjs` serves only allowlisted public static files/directories; backend source/docs/workflows/reports/package metadata/Rust source are denied by static smoke.
+- Import/PIM 2.0 has sidecar, diagnostics/export, bulk photo CLI, responsive variants, and active S3-compatible object-storage provider slices;
 - VPS migration path now has an explicit filesystem store bridge for shared API data; Vercel is not used for future deploy/verification;
 - VPS runtime path now has `server.mjs` for static clean URLs plus existing `/api/*` handlers;
 - Public catalog query/detail reads are now backed by PostgreSQL on VPS via `SOBAG_CATALOG_SOURCE=postgres`;
@@ -1177,19 +1183,25 @@ Previous handoff verification:
 - `npm.cmd run ui:smoke -- --grep "mobile pages"`
 
 Recommended first verification on a new device:
-1. Install Node.js 20+, Git, Python, GitHub CLI, and optionally Vercel CLI.
+1. Install Node.js 20+, Git, Python, GitHub CLI, and Rust toolchain if Rust checks are needed.
 2. Clone/pull the repo.
 3. Run `npm install`.
 4. Use `npm run dev:static` for ordinary UI work.
-5. Use `npm run dev:vercel` only for Vercel Functions/env checks.
-6. Run `npm.cmd run check`.
-7. Run `npm.cmd run ui:smoke`; if slow, first run the two focused smoke commands listed above.
+5. Run `npm.cmd run check`.
+6. Run `npm.cmd run ui:smoke`; if slow, first run the two focused smoke commands listed above.
 
 Backend/storage state:
-- Vercel API routes exist under `api/`.
-- Upstash Redis / Vercel KV-compatible storage is configured in Vercel.
-- `/api/health` on production should return storage ready.
+- Current API authority is VPS Node through `server.mjs`, `api-router.js`, and `server-routes/`.
+- Legacy `api/[...path].js` and `api/_lib/**` compatibility files are retired; route/runtime code must use canonical `server-routes/` and `server-routes/_lib/**`.
+- Object storage target is S3-compatible/MinIO/R2, not Vercel Blob.
+- `/api/health` on production should return storage ready without exposing env values.
 - Do not expose env values in chat/docs/repo.
+- Current 2026-06-15 VPS/Rust pass: confirmed no-secret domain/IP/user are `sobag-shop.online`, `77.239.107.164`, and SSH user `root`; the SSH password must not be copied into repo, reports, prompts, logs, command lines, or shell history. Safe public-key SSH works, inventory confirmed Ubuntu 24.04/Nginx/PostgreSQL 16/PM2 Node/running Rust services, and the VPS/Rust no-secret packet audit passes.
+- Current 2026-06-15 catalog DB packet pass: VPS `sobag_catalog_test` has the PostgreSQL schema applied from the PIM migration bundle, seed counts verified (`808` products, `12943` variants, `2768` images, `88` taxonomies), rollback rehearsal confirmed, and production/runtime toggles remain disabled.
+- Current 2026-06-15 security pass: `server.mjs` static serving is allowlisted and `tools/vps-server-smoke.mjs` checks backend source/docs/workflows/package/Rust paths plus encoded public-dir traversal return 404. Browser auth fallback now fails closed outside local development if backend auth is unavailable, and production admin pages require a verified backend session before rendering management UI.
+- Current 2026-06-15 deploy guard pass: VPS deploy-generated Node start script and Rust systemd unit set `NODE_ENV=production`, so production session cookies include the `Secure` attribute through the deploy path.
+- Current 2026-06-15 modularity pass: XLSX/CSV/tabular file helpers are consolidated in `components/app-xlsx.js`; app/admin/cart use the shared helper.
+- Current 2026-06-15 Rust verification: `cargo fmt --check` and `cargo metadata --locked` pass locally; VPS/Linux `cargo check --locked && cargo test --locked` passes on the current release as `sobag` with 25 tests; local Windows `cargo check --locked` is blocked by missing MSVC `link.exe`. `.github/workflows/rust-check.yml` now runs `cargo fmt --check`, metadata, check, and test on Ubuntu with `contents: read`.
 
 Important remaining work:
 - Current Rust review moderation preview slice: internal `PATCH /rust/admin/content` now supports temporary-store review approve/hide/delete moderation with audit records. Deploy smoke verifies valid moderation, invalid status rejection, deletion, and persisted review list. Public `/api/admin/content` still stays on Node.
@@ -1199,7 +1211,8 @@ Important remaining work:
 - Current auth/orders/admin migration planning slice: `docs/rust-auth-orders-admin-migration-plan.md` and `tools/rust-auth-orders-admin-plan-audit.mjs` define and guard the next Rust write-route stage. No auth/order/admin production route is switched to Rust yet.
 - Deployment: after future pushes, verify `autofix-check`, `vps-deploy`, and `production-smoke`; Vercel is not an active deploy/verification target.
 - Import/PIM 2.0: later DB/storage split for product, variant, image, taxonomy, and import-batch entities; keep public `/api/catalog` published-only.
-- Durable image storage: choose/configure the real provider env for the next photo migration run and validate AVIF/WebP behavior on the real migrated catalog image set.
+- Durable image storage: choose/configure the real S3-compatible provider env for the next photo migration run and validate AVIF/WebP behavior on the real migrated catalog image set.
+- CWV field audit: run after object-storage/image migration is ready and real field or controlled production measurements exist.
 - Content/SEO: final copy for about/contacts/business/marketplaces, SEO category text, final Yandex map setup.
 - Performance for 10k+ products: Core Web Vitals audit and WebP/AVIF responsive images on the real migrated catalog.
 - QA/Ops current checklist is done; next work is performance/SEO/remaining Import-PIM larger items.

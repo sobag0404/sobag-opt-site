@@ -95,15 +95,15 @@ python tools/product_importer.py scan-photos --photos "C:\Path\YandexDisk\Фот
 - apply сохраняет snapshot каталога перед записью;
 - rollback доступен только для последней примененной партии нового механизма.
 
-Если Vercel API недоступен локально, страница использует localStorage fallback для preview/report, но production-сценарий должен идти через `/api/admin/import-batches`.
+Если локальный API недоступен, страница использует localStorage fallback для preview/report, но production-сценарий должен идти через `/api/admin/import-batches` на VPS.
 
 ## Фото и object storage
 
-Новые bulk-фото больше не должны попадать в Git. Для следующих партий используем object storage слой из `api/_lib/object-storage.js` и документацию `docs/object-storage.md`.
+Новые bulk-фото больше не должны попадать в Git. Для следующих партий используем object storage слой из `server-routes/_lib/object-storage.js` и документацию `docs/object-storage.md`.
 
-Доступные providers: Vercel Blob и S3-compatible для VPS/MinIO/R2. В репозитории хранится только код и metadata, а секреты object storage должны жить только в окружении Vercel/локальной машине. В товаре можно хранить старые поля `image`/`gallery` для совместимости и новое поле `images` с metadata: `url`, `storageKey`, `provider`, `width`, `height`, `mime`, `uploadedAt`.
+Активный provider: S3-compatible для VPS/MinIO/R2. В репозитории хранится только код и metadata, а секреты object storage должны жить только в окружении VPS/CI secret store/локальной машине. В товаре можно хранить старые поля `image`/`gallery` для совместимости и новое поле `images` с metadata: `url`, `storageKey`, `provider`, `width`, `height`, `mime`, `uploadedAt`.
 
-В `admin-import.html` после загрузки Excel/CSV можно выбрать файлы или папку фото. Страница сопоставляет изображения с товарами по `baseSku` и `Папка фото`, показывает отчет `ready/missing/repeated/uploaded/failed`, умеет скачать CSV-отчет и после успешной загрузки создает новый preview batch с Blob/S3 metadata.
+В `admin-import.html` после загрузки Excel/CSV можно выбрать файлы или папку фото. Страница сопоставляет изображения с товарами по `baseSku` и `Папка фото`, показывает отчет `ready/missing/repeated/uploaded/failed`, умеет скачать CSV-отчет и после успешной загрузки создает новый preview batch с S3-compatible metadata.
 
 Для больших партий используйте CLI, чтобы не передавать файлы через JSON API:
 
@@ -112,7 +112,7 @@ node tools/bulk-upload-product-photos.mjs --products data/products.import.json -
 node tools/bulk-upload-product-photos.mjs --products data/products.import.json --photos "C:\Path\Photos" --out local-import-output\products-with-object-images.json --report local-import-output\bulk-photo-upload-report.csv --responsive
 ```
 
-Реальный upload требует provider env только в локальном/production окружении: `BLOB_READ_WRITE_TOKEN` для Vercel Blob или `SOBAG_S3_*` для S3-compatible. Для реальной генерации responsive WebP/AVIF variants нужен optional `sharp`; dry-run строит план variants без него. CLI пишет CSV-отчет и products JSON с `images` metadata, не добавляя bulk-фото в Git.
+Реальный upload требует provider env только в локальном/production окружении: `SOBAG_S3_*` для S3-compatible. Для реальной генерации responsive WebP/AVIF variants нужен optional `sharp`; dry-run строит план variants без него. CLI пишет CSV-отчет и products JSON с `images` metadata, не добавляя bulk-фото в Git.
 
 После миграции фото проверьте metadata перед публикацией:
 

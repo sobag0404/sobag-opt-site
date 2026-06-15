@@ -1,8 +1,8 @@
 # VPS Migration Notes
 
-Last updated: 2026-06-09
+Last updated: 2026-06-15
 
-These notes prepare the VPS path without changing production data or Vercel fallback behavior.
+These notes describe the VPS-only path without changing production data.
 
 For the step-by-step launch/cutover process, use `docs/vps-launch-runbook.md`.
 
@@ -12,11 +12,11 @@ Run the local release audit before VPS packaging:
 npm run audit:vps-release
 ```
 
-It is offline. It checks required VPS/Vercel fallback scripts, runtime files, ignore rules, and tracked-file safety for secrets/local output/raw photo folders.
+It is offline. It checks required VPS scripts, runtime files, ignore rules, and tracked-file safety for secrets/local output/raw photo folders.
 
 ## Storage
 
-Default Vercel/fallback storage remains Redis/KV via:
+The active server storage layer can use Redis-compatible env via:
 
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
@@ -101,9 +101,9 @@ npm run audit:pim-schema
 
 Do not apply it to production until the real DB split is explicitly approved and backed up.
 
-## Fallback
+## No Vercel Runtime Target
 
-Keep Vercel configured with Redis/KV and Vercel Blob/S3 env as a fallback path. Do not switch Vercel to the file provider.
+Vercel deploy/runtime is not an active fallback. Historical Vercel references in old handoff files do not override this VPS-only target.
 
 ## Runtime
 

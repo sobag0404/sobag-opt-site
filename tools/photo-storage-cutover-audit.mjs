@@ -16,10 +16,10 @@ const REQUIRED_PHRASES = [
   "SOBAG_OBJECT_STORAGE_PROVIDER=s3-compatible",
   "SOBAG_S3_ENDPOINT",
   "local-import-output/",
-  "raw/bulk фото",
+  "raw/bulk photos",
   "Existing products must not be deleted",
   "Product/category/collection/holiday previews must stay square 1:1",
-  "Не коммитить `.env`",
+  "Do not commit `.env`",
 ];
 
 function auditCutoverRunbook(text) {

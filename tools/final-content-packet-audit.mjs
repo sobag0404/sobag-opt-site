@@ -77,6 +77,15 @@ function auditPacketFile(path, { strict = false } = {}) {
     return { ok: !strict, ready: false, missing: true, errors: strict ? [`missing ${path}`] : [], warnings: [`${path} is not created yet`] };
   }
   const parsed = JSON.parse(readFileSync(resolved, "utf8"));
+  if (parsed.template === true) {
+    return {
+      ok: !strict,
+      ready: false,
+      missing: false,
+      errors: strict ? [`${path} is still a template`] : [],
+      warnings: [`${path} is a starter template; fill real no-secret values before strict gates`],
+    };
+  }
   const result = validatePacket(parsed);
   return { ...result, ready: result.ok, missing: false };
 }

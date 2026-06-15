@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -162,14 +162,50 @@ function checkImageHints() {
   }
 }
 
+function checkAuthFallbackGuard() {
+  const text = readFileSync(join(root, "app.js"), "utf8");
+  const guardCount = (text.match(/if \(!isLocalAuthFallbackAllowed\(\)\)/g) || []).length;
+  if (!text.includes("function isLocalAuthFallbackAllowed()") || guardCount < 2) {
+    throw new Error("app.js: backend auth fallback must fail closed outside local development for login and registration");
+  }
+}
+
 function main() {
   console.log(writeMode ? "AutoFix: write mode" : "AutoFix: check mode");
   parseJson("package.json");
-  parseJson("vercel.json");
   parseJson("data/products-live.json");
-  walk(join(root, "api"), (file) => file.endsWith(".js")).forEach((file) => run("node", ["--check", file]));
-  ["app.js", "cart.js", "components/site-shell.js", "server.mjs", "tools/static-server.mjs", "tools/production-smoke.mjs", "tools/production-performance-smoke.mjs", "tools/production-storage-readiness.mjs", "tools/production-workflow-audit.mjs", "tools/rust-auth-me-shadow-smoke.mjs", "tools/rust-auth-me-cutover-smoke.mjs", "tools/rust-auth-write-cutover-smoke.mjs", "tools/rust-orders-write-smoke.mjs", "tools/rust-orders-briefs-cutover-smoke.mjs", "tools/rust-admin-orders-cutover-smoke.mjs", "tools/rust-admin-users-cutover-smoke.mjs", "tools/rust-admin-content-cutover-smoke.mjs", "tools/rust-account-orders-admin-cutover-audit.mjs", "tools/rust-account-route-rehearsal.mjs", "tools/rust-ssr-smoke.mjs", "tools/rust-ssr-browser-smoke.mjs", "tools/rust-public-route-smoke.mjs", "tools/rust-ssr-cutover-audit.mjs", "tools/rust-ssr-route-rehearsal.mjs", "tools/rust-auth-orders-admin-plan-audit.mjs", "tools/access-audit.mjs", "tools/error-log-audit.mjs", "tools/content-seo-audit.mjs", "tools/content-readiness-report.mjs", "tools/final-content-packet-audit.mjs", "tools/final-content-apply-plan.mjs", "tools/goal-readiness-report.mjs", "tools/goal-completion-audit.mjs", "tools/goal-inputs-packet-audit.mjs", "tools/goal-inputs-packet-template.mjs", "tools/image-metadata-audit.mjs", "tools/object-storage-env-packet-audit.mjs", "tools/object-storage-apply-plan.mjs", "tools/photo-migration-readiness.mjs", "tools/photo-migration-manifest.mjs", "tools/photo-migration-manifest-audit.mjs", "tools/photo-migration-candidate-audit.mjs", "tools/photo-migration-pilot-smoke.mjs", "tools/photo-storage-cutover-audit.mjs", "tools/catalog-db-env-packet-audit.mjs", "tools/catalog-db-apply-plan.mjs", "tools/catalog-db-cutover-audit.mjs", "tools/catalog-performance-audit.mjs", "tools/core-web-vitals-readiness.mjs", "tools/cwv-field-audit-packet.mjs", "tools/cwv-field-apply-plan.mjs", "tools/vps-release-audit.mjs", "tools/bulk-upload-product-photos.mjs", "tools/bulk-upload-product-photos.test.mjs", "tools/object-storage-s3-smoke.mjs", "tools/file-store-smoke.mjs", "tools/file-store-backup.mjs", "tools/health-store-status-smoke.mjs", "tools/vps-server-smoke.mjs", "tools/vps-write-smoke.mjs", "tools/vps-preflight.mjs", "tools/pim-smoke.mjs", "tools/pim-report-smoke.mjs", "tools/pim-export-normalized.mjs", "tools/pim-postgres-seed.mjs", "tools/pim-postgres-migration-bundle.mjs", "tools/pim-postgres-migration-bundle-audit.mjs", "tools/pim-postgres-rehearsal.mjs", "tools/pim-db-contract-audit.mjs", "tools/pim-postgres-schema-audit.mjs", "tools/pim-postgres-query-contract.mjs", "tools/catalog-source-smoke.mjs", "tools/catalog-db-rows-smoke.mjs", "tools/catalog-db-query-smoke.mjs", "tools/catalog-db-source-smoke.mjs", "tools/catalog-db-client-smoke.mjs", "tools/catalog-db-write-smoke.mjs", "tools/catalog-db-write-plan-audit.mjs", "tools/catalog-db-write-rehearsal.mjs", "tools/catalog-query-smoke.mjs", "tools/catalog-query-scale-smoke.mjs"].forEach((file) => run("node", ["--check", file]));
-  compilePythonFiles(["tools/product_importer.py", "tools/publish_imported_products.py", "tools/audit_catalog.py"]);
+  if (existsSync(join(root, "api"))) {
+    walk(join(root, "api"), (file) => file.endsWith(".js")).forEach((file) => run("node", ["--check", file]));
+  }
+  ["app.js", "cart.js", "components/site-shell.js", "components/app-utils.js", "components/app-data.js", "components/app-content-utils.js", "components/app-product-utils.js", "components/app-account.js", "components/app-admin.js", "components/cart-data.js", "components/cart-utils.js", "server.mjs", "tools/static-server.mjs", "tools/production-smoke.mjs", "tools/production-performance-smoke.mjs", "tools/production-storage-readiness.mjs", "tools/production-workflow-audit.mjs", "tools/rust-auth-me-shadow-smoke.mjs", "tools/rust-auth-me-cutover-smoke.mjs", "tools/rust-auth-write-cutover-smoke.mjs", "tools/rust-orders-write-smoke.mjs", "tools/rust-orders-briefs-cutover-smoke.mjs", "tools/rust-admin-orders-cutover-smoke.mjs", "tools/rust-admin-users-cutover-smoke.mjs", "tools/rust-admin-content-cutover-smoke.mjs", "tools/rust-account-orders-admin-cutover-audit.mjs", "tools/rust-local-env-audit.mjs", "tools/rust-account-route-rehearsal.mjs", "tools/rust-ssr-smoke.mjs", "tools/rust-ssr-browser-smoke.mjs", "tools/rust-public-route-smoke.mjs", "tools/rust-ssr-cutover-audit.mjs", "tools/rust-ssr-route-rehearsal.mjs", "tools/rust-auth-orders-admin-plan-audit.mjs", "tools/access-audit.mjs", "tools/error-log-audit.mjs", "tools/content-seo-audit.mjs", "tools/content-readiness-report.mjs", "tools/final-content-packet-audit.mjs", "tools/final-content-apply-plan.mjs", "tools/goal-readiness-report.mjs", "tools/goal-completion-audit.mjs", "tools/goal-inputs-packet-audit.mjs", "tools/goal-inputs-packet-template.mjs", "tools/vps-rust-cutover-packet-audit.mjs", "tools/image-metadata-audit.mjs", "tools/object-storage-env-packet-audit.mjs", "tools/object-storage-apply-plan.mjs", "tools/photo-migration-readiness.mjs", "tools/photo-migration-manifest.mjs", "tools/photo-migration-manifest-audit.mjs", "tools/photo-migration-candidate-audit.mjs", "tools/photo-migration-pilot-smoke.mjs", "tools/photo-storage-cutover-audit.mjs", "tools/catalog-db-env-packet-audit.mjs", "tools/catalog-db-apply-plan.mjs", "tools/catalog-db-cutover-audit.mjs", "tools/catalog-performance-audit.mjs", "tools/core-web-vitals-readiness.mjs", "tools/cwv-field-audit-packet.mjs", "tools/cwv-field-apply-plan.mjs", "tools/vps-release-audit.mjs", "tools/bulk-upload-product-photos.mjs", "tools/bulk-upload-product-photos.test.mjs", "tools/object-storage-s3-smoke.mjs", "tools/file-store-smoke.mjs", "tools/file-store-backup.mjs", "tools/health-store-status-smoke.mjs", "tools/vps-server-smoke.mjs", "tools/vps-write-smoke.mjs", "tools/vps-preflight.mjs", "tools/pim-smoke.mjs", "tools/pim-report-smoke.mjs", "tools/pim-export-normalized.mjs", "tools/pim-postgres-seed.mjs", "tools/pim-postgres-migration-bundle.mjs", "tools/pim-postgres-migration-bundle-audit.mjs", "tools/pim-postgres-rehearsal.mjs", "tools/pim-db-contract-audit.mjs", "tools/pim-postgres-schema-audit.mjs", "tools/pim-postgres-query-contract.mjs", "tools/catalog-source-smoke.mjs", "tools/catalog-db-rows-smoke.mjs", "tools/catalog-db-query-smoke.mjs", "tools/catalog-db-source-smoke.mjs", "tools/catalog-db-client-smoke.mjs", "tools/catalog-db-write-smoke.mjs", "tools/catalog-db-write-plan-audit.mjs", "tools/catalog-db-write-rehearsal.mjs", "tools/catalog-query-smoke.mjs", "tools/catalog-query-scale-smoke.mjs"].forEach((file) => run("node", ["--check", file]));
+  compilePythonFiles([
+    "tools/product_importer.py",
+    "tools/publish_imported_products.py",
+    "tools/audit_catalog.py",
+    "tools/project_readiness_agent/__init__.py",
+    "tools/project_readiness_agent/config.py",
+    "tools/project_readiness_agent/context.py",
+    "tools/project_readiness_agent/models.py",
+    "tools/project_readiness_agent/runner.py",
+    "tools/project_readiness_agent/run.py",
+    "tools/project_readiness_agent/sanitizer.py",
+    "tools/project_readiness_agent/checks/__init__.py",
+    "tools/project_readiness_agent/checks/architecture.py",
+    "tools/project_readiness_agent/checks/chat_goal_context.py",
+    "tools/project_readiness_agent/checks/ci_cd.py",
+    "tools/project_readiness_agent/checks/code_quality.py",
+    "tools/project_readiness_agent/checks/common.py",
+    "tools/project_readiness_agent/checks/documentation.py",
+    "tools/project_readiness_agent/checks/product_readiness.py",
+    "tools/project_readiness_agent/checks/prompt_engineering.py",
+    "tools/project_readiness_agent/checks/security.py",
+    "tools/project_readiness_agent/checks/tests.py",
+    "tools/project_readiness_agent/reporting/__init__.py",
+    "tools/project_readiness_agent/reporting/markdown.py",
+    "tools/project_readiness_agent/tests/__init__.py",
+    "tools/project_readiness_agent/tests/test_agent_models.py",
+    "tools/project_readiness_agent/tests/test_reporting.py",
+  ]);
   run("node", ["tools/validate-products.mjs"]);
   run("node", ["tools/pim-smoke.mjs"]);
   run("node", ["tools/pim-report-smoke.mjs"]);
@@ -224,6 +260,8 @@ function main() {
   run("node", ["tools/goal-inputs-packet-audit.mjs"]);
   run("node", ["tools/goal-inputs-packet-audit.mjs", "--self-test"]);
   run("node", ["tools/goal-inputs-packet-template.mjs", "--self-test"]);
+  run("node", ["tools/vps-rust-cutover-packet-audit.mjs"]);
+  run("node", ["tools/vps-rust-cutover-packet-audit.mjs", "--self-test"]);
   run("node", ["tools/image-metadata-audit.mjs"]);
   run("node", ["tools/image-metadata-audit.mjs", "--self-test"]);
   run("node", ["tools/object-storage-env-packet-audit.mjs"]);
@@ -259,6 +297,7 @@ function main() {
   run("node", ["tools/rust-public-route-smoke.mjs", "--self-test"]);
   run("node", ["tools/rust-auth-orders-admin-plan-audit.mjs"]);
   run("node", ["tools/rust-auth-orders-admin-plan-audit.mjs", "--self-test"]);
+  run("node", ["tools/rust-local-env-audit.mjs"]);
   run("node", ["tools/vps-release-audit.mjs"]);
   run("node", ["tools/vps-release-audit.mjs", "--self-test"]);
   run("node", ["tools/rust-auth-me-shadow-smoke.mjs", "--self-test"]);
@@ -273,6 +312,7 @@ function main() {
   run("node", ["tools/error-log-audit.mjs"]);
   assertNoPattern("app.js", /products-live\.json\?v=\$\{Date\.now\(\)\}/, "нельзя отключать кэш каталога через Date.now()");
   assertNoPattern("cart.js", /password:\s*["'`]/, "пароли не должны появляться в cart.js");
+  checkAuthFallbackGuard();
   checkUiShellOwnership();
   checkPageSectionOwnership();
   checkNoMojibake();

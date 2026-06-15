@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { basename, join } from "node:path";
 
@@ -7,12 +7,10 @@ const root = process.cwd();
 const REQUIRED_FILES = [
   "server.mjs",
   "api-router.js",
-  "api/[...path].js",
   "package.json",
-  "vercel.json",
-  "api/_lib/store.js",
-  "api/_lib/object-storage.js",
   "server-routes/health.js",
+  "server-routes/_lib/store.js",
+  "server-routes/_lib/object-storage.js",
   "tools/vps-preflight.mjs",
   "tools/vps-server-smoke.mjs",
   "tools/vps-write-smoke.mjs",
@@ -32,6 +30,7 @@ const REQUIRED_FILES = [
   "tools/rust-admin-users-cutover-smoke.mjs",
   "tools/rust-admin-content-cutover-smoke.mjs",
   "tools/rust-account-orders-admin-cutover-audit.mjs",
+  "tools/rust-local-env-audit.mjs",
   "tools/rust-auth-orders-admin-plan-audit.mjs",
   "docs/vps-migration-notes.md",
   "docs/vps-launch-runbook.md",
@@ -40,6 +39,7 @@ const REQUIRED_FILES = [
   "docs/rust-ssr-cutover-runbook.md",
   "docs/rust-account-orders-admin-cutover-runbook.md",
   "docs/rust-auth-orders-admin-migration-plan.md",
+  "docs/vps-rust-runtime-map.md",
   "rust-server/Cargo.toml",
   "rust-server/Cargo.lock",
   "rust-server/src/main.rs",
@@ -47,7 +47,6 @@ const REQUIRED_FILES = [
 
 const REQUIRED_SCRIPTS = {
   "dev:static": "tools/static-server.mjs",
-  "dev:vercel": "vercel dev",
   "start:vps": "server.mjs",
   "smoke:vps": "tools/vps-server-smoke.mjs",
   "smoke:vps:write": "tools/vps-write-smoke.mjs",
@@ -72,6 +71,7 @@ const REQUIRED_SCRIPTS = {
   "smoke:rust:admin-users-cutover": "tools/rust-admin-users-cutover-smoke.mjs",
   "smoke:rust:admin-content-cutover": "tools/rust-admin-content-cutover-smoke.mjs",
   "audit:rust-account-cutover": "tools/rust-account-orders-admin-cutover-audit.mjs",
+  "audit:rust-local-env": "tools/rust-local-env-audit.mjs",
   "audit:rust-ssr-cutover": "tools/rust-ssr-cutover-audit.mjs",
   "rehearse:rust-ssr-routes": "tools/rust-ssr-route-rehearsal.mjs",
   "audit:rust-migration-plan": "tools/rust-auth-orders-admin-plan-audit.mjs",
@@ -79,13 +79,34 @@ const REQUIRED_SCRIPTS = {
   "ui:smoke": "tools/ui-smoke.spec.js",
 };
 
+const FORBIDDEN_VERCEL_FILES = [
+  "vercel.json",
+  ".vercelignore",
+  "tools/vercel-daily-deploy-gate.mjs",
+];
+
+const FORBIDDEN_PACKAGE_SCRIPTS = ["dev:vercel"];
+const FORBIDDEN_DEPENDENCIES = ["@vercel/blob"];
+const FORBIDDEN_LEGACY_API_FILES = [
+  "api/[...path].js",
+  "api/_lib/auth.js",
+  "api/_lib/store.js",
+  "api/_lib/http.js",
+  "api/_lib/object-storage.js",
+];
+
 const REQUIRED_VPS_DEPLOY_MARKERS = [
+  "github.ref_name == 'main'",
   "cleanup_failed_release()",
+  "safe_rm_rf()",
+  "target=\"$(readlink -f \"$1\")\"",
   "rust_target_dir=\"$app_dir/shared/cargo-target\"",
   "export CARGO_TARGET_DIR=\"$rust_target_dir\"",
+  "export NODE_ENV=production",
   "cargo test --locked",
   "cargo build --release --locked",
   "install -m 755 \"$rust_target_dir/release/sobag-opt-rust\" \"$rust_binary\"",
+  "Environment=NODE_ENV=production",
   "sudo systemctl restart sobag-opt-rust",
   "Node health failed after PM2 restart",
   "http://127.0.0.1:3001/api/health-rust",
@@ -99,7 +120,8 @@ const REQUIRED_VPS_DEPLOY_MARKERS = [
   "node tools/rust-admin-orders-cutover-smoke.mjs --rust-bin \"$rust_binary\"",
   "node tools/rust-admin-users-cutover-smoke.mjs --rust-bin \"$rust_binary\"",
   "node tools/rust-admin-content-cutover-smoke.mjs --rust-bin \"$rust_binary\"",
-  "rm -rf -- \"$rust_target_dir/debug\"",
+  "safe_rm_rf \"$rust_target_dir/debug\"",
+  "::add-mask::%s",
   "Rust health failed; restoring previous binary",
 ];
 
@@ -149,6 +171,64 @@ function assertIncludes(haystack, needle, label) {
   if (!String(haystack || "").includes(needle)) throw new Error(`${label} must include ${needle}`);
 }
 
+function combinedDependencies(packageJson) {
+  return {
+    ...(packageJson.dependencies || {}),
+    ...(packageJson.devDependencies || {}),
+    ...(packageJson.optionalDependencies || {}),
+  };
+}
+
+function assertNoActiveVercelArtifacts(packageJson, errors) {
+  FORBIDDEN_VERCEL_FILES.forEach((file) => {
+    if (existsSync(join(root, file))) errors.push(`active Vercel-era artifact must be removed: ${file}`);
+  });
+
+  const scripts = packageJson.scripts || {};
+  FORBIDDEN_PACKAGE_SCRIPTS.forEach((name) => {
+    if (Object.prototype.hasOwnProperty.call(scripts, name)) errors.push(`active package script is forbidden in VPS-only mode: ${name}`);
+  });
+
+  const dependencies = combinedDependencies(packageJson);
+  FORBIDDEN_DEPENDENCIES.forEach((name) => {
+    if (Object.prototype.hasOwnProperty.call(dependencies, name)) errors.push(`active Vercel dependency is forbidden in VPS-only mode: ${name}`);
+  });
+
+  const objectStorage = readFileSync(join(root, "server-routes/_lib/object-storage.js"), "utf8");
+  [
+    "@vercel/blob",
+    "BLOB_READ_WRITE_TOKEN",
+    "createVercelBlobAdapter",
+    "vercel-blob",
+  ].forEach((marker) => {
+    if (objectStorage.includes(marker)) errors.push(`object storage adapter must not contain active Vercel Blob marker: ${marker}`);
+  });
+  if (!objectStorage.includes('const DEFAULT_PROVIDER = "s3-compatible"')) {
+    errors.push("object storage default provider must stay s3-compatible");
+  }
+}
+
+function assertApiLibWrappers(errors) {
+  const apiDir = join(root, "api");
+  const apiLibDir = join(root, "api/_lib");
+  const serverLibDir = join(root, "server-routes/_lib");
+  if (existsSync(apiDir)) errors.push("legacy api directory must stay retired; use server-routes/ as the VPS Node authority");
+  FORBIDDEN_LEGACY_API_FILES.forEach((file) => {
+    if (existsSync(join(root, file))) errors.push(`legacy api compatibility file must stay retired: ${file}`);
+  });
+  if (!existsSync(apiLibDir)) return;
+  readdirSync(apiLibDir)
+    .filter((file) => file.endsWith(".js"))
+    .forEach((file) => {
+      const apiText = readFileSync(join(apiLibDir, file), "utf8").trim();
+      const serverFile = join(serverLibDir, file);
+      const moduleName = file.replace(/\.js$/i, "");
+      const expected = `module.exports = require("../../server-routes/_lib/${moduleName}");`;
+      if (!existsSync(serverFile)) errors.push(`api/_lib wrapper has no canonical peer: ${file}`);
+      if (apiText !== expected) errors.push(`api/_lib/${file} must be a thin wrapper to server-routes/_lib/${file}`);
+    });
+}
+
 function auditRelease({ packageJson, gitignore, trackedFiles, vpsDeployWorkflow = "" }) {
   const errors = [];
   const scripts = packageJson.scripts || {};
@@ -169,13 +249,17 @@ function auditRelease({ packageJson, gitignore, trackedFiles, vpsDeployWorkflow 
     if (!gitignore.split(/\r?\n/).some((line) => line.trim() === pattern)) errors.push(`.gitignore missing ${pattern}`);
   });
 
-  const forbiddenTracked = trackedFiles.filter((file) => TRACKED_FORBIDDEN.some((pattern) => pattern.test(file)));
+  const forbiddenTracked = trackedFiles.filter(
+    (file) => file !== ".env.example" && TRACKED_FORBIDDEN.some((pattern) => pattern.test(file)),
+  );
   forbiddenTracked.forEach((file) => errors.push(`forbidden tracked local/secret artifact: ${file}`));
 
   if (!trackedFiles.includes("server.mjs")) errors.push("server.mjs must be tracked for VPS runtime");
   if (!trackedFiles.includes(".github/workflows/production-smoke.yml")) errors.push("production smoke workflow must stay tracked");
   if (!trackedFiles.includes("docs/vps-migration-notes.md")) errors.push("VPS migration notes must stay tracked");
   if (trackedFiles.some((file) => basename(file).toLocaleLowerCase("en-US") === ".env")) errors.push("tracked .env file is forbidden");
+  assertNoActiveVercelArtifacts(packageJson, errors);
+  assertApiLibWrappers(errors);
   REQUIRED_VPS_DEPLOY_MARKERS.forEach((marker) => {
     if (!vpsDeployWorkflow.includes(marker)) errors.push(`vps-deploy workflow missing Rust deploy marker: ${marker}`);
   });
@@ -209,6 +293,25 @@ function selfTest() {
     rejected = /forbidden tracked/.test(error.message);
   }
   if (!rejected) throw new Error("self-test should reject tracked .env");
+
+  rejected = false;
+  try {
+    auditRelease({
+      packageJson: {
+        scripts: {
+          ...Object.fromEntries(Object.entries(REQUIRED_SCRIPTS).map(([name, expected]) => [name, `node ${expected}`])),
+          "dev:vercel": "vercel dev",
+        },
+        dependencies: { "@vercel/blob": "0.0.0" },
+      },
+      gitignore: REQUIRED_IGNORES.join("\n"),
+      trackedFiles: ["server.mjs", ".github/workflows/production-smoke.yml", "docs/vps-migration-notes.md"],
+      vpsDeployWorkflow: REQUIRED_VPS_DEPLOY_MARKERS.join("\n"),
+    });
+  } catch (error) {
+    rejected = /dev:vercel|@vercel\/blob/.test(error.message);
+  }
+  if (!rejected) throw new Error("self-test should reject active Vercel package artifacts");
 }
 
 function main() {

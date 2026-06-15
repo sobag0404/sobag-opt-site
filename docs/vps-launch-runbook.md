@@ -1,49 +1,41 @@
 # VPS Launch Runbook
 
-Last updated: 2026-06-09
+Last updated: 2026-06-15
 
-Цель: безопасно поднять Sobag Opt на VPS, не меняя production data, DNS, Vercel env/cache/user data и не ломая Vercel fallback.
+Goal: run Sobag Opt on the VPS without changing production data, secrets, cache, or user data outside an approved deploy/cutover step.
 
-## Границы
+## Boundaries
 
-- Не переносить и не удалять production data без отдельного подтверждения.
-- Не коммитить `.env`, токены, пароли, cookies, SSH-ключи, дампы БД, raw/bulk фото.
-- Vercel fallback остается на Redis/KV и не переводится на `SOBAG_STORE_PROVIDER=file`.
-- DNS cutover делать только отдельным шагом после зеленых проверок на VPS URL.
+- Do not commit `.env`, tokens, passwords, cookies, SSH keys, DB dumps, raw photos, or local import output.
+- Do not change production env/cache/user data without explicit approval.
+- Deploy target is VPS only. Vercel is not an active deploy/runtime/fallback target.
+- Rollback path is the previous VPS release plus documented Nginx exact-route backups.
 
-## Перед VPS
+## Before VPS Deploy
 
-Локально:
+Run locally:
 
 ```bash
 git status --short --branch
 npm.cmd run check
 npm.cmd run ui:smoke
 npm.cmd run audit:vps-release
+npm.cmd run audit:vps-rust-cutover-packet
 ```
 
-Если планируется перенос локального file-store каталога, сначала сделать backup:
+Fill the no-secret VPS/Rust input packet locally before any cutover planning: `docs/vps-rust-cutover-input-packet.md`.
+
+If a local file-store needs transfer, back it up first:
 
 ```bash
 npm.cmd run backup:store -- --source .sobag-store --dest sobag-store-backups
 ```
 
-`sobag-store-backups/` игнорируется Git. Не добавлять архивы данных в репозиторий.
+`sobag-store-backups/` is ignored by Git.
 
-## Подготовка VPS
+## VPS Environment
 
-На сервере нужны Node.js 20+, Git, reverse proxy с TLS и отдельные директории данных:
-
-```bash
-sudo mkdir -p /opt/sobag-opt /var/lib/sobag-opt/store /var/backups/sobag-opt
-sudo chown -R "$USER":"$USER" /opt/sobag-opt /var/lib/sobag-opt/store /var/backups/sobag-opt
-cd /opt/sobag-opt
-git clone https://github.com/sobag0404/sobag-opt-site.git .
-git checkout main
-npm ci
-```
-
-Env хранить только на сервере. Значения ниже являются именами переменных, не готовым `.env` для коммита:
+Store env values only on the target server or CI secret store:
 
 ```bash
 SOBAG_STORE_PROVIDER=file
@@ -61,9 +53,9 @@ PORT=3000
 HOST=127.0.0.1
 ```
 
-## Проверка До Запуска
+`SOBAG_STORE_PROVIDER=file` is the pragmatic VPS-local app data path for the first runtime cutover. Product photo/media migration still uses the S3-compatible object-storage adapter unless a separate filesystem media provider is implemented and audited.
 
-На VPS:
+## Local VPS Runtime Checks
 
 ```bash
 npm run preflight:vps
@@ -71,82 +63,71 @@ npm run smoke:vps
 npm run smoke:vps:write
 ```
 
-`preflight:vps` печатает только безопасные статусы. Если он падает, не запускать публичный cutover.
+`preflight:vps` prints safe status only and never prints secret values.
 
-## Запуск
-
-Минимальная команда:
+## Start Runtime
 
 ```bash
 npm run start:vps
 ```
 
-В production запускать через process manager/systemd, а наружу отдавать через Nginx/Caddy:
+In production, run behind Nginx/Caddy/systemd/PM2:
 
-- app слушает `127.0.0.1:3000`;
-- reverse proxy отвечает за TLS, gzip/brotli, лимиты размера запроса и access logs;
-- `/api/health` должен возвращать `ok=true` и `store.provider=file`.
+- Node listens on `127.0.0.1:3000`.
+- Rust service listens on `127.0.0.1:3001`.
+- Reverse proxy owns TLS, compression, request limits, access logs, and exact Rust cutover routes.
+- `/api/health` must report `ok=true` and safe store/object-storage status.
 
-## Проверка VPS URL
+## Production Smoke
 
-До DNS cutover проверить временный домен или IP через reverse proxy:
+Before and after cutover:
 
 ```bash
-npm.cmd run smoke:prod -- --base-url https://vps-preview.example
+npm.cmd run smoke:prod -- --base-url https://sobag-shop.online
+npm.cmd run smoke:prod:storage -- --base-url https://sobag-shop.online
 ```
 
-Проверить вручную:
+For photo storage or catalog DB strict gates, add the strict flags only after separate approval:
 
-- главная, каталог, поиск, карточка товара;
-- корзина и отправка тестовой заявки;
-- вход администратора;
-- админка заказов и товаров;
-- `/api/health`.
-
-## Cutover
-
-Делать отдельным подтвержденным шагом:
-
-1. Backup текущего VPS file-store.
-2. Финальный `npm run preflight:vps`.
-3. Финальный smoke по VPS URL.
-4. DNS переключение.
-5. `npm.cmd run smoke:prod -- --base-url https://sobag-shop.online`.
-6. Проверка fallback: `npm.cmd run smoke:prod -- --base-url https://sobag-opt-site.vercel.app`.
+```bash
+npm.cmd run smoke:prod:storage -- --base-url https://sobag-shop.online --require-object-storage
+npm.cmd run smoke:prod:storage -- --base-url https://sobag-shop.online --require-catalog-db
+```
 
 ## Rollback
 
-Если после cutover есть критическая ошибка:
+If a critical issue appears:
 
-1. Вернуть DNS на прежний target или fallback.
-2. Не менять данные в панике.
-3. Снять логи reverse proxy/app.
-4. При повреждении file-store восстановить только подтвержденный backup:
+1. Restore the previous VPS release or the relevant Nginx exact-route backup.
+2. Do not change production data in panic mode.
+3. Collect reverse proxy/app logs without secrets.
+4. Restore file-store backup only during a maintenance window and only to the intended directory:
 
 ```bash
 npm run backup:store -- --restore /var/backups/sobag-opt/store-YYYYMMDDTHHMMSSZ --target /var/lib/sobag-opt/store --force
 ```
 
-5. Повторить `npm run smoke:vps` и `npm run smoke:vps:write`.
+5. Rerun `npm run smoke:vps` and `npm run smoke:vps:write`.
 
-## Фото И Каталог
+## Photo And Catalog
 
-До реальной миграции фото на S3-compatible storage публичный каталог может продолжать использовать текущие static/legacy image URL.
-
-Перед публикацией migrated image catalog:
+Before migrated image publication:
 
 ```bash
 node tools/image-metadata-audit.mjs --products local-import-output/products-with-object-images.json --published-only --require-metadata --require-responsive --require-square
 ```
 
-Raw/bulk фото и `local-import-output/` не добавлять в Git.
+Raw/bulk photos and `local-import-output/` must stay out of Git.
 
-## Rust Catalog Slice
+## Rust Verification
 
-Current VPS keeps Node.js as the main runtime and runs Rust only for catalog read routes:
+VPS/Linux Rust gate:
 
-- Node: `127.0.0.1:3000`
-- Rust systemd service: `sobag-opt-rust` on `127.0.0.1:3001`
-- Nginx Rust routes: `/api/catalog-query`, `/api/catalog-detail`
+```bash
+cd rust-server
+cargo fmt --check
+cargo check --locked
+cargo test --locked
+```
 
-Deploy is handled by `.github/workflows/vps-deploy.yml`: it builds `rust-server`, restarts the systemd service, verifies `/api/health-rust`, and runs shadow comparison against Node. Detailed rollback steps are in `docs/rust-deploy-runbook.md`.
+Then run the relevant Rust smoke/cutover scripts from `package.json` before switching any exact public route. Local Windows Rust build can be blocked by missing MSVC `link.exe`; treat that as an environment blocker until the toolchain is installed.

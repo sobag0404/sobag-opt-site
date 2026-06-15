@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const PRODUCT_STATUSES = new Set(["draft", "published", "hidden", "archive"]);
-const IMAGE_PROVIDERS = new Set(["vercel-blob", "s3-compatible"]);
+const IMAGE_PROVIDERS = new Set(["s3-compatible"]);
 const RESPONSIVE_FORMATS = new Set(["webp", "avif"]);
 
 const root = process.cwd();

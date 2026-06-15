@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import { auditProducts } from "./image-metadata-audit.mjs";
 
 const require = createRequire(import.meta.url);
-const { normalizeProvider, objectStorageStatus } = require("../api/_lib/object-storage.js");
+const { normalizeProvider, objectStorageStatus } = require("../server-routes/_lib/object-storage.js");
 
 const root = process.cwd();
 const REQUIRED_IGNORES = [
@@ -43,7 +43,7 @@ function parseArgs(argv = process.argv.slice(2)) {
   node tools/photo-migration-readiness.mjs [--products data/products-live.json]
 
 Options:
-  --provider <name>  Check provider status as vercel-blob or s3-compatible.
+  --provider <name>  Check provider status as s3-compatible.
   --strict           Fail until published products have complete square WebP/AVIF metadata.
   --json             Print machine-readable report.
   --self-test        Run fixture checks.`);
@@ -155,6 +155,7 @@ function readinessReport(products, args, env = process.env, gitignoreText = read
   const blockers = [];
   if (!shapeAudit.ok) blockers.push("image metadata shape has errors");
   if (ignores.some((item) => !item.ignored)) blockers.push("raw/bulk photo folders are not fully ignored");
+  if (storage.supported === false) blockers.push(`${provider} is not an active object storage provider`);
   if (productSummary.pendingPublishedProducts.length) warnings.push("published products are not fully migrated to square responsive image metadata");
   if (args.strict) {
     if (!storage.configured) blockers.push(`${provider} is not configured in env`);

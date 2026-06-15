@@ -14,7 +14,7 @@ It is also included in:
 npm.cmd run check
 ```
 
-Because `autofix-check` already runs on push, pull request, and the weekly Monday schedule, this gives the project a lightweight periodic access audit without touching production data or Vercel env.
+Because `autofix-check` already runs on push, pull request, and the weekly Monday schedule, this gives the project a lightweight periodic access audit without touching production data or runtime env.
 
 ## Current Matrix
 
@@ -28,7 +28,7 @@ Because `autofix-check` already runs on push, pull request, and the weekly Monda
 
 ## What The Audit Checks
 
-- Every API route file outside `api/_lib` is listed in the access matrix.
+- Every active API route file outside `server-routes/_lib` is listed in the access matrix.
 - Listed files still exist and map to the expected route path.
 - Expected HTTP methods are guarded and unsupported methods call `methodNotAllowed`.
 - Admin routes use `requireUser(req, [...])` with the expected role set.

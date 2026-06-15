@@ -119,6 +119,7 @@ Allowed exact locations after their gates:
 - `location = /api/orders`
 - `location = /api/briefs`
 - `location = /api/admin/orders`
+- `location = /api/admin/users`
 - `location = /api/admin/content`
 
 Do not add wildcard `/api/admin/` or generic `/api/` proxy to Rust during these stages.

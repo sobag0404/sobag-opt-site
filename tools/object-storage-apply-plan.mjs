@@ -8,7 +8,6 @@ const DEFAULT_OUT = "local-import-output/object-storage-apply-plan.json";
 
 const SECRET_ENV_NAMES = {
   "s3-compatible": ["SOBAG_S3_ACCESS_KEY_ID", "SOBAG_S3_SECRET_ACCESS_KEY", "SOBAG_S3_SESSION_TOKEN"],
-  "vercel-blob": ["BLOB_READ_WRITE_TOKEN"],
 };
 
 function parseArgs(argv = process.argv.slice(2)) {
@@ -51,18 +50,15 @@ function buildObjectStorageApplyPlan(packet) {
   if (!validation.ok) throw new Error(`object storage packet is not ready: ${validation.errors.join("; ")}`);
 
   const provider = validation.provider;
-  const requiredEnvNames =
-    provider === "s3-compatible"
-      ? [
-          "SOBAG_OBJECT_STORAGE_PROVIDER",
-          "SOBAG_S3_ENDPOINT",
-          "SOBAG_S3_BUCKET",
-          "SOBAG_S3_REGION",
-          "SOBAG_S3_PUBLIC_BASE_URL",
-          "SOBAG_S3_FORCE_PATH_STYLE",
-          ...SECRET_ENV_NAMES[provider],
-        ]
-      : ["SOBAG_OBJECT_STORAGE_PROVIDER", ...SECRET_ENV_NAMES[provider]];
+  const requiredEnvNames = [
+    "SOBAG_OBJECT_STORAGE_PROVIDER",
+    "SOBAG_S3_ENDPOINT",
+    "SOBAG_S3_BUCKET",
+    "SOBAG_S3_REGION",
+    "SOBAG_S3_PUBLIC_BASE_URL",
+    "SOBAG_S3_FORCE_PATH_STYLE",
+    ...SECRET_ENV_NAMES[provider],
+  ];
 
   return {
     ready: true,
@@ -74,7 +70,7 @@ function buildObjectStorageApplyPlan(packet) {
     guardrails: [
       "do not commit env values, tokens, access keys, raw photos, or generated bulk photo folders",
       "do not change production env/cache/user data without explicit approval",
-      "configure provider env only in the target VPS/Vercel panel or server shell",
+      "configure provider env only in the target VPS server shell or CI secret store",
       "run a small photo pilot before full catalog publication",
       "audit candidate products JSON before switching public catalog image data",
     ],
@@ -126,14 +122,6 @@ function selfTest() {
   assert(plan.ready, "valid S3-compatible plan rejected");
   assert(plan.requiredEnvNames.includes("SOBAG_S3_SECRET_ACCESS_KEY"), "secret env name must be listed");
   assert(!JSON.stringify(plan.publicConfigPreview).includes("SECRET_ACCESS_KEY"), "public preview must not expose secret names");
-
-  const blobPlan = buildObjectStorageApplyPlan({
-    provider: "vercel-blob",
-    credentialsConfirmed: true,
-    publicReadConfirmed: true,
-  });
-  assert(blobPlan.secretEnvNames.includes("BLOB_READ_WRITE_TOKEN"), "Blob token env name must be listed");
-
   try {
     buildObjectStorageApplyPlan({ provider: "s3-compatible", endpoint: "https://storage.example.test" });
     throw new Error("invalid packet was accepted");

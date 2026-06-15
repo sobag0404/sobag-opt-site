@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { buildCatalogPim } = require("../api/_lib/pim.js");
+const { buildCatalogPim } = require("../server-routes/_lib/pim.js");
 
 const PRODUCT_STATUSES = new Set(["draft", "published", "hidden", "archive"]);
 const TAXONOMY_TYPES = new Set(["category", "collection", "holiday", "tag"]);

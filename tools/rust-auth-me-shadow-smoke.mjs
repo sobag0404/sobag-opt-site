@@ -565,6 +565,20 @@ async function runSmoke(args) {
     }
     const registeredMe = await getJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, registerToken);
     if (registeredMe.user?.email !== "new@example.test") throw new Error("registered session mismatch");
+
+    const reservedRegister = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/register`, {
+      method: "POST",
+      body: {
+        email: "admin@sobag",
+        password: "secret123",
+        name: "Reserved Admin",
+        phone: "89689593255",
+        personalDataConsent: true,
+      },
+    });
+    if (reservedRegister.status !== 409 || reservedRegister.payload.error !== "reserved_email") {
+      throw new Error(`reserved register mismatch: ${reservedRegister.status} ${JSON.stringify(reservedRegister.payload)}`);
+    }
     console.log("OK auth write preview login/register/profile/logout");
 
     const adminContent = await requestJson(`http://127.0.0.1:${rustPort}/rust/admin/content`, { token: "content" });

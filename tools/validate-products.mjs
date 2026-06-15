@@ -135,7 +135,7 @@ function assertProducts() {
           if (!image || typeof image !== "object") errors.push(`${label}: images[${imageIndex}] must be an object`);
           if (image && typeof image === "object") {
             if (!normalizeText(image.url) && !normalizeText(image.storageKey)) errors.push(`${label}: images[${imageIndex}] needs url or storageKey`);
-            if (image.provider && !["vercel-blob", "s3-compatible"].includes(normalizeText(image.provider))) errors.push(`${label}: images[${imageIndex}] has unsupported provider`);
+            if (image.provider && !["s3-compatible"].includes(normalizeText(image.provider))) errors.push(`${label}: images[${imageIndex}] has unsupported provider`);
             if (image.width !== undefined && image.width !== null && Number(image.width) <= 0) errors.push(`${label}: images[${imageIndex}] width must be positive`);
             if (image.height !== undefined && image.height !== null && Number(image.height) <= 0) errors.push(`${label}: images[${imageIndex}] height must be positive`);
             if (image.variants !== undefined) {
@@ -145,7 +145,7 @@ function assertProducts() {
                   if (!variant || typeof variant !== "object") errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] must be an object`);
                   if (variant && typeof variant === "object") {
                     if (!normalizeText(variant.url) && !normalizeText(variant.storageKey)) errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] needs url or storageKey`);
-                    if (variant.provider && !["vercel-blob", "s3-compatible"].includes(normalizeText(variant.provider))) errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] has unsupported provider`);
+                    if (variant.provider && !["s3-compatible"].includes(normalizeText(variant.provider))) errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] has unsupported provider`);
                     if (variant.width !== undefined && variant.width !== null && Number(variant.width) <= 0) errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] width must be positive`);
                     if (variant.height !== undefined && variant.height !== null && Number(variant.height) <= 0) errors.push(`${label}: images[${imageIndex}].variants[${variantIndex}] height must be positive`);
                   }

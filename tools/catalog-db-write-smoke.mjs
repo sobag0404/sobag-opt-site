@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { buildCatalogPim } = require("../api/_lib/pim.js");
-const { buildCatalogWriteStatements, runCatalogWriteTransaction } = require("../api/_lib/catalog-db-write.js");
+const { buildCatalogPim } = require("../server-routes/_lib/pim.js");
+const { buildCatalogWriteStatements, runCatalogWriteTransaction } = require("../server-routes/_lib/catalog-db-write.js");
 
 function fixturePim() {
   return buildCatalogPim(

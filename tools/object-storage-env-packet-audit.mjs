@@ -37,7 +37,7 @@ function validatePacket(packet) {
   const errors = [];
   const warnings = [];
   const provider = text(packet.provider).toLowerCase();
-  if (!["s3-compatible", "vercel-blob"].includes(provider)) errors.push("provider must be s3-compatible or vercel-blob");
+  if (provider !== "s3-compatible") errors.push("provider must be s3-compatible");
 
   const secretKeys = hasSecretLikeKey(packet);
   secretKeys.forEach((key) => errors.push(`packet must not contain secret-like key: ${key}`));
@@ -54,12 +54,6 @@ function validatePacket(packet) {
     if (!text(packet.region)) warnings.push("region is empty; adapter will default to auto");
   }
 
-  if (provider === "vercel-blob") {
-    ["credentialsConfirmed", "publicReadConfirmed"].forEach((field) => {
-      if (packet[field] !== true) errors.push(`${field} must be true`);
-    });
-  }
-
   return { ok: errors.length === 0, ready: errors.length === 0, provider, errors, warnings };
 }
 
@@ -69,6 +63,15 @@ function auditPacketFile(path, { strict = false } = {}) {
     return { ok: !strict, ready: false, missing: true, errors: strict ? [`missing ${path}`] : [], warnings: [`${path} is not created yet`] };
   }
   const parsed = JSON.parse(readFileSync(resolved, "utf8"));
+  if (parsed.template === true) {
+    return {
+      ok: !strict,
+      ready: false,
+      missing: false,
+      errors: strict ? [`${path} is still a template`] : [],
+      warnings: [`${path} is a starter template; fill real no-secret values before strict gates`],
+    };
+  }
   return { ...validatePacket(parsed), missing: false };
 }
 

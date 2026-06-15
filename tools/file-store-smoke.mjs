@@ -22,7 +22,7 @@ const {
   saveSession,
   saveStore,
   storeStatus,
-} = require("../api/_lib/store.js");
+} = require("../server-routes/_lib/store.js");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);

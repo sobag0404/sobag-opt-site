@@ -5,7 +5,7 @@ import { join, relative, sep } from "node:path";
 
 const require = createRequire(import.meta.url);
 const root = process.cwd();
-const { handleError } = require("../api/_lib/http.js");
+const { handleError } = require("../server-routes/_lib/http.js");
 
 const directErrorRoutes = new Set(["server-routes/health.js"]);
 
@@ -38,7 +38,7 @@ function assert(condition, message) {
 }
 
 function auditHttpHelper() {
-  const source = read("api/_lib/http.js");
+  const source = read("server-routes/_lib/http.js");
   assert(source.includes('event: "api_error"'), "http helper must log api_error events");
   assert(source.includes("X-Sobag-Request-Id"), "http helper must send X-Sobag-Request-Id");
   assert(/console\.error\(JSON\.stringify\(payload\)\)/.test(source), "http helper must write structured JSON logs");

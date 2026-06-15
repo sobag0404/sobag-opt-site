@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { buildCatalogCardsSql, buildCatalogCountSql, buildCatalogDetailSql, buildCatalogFacetSql, pageSize } = require("../api/_lib/catalog-db-query.js");
+const { buildCatalogCardsSql, buildCatalogCountSql, buildCatalogDetailSql, buildCatalogFacetSql, pageSize } = require("../server-routes/_lib/catalog-db-query.js");
 
 function assertParameterized(query) {
   assert.equal(/'[^']*\$\d+[^']*'/.test(query.sql), false, "placeholder must not be quoted as a literal");

@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 
 const root = process.cwd();
 const DEFAULT_MANIFEST = "local-import-output/photo-migration-manifest.json";
-const PROVIDERS = new Set(["vercel-blob", "s3-compatible"]);
+const PROVIDERS = new Set(["s3-compatible"]);
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
 const RESPONSIVE_FORMATS = new Set(["webp", "avif"]);
 

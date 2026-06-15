@@ -11,6 +11,12 @@ const BUDGETS = {
   "styles.css": { rawKb: 180, gzipKb: 40 },
   "cart.js": { rawKb: 80, gzipKb: 22 },
   "components/site-shell.js": { rawKb: 20, gzipKb: 8 },
+  "components/app-account.js": { rawKb: 80, gzipKb: 24 },
+  "components/app-admin.js": { rawKb: 180, gzipKb: 44 },
+  "components/app-content-utils.js": { rawKb: 80, gzipKb: 22 },
+  "components/app-data.js": { rawKb: 220, gzipKb: 44 },
+  "components/app-product-utils.js": { rawKb: 60, gzipKb: 18 },
+  "components/app-xlsx.js": { rawKb: 20, gzipKb: 8 },
 };
 const REQUIRED_PAGES = ["index.html", "catalog.html", "search.html", "cart.html"];
 
@@ -53,6 +59,9 @@ function auditCoreWebVitalsReadiness() {
   const errors = [];
   const warnings = [];
   const app = read("app.js");
+  const appAccount = read("components/app-account.js");
+  const appAdmin = read("components/app-admin.js");
+  const appContentUtils = read("components/app-content-utils.js");
   const css = read("styles.css");
   const server = read("server.mjs");
   const catalogQueryRoute = read("server-routes/catalog-query.js");
@@ -80,8 +89,11 @@ function auditCoreWebVitalsReadiness() {
   });
 
   assert(!/Date\.now\(\)/.test(app.match(/fetchCatalogData[\s\S]{0,1200}/)?.[0] || ""), "catalog fetch path must not disable browser cache with Date.now()", errors);
-  assert(app.includes("ensureXlsxLibrary") && app.includes("XLSX_CDN_URL"), "app XLSX support should lazy-load only on demand", errors);
-  assert(app.includes("PUBLIC_API_CACHE_PREFIX") && app.includes("PUBLIC_API_CACHE_MAX_ENTRIES"), "public catalog API responses should keep a bounded browser cache", errors);
+  const appXlsx = read("components/app-xlsx.js");
+  const xlsxLazySource = `${app}\n${appAccount}\n${appAdmin}\n${appXlsx}`;
+  const publicCacheSource = `${app}\n${appContentUtils}`;
+  assert(xlsxLazySource.includes("ensureXlsxLibrary") && xlsxLazySource.includes("XLSX_CDN_URL"), "app XLSX support should lazy-load only on demand", errors);
+  assert(publicCacheSource.includes("PUBLIC_API_CACHE_PREFIX") && publicCacheSource.includes("PUBLIC_API_CACHE_MAX_ENTRIES"), "public catalog API responses should keep a bounded browser cache", errors);
   assert(app.includes("const CATALOG_PAGE_SIZE = 48;"), "frontend public catalog page size must stay 48", errors);
   assert(app.includes("const SERVER_CATALOG_PAGE_SIZE = CATALOG_PAGE_SIZE;"), "server query page size must follow shared page size", errors);
   assert(app.includes("productCardSkeletonHtml") && app.includes("renderProductsLoading"), "catalog/search initial loading should keep skeleton state", errors);

@@ -1,4 +1,4 @@
-const { methodNotAllowed, sendJson } = require("./api/_lib/http");
+const { methodNotAllowed, sendJson } = require("./server-routes/_lib/http");
 const catalog = require("./server-routes/catalog.js");
 const catalogQuery = require("./server-routes/catalog-query.js");
 const catalogDetail = require("./server-routes/catalog-detail.js");

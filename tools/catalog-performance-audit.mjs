@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { auditProducts } from "./image-metadata-audit.mjs";
 
 const require = createRequire(import.meta.url);
-const { DEFAULT_PAGE_SIZE, publicProducts, queryCatalog } = require("../api/_lib/catalog-query.js");
+const { DEFAULT_PAGE_SIZE, publicProducts, queryCatalog } = require("../server-routes/_lib/catalog-query.js");
 
 const root = process.cwd();
 const productsPath = join(root, "data", "products-live.json");

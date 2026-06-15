@@ -19,7 +19,7 @@ function status(label, done, pending = []) {
 
 function buildGoalReadinessReport() {
   const products = loadProducts();
-  const content = auditContentReadiness(readFileSync(join(root, "app.js"), "utf8"));
+  const content = auditContentReadiness(readFileSync(join(root, "components", "app-data.js"), "utf8"));
   const photo = photoReadinessReport(products, { provider: process.env.SOBAG_OBJECT_STORAGE_PROVIDER || "", strict: false });
   const performance = auditCatalogPerformance();
   const cwv = auditCoreWebVitalsReadiness();

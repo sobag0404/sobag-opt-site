@@ -1,11 +1,11 @@
 import { mkdir, mkdtemp, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, extname, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { createObjectStorageAdapter, normalizeImageMetadata, normalizeProvider } = require("../api/_lib/object-storage.js");
+const { createObjectStorageAdapter, normalizeImageMetadata, normalizeProvider } = require("../server-routes/_lib/object-storage.js");
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"]);
 const DEFAULT_REPORT = "local-import-output/bulk-photo-upload-report.csv";
@@ -24,7 +24,7 @@ Options:
   --photos <path>                Root folder with product photo folders.
   --out <path>                   Output products JSON. Default: ${DEFAULT_OUT}
   --report <path>                CSV report. Default: ${DEFAULT_REPORT}
-  --provider <name>              vercel-blob or s3-compatible. Default: env/default adapter provider.
+  --provider <name>              s3-compatible. Default: env/default adapter provider.
   --dry-run                      Scan and report only, no uploads and no products output.
   --replace-existing-images      Replace existing image metadata/gallery for products that upload successfully.
   --responsive                   Generate responsive WebP/AVIF variants before upload. Requires optional sharp package for real uploads.
@@ -123,8 +123,11 @@ function normalizeKey(value) {
     .toLocaleLowerCase("ru-RU")
     .replace(/\.[a-z0-9]{2,5}$/i, "")
     .replace(/[\\/:*?"<>|]+/g, "/")
-    .replace(/\s+/g, " ")
-    .trim();
+    .split("/")
+    .filter(Boolean)
+    .pop()
+    ?.replace(/[^a-zа-яё0-9]+/giu, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function skuKey(value) {
@@ -225,6 +228,17 @@ async function renderResponsiveVariant(sharp, sourceBuffer, spec, quality) {
   };
 }
 
+async function imageDimensions(imageTool, body, mime) {
+  const detected = imageSize(body, mime);
+  if (detected.width && detected.height) return detected;
+  if (!imageTool) return detected;
+  const metadata = await imageTool(body).metadata();
+  return {
+    width: Number(metadata.width || 0) || undefined,
+    height: Number(metadata.height || 0) || undefined,
+  };
+}
+
 function uniqueImages(images) {
   const seen = new Set();
   return images
@@ -286,7 +300,10 @@ async function buildPhotoFolderIndex(photosRoot) {
 }
 
 async function directFolder(photosRoot, value) {
-  const candidate = resolve(photosRoot, value || "");
+  const rootPath = resolve(photosRoot);
+  const candidate = resolve(rootPath, value || "");
+  const relativeCandidate = relative(rootPath, candidate);
+  if (!relativeCandidate || relativeCandidate.startsWith("..") || isAbsolute(relativeCandidate)) return "";
   try {
     const info = await stat(candidate);
     return info.isDirectory() ? candidate : "";
@@ -407,7 +424,7 @@ async function processProduct({ adapter, args, imageTool, index, photosRoot, pro
     }
     try {
       const body = await readFile(file);
-      const dimensions = imageSize(body, mime);
+      const dimensions = await imageDimensions(imageTool, body, mime);
       const image = await uploadWithRetries(
         adapter,
         {

@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 
 const require = createRequire(import.meta.url);
-const { findProductDetail, paramsToQuery, queryCatalog } = require("../api/_lib/catalog-query.js");
+const { findProductDetail, paramsToQuery, queryCatalog } = require("../server-routes/_lib/catalog-query.js");
 
 const root = process.cwd();
 const liveProducts = JSON.parse(readFileSync(join(root, "data", "products-live.json"), "utf8"));

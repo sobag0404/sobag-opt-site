@@ -1,0 +1,107 @@
+name: project-readiness-agent
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-readiness-agent-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run project readiness agent
+        id: readiness
+        continue-on-error: true
+        env:
+          PROJECT_READINESS_RUN_COMMANDS: "true"
+        run: python tools/project_readiness_agent/run.py --quiet
+
+      - name: Upload readiness reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-readiness-reports
+          path: reports/project-readiness/
+          if-no-files-found: error
+
+  commit-reports:
+    if: github.event_name == 'workflow_dispatch' && github.ref_name == 'main'
+    needs: readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run project readiness agent
+        env:
+          PROJECT_READINESS_RUN_COMMANDS: "true"
+        run: python tools/project_readiness_agent/run.py --quiet
+
+      - name: Detect meaningful report changes
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_paths=("reports/project-readiness/latest.md" "reports/project-readiness/latest-chat.md")
+          changed=0
+          for path in "${report_paths[@]}"; do
+            if ! git show "HEAD:${path}" >/tmp/readiness-before 2>/dev/null; then
+              changed=1
+              continue
+            fi
+            sed '/^Generated:/d' "$path" > /tmp/readiness-after
+            sed '/^Generated:/d' /tmp/readiness-before > /tmp/readiness-before-normalized
+            if ! diff -q /tmp/readiness-before-normalized /tmp/readiness-after >/dev/null; then
+              changed=1
+            fi
+          done
+          echo "changed=${changed}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit updated reports
+        if: steps.diff.outputs.changed == '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/project-readiness/latest.md reports/project-readiness/latest-chat.md
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Update project readiness reports [skip ci]"
+          git push

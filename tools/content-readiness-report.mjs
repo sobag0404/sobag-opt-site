@@ -31,7 +31,7 @@ function readProjectFile(file) {
 function defaultSiteContentBlock(appText) {
   const start = appText.indexOf("const defaultSiteContent = {");
   const end = appText.indexOf("const siteTextFields =", start);
-  if (start < 0 || end < 0) throw new Error("app.js: defaultSiteContent block not found");
+  if (start < 0 || end < 0) throw new Error("app data: defaultSiteContent block not found");
   return appText.slice(start, end);
 }
 
@@ -106,7 +106,7 @@ function main() {
     console.log("content readiness report self-test passed");
     return;
   }
-  const report = auditContentReadiness(readProjectFile("app.js"));
+  const report = auditContentReadiness(readProjectFile("components/app-data.js"));
   if (process.argv.includes("--json")) console.log(JSON.stringify(report, null, 2));
   else {
     console.log(`Content readiness ${report.ok ? "passed" : "failed"}: finalReady=${report.finalReady}, pending=${report.pending.join(", ") || "none"}`);

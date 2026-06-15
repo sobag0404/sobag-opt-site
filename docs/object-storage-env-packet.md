@@ -1,18 +1,18 @@
 # Object Storage Env Packet
 
-Last updated: 2026-06-10
+Last updated: 2026-06-15
 
-Цель: перед реальной миграцией фото подтвердить параметры object storage без публикации секретов в Git, чат, логи или screenshots.
+Purpose: confirm S3-compatible object storage settings before real photo migration without publishing secrets in Git, chat, logs, or screenshots.
 
-## Где Готовить
+This packet is for product photos/media only. VPS app/session/order data can use the local file store through `SOBAG_STORE_PROVIDER=file` and `SOBAG_FILE_STORE_DIR`; that does not replace the current product-photo object-storage adapter.
 
-Локальный файл, не коммитить:
+Local file, never commit:
 
 ```text
 local-import-output/object-storage-env-packet.json
 ```
 
-## Структура
+Required no-secret structure:
 
 ```json
 {
@@ -20,7 +20,7 @@ local-import-output/object-storage-env-packet.json
   "endpoint": "https://example.storage.endpoint",
   "bucket": "sobag-products",
   "region": "auto",
-  "publicBaseUrl": "https://cdn.example.ru/sobag-products",
+  "publicBaseUrl": "https://cdn.example.test/sobag-products",
   "forcePathStyle": true,
   "credentialsConfirmed": true,
   "publicReadConfirmed": true,
@@ -28,27 +28,14 @@ local-import-output/object-storage-env-packet.json
 }
 ```
 
-Для Vercel Blob:
-
-```json
-{
-  "provider": "vercel-blob",
-  "credentialsConfirmed": true,
-  "publicReadConfirmed": true
-}
-```
-
-## Проверка
+Check:
 
 ```powershell
 npm.cmd run audit:object-storage-packet -- --packet local-import-output/object-storage-env-packet.json --strict
 ```
 
-Без `--strict` команда работает как readiness report и не падает, если пакет еще не создан.
+Rules:
 
-## Правила
-
-- Не указывать access key, secret key, token, connection string или `.env` значения.
-- `provider=s3-compatible` требует endpoint, bucket, publicBaseUrl и подтверждения public read/CORS.
-- `provider=vercel-blob` требует только подтверждения credentials/public read.
-- После подтверждения provider/env запускать `npm.cmd run smoke:prod:storage -- --base-url https://sobag-shop.online --require-object-storage`.
+- Do not include access keys, secret keys, tokens, connection strings, or `.env` values.
+- Only `provider=s3-compatible` is accepted for the active VPS target.
+- After provider/env confirmation, run `npm.cmd run smoke:prod:storage -- --base-url https://sobag-shop.online --require-object-storage`.

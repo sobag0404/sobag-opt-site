@@ -4,8 +4,8 @@ import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { buildCatalogPim } = require("../api/_lib/pim.js");
-const { productCard, productDetail } = require("../api/_lib/catalog-query.js");
+const { buildCatalogPim } = require("../server-routes/_lib/pim.js");
+const { productCard, productDetail } = require("../server-routes/_lib/catalog-query.js");
 
 const root = process.cwd();
 const CARD_FORBIDDEN_FIELDS = new Set(["variants", "images", "gallery", "detailDescription", "reviews", "variantPrices", "types", "sizes", "materials"]);

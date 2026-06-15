@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { cardFromDbRow, detailFromDbRows } = require("../api/_lib/catalog-db-rows.js");
+const { cardFromDbRow, detailFromDbRows } = require("../server-routes/_lib/catalog-db-rows.js");
 
 function smokeCardRow() {
   const card = cardFromDbRow({

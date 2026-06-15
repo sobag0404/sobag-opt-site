@@ -165,633 +165,7 @@ const CONTENT_PAGES: &[ContentPageSpec] = &[
 ];
 
 #[cfg(test)]
-mod ssr_tests {
-    use super::*;
-
-    #[test]
-    fn renders_catalog_fragment_as_htmx_safe_html() {
-        let query = parse_catalog_query("q=pod&pageSize=1&sort=popular");
-        let page = ListingPage {
-            total: 2,
-            facet_options: HashMap::from([(
-                "categories",
-                vec![FacetValue {
-                    value: "Pillows".to_string(),
-                    count: 2,
-                }],
-            )]),
-            items: vec![CatalogCard {
-                id: "p1".to_string(),
-                base_sku: "opt_1".to_string(),
-                name: "Pillow <test>".to_string(),
-                category: "Pillows".to_string(),
-                categories: vec!["Pillows".to_string()],
-                collections: vec![],
-                holidays: vec![],
-                tags: vec![],
-                badge: String::new(),
-                description: String::new(),
-                stock: "in_stock".to_string(),
-                image: "/img.jpg".to_string(),
-                image_meta: None,
-                min_price: 220,
-                max_price: 220,
-                variant_count: 1,
-                popular: 1,
-            }],
-        };
-        let html = render_listing_fragment("/rust/catalog-fragment", &query, &page);
-        assert!(html.contains("hx-get"));
-        assert!(html.contains("opt_1"));
-        assert!(html.contains("Pillow &lt;test&gt;"));
-        assert!(!html.contains("<test>"));
-    }
-
-    #[test]
-    fn renders_product_fragment_with_variants() {
-        let product = ProductDetail {
-            id: "p1".to_string(),
-            base_sku: "opt_1".to_string(),
-            name: "Pillow".to_string(),
-            status: "published".to_string(),
-            hidden: false,
-            category: "Pillows".to_string(),
-            categories: vec!["Pillows".to_string()],
-            collections: vec![],
-            holidays: vec![],
-            tags: vec![],
-            description: "Description".to_string(),
-            detail_description: String::new(),
-            base_price: 0,
-            min_price: 220,
-            max_price: 220,
-            popular: 1,
-            stock: "in_stock".to_string(),
-            variants: vec![Variant {
-                id: "v1".to_string(),
-                product_id: "p1".to_string(),
-                base_sku: "opt_1".to_string(),
-                sku: "sku_1".to_string(),
-                variant_type: "Pillow".to_string(),
-                size: "40x40".to_string(),
-                material: "Velour".to_string(),
-                name: String::new(),
-                price: 220,
-                price_source: String::new(),
-            }],
-            images: vec![],
-        };
-        let html = render_product_fragment(&product, &[]);
-        assert!(html.contains("sku_1"));
-        assert!(html.contains("от 220 ₽"));
-        assert!(html.contains("assets/production-hero-1.png"));
-        assert!(html.contains("rust-variant-qty"));
-    }
-
-    #[test]
-    fn renders_content_page_from_admin_content_shape() {
-        let content = json!({
-            "aboutPageTitle": "About <Sobag>",
-            "aboutPageLead": "Lead",
-            "aboutPageText": "Text",
-            "aboutPageProductionTitle": "Production",
-            "aboutPageProductionText": "Details"
-        });
-        let html = render_content_page(content_page_spec("about").unwrap(), &content);
-        assert!(html.contains("data-rust-content-page=\"about\""));
-        assert!(html.contains("About &lt;Sobag&gt;"));
-        assert!(html.contains("Production"));
-        assert!(!html.contains("About <Sobag>"));
-    }
-
-    #[test]
-    fn file_store_content_key_matches_node_contract() {
-        assert_eq!(
-            file_key_hex("sobag:content:v1"),
-            "736f6261673a636f6e74656e743a7631"
-        );
-        assert_eq!(
-            file_store_path_for_key(".sobag-store", CONTENT_KEY),
-            PathBuf::from(".sobag-store").join("736f6261673a636f6e74656e743a7631.json")
-        );
-        assert_eq!(
-            file_store_path_for_key(".sobag-store", STORE_KEY),
-            PathBuf::from(".sobag-store").join("736f6261673a73746f72653a7631.json")
-        );
-    }
-
-    #[test]
-    fn auth_session_cookie_contract_matches_node() {
-        let token = "abc123";
-        assert_eq!(SESSION_COOKIE, "sobag_session");
-        assert_eq!(SESSION_TTL_SECONDS, 2_592_000);
-        assert_eq!(session_store_key(token), "sobag:session:abc123");
-        assert!(session_cookie_header(token).contains("HttpOnly"));
-        assert!(session_cookie_header(token).contains("SameSite=Lax"));
-        assert!(expired_session_cookie_header().contains("Max-Age=0"));
-        assert_eq!(
-            parse_cookie_value("theme=dark; sobag_session=abc123; other=1", SESSION_COOKIE),
-            Some("abc123".to_string())
-        );
-        assert_eq!(
-            parse_cookie_value("sobag_session=token%20value", SESSION_COOKIE),
-            Some("token value".to_string())
-        );
-        assert_eq!(parse_cookie_value("other=1", SESSION_COOKIE), None);
-    }
-
-    #[test]
-    fn finds_login_user_by_email_or_phone_and_hashes_preview_password() {
-        let (password_hash, password_salt) = hash_password_preview("secret123", "buyer@example.test");
-        let store = json!({
-            "users": {
-                "buyer@example.test": {
-                    "email": "buyer@example.test",
-                    "phone": "+7 968 959-32-54",
-                    "passwordHash": password_hash,
-                    "passwordSalt": password_salt
-                }
-            }
-        });
-        let by_email = find_login_user(&store, "BUYER@example.test").expect("email login");
-        assert_eq!(by_email.0, "buyer@example.test");
-        let by_phone = find_login_user(&store, "89689593254").expect("phone login");
-        assert_eq!(by_phone.0, "buyer@example.test");
-        assert!(verify_user_password("secret123", &by_email.1));
-        assert!(!verify_user_password("wrong", &by_email.1));
-    }
-
-    #[test]
-    fn sanitizes_profile_preview_fields() {
-        let profile = json!({
-            "name": " Buyer ",
-            "phone": "89689593254",
-            "inn": "123abc456789012",
-            "kpp": "12x3456789"
-        });
-        let sanitized = sanitize_profile_value(&profile, &json!({}));
-        assert_eq!(sanitized["name"], "Buyer");
-        assert_eq!(sanitized["phone"], "+7 968 959-32-54");
-        assert_eq!(sanitized["inn"], "123456789012");
-        assert_eq!(sanitized["kpp"], "123456789");
-    }
-
-    #[test]
-    fn file_store_wrapper_unwraps_and_expires_like_node() {
-        let wrapped = json!({
-            "version": 1,
-            "expiresAt": "2030-01-01T00:00:00.000Z",
-            "value": { "email": "buyer@example.test" }
-        });
-        assert_eq!(
-            file_store_unwrap_value(&wrapped, 1_700_000_000),
-            Some(json!({ "email": "buyer@example.test" }))
-        );
-
-        let expired = json!({
-            "version": 1,
-            "expiresAt": "2020-01-01T00:00:00.000Z",
-            "value": { "email": "buyer@example.test" }
-        });
-        assert_eq!(file_store_unwrap_value(&expired, 1_700_000_000), None);
-        assert_eq!(
-            file_store_unwrap_value(&json!({"raw": true}), 1),
-            Some(json!({"raw": true}))
-        );
-    }
-
-    #[test]
-    fn verifies_node_pbkdf2_password_fixture() {
-        assert_eq!(PBKDF2_ITERATIONS, 310_000);
-        assert_eq!(PBKDF2_KEY_LEN, 32);
-        assert!(verify_password_hash(
-            "Qwerty1234567899",
-            "00112233445566778899aabbccddeeff",
-            "642284d450b3032d40340ccc7fc96fdaca2ffd9564761ecf7615269b4bef46f8"
-        ));
-        assert!(!verify_password_hash(
-            "wrong",
-            "00112233445566778899aabbccddeeff",
-            "642284d450b3032d40340ccc7fc96fdaca2ffd9564761ecf7615269b4bef46f8"
-        ));
-        assert!(!verify_password_hash("secret", "not-hex", "also-not-hex"));
-    }
-
-    #[test]
-    fn builds_auth_me_payload_without_private_fields() {
-        let store = json!({
-            "users": {
-                "buyer@example.test": {
-                    "email": "buyer@example.test",
-                    "name": "Buyer",
-                    "role": "buyer",
-                    "passwordHash": "hidden",
-                    "passwordSalt": "hidden"
-                }
-            },
-            "orders": [
-                {
-                    "id": "SO-1",
-                    "userEmail": "buyer@example.test",
-                    "crmThread": [
-                        { "visibility": "customer", "text": "visible" },
-                        { "visibility": "internal", "text": "hidden" }
-                    ]
-                },
-                { "id": "SO-2", "customer": { "email": "other@example.test" } }
-            ],
-            "reviews": [
-                { "id": "REV-1", "userEmail": "buyer@example.test", "text": "ok" }
-            ],
-            "carts": {
-                "buyer@example.test": { "items": [{ "key": "sku-1" }] }
-            },
-            "favorites": {
-                "buyer@example.test": { "items": ["p1"] }
-            },
-            "savedCarts": {
-                "buyer@example.test": {
-                    "items": [{
-                        "id": "SC-1",
-                        "managerComment": "hidden",
-                        "commentHistory": [
-                            { "visibility": "customer", "text": "visible" },
-                            { "visibility": "internal", "text": "hidden" }
-                        ]
-                    }]
-                }
-            }
-        });
-        let payload = auth_me_payload_from_values(
-            &store,
-            &json!({ "email": "buyer@example.test", "createdAt": "2026-06-11T00:00:00.000Z" }),
-        );
-        assert_eq!(payload["user"]["email"], "buyer@example.test");
-        assert!(payload["user"].get("passwordHash").is_none());
-        assert!(payload["user"].get("passwordSalt").is_none());
-        assert_eq!(payload["user"]["orders"].as_array().unwrap().len(), 1);
-        assert_eq!(
-            payload["user"]["orders"][0]["crmThread"]
-                .as_array()
-                .unwrap()
-                .len(),
-            1
-        );
-        assert_eq!(payload["user"]["reviews"].as_array().unwrap().len(), 1);
-        assert_eq!(payload["cartItems"].as_array().unwrap().len(), 1);
-        assert_eq!(payload["favoriteItems"].as_array().unwrap().len(), 1);
-        assert!(payload["savedCarts"][0].get("managerComment").is_none());
-        assert_eq!(
-            payload["savedCarts"][0]["commentHistory"]
-                .as_array()
-                .unwrap()
-                .len(),
-            1
-        );
-    }
-
-    #[test]
-    fn auth_me_payload_is_anonymous_without_session_user() {
-        let payload = auth_me_payload_from_values(
-            &json!({ "users": {} }),
-            &json!({ "email": "missing@example.test" }),
-        );
-        assert_eq!(payload, json!({ "user": null }));
-    }
-
-    #[test]
-    fn sanitizes_auth_me_account_state_writes() {
-        let cart = sanitize_cart_items(&json!([
-            ["line-1", { "qty": 100000, "variant": { "sku": "sku-1", "price": -5 } }],
-            { "key": "bad", "variant": {} }
-        ]));
-        assert_eq!(cart.as_array().unwrap().len(), 1);
-        assert_eq!(cart[0][1]["qty"], 99999);
-        assert_eq!(cart[0][1]["variant"]["price"], 0.0);
-
-        let favorites = sanitize_favorite_items(&json!(["p1", "p1", "", "p2"]));
-        assert_eq!(favorites, json!(["p1", "p2"]));
-
-        let saved = sanitize_saved_carts_input(
-            &json!([{
-                "id": "SC-1",
-                "items": [["line-1", { "variant": { "sku": "sku-1" } }]],
-                "status": "sent",
-                "managerComment": "hidden",
-                "commentHistory": [
-                    { "visibility": "customer", "text": "visible" },
-                    { "visibility": "internal", "text": "hidden" }
-                ]
-            }]),
-            false,
-        );
-        assert_eq!(saved[0]["status"], "sent");
-        assert!(saved[0].get("managerComment").is_none());
-        assert_eq!(saved[0]["commentHistory"].as_array().unwrap().len(), 1);
-
-        let user = json!({ "email": "buyer@example.test", "name": "Buyer" });
-        let review = sanitize_review_value(
-            &json!({
-                "productId": "p1",
-                "baseSku": "opt_1",
-                "productName": "Pillow",
-                "rating": 7,
-                "text": "great product"
-            }),
-            &user,
-        )
-        .expect("review");
-        assert_eq!(review["rating"], 5);
-        assert_eq!(review["status"], "pending");
-    }
-
-    #[test]
-    fn stores_auth_me_account_state_by_user_email() {
-        let mut store = default_store_value();
-        set_store_nested_items(&mut store, "favorites", "buyer@example.test", json!(["p1"]));
-        assert_eq!(
-            store_nested_items(&store, "favorites", "buyer@example.test"),
-            json!(["p1"])
-        );
-        push_review_record(&mut store, json!({ "id": "REV-1" }));
-        assert_eq!(store["reviews"].as_array().unwrap().len(), 1);
-    }
-
-    #[test]
-    fn admin_orders_payload_keeps_raw_order_data_for_managers() {
-        let store = json!({
-            "users": {
-                "manager@example.test": { "email": "manager@example.test", "name": "Manager", "role": "manager" }
-            },
-            "orders": [
-                {
-                    "id": "SO-1",
-                    "status": "new",
-                    "crmThread": [
-                        { "visibility": "internal", "text": "manager-only" },
-                        { "visibility": "customer", "text": "customer-visible" }
-                    ]
-                }
-            ]
-        });
-        let payload = admin_orders_payload_from_values(&store);
-        assert_eq!(payload["orders"].as_array().unwrap().len(), 1);
-        assert_eq!(payload["orders"][0]["crmThread"].as_array().unwrap().len(), 2);
-        assert!(can_read_admin_orders(&json!({ "role": "admin" })));
-        assert!(can_read_admin_orders(&json!({ "role": "manager" })));
-        assert!(!can_read_admin_orders(&json!({ "role": "buyer" })));
-        let mut store = store;
-        let updated = apply_admin_order_patch(
-            &mut store,
-            &json!({
-                "id": "SO-1",
-                "status": "processing",
-                "managerEmail": "manager@example.test",
-                "managerNote": "Call client",
-                "commentText": "Visible update",
-                "commentVisibility": "customer"
-            }),
-            &json!({ "email": "admin@example.test", "name": "Admin", "role": "admin" }),
-        )
-        .expect("order patch");
-        assert_eq!(updated["status"], "processing");
-        assert_eq!(updated["managerName"], "Manager");
-        assert_eq!(updated["crmThread"][0]["visibility"], "customer");
-        assert_eq!(updated["statusHistory"].as_array().unwrap().len(), 1);
-        assert_eq!(store["audit"][0]["type"], "order_update");
-        let invalid = apply_admin_order_patch(
-            &mut store,
-            &json!({ "id": "SO-1", "status": "bad" }),
-            &json!({ "email": "admin@example.test", "role": "admin" }),
-        )
-        .expect_err("invalid status");
-        assert_eq!(invalid.code, "invalid_status");
-    }
-
-    #[test]
-    fn admin_user_detail_matches_node_contract_without_private_fields() {
-        let store = json!({
-            "users": {
-                "buyer@example.test": {
-                    "email": "buyer@example.test",
-                    "name": "Buyer",
-                    "role": "buyer",
-                    "passwordHash": "hidden",
-                    "passwordSalt": "hidden"
-                }
-            },
-            "orders": [
-                { "id": "SO-1", "userEmail": "buyer@example.test", "customer": { "email": "buyer@example.test" } },
-                { "id": "SO-2", "userEmail": "other@example.test", "customer": { "email": "other@example.test", "address": "Kursk" } }
-            ]
-        });
-        let buyer = admin_user_detail_from_values(&store, "BUYER@example.test").expect("buyer detail");
-        assert_eq!(buyer["orders"].as_array().unwrap().len(), 1);
-        assert!(buyer.get("passwordHash").is_none());
-        assert!(buyer.get("passwordSalt").is_none());
-        let order_only =
-            admin_user_detail_from_values(&store, "other@example.test").expect("order-only detail");
-        assert_eq!(order_only["role"], "buyer");
-        assert_eq!(order_only["addresses"][0], "Kursk");
-        assert!(admin_user_detail_from_values(&store, "missing@example.test").is_err());
-        assert!(can_read_admin_users(&json!({ "role": "admin" })));
-        assert!(can_read_admin_users(&json!({ "role": "manager" })));
-        assert!(!can_read_admin_users(&json!({ "role": "buyer" })));
-        assert!(can_manage_admin_users(&json!({ "role": "admin" })));
-        assert!(!can_manage_admin_users(&json!({ "role": "manager" })));
-        assert!(valid_admin_assignable_role("manager"));
-        assert!(valid_admin_assignable_role("content"));
-        assert!(!valid_admin_assignable_role("admin"));
-    }
-
-    #[test]
-    fn admin_content_roles_and_reviews_match_contract() {
-        assert!(can_edit_content(&json!({ "role": "admin" })));
-        assert!(can_edit_content(&json!({ "role": "content" })));
-        assert!(!can_edit_content(&json!({ "role": "manager" })));
-        assert!(!can_edit_content(&json!({ "role": "buyer" })));
-        assert!(valid_review_status("approved"));
-        assert!(valid_review_status("hidden"));
-        assert!(!valid_review_status("deleted"));
-        let store = json!({
-            "reviews": [
-                { "id": "old", "createdAt": "2026-01-01T00:00:00.000Z" },
-                { "id": "new", "createdAt": "2026-02-01T00:00:00.000Z" }
-            ]
-        });
-        let reviews = sorted_reviews_for_admin(&store);
-        assert_eq!(reviews[0]["id"], "new");
-        assert_eq!(reviews[1]["id"], "old");
-    }
-
-    #[test]
-    fn builds_and_persists_order_preview_record() {
-        let user = json!({
-            "email": "buyer@example.test",
-            "name": "Buyer",
-            "phone": "+7 968 959-32-54"
-        });
-        let data = json!({
-            "items": [{
-                "key": "sku-1",
-                "productName": "Pillow",
-                "qty": 0,
-                "variant": { "sku": "sku-1", "price": 520 }
-            }],
-            "total": 30000,
-            "customer": { "name": "Buyer" },
-            "source": "site"
-        });
-        let order = build_order_record(&data, Some(&user)).expect("order");
-        assert_eq!(order["userEmail"], "buyer@example.test");
-        assert_eq!(order["customer"]["phone"], "+7 968 959-32-54");
-        assert_eq!(order["items"][0]["qty"], 1);
-        let mut store = default_store_value();
-        push_order_record(&mut store, order);
-        assert_eq!(store["orders"].as_array().unwrap().len(), 1);
-    }
-
-    #[test]
-    fn order_create_updates_user_profile_like_node() {
-        let user = json!({
-            "email": "buyer@example.test",
-            "name": "Buyer",
-            "phone": "+7 900 000-00-00"
-        });
-        let data = json!({
-            "items": [{ "key": "sku-1", "variant": { "sku": "sku-1", "price": 520 } }],
-            "total": 30000,
-            "customer": {
-                "name": "Buyer",
-                "company": "Sobag LLC",
-                "inn": "1234567890",
-                "phone": "89689593254",
-                "email": "buyer@example.test",
-                "city": "Kursk",
-                "address": "Factory lane",
-                "layoutFileName": "layout.pdf",
-                "comment": "Call first"
-            }
-        });
-        let order = build_order_record(&data, Some(&user)).expect("order");
-        let mut store = json!({
-            "users": {
-                "buyer@example.test": {
-                    "email": "buyer@example.test",
-                    "name": "Buyer",
-                    "role": "buyer",
-                    "addresses": ["Old address"]
-                }
-            },
-            "orders": []
-        });
-        update_user_profile_from_order(&mut store, &order);
-        let updated = &store["users"]["buyer@example.test"];
-        assert_eq!(updated["company"], "Sobag LLC");
-        assert_eq!(updated["inn"], "1234567890");
-        assert_eq!(updated["phone"], "+7 968 959-32-54");
-        assert_eq!(updated["addresses"][0], "Factory lane");
-        assert_eq!(updated["addresses"][1], "Old address");
-        assert_eq!(updated["layoutFiles"][0], "layout.pdf");
-        assert_eq!(updated["orderComments"][0], "Call first");
-        assert_eq!(updated["lastCustomer"]["city"], "Kursk");
-    }
-
-    #[test]
-    fn rejects_below_minimum_order_preview_record() {
-        let error = build_order_record(
-            &json!({
-                "items": [{ "variant": { "sku": "sku-1" } }],
-                "total": 29999,
-                "customer": { "phone": "+7 968 959-32-54" }
-            }),
-            None,
-        )
-        .expect_err("minimum error");
-        assert_eq!(error.code, "minimum_total");
-    }
-
-    #[test]
-    fn buyer_order_patch_adds_public_customer_message() {
-        let user = json!({ "email": "buyer@example.test", "name": "Buyer" });
-        let mut store = json!({
-            "orders": [{
-                "id": "SO-1",
-                "userEmail": "buyer@example.test",
-                "customer": { "email": "buyer@example.test" },
-                "crmThread": [
-                    { "visibility": "internal", "text": "hidden" },
-                    { "visibility": "customer", "text": "visible" }
-                ]
-            }]
-        });
-        let updated = apply_buyer_order_comment_patch(
-            &mut store,
-            &json!({ "id": "SO-1", "commentText": "Need invoice" }),
-            &user,
-        )
-        .expect("patched order");
-        assert_eq!(store["orders"][0]["updatedBy"], "buyer@example.test");
-        assert_eq!(updated["crmThread"][0]["text"], "Need invoice");
-        assert_eq!(updated["crmThread"].as_array().unwrap().len(), 2);
-    }
-
-    #[test]
-    fn buyer_order_patch_rejects_other_customer_order() {
-        let user = json!({ "email": "buyer@example.test", "name": "Buyer" });
-        let mut store = json!({
-            "orders": [{
-                "id": "SO-1",
-                "userEmail": "other@example.test",
-                "customer": { "email": "other@example.test" }
-            }]
-        });
-        let error = apply_buyer_order_comment_patch(
-            &mut store,
-            &json!({ "id": "SO-1", "commentText": "Need invoice" }),
-            &user,
-        )
-        .expect_err("not found");
-        assert_eq!(error.code, "not_found");
-    }
-
-    #[test]
-    fn builds_custom_print_brief_and_order_preview_record() {
-        let user = json!({ "email": "buyer@example.test", "name": "Buyer" });
-        let (brief, order) = build_brief_record(
-            &json!({
-                "product": "Подушка",
-                "quantity": 100,
-                "phone": "89689593254",
-                "comment": "Need sample"
-            }),
-            Some(&user),
-        )
-        .expect("brief");
-        assert_eq!(brief["type"], "custom_print");
-        assert_eq!(brief["phone"], "+7 968 959-32-54");
-        assert_eq!(order["source"], "custom_brief");
-        assert_eq!(order["customBrief"]["quantity"], 100);
-        let mut store = default_store_value();
-        push_brief_record(&mut store, brief, order);
-        assert_eq!(store["briefs"].as_array().unwrap().len(), 1);
-        assert_eq!(store["orders"].as_array().unwrap().len(), 1);
-    }
-
-    #[test]
-    fn rejects_invalid_brief_email() {
-        let error = build_brief_record(
-            &json!({
-                "product": "Подушка",
-                "quantity": 100,
-                "email": "bad-email"
-            }),
-            None,
-        )
-        .expect_err("email error");
-        assert_eq!(error.code, "invalid_email");
-    }
-}
+mod ssr_tests;
 
 #[derive(Debug)]
 struct AppError {
@@ -860,9 +234,17 @@ impl AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
+        if self.status == StatusCode::INTERNAL_SERVER_ERROR {
+            tracing::error!(error = %self.message, "rust_internal_error");
+        }
+        let message = if self.status == StatusCode::INTERNAL_SERVER_ERROR {
+            "Internal server error."
+        } else {
+            &self.message
+        };
         (
             self.status,
-            Json(json!({ "error": self.code, "message": self.message })),
+            Json(json!({ "error": self.code, "message": message })),
         )
             .into_response()
     }
@@ -1087,7 +469,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/returns", get(content_page_alias))
         .route("/seller-support", get(content_page_alias))
         .route("/wholesale", get(content_page_alias))
-        .route("/rust/auth/me", get(auth_me_preview).put(auth_me_update_preview))
+        .route(
+            "/rust/auth/me",
+            get(auth_me_preview).put(auth_me_update_preview),
+        )
         .route("/rust/auth/login", post(auth_login_preview))
         .route("/rust/auth/register", post(auth_register_preview))
         .route("/rust/auth/logout", post(auth_logout_preview))
@@ -1212,14 +597,7 @@ async fn catalog_page(
     uri: Uri,
 ) -> AppResult<(HeaderMap, Html<String>)> {
     let routes = routes_for_path(uri.path());
-    render_listing_page(
-        state,
-        uri,
-        "Каталог",
-        routes.catalog_fragment_path,
-        routes,
-    )
-    .await
+    render_listing_page(state, uri, "Каталог", routes.catalog_fragment_path, routes).await
 }
 
 async fn search_page(
@@ -1280,7 +658,9 @@ async fn product_fragment(
     let related = load_related_cards(&state.pool, &product, 4).await?;
     Ok((
         cache_headers(),
-        Html(render_product_fragment_with_routes(&product, &related, routes)),
+        Html(render_product_fragment_with_routes(
+            &product, &related, routes,
+        )),
     ))
 }
 
@@ -1327,7 +707,8 @@ async fn auth_login_preview(
         .await
         .map_err(|error| AppError::internal(error.to_string()))?
         .unwrap_or_else(default_store_value);
-    let login = clean_text(data.get("login").or_else(|| data.get("email")), 180).unwrap_or_default();
+    let login =
+        clean_text(data.get("login").or_else(|| data.get("email")), 180).unwrap_or_default();
     let password = data.get("password").and_then(Value::as_str).unwrap_or("");
     let Some((email, user)) = find_login_user(&store, &login) else {
         return Err(AppError::unauthorized("Проверьте логин и пароль."));
@@ -1335,7 +716,7 @@ async fn auth_login_preview(
     if !verify_user_password(password, &user) {
         return Err(AppError::unauthorized("Проверьте логин и пароль."));
     }
-    let token = preview_session_token(&email);
+    let token = preview_session_token(&email)?;
     save_file_store_value_with_ttl(
         &session_store_key(&token),
         &json!({ "email": email, "createdAt": Utc::now().to_rfc3339() }),
@@ -1346,9 +727,15 @@ async fn auth_login_preview(
     let mut headers = no_store_headers();
     headers.insert(
         header::SET_COOKIE,
-        session_cookie_header(&token).parse().expect("valid set-cookie"),
+        session_cookie_header(&token)
+            .parse()
+            .expect("valid set-cookie"),
     );
-    Ok((StatusCode::OK, headers, Json(json!({ "user": public_user_value(&user) }))))
+    Ok((
+        StatusCode::OK,
+        headers,
+        Json(json!({ "user": public_user_value(&user) })),
+    ))
 }
 
 async fn auth_register_preview(
@@ -1365,6 +752,12 @@ async fn auth_register_preview(
     if !is_valid_email(&email) {
         return Err(AppError::bad_request("invalid_email", "Проверьте email."));
     }
+    if is_reserved_bootstrap_email(&email) {
+        return Err(AppError::conflict(
+            "reserved_email",
+            "Reserved administrator email.",
+        ));
+    }
     if password.len() < 6 {
         return Err(AppError::bad_request(
             "weak_password",
@@ -1372,7 +765,10 @@ async fn auth_register_preview(
         ));
     }
     if name.is_empty() || phone.is_empty() {
-        return Err(AppError::bad_request("missing_profile", "Укажите имя и телефон."));
+        return Err(AppError::bad_request(
+            "missing_profile",
+            "Укажите имя и телефон.",
+        ));
     }
     if !data
         .get("personalDataConsent")
@@ -1432,7 +828,7 @@ async fn auth_register_preview(
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
 
-    let token = preview_session_token(&email);
+    let token = preview_session_token(&email)?;
     save_file_store_value_with_ttl(
         &session_store_key(&token),
         &json!({ "email": email, "createdAt": Utc::now().to_rfc3339() }),
@@ -1443,9 +839,15 @@ async fn auth_register_preview(
     let mut headers = no_store_headers();
     headers.insert(
         header::SET_COOKIE,
-        session_cookie_header(&token).parse().expect("valid set-cookie"),
+        session_cookie_header(&token)
+            .parse()
+            .expect("valid set-cookie"),
     );
-    Ok((StatusCode::CREATED, headers, Json(json!({ "user": public_user_value(&user_value) }))))
+    Ok((
+        StatusCode::CREATED,
+        headers,
+        Json(json!({ "user": public_user_value(&user_value) })),
+    ))
 }
 
 async fn auth_logout_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<Value>)> {
@@ -1546,7 +948,10 @@ async fn auth_me_update_preview(
         .map_err(|error| AppError::internal(error.to_string()))?;
     Ok((
         no_store_headers(),
-        Json(auth_me_payload_from_values(&store, &json!({ "email": email }))),
+        Json(auth_me_payload_from_values(
+            &store,
+            &json!({ "email": email }),
+        )),
     ))
 }
 
@@ -1564,7 +969,10 @@ async fn admin_orders_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<
     if !can_read_admin_orders(&user) {
         return Err(AppError::forbidden("Недостаточно прав."));
     }
-    Ok((no_store_headers(), Json(admin_orders_payload_from_values(&store))))
+    Ok((
+        no_store_headers(),
+        Json(admin_orders_payload_from_values(&store)),
+    ))
 }
 
 async fn admin_orders_patch_preview(
@@ -1613,7 +1021,10 @@ async fn admin_users_preview(
         .map(|value| normalize_email(value))
         .unwrap_or_default();
     if email.is_empty() {
-        return Ok((no_store_headers(), Json(admin_users_payload_from_values(&store))));
+        return Ok((
+            no_store_headers(),
+            Json(admin_users_payload_from_values(&store)),
+        ));
     }
     Ok((
         no_store_headers(),
@@ -1632,7 +1043,7 @@ async fn admin_users_invite_preview(
         ));
     }
     let email = normalize_email(&clean_text(data.get("email"), 180).unwrap_or_default());
-    if !is_valid_email(&email) || email == "admin@sobag" {
+    if !is_valid_email(&email) || is_reserved_bootstrap_email(&email) {
         return Err(AppError::bad_request(
             "invalid_email",
             "Проверьте email сотрудника.",
@@ -1720,7 +1131,10 @@ async fn admin_users_role_patch_preview(
     save_file_store_value(STORE_KEY, &store)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
-    Ok((no_store_headers(), Json(json!({ "user": public_user_value(&user_value) }))))
+    Ok((
+        no_store_headers(),
+        Json(json!({ "user": public_user_value(&user_value) })),
+    ))
 }
 
 async fn admin_users_delete_preview(
@@ -1750,17 +1164,26 @@ async fn admin_users_delete_preview(
     let mut next = existing.as_object().cloned().unwrap_or_default();
     next.insert("role".to_string(), json!("buyer"));
     next.insert("employee".to_string(), json!(false));
-    next.insert("managerRemovedAt".to_string(), json!(Utc::now().to_rfc3339()));
+    next.insert(
+        "managerRemovedAt".to_string(),
+        json!(Utc::now().to_rfc3339()),
+    );
     next.insert("updatedAt".to_string(), json!(Utc::now().to_rfc3339()));
     let user_value = Value::Object(next);
     users.insert(email, user_value.clone());
     save_file_store_value(STORE_KEY, &store)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
-    Ok((no_store_headers(), Json(json!({ "user": public_user_value(&user_value) }))))
+    Ok((
+        no_store_headers(),
+        Json(json!({ "user": public_user_value(&user_value) })),
+    ))
 }
 
-async fn admin_content_preview(headers: HeaderMap, uri: Uri) -> AppResult<(HeaderMap, Json<Value>)> {
+async fn admin_content_preview(
+    headers: HeaderMap,
+    uri: Uri,
+) -> AppResult<(HeaderMap, Json<Value>)> {
     let cookie_header = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -1774,7 +1197,12 @@ async fn admin_content_preview(headers: HeaderMap, uri: Uri) -> AppResult<(Heade
     if !can_edit_content(&user) {
         return Err(AppError::forbidden("Недостаточно прав."));
     }
-    if uri.query().unwrap_or("").split('&').any(|part| part == "reviews=1") {
+    if uri
+        .query()
+        .unwrap_or("")
+        .split('&')
+        .any(|part| part == "reviews=1")
+    {
         return Ok((
             no_store_headers(),
             Json(json!({
@@ -1965,7 +1393,11 @@ async fn order_create_preview(
     save_file_store_value(STORE_KEY, &store)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
-    Ok((StatusCode::CREATED, no_store_headers(), Json(json!({ "order": order }))))
+    Ok((
+        StatusCode::CREATED,
+        no_store_headers(),
+        Json(json!({ "order": order })),
+    ))
 }
 
 async fn order_patch_preview(
@@ -2560,7 +1992,10 @@ fn apply_admin_order_patch(store: &mut Value, data: &Value, user: &Value) -> App
     let order_id = clean_text(data.get("id"), 120).unwrap_or_default();
     let status = clean_text(data.get("status"), 40).unwrap_or_default();
     if !status.is_empty() && !valid_order_status(&status) {
-        return Err(AppError::bad_request("invalid_status", "Некорректный статус."));
+        return Err(AppError::bad_request(
+            "invalid_status",
+            "Некорректный статус.",
+        ));
     }
     let has_manager_email = has_object_key(data, "managerEmail");
     let manager_email = if has_manager_email {
@@ -2635,10 +2070,17 @@ fn apply_admin_order_patch(store: &mut Value, data: &Value, user: &Value) -> App
         }
         if let Some(crm_entry) = order_crm_thread_entry(data, &actor_name, &actor_role) {
             let current = original.get("crmThread").and_then(Value::as_array).cloned();
-            next.insert("crmThread".to_string(), prepend_limited(current, crm_entry, 200));
+            next.insert(
+                "crmThread".to_string(),
+                prepend_limited(current, crm_entry, 200),
+            );
         } else {
-            next.entry("crmThread".to_string())
-                .or_insert_with(|| original.get("crmThread").cloned().unwrap_or_else(|| json!([])));
+            next.entry("crmThread".to_string()).or_insert_with(|| {
+                original
+                    .get("crmThread")
+                    .cloned()
+                    .unwrap_or_else(|| json!([]))
+            });
         }
         if let Some(history_entry) = order_history_entry(&original, &next, &actor_email) {
             let current = original
@@ -2739,7 +2181,11 @@ fn order_crm_thread_entry(data: &Value, actor: &str, role: &str) -> Option<Value
     }))
 }
 
-fn order_history_entry(original: &Value, next: &serde_json::Map<String, Value>, actor: &str) -> Option<Value> {
+fn order_history_entry(
+    original: &Value,
+    next: &serde_json::Map<String, Value>,
+    actor: &str,
+) -> Option<Value> {
     let mut changes = Vec::new();
     let old_status = string_field(original, "status").unwrap_or_else(|| "new".to_string());
     let new_status = next
@@ -2840,7 +2286,11 @@ fn admin_user_detail_from_values(store: &Value, email: &str) -> AppResult<Value>
         }
         return Ok(public);
     }
-    if orders.as_array().map(|items| items.is_empty()).unwrap_or(true) {
+    if orders
+        .as_array()
+        .map(|items| items.is_empty())
+        .unwrap_or(true)
+    {
         return Err(AppError::not_found("not_found", "Пользователь не найден."));
     }
     let latest_customer = orders
@@ -2941,14 +2391,8 @@ fn sorted_reviews_for_admin(store: &Value) -> Value {
         .cloned()
         .unwrap_or_default();
     reviews.sort_by(|left, right| {
-        let left = left
-            .get("createdAt")
-            .and_then(Value::as_str)
-            .unwrap_or("");
-        let right = right
-            .get("createdAt")
-            .and_then(Value::as_str)
-            .unwrap_or("");
+        let left = left.get("createdAt").and_then(Value::as_str).unwrap_or("");
+        let right = right.get("createdAt").and_then(Value::as_str).unwrap_or("");
         right.cmp(left)
     });
     Value::Array(reviews)
@@ -3040,6 +2484,15 @@ fn is_valid_email(value: &str) -> bool {
             && !value.ends_with('@'))
 }
 
+fn is_reserved_bootstrap_email(value: &str) -> bool {
+    let email = normalize_email(value);
+    email == "admin@sobag"
+        || env::var("SOBAG_ADMIN_EMAIL")
+            .ok()
+            .map(|admin_email| normalize_email(&admin_email) == email)
+            .unwrap_or(false)
+}
+
 fn find_login_user(store: &Value, login: &str) -> Option<(String, Value)> {
     let normalized_email = normalize_email(login);
     let users = store.get("users")?.as_object()?;
@@ -3073,18 +2526,29 @@ fn verify_user_password(password: &str, user: &Value) -> bool {
 }
 
 fn hash_password_preview(password: &str, email: &str) -> (String, String) {
-    let seed = format!("{}:{}:{}", email, Utc::now().timestamp_millis(), password.len());
+    let seed = format!(
+        "{}:{}:{}",
+        email,
+        Utc::now().timestamp_millis(),
+        password.len()
+    );
     let digest = Sha256::digest(seed.as_bytes());
     let salt = hex::encode(&digest[..16]);
     let mut derived = [0_u8; PBKDF2_KEY_LEN];
-    pbkdf2_hmac::<Sha256>(password.as_bytes(), &digest[..16], PBKDF2_ITERATIONS, &mut derived);
+    pbkdf2_hmac::<Sha256>(
+        password.as_bytes(),
+        &digest[..16],
+        PBKDF2_ITERATIONS,
+        &mut derived,
+    );
     (hex::encode(derived), salt)
 }
 
-fn preview_session_token(email: &str) -> String {
-    let seed = format!("{}:{}:{}", email, Utc::now().timestamp_millis(), SESSION_COOKIE);
-    let digest = Sha256::digest(seed.as_bytes());
-    hex::encode(digest)
+fn preview_session_token(_email: &str) -> AppResult<String> {
+    let mut token = [0_u8; 32];
+    getrandom::getrandom(&mut token)
+        .map_err(|_| AppError::internal("session token generation failed"))?;
+    Ok(hex::encode(token))
 }
 
 fn sanitize_profile_value(profile: &Value, existing: &Value) -> Value {
@@ -3130,7 +2594,10 @@ fn sanitize_cart_items(items: &Value) -> Value {
 
 fn sanitize_cart_line_value(entry: &Value) -> Option<Value> {
     let (key_source, line) = if let Some(pair) = entry.as_array() {
-        (pair.first().unwrap_or(&Value::Null), pair.get(1).unwrap_or(&Value::Null))
+        (
+            pair.first().unwrap_or(&Value::Null),
+            pair.get(1).unwrap_or(&Value::Null),
+        )
     } else {
         (entry.get("key").unwrap_or(&Value::Null), entry)
     };
@@ -3148,7 +2615,10 @@ fn sanitize_cart_line_value(entry: &Value) -> Option<Value> {
         .or_else(|| clean_text(line.get("key"), 160))
         .unwrap_or_else(|| sku.clone());
     let qty = clamp_i64(
-        line.get("qty").and_then(Value::as_f64).unwrap_or(1.0).round() as i64,
+        line.get("qty")
+            .and_then(Value::as_f64)
+            .unwrap_or(1.0)
+            .round() as i64,
         1,
         99_999,
     );
@@ -3217,7 +2687,11 @@ fn sanitize_saved_cart_input(cart: &Value, include_internal: bool) -> Option<Val
         return None;
     }
     let entries = sanitize_cart_items(cart.get("items").unwrap_or(&Value::Null));
-    if entries.as_array().map(|items| items.is_empty()).unwrap_or(true) {
+    if entries
+        .as_array()
+        .map(|items| items.is_empty())
+        .unwrap_or(true)
+    {
         return None;
     }
     let now = Utc::now().to_rfc3339();
@@ -3264,29 +2738,52 @@ fn sanitize_saved_cart_input(cart: &Value, include_internal: bool) -> Option<Val
     let mut saved = serde_json::Map::new();
     saved.insert(
         "id".to_string(),
-        json!(clean_text(cart.get("id"), 80).unwrap_or_else(|| format!("SC-{}", Utc::now().timestamp_millis()))),
+        json!(clean_text(cart.get("id"), 80)
+            .unwrap_or_else(|| format!("SC-{}", Utc::now().timestamp_millis()))),
     );
     saved.insert(
         "title".to_string(),
-        json!(clean_text(cart.get("title"), 120).unwrap_or_else(|| "Сохраненная корзина".to_string())),
+        json!(
+            clean_text(cart.get("title"), 120).unwrap_or_else(|| "Сохраненная корзина".to_string())
+        ),
     );
     saved.insert("createdAt".to_string(), json!(created_at));
     saved.insert("updatedAt".to_string(), json!(updated_at));
-    saved.insert("date".to_string(), json!(clean_text(cart.get("date"), 80).unwrap_or_default()));
+    saved.insert(
+        "date".to_string(),
+        json!(clean_text(cart.get("date"), 80).unwrap_or_default()),
+    );
     saved.insert("items".to_string(), entries);
-    saved.insert("qty".to_string(), json!(non_negative_rounded_i64(cart.get("qty"))));
-    saved.insert("subtotal".to_string(), json!(non_negative_rounded_i64(cart.get("subtotal"))));
-    saved.insert("discount".to_string(), json!(non_negative_rounded_i64(cart.get("discount"))));
-    saved.insert("total".to_string(), json!(non_negative_rounded_i64(cart.get("total"))));
+    saved.insert(
+        "qty".to_string(),
+        json!(non_negative_rounded_i64(cart.get("qty"))),
+    );
+    saved.insert(
+        "subtotal".to_string(),
+        json!(non_negative_rounded_i64(cart.get("subtotal"))),
+    );
+    saved.insert(
+        "discount".to_string(),
+        json!(non_negative_rounded_i64(cart.get("discount"))),
+    );
+    saved.insert(
+        "total".to_string(),
+        json!(non_negative_rounded_i64(cart.get("total"))),
+    );
     saved.insert(
         "status".to_string(),
-        json!(if clean_text(cart.get("status"), 40).as_deref() == Some("sent") {
-            "sent"
-        } else {
-            "draft"
-        }),
+        json!(
+            if clean_text(cart.get("status"), 40).as_deref() == Some("sent") {
+                "sent"
+            } else {
+                "draft"
+            }
+        ),
     );
-    saved.insert("sentAt".to_string(), json!(clean_text(cart.get("sentAt"), 40).unwrap_or_default()));
+    saved.insert(
+        "sentAt".to_string(),
+        json!(clean_text(cart.get("sentAt"), 40).unwrap_or_default()),
+    );
     saved.insert(
         "sentOrderId".to_string(),
         json!(clean_text(cart.get("sentOrderId"), 80).unwrap_or_default()),
@@ -3348,7 +2845,10 @@ fn sanitize_review_value(input: &Value, user: &Value) -> Option<Value> {
 }
 
 fn non_negative_rounded_i64(value: Option<&Value>) -> i64 {
-    std::cmp::max(0, value.and_then(Value::as_f64).unwrap_or(0.0).round() as i64)
+    std::cmp::max(
+        0,
+        value.and_then(Value::as_f64).unwrap_or(0.0).round() as i64,
+    )
 }
 
 fn digits_only(value: &str, limit: usize) -> String {
@@ -3378,7 +2878,10 @@ fn build_order_record(data: &Value, user: Option<&Value>) -> AppResult<Value> {
         })
         .unwrap_or_default();
     if items.is_empty() {
-        return Err(AppError::bad_request("empty_order", "В заказе нет товаров."));
+        return Err(AppError::bad_request(
+            "empty_order",
+            "В заказе нет товаров.",
+        ));
     }
     let total = data.get("total").and_then(Value::as_f64).unwrap_or(0.0);
     if !total.is_finite() || total < 30_000.0 {
@@ -3623,59 +3126,111 @@ fn update_user_profile_from_order(store: &mut Value, order: &Value) {
         "legalAddress": if legal_address.is_empty() { string_field(&existing, "legalAddress").unwrap_or_default() } else { legal_address.clone() },
     });
     let mut next = existing.as_object().cloned().unwrap_or_default();
-    if string_field(&existing, "name").unwrap_or_default().is_empty() {
+    if string_field(&existing, "name")
+        .unwrap_or_default()
+        .is_empty()
+    {
         next.insert("name".to_string(), json!(customer_name));
     }
     next.insert(
         "company".to_string(),
-        json!(if company.is_empty() { string_field(&existing, "company").unwrap_or_default() } else { company }),
+        json!(if company.is_empty() {
+            string_field(&existing, "company").unwrap_or_default()
+        } else {
+            company
+        }),
     );
     next.insert(
         "inn".to_string(),
-        json!(if inn.is_empty() { string_field(&existing, "inn").unwrap_or_default() } else { inn }),
+        json!(if inn.is_empty() {
+            string_field(&existing, "inn").unwrap_or_default()
+        } else {
+            inn
+        }),
     );
     next.insert(
         "kpp".to_string(),
-        json!(if kpp.is_empty() { string_field(&existing, "kpp").unwrap_or_default() } else { kpp }),
+        json!(if kpp.is_empty() {
+            string_field(&existing, "kpp").unwrap_or_default()
+        } else {
+            kpp
+        }),
     );
     next.insert(
         "legalAddress".to_string(),
-        json!(if legal_address.is_empty() { string_field(&existing, "legalAddress").unwrap_or_default() } else { legal_address }),
+        json!(if legal_address.is_empty() {
+            string_field(&existing, "legalAddress").unwrap_or_default()
+        } else {
+            legal_address
+        }),
     );
     next.insert(
         "phone".to_string(),
-        json!(if phone.is_empty() { string_field(&existing, "phone").unwrap_or_default() } else { phone }),
+        json!(if phone.is_empty() {
+            string_field(&existing, "phone").unwrap_or_default()
+        } else {
+            phone
+        }),
     );
     next.insert("email".to_string(), json!(email.clone()));
     next.insert(
         "city".to_string(),
-        json!(if city.is_empty() { string_field(&existing, "city").unwrap_or_default() } else { city }),
+        json!(if city.is_empty() {
+            string_field(&existing, "city").unwrap_or_default()
+        } else {
+            city
+        }),
     );
     next.insert(
         "address".to_string(),
-        json!(if address.is_empty() { string_field(&existing, "address").unwrap_or_default() } else { address.clone() }),
+        json!(if address.is_empty() {
+            string_field(&existing, "address").unwrap_or_default()
+        } else {
+            address.clone()
+        }),
     );
     let mut addresses = vec![address];
     addresses.extend(existing_string_array(existing.get("addresses")));
-    next.insert("addresses".to_string(), unique_non_empty_values(addresses, 10));
+    next.insert(
+        "addresses".to_string(),
+        unique_non_empty_values(addresses, 10),
+    );
     next.insert(
         "delivery".to_string(),
-        json!(if delivery.is_empty() { string_field(&existing, "delivery").unwrap_or_default() } else { delivery }),
+        json!(if delivery.is_empty() {
+            string_field(&existing, "delivery").unwrap_or_default()
+        } else {
+            delivery
+        }),
     );
     next.insert(
         "packaging".to_string(),
-        json!(if packaging.is_empty() { string_field(&existing, "packaging").unwrap_or_default() } else { packaging }),
+        json!(if packaging.is_empty() {
+            string_field(&existing, "packaging").unwrap_or_default()
+        } else {
+            packaging
+        }),
     );
     let mut layout_files = vec![layout_file];
     layout_files.extend(existing_string_array(existing.get("layoutFiles")));
-    next.insert("layoutFiles".to_string(), unique_non_empty_values(layout_files, 20));
+    next.insert(
+        "layoutFiles".to_string(),
+        unique_non_empty_values(layout_files, 20),
+    );
     next.insert(
         "orderComment".to_string(),
-        json!(if comment.is_empty() { string_field(&existing, "orderComment").unwrap_or_default() } else { comment.clone() }),
+        json!(if comment.is_empty() {
+            string_field(&existing, "orderComment").unwrap_or_default()
+        } else {
+            comment.clone()
+        }),
     );
     let mut comments = vec![comment];
     comments.extend(existing_string_array(existing.get("orderComments")));
-    next.insert("orderComments".to_string(), unique_non_empty_values(comments, 10));
+    next.insert(
+        "orderComments".to_string(),
+        unique_non_empty_values(comments, 10),
+    );
     next.insert(
         "companies".to_string(),
         merge_companies(primary_company, existing.get("companies")),
@@ -3755,7 +3310,10 @@ fn build_brief_record(data: &Value, user: Option<&Value>) -> AppResult<(Value, V
     );
 
     if product.is_empty() {
-        return Err(AppError::bad_request("missing_product", "Выберите изделие."));
+        return Err(AppError::bad_request(
+            "missing_product",
+            "Выберите изделие.",
+        ));
     }
     if quantity < 1 {
         return Err(AppError::bad_request("missing_quantity", "Укажите тираж."));
@@ -3767,7 +3325,10 @@ fn build_brief_record(data: &Value, user: Option<&Value>) -> AppResult<(Value, V
         ));
     }
     if !valid_email(&email) {
-        return Err(AppError::bad_request("invalid_email", "Проверьте формат email."));
+        return Err(AppError::bad_request(
+            "invalid_email",
+            "Проверьте формат email.",
+        ));
     }
 
     let now = Utc::now();
@@ -5120,22 +4681,4 @@ async fn load_images(pool: &PgPool, product_id: &str) -> AppResult<Vec<ProductIm
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn cursor_roundtrip() {
-        assert_eq!(decode_cursor(&encode_cursor(96)), Some(96));
-        assert_eq!(decode_cursor("bad"), None);
-    }
-
-    #[test]
-    fn parses_query_like_node() {
-        let query = parse_catalog_query("q=%D0%9F%D0%BE%D0%B4%D1%83%D1%88%D0%BA%D0%B0&pageSize=999&page=3&category=%D0%9F%D0%BE%D0%B4%D1%83%D1%88%D0%BA%D0%B8&categories=%D0%9D%D0%B0%D0%B2%D0%BE%D0%BB%D0%BE%D1%87%D0%BA%D0%B8&sort=price_asc");
-        assert_eq!(query.q, "Подушка");
-        assert_eq!(query.page_size, MAX_PAGE_SIZE);
-        assert_eq!(query.offset, 240);
-        assert_eq!(query.filters.get("category").unwrap().len(), 2);
-        assert_eq!(query.sort, "price_asc");
-    }
-}
+mod tests;

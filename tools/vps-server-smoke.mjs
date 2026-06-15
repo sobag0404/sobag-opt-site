@@ -37,6 +37,11 @@ async function readText(baseUrl, path) {
   return { response, text };
 }
 
+async function assertNotServed(baseUrl, path) {
+  const response = await fetch(new URL(path, baseUrl));
+  assert(response.status === 404, `${path} should not be publicly served, got ${response.status}`);
+}
+
 const server = createSobagServer();
 
 try {
@@ -60,6 +65,16 @@ try {
 
   const catalogPage = await readText(baseUrl, "/catalog");
   assert(catalogPage.text.includes("Каталог"), "clean catalog URL should resolve to catalog.html");
+
+  await assertNotServed(baseUrl, "/server.mjs");
+  await assertNotServed(baseUrl, "/package.json");
+  await assertNotServed(baseUrl, "/docs/vps-rust-runtime-map.md");
+  await assertNotServed(baseUrl, "/.github/workflows/vps-deploy.yml");
+  await assertNotServed(baseUrl, "/rust-server/src/main.rs");
+  await assertNotServed(baseUrl, "/server-routes/_lib/auth.js");
+  await assertNotServed(baseUrl, "/assets/%2e%2e/server.mjs");
+  await assertNotServed(baseUrl, "/components/%2e%2e/.github/workflows/vps-deploy.yml");
+  await assertNotServed(baseUrl, "/templates/%2e%2e/server-routes/_lib/auth.js");
 
   const health = await readJson(baseUrl, "/api/health");
   assert(health.ok === true, "health should be ready with file store");

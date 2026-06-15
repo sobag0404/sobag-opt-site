@@ -17,7 +17,10 @@ jobs:
   deploy:
     if: >-
       ${{
-        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          github.ref_name == 'main'
+        ) ||
         (
           github.event.workflow_run.conclusion == 'success' &&
           github.event.workflow_run.event == 'push' &&
@@ -64,12 +67,25 @@ jobs:
 
           app_dir="/opt/sobag-opt"
           repo_dir="$app_dir/repo"
+          rust_target_dir="$app_dir/shared/cargo-target"
           release="$(date -u +%Y%m%dT%H%M%SZ)-${DEPLOY_SHA:0:7}"
           release_dir="$app_dir/releases/$release"
           release_activated=0
+          safe_rm_rf() {
+            target="$(readlink -f "$1")"
+            case "$target" in
+              "$app_dir/releases"/*|"$repo_dir"|"$rust_target_dir/debug")
+                rm -rf -- "$target"
+                ;;
+              *)
+                echo "Refusing unsafe rm -rf target: $target"
+                exit 1
+                ;;
+            esac
+          }
           cleanup_failed_release() {
             if [ "$release_activated" != "1" ]; then
-              rm -rf -- "$release_dir"
+              safe_rm_rf "$release_dir"
             fi
           }
           trap cleanup_failed_release ERR
@@ -78,7 +94,7 @@ jobs:
 
           export GIT_SSH_COMMAND="ssh -i /home/$USER/.ssh/github_repo_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
           if [ ! -d "$repo_dir/.git" ]; then
-            rm -rf "$repo_dir"
+            safe_rm_rf "$repo_dir"
             git clone --no-checkout git@github.com:sobag0404/sobag-opt-site.git "$repo_dir"
           fi
 
@@ -110,6 +126,8 @@ jobs:
             (
               cd rust-server
               export CARGO_TARGET_DIR="$rust_target_dir"
+              cargo fmt --check
+              cargo check --locked
               cargo test --locked
               cargo build --release --locked
             )
@@ -118,6 +136,14 @@ jobs:
           release_activated=1
           ln -sfn "$release_dir" "$app_dir/current"
           printf '%s\n' "$release" > "$app_dir/current-release.txt"
+          cat > "$app_dir/shared/start.sh" <<START_SCRIPT
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$app_dir/current"
+export NODE_ENV=production
+exec node server.mjs
+START_SCRIPT
+          chmod 755 "$app_dir/shared/start.sh"
 
           if pm2 describe sobag-opt >/dev/null 2>&1; then
             pm2 restart sobag-opt --update-env
@@ -138,6 +164,13 @@ jobs:
           done
 
           if [ -f rust-server/Cargo.toml ]; then
+            restore_previous_rust() {
+              if [ -x "$rust_previous" ]; then
+                install -m 755 "$rust_previous" "$rust_binary"
+                sudo systemctl restart sobag-opt-rust || true
+                curl -fsS http://127.0.0.1:3001/api/health-rust || true
+              fi
+            }
             if [ -x "$rust_binary" ]; then
               cp -p "$rust_binary" "$rust_previous"
             fi
@@ -151,6 +184,7 @@ jobs:
           User=sobag
           WorkingDirectory=/opt/sobag-opt/current
           EnvironmentFile=/opt/sobag-opt/shared/.env
+          Environment=NODE_ENV=production
           Environment=SOBAG_RUST_BIND=127.0.0.1:3001
           ExecStart=/opt/sobag-opt/shared/sobag-opt-rust
           Restart=always
@@ -166,43 +200,71 @@ jobs:
             sudo systemctl enable sobag-opt-rust
             if ! sudo systemctl restart sobag-opt-rust; then
               echo "Rust restart failed; restoring previous binary"
-              if [ -x "$rust_previous" ]; then
-                install -m 755 "$rust_previous" "$rust_binary"
-                sudo systemctl restart sobag-opt-rust || true
-              fi
+              restore_previous_rust
               exit 1
             fi
             sleep 2
             if ! curl -fsS http://127.0.0.1:3001/api/health-rust; then
               echo "Rust health failed; restoring previous binary"
-              if [ -x "$rust_previous" ]; then
-                install -m 755 "$rust_previous" "$rust_binary"
-                sudo systemctl restart sobag-opt-rust || true
-                curl -fsS http://127.0.0.1:3001/api/health-rust || true
-              fi
+              restore_previous_rust
               exit 1
             fi
-            node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001
-            node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001
-            set -a
-            . "$app_dir/shared/.env"
-            set +a
-            node tools/rust-auth-me-shadow-smoke.mjs --rust-bin "$rust_binary"
-            node tools/rust-auth-me-cutover-smoke.mjs --rust-bin "$rust_binary"
-            node tools/rust-auth-write-cutover-smoke.mjs --rust-bin "$rust_binary"
-            node tools/rust-orders-write-smoke.mjs --rust-bin "$rust_binary"
-            node tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin "$rust_binary"
-            node tools/rust-admin-orders-cutover-smoke.mjs --rust-bin "$rust_binary"
-            node tools/rust-admin-users-cutover-smoke.mjs --rust-bin "$rust_binary"
-            node tools/rust-admin-content-cutover-smoke.mjs --rust-bin "$rust_binary"
-            rm -rf -- "$rust_target_dir/debug"
+            load_safe_env_file() {
+              env_file="$1"
+              [ -f "$env_file" ] || return 0
+              while IFS= read -r line || [ -n "$line" ]; do
+                case "$line" in
+                  ""|\#*) continue ;;
+                esac
+                key="${line%%=*}"
+                value="${line#*=}"
+                case "$key" in
+                  SOBAG_*|DATABASE_URL|POSTGRES_URL|PORT|HOST|NODE_ENV|UPSTASH_*|KV_*) ;;
+                  *) continue ;;
+                esac
+                if ! printf '%s' "$key" | grep -Eq '^[A-Za-z_][A-Za-z0-9_]*$'; then
+                  echo "Invalid env key in deploy env file"
+                  exit 1
+                fi
+                case "$value" in
+                  \"*\") value="${value#\"}"; value="${value%\"}" ;;
+                  \'*\') value="${value#\'}"; value="${value%\'}" ;;
+                esac
+                export "$key=$value"
+              done < "$env_file"
+            }
+            load_safe_env_file "$app_dir/shared/.env"
+            for secret_name in SOBAG_ADMIN_PASSWORD SOBAG_CATALOG_DATABASE_URL SOBAG_SESSION_SECRET SOBAG_JWT_SECRET SOBAG_S3_SECRET_ACCESS_KEY SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SESSION_TOKEN DATABASE_URL POSTGRES_URL UPSTASH_REDIS_REST_TOKEN KV_REST_API_TOKEN; do
+              secret_value="${!secret_name:-}"
+              if [ -n "$secret_value" ]; then
+                printf '::add-mask::%s\n' "$secret_value"
+              fi
+            done
+            if ! {
+              node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001 &&
+              node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001 &&
+              node tools/rust-auth-me-shadow-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-auth-me-cutover-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-auth-write-cutover-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-orders-write-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-admin-orders-cutover-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-admin-users-cutover-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-admin-content-cutover-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-public-route-smoke.mjs --base https://sobag-shop.online
+            }; then
+              echo "Rust smoke failed; restoring previous binary"
+              restore_previous_rust
+              exit 1
+            fi
+            safe_rm_rf "$rust_target_dir/debug"
           fi
 
           mapfile -t releases < <(ls -1dt "$app_dir"/releases/* 2>/dev/null || true)
           keep_current="$(readlink -f "$app_dir/current")"
           for old_release in "${releases[@]}"; do
             if [ "$old_release" != "$keep_current" ]; then
-              rm -rf -- "$old_release"
+              safe_rm_rf "$old_release"
             fi
           done
           REMOTE
