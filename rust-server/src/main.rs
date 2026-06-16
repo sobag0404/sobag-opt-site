@@ -3004,7 +3004,7 @@ async fn trusted_order_lines(pool: &PgPool, data: &Value) -> AppResult<Vec<Value
         .map(|(sku, _)| sku.clone())
         .collect::<Vec<_>>();
     let rows = sqlx::query(
-        "SELECT v.sku, v.name AS variant_name, v.type, v.size, v.material, v.price, p.id AS product_id, p.base_sku, p.name AS product_name, COALESCE(p.status, 'published') AS status, COALESCE(img.url, '') AS product_image
+        "SELECT v.sku, v.name AS variant_name, v.type, v.size, v.material, v.price::double precision AS price, p.id AS product_id, p.base_sku, p.name AS product_name, COALESCE(p.status, 'published') AS status, COALESCE(img.url, '') AS product_image
          FROM variants v
          JOIN public_catalog_products p ON p.id = v.product_id
          LEFT JOIN LATERAL (
@@ -4508,7 +4508,13 @@ fn push_where<'a>(
 
 async fn load_cards(pool: &PgPool, query: &CatalogQuery) -> AppResult<Vec<CatalogCard>> {
     let mut builder = sqlx::QueryBuilder::<sqlx::Postgres>::new(
-        "SELECT id, base_sku, name, description, stock, popular, min_price, max_price, variant_count, category, categories, collections, holidays, tags, image, image_meta FROM public_catalog_cards",
+        "SELECT id, base_sku, name, description, stock,
+                popular::bigint AS popular,
+                min_price::double precision AS min_price,
+                max_price::double precision AS max_price,
+                variant_count::bigint AS variant_count,
+                category, categories, collections, holidays, tags, image, image_meta
+         FROM public_catalog_cards",
     );
     push_where(&mut builder, query, None);
     builder.push(" ORDER BY ").push(sort_sql(&query.sort));
@@ -4551,7 +4557,12 @@ async fn load_related_cards(
         return Ok(Vec::new());
     }
     let rows = sqlx::query(
-        "SELECT id, base_sku, name, description, stock, popular, min_price, max_price, variant_count, category, categories, collections, holidays, tags, image, image_meta
+        "SELECT id, base_sku, name, description, stock,
+                popular::bigint AS popular,
+                min_price::double precision AS min_price,
+                max_price::double precision AS max_price,
+                variant_count::bigint AS variant_count,
+                category, categories, collections, holidays, tags, image, image_meta
          FROM public_catalog_cards
          WHERE base_sku <> $1
            AND (categories && $2::text[] OR collections && $3::text[] OR holidays && $4::text[] OR tags && $5::text[])
@@ -4698,8 +4709,13 @@ async fn load_product_detail(
     base_sku: &str,
     sku: &str,
 ) -> AppResult<Option<ProductDetail>> {
-    let mut builder =
-        sqlx::QueryBuilder::<sqlx::Postgres>::new("SELECT * FROM public_catalog_products WHERE ");
+    let mut builder = sqlx::QueryBuilder::<sqlx::Postgres>::new(
+        "SELECT *,
+                min_price::double precision AS min_price_float,
+                max_price::double precision AS max_price_float,
+                popular::bigint AS popular_int
+         FROM public_catalog_products WHERE ",
+    );
     let mut has_lookup = false;
     if !id.is_empty() {
         builder.push("(id = ").push_bind(id.to_string()).push(")");
@@ -4757,9 +4773,9 @@ async fn load_product_detail(
             .try_get("detail_description")
             .unwrap_or_default(),
         base_price: 0,
-        min_price: row_i64(&product_row, "min_price"),
-        max_price: row_i64(&product_row, "max_price"),
-        popular: row_i64(&product_row, "popular"),
+        min_price: row_i64(&product_row, "min_price_float"),
+        max_price: row_i64(&product_row, "max_price_float"),
+        popular: row_i64(&product_row, "popular_int"),
         stock: product_row.try_get("stock").unwrap_or_default(),
         variants,
         images,
@@ -4767,11 +4783,13 @@ async fn load_product_detail(
 }
 
 async fn load_variants(pool: &PgPool, product_id: &str) -> AppResult<Vec<Variant>> {
-    let rows = sqlx::query("SELECT * FROM variants WHERE product_id = $1 ORDER BY sku ASC")
-        .bind(product_id)
-        .fetch_all(pool)
-        .await
-        .map_err(|error| AppError::internal(error.to_string()))?;
+    let rows = sqlx::query(
+        "SELECT *, price::double precision AS price_float FROM variants WHERE product_id = $1 ORDER BY sku ASC",
+    )
+    .bind(product_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|error| AppError::internal(error.to_string()))?;
     Ok(rows
         .into_iter()
         .map(|row| Variant {
@@ -4783,7 +4801,7 @@ async fn load_variants(pool: &PgPool, product_id: &str) -> AppResult<Vec<Variant
             size: row.try_get("size").unwrap_or_default(),
             material: row.try_get("material").unwrap_or_default(),
             name: row.try_get("name").unwrap_or_default(),
-            price: row_i64(&row, "price"),
+            price: row_i64(&row, "price_float"),
             price_source: String::new(),
         })
         .filter(|variant| !variant.id.is_empty() && !variant.sku.is_empty())
