@@ -63,7 +63,7 @@ function fixtureStore() {
         name: "Buyer",
         role: "buyer",
         phone: "+7 968 959-32-54",
-        passwordHash: "642284d450b3032d40340ccc7fc96fdaca2ffd9564761ecf7615269b4bef46f8",
+        passwordHash: "1b827148ba2a5541c2b632bce36aba9b39449d7e8e366e82b18347854479f71a",
         passwordSalt: "00112233445566778899aabbccddeeff",
       },
       "manager@example.test": { email: "manager@example.test", name: "Manager", role: "manager", passwordHash: "hidden", passwordSalt: "hidden" },
