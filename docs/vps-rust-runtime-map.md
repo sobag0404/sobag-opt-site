@@ -22,7 +22,8 @@ Last updated: 2026-06-16
 | `/api/auth/login`, `/api/auth/register`, `/api/auth/logout` | Rust exact routes | cut over after auth write parity | restore previous Nginx exact-route backup |
 | `/api/orders`, `/api/briefs` | Rust exact routes | cut over after Redis-backed parity | route exact paths back to Node backup |
 | `/api/admin/orders`, `/api/admin/users`, `/api/admin/content` | Rust exact routes | cut over | route exact paths back to Node |
-| Admin catalog/import/media/PIM writes | Node fallback | pending | keep Node |
+| `/api/admin/pim` | Rust exact route for read-only PIM diagnostics/export | cut over after PostgreSQL-backed PIM parity | restore `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-pim-20260616T193119Z` |
+| Admin catalog/import/media/price writes | Node fallback | pending | keep Node |
 
 ## Vercel-Era Removal State
 
@@ -52,6 +53,8 @@ Next.js runtime is not present. Cleanup targets the old Vercel serverless/deploy
 - Redis-backed Rust write-store parity is deployed at `129740b`: Rust reads/writes/deletes the same Redis/Upstash REST keys used by Node, and VPS deploy runs passed both file-store and Redis fixture order/brief smokes before accepting the release.
 - Auth-write live smoke passed after the exact-route switch: registration/login/logout on production Rust routes set/clear production cookies with `HttpOnly`, `SameSite=Lax`, and `Secure`; invalid credentials, duplicate registration, missing consent, CSRF origin rejection, and the no-order review guard all returned the expected errors without exposing cookies or secrets.
 - Orders/briefs live smoke remains green after auth-write cutover: health/catalog prices stayed valid, a safe Rust-created order and brief persisted through Redis, minimum-total validation stayed active, and production smoke/storage/cache checks stayed green.
+- Production exact `/api/admin/pim` is cut over to Rust for read-only PIM diagnostics/export after adding PostgreSQL-backed fallback when the file-store catalog is absent. Current route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-pim-20260616T193119Z`.
+- Admin PIM live smoke passed after the exact-route switch: anonymous access returned 401, a temporary content-role session read summary/variants/CSV through Rust, 12,943 variants included non-zero prices, invalid views returned 400, and the temporary user/session were removed. Admin catalog/import/media/price mutation routes remain on Node fallback.
 
 ## VPS Access And Cutover Input
 
