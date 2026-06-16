@@ -15,8 +15,10 @@ Git: `main` / `3b1e229`
 Current post-transition implementation evidence:
 - Security backlog TASK-001..TASK-004 first pass is implemented for Node and Rust order paths: server-side order repricing, client total mismatch rejection, JSON body caps, rate limiting, and cookie-auth same-origin mutation guard.
 - RBAC/API regression coverage is extended through `tools/api-security-smoke.mjs` and `npm run check`.
-- VPS/static cache policy is hardened in `server.mjs`: HTML revalidates, API stays `no-store`, catalog API keeps short public cache, non-fingerprinted assets use cautious browser cache, and fingerprinted assets are immutable.
-- Cache/header evidence is covered by `tools/vps-server-smoke.mjs` and `tools/production-performance-smoke.mjs --self-test`; live production header checks are blocked in this local shell by outbound network failure and must be verified by GitHub/VPS after deploy.
+- VPS/static cache policy is hardened in `server.mjs`: HTML revalidates, API stays `no-store`, catalog API keeps short public cache, non-fingerprinted assets use cautious browser cache, and versioned/fingerprinted assets are immutable.
+- Cache/header evidence is covered by `tools/vps-server-smoke.mjs`, `tools/production-performance-smoke.mjs --self-test`, and live `npm run smoke:cache-headers -- --timeout 30000` against `https://sobag-shop.online`.
+- Live production status after commit `cefeb12`: `/api/health` 200 `no-store`, `/api/catalog-query` returns real imported category facets and non-zero prices, `/api/price-list?format=json` returns 31 rows with short public cache, `/` is `no-cache`, and versioned JS/CSS URLs are immutable.
+- Production `/api/orders` and `/api/briefs` are intentionally routed to Node fallback until Rust write routes support the live Redis-backed store provider; this protects order creation while preserving Rust for catalog/search/product SSR and already-cut admin/content routes.
 
 ## 2. Readiness Score
 
@@ -133,6 +135,15 @@ Current post-transition implementation evidence:
 - Description: The CWV field packet is still a template, but deploy, Rust/VPS, production smoke, and synthetic 10k catalog/performance evidence are recorded.
 - Why it matters: The Rust/VPS transition can be handed off with warnings, but real post-launch field data is still needed for ongoing product monitoring.
 - Recommendation: Collect real field CWV after production traffic is available; keep synthetic evidence separate from field data.
+
+#### PROD-005: Promo pricing business rule is not yet specified
+
+- Severity: `low`
+- Priority: `P2`
+- File / area: `price groups / public price export / order pricing`
+- Description: Public price-list export exists, but promo/action order-pricing precedence and XLSX styling rules still need an explicit business decision.
+- Why it matters: Without a rule, the backend must not silently apply promo prices to orders or invent display precedence.
+- Recommendation: Define promo validity dates, precedence against SKU overrides, and whether active promo prices affect order totals before implementing promo order pricing.
 
 #### PROD-004: Next-stage migration context is available
 

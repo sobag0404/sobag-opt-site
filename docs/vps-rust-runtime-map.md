@@ -1,6 +1,6 @@
 # VPS / Rust Runtime Map
 
-Last updated: 2026-06-15
+Last updated: 2026-06-16
 
 ## Target State
 
@@ -20,7 +20,7 @@ Last updated: 2026-06-15
 | `/api/catalog-query`, `/api/catalog-detail` | Rust/PostgreSQL path on VPS | cut over | route back to Node/API fallback |
 | `/api/auth/me` | Rust for `GET+PUT` | cut over | route exact path back to Node |
 | `/api/auth/login`, `/api/auth/register`, `/api/auth/logout` | Node fallback | pending Rust auth-write cutover | keep Node |
-| `/api/orders`, `/api/briefs` | Rust exact routes | cut over | route exact paths back to Node |
+| `/api/orders`, `/api/briefs` | Node fallback | rolled back from Rust exact routes on production | keep Node until Rust write store supports the live Redis-backed provider |
 | `/api/admin/orders`, `/api/admin/users`, `/api/admin/content` | Rust exact routes | cut over | route exact paths back to Node |
 | Admin catalog/import/media/PIM writes | Node fallback | pending | keep Node |
 
@@ -42,6 +42,13 @@ Next.js runtime is not present. Cleanup targets the old Vercel serverless/deploy
 - Safe next step: keep `server.mjs`, `api-router.js`, tools, smokes, and release audits green while moving remaining Node fallback routes to Rust through parity/cutover gates.
 - Static serving guard: `server.mjs` allowlists only public root pages/assets/components/templates and `data/products-live.json`; backend source, docs, workflows, reports, package metadata, Rust/server route source, and encoded traversal through public directories must return 404 from the VPS static server.
 - Browser auth/admin guard: when backend auth is unavailable, client-side login/register fallback now runs only on local development hosts; production hosts fail closed instead of storing new user passwords in localStorage. Production admin pages also require a verified backend session before rendering management UI.
+
+## Current Production Notes
+
+- Deployed commit `cefeb12` hardens VPS static cache policy: HTML is `no-cache`, versioned JS/CSS query URLs are `public, max-age=31536000, immutable`, product data and public catalog/price-list APIs use short public cache, and auth/health/order APIs stay `no-store`.
+- Live catalog cold requests return current imported facets: `Подушки 517`, `Наволочки 517`, `Мешки для обуви 170`, `Чехлы на чемодан 37`, `Ремувки 19`, `Флаги 65`. `/api/catalog` returns `no-store`; `/api/catalog-query` returns short public cache only.
+- Production order writes are intentionally routed back to Node after live smoke found Rust write routes still depend on file-store semantics while the VPS app store provider is Redis-backed. Rollback backup: `/etc/nginx/sites-available/sobag-opt.pre-node-orders-20260616T122736Z`.
+- Before re-cutting `/api/orders` or `/api/briefs` to Rust, implement Redis-backed Rust write-store parity or an approved store bridge, then rerun live order/brief smokes against the real VPS provider.
 
 ## VPS Access And Cutover Input
 

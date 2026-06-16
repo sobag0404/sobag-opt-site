@@ -2,6 +2,12 @@
 
 Date: 2026-06-16
 
+Latest production status:
+- Cache hardening code commit `cefeb12` is deployed on `sobag-shop.online`; later docs-only releases may advance the release marker without changing runtime code. GitHub `autofix-check`, `rust-check`, `vps-deploy`, and `production-smoke` passed for the cache hardening release.
+- Live checks passed: `/api/health` 200 `no-store`, `/api/catalog-query` prices are non-zero with real imported category facets, `/api/price-list?format=json` returns 31 rows with short public cache, `/` is `no-cache`, and versioned JS/CSS URLs are immutable.
+- Production `/api/orders` and `/api/briefs` are routed back to Node fallback because live Rust writes still require file-store semantics while the VPS app store provider is Redis-backed. Backup before rollback: `/etc/nginx/sites-available/sobag-opt.pre-node-orders-20260616T122736Z`.
+- Remaining business decision: promo/order-pricing precedence and XLSX red styling require explicit business rules before implementing promo pricing beyond the current public price-list rows.
+
 Transition readiness:
 - Status: `READY_WITH_WARNINGS` after external GitHub/VPS gates passed.
 - Verified external gates: `autofix-check` PASS, `rust-check` PASS, `vps-deploy` PASS, `production-smoke` PASS, `https://sobag-shop.online/` returns 200, and `/index.html` redirects to `/` with 301.
@@ -9,7 +15,7 @@ Transition readiness:
 - Real field CWV is still unavailable and remains post-launch monitoring; synthetic 10k catalog/performance evidence is tracked in `docs/synthetic-cwv-readiness-evidence.md`.
 
 Current deployed VPS release:
-- `20260615Tmanual-427f171` is active on `sobag-shop.online`; `/opt/sobag-opt/current` points to `/opt/sobag-opt/releases/20260615Tmanual-427f171`.
+- Runtime code is at cache hardening commit `cefeb12` or a later docs-only release through the GitHub VPS deploy workflow.
 - Rollback release kept on VPS: `/opt/sobag-opt/releases/20260612T123649Z-6c76c30`.
 
 Repository:
@@ -32,7 +38,7 @@ Production URLs:
 - Health: `https://sobag-shop.online/api/health`
 
 Current focus:
-- Post-transition security/cache pass is in progress: server-side order repricing, JSON limits, route rate limits, same-origin cookie mutation guard, API security smoke, and VPS static cache smoke are implemented locally. After commit/push, GitHub/VPS deploy plus live cache/header smokes must verify production behavior.
+- Post-transition security/cache pass is deployed: server-side order repricing, JSON limits, route rate limits, same-origin cookie mutation guard, API security smoke, VPS static cache policy, and live cache/header smokes are green. Keep order/brief writes on Node fallback until Rust supports the live Redis-backed write store.
 - Rust/VPS transition can be handed off with warnings after successful GitHub/VPS gates. Do not start external review backlog TASK-001..TASK-015 until the user asks for the post-transition review pass.
 - Current canonical URL cleanup: commit `3fa61ef` is pushed. `server.mjs` and local `tools/static-server.mjs` redirect `/index.html` to `/` with 301, shared header/home links point to `/`, `tools/canonical-url-smoke.mjs` covers root canonical, `/index.html` redirect, key pages, and root CSS/JS assets, and production-smoke workflow runs the canonical smoke after VPS deploy.
 - External developer/security review `C:\Users\SoBag\Downloads\AI_DEVELOPER_REVIEW.md` is reference-only for the current transition pass. Do not start TASK-001..TASK-015 until the Rust/VPS transition gates are complete. Post-transition P0/P1 backlog captured from the review: server-side order repricing/trust boundary, public endpoint rate limiting, CSRF/origin enforcement, JSON body-size limits, persistence concurrency/locking, CI gate reliability, and real CWV/goal evidence.
@@ -42,7 +48,7 @@ Current focus:
 - Current readiness pass expanded `docs/vps-rust-cutover-input-packet.md`, `tools/goal-inputs-packet-template.mjs`, and `tools/vps-rust-cutover-packet-audit.mjs`; ignored local packet files live under `local-import-output/` and must stay out of Git/chat when they contain operator-specific data.
 - Current readiness work added a no-secret VPS/Rust cutover packet template/audit, split Rust test modules out of `rust-server/src/main.rs`, moved browser utilities/data/content/product/account/admin helpers to `components/app-utils.js`, `components/app-data.js`, `components/app-content-utils.js`, `components/app-product-utils.js`, `components/app-account.js`, and `components/app-admin.js`, and split cart defaults/helpers to `components/cart-data.js` / `components/cart-utils.js`; browser `app.js` is below the 5000-line architecture threshold, with remaining frontend modularity debt limited to smaller state/render/route slices.
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;
-- Rust migration is live in staged mode: `sobag-opt-rust` runs under systemd on VPS at `127.0.0.1:3001`; Nginx routes `/api/catalog-query`, `/api/catalog-detail`, exact `/api/auth/me`, `/api/orders`, `/api/briefs`, `/api/admin/orders`, `/api/admin/users`, `/api/admin/content`, exact SSR catalog/search/product routes, fragments, and simple content pages to Rust; Node remains fallback for generic root, cart, login/register/logout, admin catalog/import/media, and non-switched pages;
+- Rust migration is live in staged mode: `sobag-opt-rust` runs under systemd on VPS at `127.0.0.1:3001`; Nginx routes `/api/catalog-query`, `/api/catalog-detail`, exact `/api/auth/me`, `/api/admin/orders`, `/api/admin/users`, `/api/admin/content`, exact SSR catalog/search/product routes, fragments, and simple content pages to Rust; Node remains fallback for generic root, cart, login/register/logout, `/api/orders`, `/api/briefs`, admin catalog/import/media, and non-switched pages;
 - VPS primary domain cutover is complete: `sobag-shop.online` and `www.sobag-shop.online` resolve to `77.239.107.164`, HTTPS is enabled by certbot/Nginx, and production smoke now targets `https://sobag-shop.online`;
 - Current cutover input: domain `sobag-shop.online`, VPS IP `77.239.107.164`, SSH user `root`. Server-side nginx/systemd preparation is allowed after inventory and backup/quarantine, but credentials must stay out of repo/docs/prompts/logs; safe public-key SSH works and initial VPS inventory/Linux Rust verification has been completed.
 - Current server hardening: `server.mjs` serves only allowlisted public static files/directories; backend source/docs/workflows/reports/package metadata/Rust source are denied by static smoke.
