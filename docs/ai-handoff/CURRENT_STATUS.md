@@ -7,7 +7,7 @@ Latest production status:
 - Rust admin prices route is now cut over: production exact `/api/admin/prices` routes to Rust for price-group/SKU preview and PostgreSQL apply. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-prices-20260616T205931Z`.
 - Rust auth write routes are now cut over: production exact `/api/auth/login`, `/api/auth/register`, and `/api/auth/logout` route to Rust after auth parity hardening. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-auth-write-20260616T174643Z`.
 - Rust Redis-backed write-store parity is implemented and deployed; production exact `/api/orders` and `/api/briefs` are now cut over to Rust after live write smoke. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-orders-briefs-20260616T164606Z`.
-- Latest deployed release marker: `20260616T205347Z-32076fd`.
+- Latest admin-prices runtime-change release: `20260616T205347Z-32076fd`; later documentation-only deploys may advance the VPS release marker without changing runtime behavior.
 - Cache hardening code commit `cefeb12` is deployed on `sobag-shop.online`; later docs-only releases may advance the release marker without changing runtime code. GitHub `autofix-check`, `rust-check`, `vps-deploy`, and `production-smoke` passed for the cache hardening release.
 - Live checks passed: `/api/health` 200 `no-store`, `/api/catalog-query` prices are non-zero with real imported category facets, `/api/price-list?format=json` returns 31 rows with short public cache, `/` is `no-cache`, and versioned JS/CSS URLs are immutable.
 - Production `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`, `/api/auth/me`, `/api/orders`, `/api/briefs`, `/api/admin/pim`, and `/api/admin/prices` route exact paths to Rust; Node remains fallback for non-switched root/cart and admin catalog/import/media mutation routes.
@@ -20,7 +20,7 @@ Transition readiness:
 - Real field CWV is still unavailable and remains post-launch monitoring; synthetic 10k catalog/performance evidence is tracked in `docs/synthetic-cwv-readiness-evidence.md`.
 
 Current deployed VPS release:
-- Runtime code is at release `20260616T205347Z-32076fd`; Rust admin price mutation parity was finalized in `32076fd`, Rust admin PIM PostgreSQL fallback in `8907ac2`, auth write parity fix in `743c63e`, deploy-smoke port collision hardening in `9932b03`, and the Rust Redis store code in `129740b`.
+- Runtime code baseline is release `20260616T205347Z-32076fd`; Rust admin price mutation parity was finalized in `32076fd`, Rust admin PIM PostgreSQL fallback in `8907ac2`, auth write parity fix in `743c63e`, deploy-smoke port collision hardening in `9932b03`, and the Rust Redis store code in `129740b`.
 - Rollback release kept on VPS: `/opt/sobag-opt/releases/20260612T123649Z-6c76c30`.
 
 Repository:

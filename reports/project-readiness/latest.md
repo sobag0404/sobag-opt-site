@@ -15,7 +15,7 @@ Remaining warning scope is not a P0/P1 blocker for the current route-by-route Ru
 
 ## 2. Current Rust/VPS Evidence
 
-- Latest deployed VPS release: `20260616T205347Z-32076fd`.
+- Latest admin-prices runtime-change release: `20260616T205347Z-32076fd`; later documentation-only deploys may advance the VPS release marker without changing runtime behavior.
 - Production exact `/api/admin/prices` routes to Rust. Rollback backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-prices-20260616T205931Z`.
 - GitHub gates passed for `32076fd`: `autofix-check` `27647385195`, `rust-check` `27647385766`, `vps-deploy` `27647440957`, and `production-smoke` `27647708702`.
 - Live admin prices smoke passed: anonymous 401, temporary content-role list/preview/apply, zero-price rejection, non-zero catalog-detail prices, cleanup of temporary user/session.
