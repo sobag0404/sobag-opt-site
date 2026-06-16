@@ -492,9 +492,9 @@ fn builds_and_persists_order_preview_record() {
         "key": "sku-1",
         "productId": "p1",
         "productName": "Pillow",
-        "productImage": "",
+        "productImage": "https://sobag-shop.online/products/pillow.webp",
         "qty": 1,
-        "variant": { "sku": "sku-1", "price": 32000 },
+        "variant": { "sku": "sku-1", "name": "Pillow / 40x40 / Velour", "price": 32000 },
         "subtotal": 32000
     })];
     let order =
@@ -502,6 +502,14 @@ fn builds_and_persists_order_preview_record() {
     assert_eq!(order["userEmail"], "buyer@example.test");
     assert_eq!(order["customer"]["phone"], "+7 968 959-32-54");
     assert_eq!(order["items"][0]["qty"], 1);
+    assert_eq!(
+        order["items"][0]["productImage"],
+        "https://sobag-shop.online/products/pillow.webp"
+    );
+    assert_eq!(
+        order["items"][0]["variant"]["name"],
+        "Pillow / 40x40 / Velour"
+    );
     let mut store = default_store_value();
     push_order_record(&mut store, order);
     assert_eq!(store["orders"].as_array().unwrap().len(), 1);

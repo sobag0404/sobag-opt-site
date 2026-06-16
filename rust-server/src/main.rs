@@ -3004,9 +3004,16 @@ async fn trusted_order_lines(pool: &PgPool, data: &Value) -> AppResult<Vec<Value
         .map(|(sku, _)| sku.clone())
         .collect::<Vec<_>>();
     let rows = sqlx::query(
-        "SELECT v.sku, v.type, v.size, v.material, v.price, p.id AS product_id, p.base_sku, p.name AS product_name, COALESCE(p.status, 'published') AS status
+        "SELECT v.sku, v.name AS variant_name, v.type, v.size, v.material, v.price, p.id AS product_id, p.base_sku, p.name AS product_name, COALESCE(p.status, 'published') AS status, COALESCE(img.url, '') AS product_image
          FROM variants v
          JOIN public_catalog_products p ON p.id = v.product_id
+         LEFT JOIN LATERAL (
+           SELECT url
+           FROM images
+           WHERE product_id = p.id
+           ORDER BY is_primary DESC, id ASC
+           LIMIT 1
+         ) img ON TRUE
          WHERE v.sku = ANY($1)",
     )
     .bind(&skus)
@@ -3030,12 +3037,13 @@ async fn trusted_order_lines(pool: &PgPool, data: &Value) -> AppResult<Vec<Value
                 "baseSku": row.try_get::<String, _>("base_sku").unwrap_or_default(),
                 "variant": {
                     "sku": sku,
-                    "name": row.try_get::<String, _>("sku").unwrap_or_default(),
+                    "name": row.try_get::<String, _>("variant_name").unwrap_or_default(),
                     "type": row.try_get::<String, _>("type").unwrap_or_default(),
                     "size": row.try_get::<String, _>("size").unwrap_or_default(),
                     "material": row.try_get::<String, _>("material").unwrap_or_default(),
                     "price": row_i64(&row, "price")
-                }
+                },
+                "productImage": row.try_get::<String, _>("product_image").unwrap_or_default()
             }),
         );
     }
@@ -3062,7 +3070,7 @@ async fn trusted_order_lines(pool: &PgPool, data: &Value) -> AppResult<Vec<Value
             "key": sku,
             "productId": trusted_line.get("productId").cloned().unwrap_or_default(),
             "productName": trusted_line.get("productName").cloned().unwrap_or_default(),
-            "productImage": "",
+            "productImage": trusted_line.get("productImage").cloned().unwrap_or_default(),
             "baseSku": trusted_line.get("baseSku").cloned().unwrap_or_default(),
             "qty": qty,
             "variant": trusted_line.get("variant").cloned().unwrap_or_default(),
@@ -4774,7 +4782,7 @@ async fn load_variants(pool: &PgPool, product_id: &str) -> AppResult<Vec<Variant
             variant_type: row.try_get("type").unwrap_or_default(),
             size: row.try_get("size").unwrap_or_default(),
             material: row.try_get("material").unwrap_or_default(),
-            name: String::new(),
+            name: row.try_get("name").unwrap_or_default(),
             price: row_i64(&row, "price"),
             price_source: String::new(),
         })
