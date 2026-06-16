@@ -3004,7 +3004,9 @@ async fn trusted_order_lines(pool: &PgPool, data: &Value) -> AppResult<Vec<Value
         .map(|(sku, _)| sku.clone())
         .collect::<Vec<_>>();
     let rows = sqlx::query(
-        "SELECT v.sku, v.name AS variant_name, v.type, v.size, v.material, v.price::double precision AS price, p.id AS product_id, p.base_sku, p.name AS product_name, COALESCE(p.status, 'published') AS status, COALESCE(img.url, '') AS product_image
+        "SELECT v.sku,
+                concat_ws(' / ', NULLIF(p.name, ''), NULLIF(v.type, ''), NULLIF(v.size, ''), NULLIF(v.material, '')) AS variant_name,
+                v.type, v.size, v.material, v.price::double precision AS price, p.id AS product_id, p.base_sku, p.name AS product_name, COALESCE(p.status, 'published') AS status, COALESCE(img.url, '') AS product_image
          FROM variants v
          JOIN public_catalog_products p ON p.id = v.product_id
          LEFT JOIN LATERAL (
@@ -4784,7 +4786,10 @@ async fn load_product_detail(
 
 async fn load_variants(pool: &PgPool, product_id: &str) -> AppResult<Vec<Variant>> {
     let rows = sqlx::query(
-        "SELECT *, price::double precision AS price_float FROM variants WHERE product_id = $1 ORDER BY sku ASC",
+        "SELECT *,
+                concat_ws(' / ', NULLIF((SELECT name FROM public_catalog_products WHERE id = variants.product_id), ''), NULLIF(type, ''), NULLIF(size, ''), NULLIF(material, '')) AS variant_name,
+                price::double precision AS price_float
+         FROM variants WHERE product_id = $1 ORDER BY sku ASC",
     )
     .bind(product_id)
     .fetch_all(pool)
@@ -4800,7 +4805,7 @@ async fn load_variants(pool: &PgPool, product_id: &str) -> AppResult<Vec<Variant
             variant_type: row.try_get("type").unwrap_or_default(),
             size: row.try_get("size").unwrap_or_default(),
             material: row.try_get("material").unwrap_or_default(),
-            name: row.try_get("name").unwrap_or_default(),
+            name: row.try_get("variant_name").unwrap_or_default(),
             price: row_i64(&row, "price_float"),
             price_source: String::new(),
         })
