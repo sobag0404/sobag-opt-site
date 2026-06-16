@@ -484,7 +484,7 @@ async function runSmoke(args) {
       method: "POST",
       body: { login: "buyer@example.test", password: "wrong" },
     });
-    if (invalidLogin.status !== 401 || invalidLogin.payload.error !== "unauthorized") {
+    if (invalidLogin.status !== 401 || invalidLogin.payload.error !== "invalid_credentials") {
       throw new Error(`invalid login mismatch: ${invalidLogin.status} ${JSON.stringify(invalidLogin.payload)}`);
     }
 
