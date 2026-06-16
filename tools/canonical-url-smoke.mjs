@@ -7,11 +7,13 @@ const DEFAULT_BASE_URL = "https://sobag-shop.online";
 const ASSET_PATTERN = /<(?:link|script)\b[^>]+(?:href|src)=["']([^"']+)["']/gi;
 
 function parseArgs(argv = process.argv.slice(2)) {
-  const args = { baseUrl: process.env.SOBAG_PRODUCTION_BASE_URL || DEFAULT_BASE_URL, selfTest: false, json: false };
+  const args = { baseUrl: process.env.SOBAG_PRODUCTION_BASE_URL || DEFAULT_BASE_URL, selfTest: false, json: false, timeoutMs: 15000 };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === "--base-url") args.baseUrl = argv[++index] || args.baseUrl;
     else if (token.startsWith("--base-url=")) args.baseUrl = token.slice("--base-url=".length);
+    else if (token === "--timeout") args.timeoutMs = Number(argv[++index] || args.timeoutMs) || args.timeoutMs;
+    else if (token.startsWith("--timeout=")) args.timeoutMs = Number(token.slice("--timeout=".length)) || args.timeoutMs;
     else if (token === "--self-test") args.selfTest = true;
     else if (token === "--json") args.json = true;
     else throw new Error(`Unknown argument: ${token}`);
@@ -51,22 +53,28 @@ function extractRootAssets(baseUrl, html) {
   return [...new Set(assets)].slice(0, 12);
 }
 
-async function runCanonicalSmoke(baseUrl) {
+function withTimeout(timeoutMs) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 1000) return {};
+  return { signal: AbortSignal.timeout(timeoutMs) };
+}
+
+async function runCanonicalSmoke(baseUrl, options = {}) {
+  const timeout = withTimeout(options.timeoutMs);
   const normalized = normalizeBaseUrl(baseUrl);
   const rootUrl = `${normalized}/`;
   const indexUrl = `${normalized}/index.html`;
   const indexWithQueryUrl = `${normalized}/index.html?utm_source=smoke`;
-  const root = await fetchText(rootUrl, { redirect: "follow" });
+  const root = await fetchText(rootUrl, { redirect: "follow", ...timeout });
   assert(root.response.ok, `/ must return 2xx, got ${root.response.status}`);
   assert(root.response.headers.get("content-type")?.includes("text/html"), "/ must return HTML");
   assert(/<link\s+rel=["']canonical["']\s+href=["']https:\/\/sobag-shop\.online\/["']/i.test(root.body), "/ must keep canonical href https://sobag-shop.online/");
   assert(!/href=["'](?:\/)?index\.html["']/i.test(root.body), "root HTML must not link to index.html");
 
-  const index = await fetchText(indexUrl);
+  const index = await fetchText(indexUrl, timeout);
   assert(index.response.status === 301, `/index.html must redirect with 301, got ${index.response.status}`);
   assert(new URL(index.response.headers.get("location") || "", rootUrl).toString() === rootUrl, "/index.html must redirect to /");
 
-  const indexWithQuery = await fetchText(indexWithQueryUrl);
+  const indexWithQuery = await fetchText(indexWithQueryUrl, timeout);
   assert(indexWithQuery.response.status === 301, `/index.html?query must redirect with 301, got ${indexWithQuery.response.status}`);
   assert(
     new URL(indexWithQuery.response.headers.get("location") || "", rootUrl).toString() === `${rootUrl}?utm_source=smoke`,
@@ -75,13 +83,13 @@ async function runCanonicalSmoke(baseUrl) {
 
   const pages = ["/catalog", "/cart"];
   for (const path of pages) {
-    const check = await fetch(`${normalized}${path}`, { redirect: "follow", headers: { "user-agent": "sobag-canonical-url-smoke/1.0" } });
+    const check = await fetch(`${normalized}${path}`, { redirect: "follow", headers: { "user-agent": "sobag-canonical-url-smoke/1.0" }, ...timeout });
     assert(check.ok, `${path} must return 2xx, got ${check.status}`);
   }
 
   const assets = extractRootAssets(normalized, root.body);
   for (const asset of assets) {
-    const check = await fetch(asset, { method: "HEAD", redirect: "follow", headers: { "user-agent": "sobag-canonical-url-smoke/1.0" } });
+    const check = await fetch(asset, { method: "HEAD", redirect: "follow", headers: { "user-agent": "sobag-canonical-url-smoke/1.0" }, ...timeout });
     assert(check.ok, `root asset must load: ${asset} (${check.status})`);
   }
 
@@ -121,7 +129,9 @@ async function withFixtureServer(callback) {
 
 async function main() {
   const args = parseArgs();
-  const report = args.selfTest ? await withFixtureServer(runCanonicalSmoke) : await runCanonicalSmoke(args.baseUrl);
+  const report = args.selfTest
+    ? await withFixtureServer((baseUrl) => runCanonicalSmoke(baseUrl, { timeoutMs: args.timeoutMs }))
+    : await runCanonicalSmoke(args.baseUrl, { timeoutMs: args.timeoutMs });
   if (args.json) console.log(JSON.stringify(report, null, 2));
   else console.log(`Canonical URL smoke passed: ${report.baseUrl} (${report.redirected}, pages=${report.checkedPages}, assets=${report.checkedAssets})`);
 }
