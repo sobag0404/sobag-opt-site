@@ -2887,18 +2887,14 @@ function renderAccountButton() {
   if (!button) return;
   const users = getUsers();
   const user = users[state.currentUser];
-  const isGuest = !user;
   button.classList.remove("account-login-button");
   button.title = user ? `${user.name || user.email}` : "Войти или зарегистрироваться";
   button.setAttribute("aria-label", button.title);
-  button.innerHTML = isGuest
-    ? '<i data-lucide="user"></i><span>Вход / регистрация</span>'
-    : user?.role === "admin"
+  button.innerHTML = user?.role === "admin"
     ? '<i data-lucide="shield"></i>'
     : user?.role === "manager"
     ? '<i data-lucide="briefcase-business"></i>'
     : '<i data-lucide="user"></i>';
-  if (isGuest) button.innerHTML = '<i data-lucide="user"></i>';
   if (window.lucide) window.lucide.createIcons();
 }
 function findVariant(product, selection = state.activeVariant) {

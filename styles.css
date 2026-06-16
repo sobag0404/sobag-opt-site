@@ -3581,8 +3581,7 @@ textarea:focus-visible {
   }
 
   .cart-button span,
-  .cart-button small,
-  .header__actions .icon-button:not(.account-login-button):first-child {
+  .cart-button small {
     display: none;
   }
 

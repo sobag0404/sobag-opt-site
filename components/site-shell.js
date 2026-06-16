@@ -30,9 +30,8 @@
           <input id="searchInput" type="search" placeholder="Поиск: пледы, подушки, тираж, принт" />
         </label>
         <div class="header__actions">
-          <button class="icon-button account-login-button" id="accountButton" type="button" title="Войти или зарегистрироваться">
+          <button class="icon-button" id="accountButton" type="button" title="Войти или зарегистрироваться" aria-label="Войти или зарегистрироваться">
             <i data-lucide="user"></i>
-            <span>Вход / регистрация</span>
           </button>
           <button class="icon-button" type="button" title="Избранное" data-nav="favorites.html">
             <i data-lucide="heart"></i>
