@@ -349,7 +349,9 @@ async function runSmoke(args) {
     assertSame("account after order create", accountAfterOrderSlice(rustAccountAfterOrder), accountAfterOrderSlice(nodeAccountAfterOrder));
     if (created.status !== 201) throw new Error(`order create status ${created.status}: ${JSON.stringify(created.payload)}`);
     if (created.payload.order?.userEmail !== "buyer@example.test") throw new Error("created order user mismatch");
-    if (created.payload.order?.items?.[0]?.qty !== 1) throw new Error("created order qty was not sanitized");
+    if (created.payload.order?.items?.[0]?.qty !== orderFixture.qty) {
+      throw new Error(`created order qty mismatch: ${created.payload.order?.items?.[0]?.qty} !== ${orderFixture.qty}`);
+    }
 
     const patched = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
       token: "buyer",
