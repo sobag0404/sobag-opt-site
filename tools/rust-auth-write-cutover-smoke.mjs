@@ -199,6 +199,9 @@ async function runSmoke(args) {
     if (register.status !== 201 || register.payload.user?.email !== "writer@example.test" || !registerCookie) {
       throw new Error(`register through Rust failed: ${register.status} ${JSON.stringify(register.payload)}`);
     }
+    if (!/HttpOnly/i.test(register.cookie) || !/SameSite=Lax/i.test(register.cookie)) {
+      throw new Error("register cookie is missing HttpOnly/SameSite=Lax attributes");
+    }
     assertNoPrivateFields("register", register.payload);
     console.log("OK POST /api/auth/register through Rust");
 
@@ -246,7 +249,7 @@ async function runSmoke(args) {
     });
     if (duplicate.status !== 409 || duplicate.payload.error !== "email_exists") throw new Error(`duplicate register guard mismatch: ${duplicate.status}`);
     const invalidLogin = await requestJson(base, "/api/auth/login", { method: "POST", body: { login: "writer@example.test", password: "badpass" } });
-    if (invalidLogin.status !== 401 || invalidLogin.payload.error !== "unauthorized") throw new Error(`invalid login guard mismatch: ${invalidLogin.status}`);
+    if (invalidLogin.status !== 401 || invalidLogin.payload.error !== "invalid_credentials") throw new Error(`invalid login guard mismatch: ${invalidLogin.status}`);
     const missingConsent = await requestJson(base, "/api/auth/register", {
       method: "POST",
       body: { name: "No Consent", email: "noconsent@example.test", phone: "+7 900 111-22-34", password: "TempPass123" },

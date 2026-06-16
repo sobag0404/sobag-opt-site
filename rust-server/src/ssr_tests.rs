@@ -134,6 +134,42 @@ fn auth_session_cookie_contract_matches_node() {
 }
 
 #[test]
+fn auth_cookie_mutation_requires_same_origin_outside_local_dev() {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::HOST, "sobag-shop.online".parse().unwrap());
+    headers.insert(header::COOKIE, "sobag_session=abc".parse().unwrap());
+    assert!(matches!(
+        enforce_auth_same_origin_for_cookie_mutation(&headers),
+        Err(AppError {
+            status: StatusCode::FORBIDDEN,
+            code: "csrf_origin_forbidden",
+            ..
+        })
+    ));
+    headers.insert(header::ORIGIN, "https://sobag-shop.online".parse().unwrap());
+    assert!(enforce_auth_same_origin_for_cookie_mutation(&headers).is_ok());
+}
+
+#[test]
+fn auth_rate_limit_matches_node_style_bucket_guard() {
+    let mut headers = HeaderMap::new();
+    headers.insert("x-real-ip", "203.0.113.10".parse().unwrap());
+    let key = format!(
+        "auth:test:{}",
+        Utc::now().timestamp_nanos_opt().unwrap_or_default()
+    );
+    assert!(auth_rate_limit(&headers, &key, 1, 60).is_ok());
+    assert!(matches!(
+        auth_rate_limit(&headers, &key, 1, 60),
+        Err(AppError {
+            status: StatusCode::TOO_MANY_REQUESTS,
+            code: "rate_limited",
+            ..
+        })
+    ));
+}
+
+#[test]
 fn finds_login_user_by_email_or_phone_and_hashes_preview_password() {
     let (password_hash, password_salt) = hash_password_preview("secret123", "buyer@example.test");
     let store = json!({
@@ -287,12 +323,12 @@ fn verifies_node_pbkdf2_password_fixture() {
     assert!(verify_password_hash(
         "Qwerty1234567899",
         "00112233445566778899aabbccddeeff",
-        "642284d450b3032d40340ccc7fc96fdaca2ffd9564761ecf7615269b4bef46f8"
+        "1b827148ba2a5541c2b632bce36aba9b39449d7e8e366e82b18347854479f71a"
     ));
     assert!(!verify_password_hash(
         "wrong",
         "00112233445566778899aabbccddeeff",
-        "642284d450b3032d40340ccc7fc96fdaca2ffd9564761ecf7615269b4bef46f8"
+        "1b827148ba2a5541c2b632bce36aba9b39449d7e8e366e82b18347854479f71a"
     ));
     assert!(!verify_password_hash("secret", "not-hex", "also-not-hex"));
 }

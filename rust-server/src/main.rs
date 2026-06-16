@@ -1,4 +1,10 @@
-use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
+use std::{
+    collections::HashMap,
+    env,
+    net::SocketAddr,
+    sync::{Arc, Mutex, OnceLock},
+    time::{Duration, Instant},
+};
 
 use axum::{
     extract::{Path, Query, State},
@@ -35,6 +41,12 @@ const PBKDF2_ITERATIONS: u32 = 310_000;
 const PBKDF2_KEY_LEN: usize = 32;
 const STORE_KEY: &str = "sobag:store:v1";
 const CONTENT_KEY: &str = "sobag:content:v1";
+const AUTH_LOGIN_LIMIT: u32 = 8;
+const AUTH_LOGIN_WINDOW_SECONDS: u64 = 5 * 60;
+const AUTH_REGISTER_LIMIT: u32 = 6;
+const AUTH_REGISTER_WINDOW_SECONDS: u64 = 10 * 60;
+const AUTH_ROUTE_LIMIT: u32 = 120;
+const AUTH_ROUTE_WINDOW_SECONDS: u64 = 60;
 const DEFAULT_PAGE_SIZE: i64 = 48;
 const MAX_PAGE_SIZE: i64 = 120;
 const MAX_CART_LINES: usize = 500;
@@ -64,6 +76,14 @@ const FACET_BUCKET_KEYS: &[&str] = &[
     "materials",
     "stock",
 ];
+
+#[derive(Clone, Copy)]
+struct RateBucket {
+    count: u32,
+    reset_at: Instant,
+}
+
+static AUTH_RATE_LIMITS: OnceLock<Mutex<HashMap<String, RateBucket>>> = OnceLock::new();
 
 #[derive(Clone)]
 struct AppState {
@@ -209,6 +229,14 @@ impl AppError {
         }
     }
 
+    fn unauthorized_code(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::UNAUTHORIZED,
+            code,
+            message: message.into(),
+        }
+    }
+
     fn forbidden(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::FORBIDDEN,
@@ -229,6 +257,14 @@ impl AppError {
         Self {
             status: StatusCode::CONFLICT,
             code,
+            message: message.into(),
+        }
+    }
+
+    fn rate_limited(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::TOO_MANY_REQUESTS,
+            code: "rate_limited",
             message: message.into(),
         }
     }
@@ -737,21 +773,165 @@ async fn auth_me_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<Value
     Ok((no_store_headers(), Json(payload)))
 }
 
+fn auth_request_ip(headers: &HeaderMap) -> String {
+    headers
+        .get("x-forwarded-for")
+        .or_else(|| headers.get("x-real-ip"))
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("unknown")
+        .split(',')
+        .next()
+        .unwrap_or("unknown")
+        .trim()
+        .chars()
+        .take(80)
+        .collect()
+}
+
+fn auth_rate_limit(
+    headers: &HeaderMap,
+    key: &str,
+    limit: u32,
+    window_seconds: u64,
+) -> AppResult<()> {
+    let now = Instant::now();
+    let bucket_key = format!("{key}:{}", auth_request_ip(headers));
+    let mut buckets = AUTH_RATE_LIMITS
+        .get_or_init(|| Mutex::new(HashMap::new()))
+        .lock()
+        .map_err(|_| AppError::internal("auth rate limiter lock failed"))?;
+    let bucket = buckets.entry(bucket_key).or_insert(RateBucket {
+        count: 0,
+        reset_at: now + Duration::from_secs(window_seconds),
+    });
+    if bucket.reset_at <= now {
+        *bucket = RateBucket {
+            count: 0,
+            reset_at: now + Duration::from_secs(window_seconds),
+        };
+    }
+    bucket.count = bucket.count.saturating_add(1);
+    if bucket.count > limit {
+        return Err(AppError::rate_limited(
+            "Too many requests. Try again later.",
+        ));
+    }
+    Ok(())
+}
+
+fn auth_host_origin(headers: &HeaderMap) -> Option<(String, String, bool)> {
+    let host = headers
+        .get(header::HOST)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("localhost")
+        .trim()
+        .to_ascii_lowercase();
+    let hostname = host.split(':').next().unwrap_or("").to_ascii_lowercase();
+    let local = matches!(hostname.as_str(), "localhost" | "127.0.0.1" | "::1");
+    let proto = headers
+        .get("x-forwarded-proto")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or(if local { "http" } else { "https" })
+        .split(',')
+        .next()
+        .unwrap_or(if local { "http" } else { "https" })
+        .trim()
+        .to_ascii_lowercase();
+    if host.is_empty() || proto.is_empty() {
+        return None;
+    }
+    Some((proto, host, local))
+}
+
+fn auth_source_origin(headers: &HeaderMap) -> Option<(String, String)> {
+    let value = headers
+        .get(header::ORIGIN)
+        .or_else(|| headers.get(header::REFERER))
+        .and_then(|value| value.to_str().ok())?
+        .trim();
+    if value.is_empty() {
+        return None;
+    }
+    let parsed = url::Url::parse(value).ok()?;
+    let host = parsed.host_str()?.to_ascii_lowercase();
+    let port = parsed
+        .port()
+        .map(|port| format!(":{port}"))
+        .unwrap_or_default();
+    Some((
+        parsed.scheme().to_ascii_lowercase(),
+        format!("{host}{port}"),
+    ))
+}
+
+fn has_session_cookie_header(headers: &HeaderMap) -> bool {
+    headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("")
+        .split(';')
+        .filter_map(|part| part.trim().split_once('='))
+        .any(|(key, _)| key.trim() == SESSION_COOKIE)
+}
+
+fn enforce_auth_same_origin_for_cookie_mutation(headers: &HeaderMap) -> AppResult<()> {
+    if !has_session_cookie_header(headers) {
+        return Ok(());
+    }
+    let Some((expected_proto, expected_host, local)) = auth_host_origin(headers) else {
+        return Err(AppError::forbidden_code(
+            "csrf_origin_forbidden",
+            "Cross-origin request is not allowed.",
+        ));
+    };
+    let Some((source_proto, source_host)) = auth_source_origin(headers) else {
+        if local {
+            return Ok(());
+        }
+        return Err(AppError::forbidden_code(
+            "csrf_origin_forbidden",
+            "Cross-origin request is not allowed.",
+        ));
+    };
+    if source_proto == expected_proto && source_host == expected_host {
+        Ok(())
+    } else {
+        Err(AppError::forbidden_code(
+            "csrf_origin_forbidden",
+            "Cross-origin request is not allowed.",
+        ))
+    }
+}
+
 async fn auth_login_preview(
+    headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
     let store = load_file_store_value(STORE_KEY)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?
         .unwrap_or_else(default_store_value);
     let login =
         clean_text(data.get("login").or_else(|| data.get("email")), 180).unwrap_or_default();
+    auth_rate_limit(
+        &headers,
+        &format!("auth:login:{}", normalize_email(&login)),
+        AUTH_LOGIN_LIMIT,
+        AUTH_LOGIN_WINDOW_SECONDS,
+    )?;
     let password = data.get("password").and_then(Value::as_str).unwrap_or("");
     let Some((email, user)) = find_login_user(&store, &login) else {
-        return Err(AppError::unauthorized("Проверьте логин и пароль."));
+        return Err(AppError::unauthorized_code(
+            "invalid_credentials",
+            "Проверьте логин и пароль.",
+        ));
     };
     if !verify_user_password(password, &user) {
-        return Err(AppError::unauthorized("Проверьте логин и пароль."));
+        return Err(AppError::unauthorized_code(
+            "invalid_credentials",
+            "Проверьте логин и пароль.",
+        ));
     }
     let token = preview_session_token(&email)?;
     save_file_store_value_with_ttl(
@@ -776,13 +956,21 @@ async fn auth_login_preview(
 }
 
 async fn auth_register_preview(
+    headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
     let mut store = load_file_store_value(STORE_KEY)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?
         .unwrap_or_else(default_store_value);
     let email = normalize_email(&clean_text(data.get("email"), 180).unwrap_or_default());
+    auth_rate_limit(
+        &headers,
+        &format!("auth:register:{email}"),
+        AUTH_REGISTER_LIMIT,
+        AUTH_REGISTER_WINDOW_SECONDS,
+    )?;
     let password = data.get("password").and_then(Value::as_str).unwrap_or("");
     let name = clean_text(data.get("name"), 120).unwrap_or_default();
     let phone = normalize_phone(&clean_text(data.get("phone"), 180).unwrap_or_default());
@@ -888,6 +1076,13 @@ async fn auth_register_preview(
 }
 
 async fn auth_logout_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
+    auth_rate_limit(
+        &headers,
+        "auth:logout",
+        AUTH_ROUTE_LIMIT,
+        AUTH_ROUTE_WINDOW_SECONDS,
+    )?;
     let cookie_header = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -2454,18 +2649,21 @@ fn verify_user_password(password: &str, user: &Value) -> bool {
 }
 
 fn hash_password_preview(password: &str, email: &str) -> (String, String) {
-    let seed = format!(
-        "{}:{}:{}",
-        email,
-        Utc::now().timestamp_millis(),
-        password.len()
-    );
-    let digest = Sha256::digest(seed.as_bytes());
-    let salt = hex::encode(&digest[..16]);
+    let mut salt_bytes = [0_u8; 16];
+    if getrandom::getrandom(&mut salt_bytes).is_err() {
+        let fallback = format!(
+            "{}:{}:{}",
+            email,
+            Utc::now().timestamp_nanos_opt().unwrap_or_default(),
+            password.len()
+        );
+        salt_bytes.copy_from_slice(&Sha256::digest(fallback.as_bytes())[..16]);
+    }
+    let salt = hex::encode(salt_bytes);
     let mut derived = [0_u8; PBKDF2_KEY_LEN];
     pbkdf2_hmac::<Sha256>(
         password.as_bytes(),
-        &digest[..16],
+        salt.as_bytes(),
         PBKDF2_ITERATIONS,
         &mut derived,
     );
@@ -3805,16 +4003,16 @@ fn sanitize_saved_cart_value(cart: &Value, include_internal: bool) -> Value {
 }
 
 fn verify_password_hash(password: &str, salt_hex: &str, hash_hex: &str) -> bool {
-    let salt = match hex::decode(salt_hex) {
-        Ok(value) => value,
-        Err(_) => return false,
-    };
+    if salt_hex.len() != 32 || !salt_hex.chars().all(|value| value.is_ascii_hexdigit()) {
+        return false;
+    }
+    let salt = salt_hex.as_bytes();
     let expected = match hex::decode(hash_hex) {
         Ok(value) if value.len() == PBKDF2_KEY_LEN => value,
         _ => return false,
     };
     let mut derived = [0_u8; PBKDF2_KEY_LEN];
-    pbkdf2_hmac::<Sha256>(password.as_bytes(), &salt, PBKDF2_ITERATIONS, &mut derived);
+    pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, PBKDF2_ITERATIONS, &mut derived);
     constant_time_eq(&derived, &expected)
 }
 
