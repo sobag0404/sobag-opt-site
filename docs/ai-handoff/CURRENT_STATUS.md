@@ -1,6 +1,12 @@
 # Current Status Snapshot
 
-Date: 2026-06-15
+Date: 2026-06-16
+
+Transition readiness:
+- Status: `READY_WITH_WARNINGS` after external GitHub/VPS gates passed.
+- Verified external gates: `autofix-check` PASS, `rust-check` PASS, `vps-deploy` PASS, `production-smoke` PASS, `https://sobag-shop.online/` returns 200, and `/index.html` redirects to `/` with 301.
+- Local shell network in this Codex thread cannot reach GitHub/live domain, so the live gate status above comes from the verified assessment-thread input.
+- Real field CWV is still unavailable and remains post-launch monitoring; synthetic 10k catalog/performance evidence is tracked in `docs/synthetic-cwv-readiness-evidence.md`.
 
 Current deployed VPS release:
 - `20260615Tmanual-427f171` is active on `sobag-shop.online`; `/opt/sobag-opt/current` points to `/opt/sobag-opt/releases/20260615Tmanual-427f171`.
@@ -9,7 +15,7 @@ Current deployed VPS release:
 Repository:
 - `https://github.com/sobag0404/sobag-opt-site`
 - branch: `main`
-- repo visibility: private
+- repo visibility: public
 - Deployment state: primary domain is on the VPS with HTTPS; Vercel deployment is disabled and no longer part of the working target.
 
 Production URLs:
@@ -26,11 +32,12 @@ Production URLs:
 - Health: `https://sobag-shop.online/api/health`
 
 Current focus:
+- Rust/VPS transition can be handed off with warnings after successful GitHub/VPS gates. Do not start external review backlog TASK-001..TASK-015 until the user asks for the post-transition review pass.
 - Current canonical URL cleanup: commit `3fa61ef` is pushed. `server.mjs` and local `tools/static-server.mjs` redirect `/index.html` to `/` with 301, shared header/home links point to `/`, `tools/canonical-url-smoke.mjs` covers root canonical, `/index.html` redirect, key pages, and root CSS/JS assets, and production-smoke workflow runs the canonical smoke after VPS deploy.
 - External developer/security review `C:\Users\SoBag\Downloads\AI_DEVELOPER_REVIEW.md` is reference-only for the current transition pass. Do not start TASK-001..TASK-015 until the Rust/VPS transition gates are complete. Post-transition P0/P1 backlog captured from the review: server-side order repricing/trust boundary, public endpoint rate limiting, CSRF/origin enforcement, JSON body-size limits, persistence concurrency/locking, CI gate reliability, and real CWV/goal evidence.
-- Latest manual VPS deploy refreshed Node/Rust runtime from commit `427f171`: Node health, Rust health, production smoke, production storage smoke, production performance smoke, Rust cargo fmt/check/test/build, and Rust route/cutover smokes passed on the VPS. GitHub Actions `autofix-check` and `rust-check` currently fail before runner startup because account billing/payment or spending limit blocks hosted runners; the deploy workflow YAML heredoc indentation was fixed locally after a failed empty release attempt, and the VPS was restored to `20260615Tmanual-427f171`.
-- Current readiness pass has real no-secret packets ready for VPS/Rust cutover, final public content, object storage, and catalog DB test rehearsal. Strict goal-inputs still blocks only on the CWV field audit packet after post-migration measurement.
-- Current VPS storage status: retired `vercel-blob` provider alias was removed from the live VPS env and replaced with S3-compatible MinIO on the VPS. Public no-secret coordinates are endpoint `https://sobag-shop.online`, bucket `sobag-products`, public base `https://sobag-shop.online/sobag-products`, region `us-east-1`, path-style mode. Secrets remain only on the VPS. Product photos were migrated to object storage, `data/products-live.json` carries square responsive WebP/AVIF metadata, and production PostgreSQL catalog image rows were updated with rollback backup `/tmp/sobag-catalog-db-photo-backup.json`. Remaining readiness blocker is CWV field audit.
+- GitHub/VPS transition gates are now green by verified assessment input: `autofix-check`, `rust-check`, `vps-deploy`, and `production-smoke` passed after the release-cleanup permission fix.
+- Current readiness pass has real no-secret packets ready for VPS/Rust cutover, final public content, object storage, and catalog DB test rehearsal. The CWV field audit packet is post-launch monitoring, not a transition blocker.
+- Current VPS storage status: retired `vercel-blob` provider alias was removed from the live VPS env and replaced with S3-compatible MinIO on the VPS. Public no-secret coordinates are endpoint `https://sobag-shop.online`, bucket `sobag-products`, public base `https://sobag-shop.online/sobag-products`, region `us-east-1`, path-style mode. Secrets remain only on the VPS. Product photos were migrated to object storage, `data/products-live.json` carries square responsive WebP/AVIF metadata, and production PostgreSQL catalog image rows were updated with rollback backup `/tmp/sobag-catalog-db-photo-backup.json`. Real field CWV remains a warning/post-launch monitoring item.
 - Current readiness pass expanded `docs/vps-rust-cutover-input-packet.md`, `tools/goal-inputs-packet-template.mjs`, and `tools/vps-rust-cutover-packet-audit.mjs`; ignored local packet files live under `local-import-output/` and must stay out of Git/chat when they contain operator-specific data.
 - Current readiness work added a no-secret VPS/Rust cutover packet template/audit, split Rust test modules out of `rust-server/src/main.rs`, moved browser utilities/data/content/product/account/admin helpers to `components/app-utils.js`, `components/app-data.js`, `components/app-content-utils.js`, `components/app-product-utils.js`, `components/app-account.js`, and `components/app-admin.js`, and split cart defaults/helpers to `components/cart-data.js` / `components/cart-utils.js`; browser `app.js` is below the 5000-line architecture threshold, with remaining frontend modularity debt limited to smaller state/render/route slices.
 - keeping `ACTIVE_CONTEXT.md` as the first short context file;

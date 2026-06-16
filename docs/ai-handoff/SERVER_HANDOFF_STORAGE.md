@@ -1,20 +1,19 @@
 # Server And Storage Handoff
 
-Last updated: 2026-06-04
+Last updated: 2026-06-16
 
 ## Hosting
 
-The site is deployed on Vercel from GitHub repo:
+The site is deployed to the VPS from GitHub repo:
 - `sobag0404/sobag-opt-site`
 - branch: `main`
 
 Primary production domain:
 - `https://sobag-shop.online/`
 
-Fallback Vercel domain:
-- `https://sobag-opt-site.vercel.app/`
+Vercel is historical only and is not an active deploy/runtime target.
 
-Clean URLs are enabled through `vercel.json`, for example:
+Clean URLs are served by the VPS server/Nginx stack, for example:
 - `/catalog` serves `catalog.html`
 - `/cart` serves `cart.html`
 - `/favorites` serves `favorites.html`
@@ -23,7 +22,7 @@ Clean URLs are enabled through `vercel.json`, for example:
 
 ## API Layer
 
-There is a Vercel API layer under `api/`.
+The current API authority is the VPS Node/Rust stack under `server-routes/` and `rust-server/`.
 
 Current purpose:
 - auth/login/session/logout;
@@ -47,12 +46,12 @@ Expected response:
 
 ## Storage
 
-Upstash Redis / Vercel KV-compatible storage is connected in Vercel.
+Current production storage is VPS/S3-compatible MinIO plus PostgreSQL/file-store paths as documented in the runtime map. Legacy Vercel/KV notes below are historical only.
 
-Configured in Vercel without exposing values in repo:
+Configured without exposing values in repo:
 - `KV_REST_API_URL`
 - `KV_REST_API_TOKEN`
-- related Upstash/Vercel KV variables
+- related legacy Upstash/Vercel KV variable names, if old data needs migration
 - `SOBAG_ADMIN_EMAIL`
 - `SOBAG_ADMIN_PASSWORD`
 
@@ -62,12 +61,6 @@ Do not put these values in:
 - docs;
 - ZIP handoff;
 - screenshots.
-
-If a new device needs Vercel operations, authenticate through official CLI/dashboard:
-
-```powershell
-vercel login
-```
 
 Do not ask the user to paste secrets into chat.
 
@@ -156,7 +149,7 @@ Before full production:
 - move admin uploads to durable object storage;
 - finalize privacy policy/personal data consent with legal review;
 - add audit trail for order status changes and imports;
-- review GitHub/Vercel access periodically.
+- review GitHub/VPS access periodically.
 
 Most recent GitHub access audit:
 - repo is private;
@@ -167,4 +160,4 @@ Most recent GitHub access audit:
 - no forks;
 - no tracked high-risk secret patterns found.
 
-Vercel GitHub access is expected and should remain installed.
+Vercel GitHub access is not required for the active VPS-only contour.

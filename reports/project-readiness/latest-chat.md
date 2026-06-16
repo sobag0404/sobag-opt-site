@@ -4,8 +4,8 @@ Next implementation packet:
 3. Keep Vercel/Next absent from active runtime/deploy; rerun VPS release, storage, error, and smoke audits after each cutover step.
 4. Re-verify Rust on Linux/VPS/CI with `cd rust-server && cargo fmt --check && cargo check --locked && cargo test --locked`; Windows MSVC `link.exe` remains local-only.
 5. Continue only small modularity slices when touching related code; large file ownership is remaining P2 debt.
-Статус проекта: NOT_READY. Оценка: 74/100.
-Блокеры: PROD-002: Real external input packets are incomplete; ARCH-001: Large source files need explicit ownership; CODE-003: No standard lint configuration is detected; PROMPT-003: Long prompts risk pulling obsolete context into new chats
-Решение: нельзя передавать, нужны исправления.
-Отчёт: reports/project-readiness/latest.md. GoAL: reports/project-readiness/latest-chat.md. Commit: 738f05e; PR unavailable.
+Статус проекта: READY_WITH_WARNINGS. Оценка: 87/100.
+Блокеры: ARCH-001: Large source files need explicit ownership; CODE-003: No standard lint configuration is detected; PROMPT-003: Long prompts risk pulling obsolete context into new chats; SEC-005: Destructive shell operations exist and require guardrails
+Решение: можно передавать с предупреждениями.
+Отчёт: reports/project-readiness/latest.md. GoAL: reports/project-readiness/latest-chat.md. Commit: 3a3dad4; PR unavailable.
 Промпт: открой новый GoAL-чат из этого файла и `latest.md`; текущая стартовая точка только latest readiness package и связанные repo artifacts. Сначала P0/P1, без лишних изменений, не печатать секреты.

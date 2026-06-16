@@ -9,19 +9,12 @@ Install:
 - Node.js / npm
 - Python
 - GitHub CLI (`gh`)
-- Vercel CLI only if you want manual deploy/inspection from the device
-
-Optional but useful:
-
-```powershell
-npm install -g vercel
-```
+- Rust toolchain for local Rust checks, or use the Ubuntu GitHub/VPS gates
 
 Use official login flows only:
 
 ```powershell
 gh auth login
-vercel login
 ```
 
 Do not paste tokens or passwords into chat.
@@ -34,7 +27,7 @@ git clone https://github.com/sobag0404/sobag-opt-site.git
 cd sobag-opt-site
 ```
 
-If the repo cannot be cloned, check that the GitHub account is logged in and has access to private repo `sobag0404/sobag-opt-site`.
+If the repo cannot be cloned, check that the GitHub account is logged in and can access `sobag0404/sobag-opt-site`.
 
 ## Install Local Dependencies
 
@@ -60,13 +53,7 @@ Open:
 - `http://127.0.0.1:4173/about.html`
 - `http://127.0.0.1:4173/contacts.html`
 
-Local static server does not emulate Vercel API routes. For API/server checks use Vercel production/preview or `dev:vercel` after official Vercel login:
-
-```powershell
-npm run dev:vercel
-```
-
-Important: do not leave multiple `dev:vercel` sessions running. `vercel dev` can spawn many `@vercel/node/dist/dev-server.mjs` child processes on Windows. Use it only when Vercel Functions/env behavior is needed; otherwise use `dev:static`.
+Local static server does not emulate the VPS API. For API/server checks use the local Node server, the configured VPS staging path, or the GitHub/VPS smoke workflows. Vercel is historical only and is not a deploy/runtime target.
 
 ## Basic Verification
 
@@ -116,11 +103,7 @@ git commit -m "Your message"
 git push origin main
 ```
 
-Vercel is connected to GitHub. Pushing to `main` should trigger deployment. Manual production deploy is also possible when Vercel CLI is authenticated:
-
-```powershell
-npx vercel deploy --prod -y
-```
+Pushing to `main` should trigger the VPS deploy and production smoke workflows. Do not deploy to Vercel.
 
 Production:
 - `https://sobag-shop.online/`
@@ -175,4 +158,4 @@ If work continues on the new device over the weekend, run the same handoff prepa
 - update `docs/ai-handoff/*`;
 - rebuild `project-ai-handoff-latest.zip`;
 - push to GitHub;
-- verify Vercel/production if site behavior changed.
+- verify VPS production if site behavior changed.

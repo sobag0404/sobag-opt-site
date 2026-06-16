@@ -242,6 +242,12 @@ def _decision_rationale(report: ProjectReport) -> str:
     severities = defaultdict(int)
     for item in report.findings:
         severities[item.severity] += 1
+    if severities["critical"] == 0 and severities["high"] == 0:
+        return (
+            f"Reason: critical={severities['critical']}, high={severities['high']}, "
+            f"medium={severities['medium']}, low={severities['low']}, info={severities['info']}. "
+            "Score is reduced only for warnings, unavailable local live checks, and post-launch monitoring items."
+        )
     return (
         f"Основание: critical={severities['critical']}, high={severities['high']}, "
         f"medium={severities['medium']}, low={severities['low']}, info={severities['info']}. "

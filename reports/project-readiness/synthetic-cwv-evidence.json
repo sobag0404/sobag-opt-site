@@ -1,0 +1,31 @@
+{
+  "status": "accepted_for_transition_readiness",
+  "generatedAt": "2026-06-16T07:40:58Z",
+  "evidenceType": "synthetic",
+  "fieldDataAvailable": false,
+  "externalGates": {
+    "autofix-check": "PASS",
+    "rust-check": "PASS",
+    "vps-deploy": "PASS",
+    "production-smoke": "PASS"
+  },
+  "liveChecks": {
+    "https://sobag-shop.online/": 200,
+    "https://sobag-shop.online/index.html": 301
+  },
+  "syntheticGates": {
+    "catalogQueryScaleSmoke": {
+      "status": "PASS",
+      "products": 10000,
+      "pageSize": 48
+    },
+    "audit:cwv": "PASS",
+    "smoke:prod:performance -- --self-test": "PASS",
+    "npm.cmd run check": "PASS"
+  },
+  "decision": "Synthetic 10k catalog and performance evidence is sufficient for Rust/VPS transition readiness after successful deploy and production smoke gates.",
+  "postLaunchMonitoring": [
+    "Collect real field CWV after production traffic is available.",
+    "Keep synthetic evidence separate from field data."
+  ]
+}
