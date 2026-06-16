@@ -1,4 +1,5 @@
 use super::*;
+use std::path::PathBuf;
 
 #[test]
 fn renders_catalog_fragment_as_htmx_safe_html() {
@@ -200,6 +201,66 @@ fn file_store_wrapper_unwraps_and_expires_like_node() {
     assert_eq!(
         file_store_unwrap_value(&json!({"raw": true}), 1),
         Some(json!({"raw": true}))
+    );
+}
+
+#[test]
+fn store_provider_defaults_to_redis_with_file_aliases() {
+    assert_eq!(normalized_store_provider(None), StoreProvider::Redis);
+    assert_eq!(normalized_store_provider(Some("")), StoreProvider::Redis);
+    assert_eq!(
+        normalized_store_provider(Some("redis")),
+        StoreProvider::Redis
+    );
+    assert_eq!(normalized_store_provider(Some("file")), StoreProvider::File);
+    assert_eq!(
+        normalized_store_provider(Some("filesystem")),
+        StoreProvider::File
+    );
+    assert_eq!(normalized_store_provider(Some("fs")), StoreProvider::File);
+}
+
+#[test]
+fn redis_store_commands_match_upstash_rest_contract() {
+    assert_eq!(
+        redis_get_command(STORE_KEY).expect("get command"),
+        json!(["GET", STORE_KEY])
+    );
+    assert_eq!(
+        redis_del_command("sobag:session:abc").expect("del command"),
+        json!(["DEL", "sobag:session:abc"])
+    );
+    assert_eq!(
+        redis_set_command(
+            "sobag:session:abc",
+            &json!({"email": "buyer@example.test"}),
+            Some(60)
+        )
+        .expect("set command"),
+        json!([
+            "SET",
+            "sobag:session:abc",
+            "{\"email\":\"buyer@example.test\"}",
+            "EX",
+            60
+        ])
+    );
+    assert_eq!(
+        redis_set_command(STORE_KEY, &json!({"orders": []}), None).expect("set command"),
+        json!(["SET", STORE_KEY, "{\"orders\":[]}"])
+    );
+}
+
+#[test]
+fn redis_result_parses_node_serialized_values() {
+    assert_eq!(redis_result_to_value(&Value::Null), None);
+    assert_eq!(
+        redis_result_to_value(&json!("{\"orders\":[],\"version\":1}")),
+        Some(json!({"orders": [], "version": 1}))
+    );
+    assert_eq!(
+        redis_result_to_value(&json!({"orders": [], "version": 1})),
+        Some(json!({"orders": [], "version": 1}))
     );
 }
 

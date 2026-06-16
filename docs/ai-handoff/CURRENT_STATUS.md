@@ -3,6 +3,7 @@
 Date: 2026-06-16
 
 Latest production status:
+- Current Rust write-store pass is in code review/gate stage: Rust store helpers now support the live Redis/Upstash REST provider as well as the existing file-store provider, and the orders/briefs write and cutover smokes have Redis-backed fixture mode. Production `/api/orders` and `/api/briefs` must remain on Node fallback until GitHub/VPS deploy smokes pass and an explicit route re-cutover is applied.
 - Cache hardening code commit `cefeb12` is deployed on `sobag-shop.online`; later docs-only releases may advance the release marker without changing runtime code. GitHub `autofix-check`, `rust-check`, `vps-deploy`, and `production-smoke` passed for the cache hardening release.
 - Live checks passed: `/api/health` 200 `no-store`, `/api/catalog-query` prices are non-zero with real imported category facets, `/api/price-list?format=json` returns 31 rows with short public cache, `/` is `no-cache`, and versioned JS/CSS URLs are immutable.
 - Production `/api/orders` and `/api/briefs` are routed back to Node fallback because live Rust writes still require file-store semantics while the VPS app store provider is Redis-backed. Backup before rollback: `/etc/nginx/sites-available/sobag-opt.pre-node-orders-20260616T122736Z`.
@@ -38,7 +39,7 @@ Production URLs:
 - Health: `https://sobag-shop.online/api/health`
 
 Current focus:
-- Post-transition security/cache pass is deployed: server-side order repricing, JSON limits, route rate limits, same-origin cookie mutation guard, API security smoke, VPS static cache policy, and live cache/header smokes are green. Keep order/brief writes on Node fallback until Rust supports the live Redis-backed write store.
+- Post-transition security/cache pass is deployed: server-side order repricing, JSON limits, route rate limits, same-origin cookie mutation guard, API security smoke, VPS static cache policy, and live cache/header smokes are green. Rust Redis-backed order/brief write-store parity is now implemented in the codebase with Redis fixture smokes; keep production order/brief writes on Node fallback until release/VPS gates and route re-cutover are green.
 - Rust/VPS transition can be handed off with warnings after successful GitHub/VPS gates. Do not start external review backlog TASK-001..TASK-015 until the user asks for the post-transition review pass.
 - Current canonical URL cleanup: commit `3fa61ef` is pushed. `server.mjs` and local `tools/static-server.mjs` redirect `/index.html` to `/` with 301, shared header/home links point to `/`, `tools/canonical-url-smoke.mjs` covers root canonical, `/index.html` redirect, key pages, and root CSS/JS assets, and production-smoke workflow runs the canonical smoke after VPS deploy.
 - External developer/security review `C:\Users\SoBag\Downloads\AI_DEVELOPER_REVIEW.md` is reference-only for the current transition pass. Do not start TASK-001..TASK-015 until the Rust/VPS transition gates are complete. Post-transition P0/P1 backlog captured from the review: server-side order repricing/trust boundary, public endpoint rate limiting, CSRF/origin enforcement, JSON body-size limits, persistence concurrency/locking, CI gate reliability, and real CWV/goal evidence.

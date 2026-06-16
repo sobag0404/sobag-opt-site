@@ -1,12 +1,10 @@
 Next implementation packet:
-1. Keep production stable on commit `cefeb12`: cache/header smoke, price integrity, public price-list, and live catalog facets are green; `/api/orders` and `/api/briefs` are intentionally back on Node fallback after Rust live writes hit the Redis-vs-file-store gap.
-2. Do not re-cut `/api/orders` or `/api/briefs` to Rust until Rust supports the live Redis-backed store provider or an approved store bridge, then rerun real VPS order/brief smokes against production-like env.
-3. Continue review P1 only where business risk is low: persistence concurrency/locking, remaining RBAC decision-table expansion, workflow/supply-chain hardening, and live smoke evidence.
-4. Pricing backlog needs business rules first: promo/action precedence, date windows, whether promo affects order totals, and XLSX red styling. Do not invent promo order-pricing defaults.
-5. Cache/catalog note: `/api/catalog` is `no-store`; `/api/catalog-query` is short public cache and returns real imported facets (`Подушки 517`, `Наволочки 517`, `Мешки для обуви 170`, `Чехлы на чемодан 37`, `Ремувки 19`, `Флаги 65`). If first-load stale categories appear, diagnose client/localStorage/bootstrap cache before changing backend.
-6. Keep Vercel/Next absent from active runtime/deploy; do not print secrets. Real field CWV remains post-launch monitoring and must not be labeled synthetic evidence.
+1. Current branch implements Rust Redis-backed write-store parity for future `/api/orders` and `/api/briefs` re-cutover: `rust-server/src/store.rs` owns file/Redis helpers, Rust uses Redis/Upstash REST for live-compatible keys, and `rust-server/src/main.rs` is back below the huge-file readiness threshold.
+2. Production `/api/orders` and `/api/briefs` must remain on Node fallback until this code is deployed and exact-route Nginx re-cutover is intentionally applied. Do not make a blind cutover.
+3. Required gates before re-cutover: `cargo fmt --check`, `cargo check --locked`, `cargo test --locked`, `npm.cmd run check`, `npm.cmd run audit:vps-release`, `npm.cmd run audit:rust-account-cutover`, `npm.cmd run audit:rust-migration-plan`, `git diff --check`. Redis E2E smokes require a built Rust binary and DB env: run both order smokes in default mode and `--store-provider redis`; local runs without DB env stop at `SOBAG_CATALOG_DATABASE_URL is required`.
+4. After commit/push, verify GitHub `rust-check`, `autofix-check`, `vps-deploy` (now runs file+Redis order/brief smokes), and `production-smoke`.
+5. Only after deploy smokes pass: backup current Nginx config, re-cut exact `/api/orders` and `/api/briefs` to Rust, run live price/order/brief smokes, verify Node fallback admin/account visibility for Rust-created records, and keep rollback to Node ready.
+6. Cache/catalog invariant: `/api/catalog` is `no-store`; `/api/catalog-query` returns real imported facets and uses short public cache. First-load stale categories should be diagnosed in client bootstrap/localStorage unless backend headers regress.
+7. Pricing promo/XLSX styling still needs business rules. Do not invent promo precedence or change order totals until confirmed.
+8. Keep Vercel/Next absent; do not print secrets. Real field CWV remains post-launch monitoring and must not be labeled synthetic evidence.
 Статус проекта: READY_WITH_WARNINGS. Оценка: 87/100.
-Блокеры: ARCH-001: Large source files need explicit ownership; CODE-003: No standard lint configuration is detected; PROMPT-003: Long prompts risk pulling obsolete context into new chats; SEC-005: Destructive shell operations exist and require guardrails
-Решение: можно передавать с предупреждениями.
-Отчёт: reports/project-readiness/latest.md. GoAL: reports/project-readiness/latest-chat.md. Commit: 3b1e229; PR unavailable.
-Промпт: открой новый GoAL-чат из этого файла и `latest.md`; текущая стартовая точка только latest readiness package и связанные repo artifacts. Сначала P0/P1, без лишних изменений, не печатать секреты.

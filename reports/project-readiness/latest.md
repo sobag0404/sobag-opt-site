@@ -1,8 +1,8 @@
 # Project Readiness Report
 
-Generated: 2026-06-16T08:54:09+00:00
+Generated: 2026-06-16T15:41:35+00:00
 Project: sobag-opt-site
-Git: `main` / `3b1e229`
+Git: `main` / `d8fc363`
 
 ## 1. Executive Summary
 
@@ -12,13 +12,11 @@ Git: `main` / `3b1e229`
 - Итоговый статус: **READY_WITH_WARNINGS**
 - Главный вывод: **можно передавать с предупреждениями**
 
-Current post-transition implementation evidence:
-- Security backlog TASK-001..TASK-004 first pass is implemented for Node and Rust order paths: server-side order repricing, client total mismatch rejection, JSON body caps, rate limiting, and cookie-auth same-origin mutation guard.
-- RBAC/API regression coverage is extended through `tools/api-security-smoke.mjs` and `npm run check`.
-- VPS/static cache policy is hardened in `server.mjs`: HTML revalidates, API stays `no-store`, catalog API keeps short public cache, non-fingerprinted assets use cautious browser cache, and versioned/fingerprinted assets are immutable.
-- Cache/header evidence is covered by `tools/vps-server-smoke.mjs`, `tools/production-performance-smoke.mjs --self-test`, and live `npm run smoke:cache-headers -- --timeout 30000` against `https://sobag-shop.online`.
-- Live production status after commit `cefeb12`: `/api/health` 200 `no-store`, `/api/catalog-query` returns real imported category facets and non-zero prices, `/api/price-list?format=json` returns 31 rows with short public cache, `/` is `no-cache`, and versioned JS/CSS URLs are immutable.
-- Production `/api/orders` and `/api/briefs` are intentionally routed to Node fallback until Rust write routes support the live Redis-backed store provider; this protects order creation while preserving Rust for catalog/search/product SSR and already-cut admin/content routes.
+Current Rust/VPS evidence:
+- Rust write-store helpers now support both file-store and Redis/Upstash REST providers for shared Node-compatible keys (`sobag:store:v1`, `sobag:session:*`, content keys).
+- `/api/orders` and `/api/briefs` are still protected by Node fallback in production until an explicit exact-route re-cutover, but Redis-backed Rust parity is implemented and covered by file+Redis fixture smokes.
+- VPS deploy gates now run both `tools/rust-orders-write-smoke.mjs` and `tools/rust-orders-briefs-cutover-smoke.mjs` in default file-store mode and `--store-provider redis` mode before accepting a Rust release.
+- `rust-server/src/main.rs` was reduced below the readiness huge-file threshold by moving store-provider logic into `rust-server/src/store.rs`; remaining large-file ownership is P2 warning debt, not a transition blocker.
 
 ## 2. Readiness Score
 
@@ -45,7 +43,7 @@ Current post-transition implementation evidence:
 
 - Severity: `medium`
 - Priority: `P2`
-- File / area: `app.js (4664 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4817 lines)`
+- File / area: `app.js (4757 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4897 lines)`
 - Description: Several implementation files are above the configured size threshold.
 - Why it matters: The project is still maintainable, but future changes will be harder to isolate.
 - Recommendation: Document ownership boundaries and extract modules when touching these areas.
@@ -85,7 +83,7 @@ Current post-transition implementation evidence:
 
 - Severity: `medium`
 - Priority: `P2`
-- File / area: `.github/workflows/vps-deploy.yml, tools/vps-release-audit.mjs`
+- File / area: `.github/workflows/vps-deploy.yml, reports/project-readiness/latest.md, tools/vps-release-audit.mjs`
 - Description: The repository contains shell snippets with `rm -rf` or equivalent destructive cleanup commands.
 - Why it matters: These commands may be legitimate in deploy cleanup, but they are high-impact if path validation regresses.
 - Recommendation: Keep destructive commands confined to reviewed deploy scripts, validate resolved paths, and never add them to the readiness agent.
@@ -135,15 +133,6 @@ Current post-transition implementation evidence:
 - Description: The CWV field packet is still a template, but deploy, Rust/VPS, production smoke, and synthetic 10k catalog/performance evidence are recorded.
 - Why it matters: The Rust/VPS transition can be handed off with warnings, but real post-launch field data is still needed for ongoing product monitoring.
 - Recommendation: Collect real field CWV after production traffic is available; keep synthetic evidence separate from field data.
-
-#### PROD-005: Promo pricing business rule is not yet specified
-
-- Severity: `low`
-- Priority: `P2`
-- File / area: `price groups / public price export / order pricing`
-- Description: Public price-list export exists, but promo/action order-pricing precedence and XLSX styling rules still need an explicit business decision.
-- Why it matters: Without a rule, the backend must not silently apply promo prices to orders or invent display precedence.
-- Recommendation: Define promo validity dates, precedence against SKU overrides, and whether active promo prices affect order totals before implementing promo order pricing.
 
 #### PROD-004: Next-stage migration context is available
 
@@ -226,9 +215,9 @@ Reason: critical=0, high=0, medium=4, low=6, info=2. Score is reduced only for w
 - Активная продуктовая цель: завершить Rust/no-Node переход только после прохождения cutover smoke/audit gates и сохранения rollback-пути.
 
 Задачи по приоритету:
-1. P2 ARCH-001: Large source files need explicit ownership. Файл/область: app.js (4664 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4817 lines). Рекомендация: Document ownership boundaries and extract modules when touching these areas.
+1. P2 ARCH-001: Large source files need explicit ownership. Файл/область: app.js (4757 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4897 lines). Рекомендация: Document ownership boundaries and extract modules when touching these areas.
 2. P2 CODE-003: No standard lint configuration is detected. Файл/область: repository. Рекомендация: Add ESLint with a small ruleset that complements, not replaces, the existing custom invariant checks.
-3. P2 SEC-005: Destructive shell operations exist and require guardrails. Файл/область: .github/workflows/vps-deploy.yml, tools/vps-release-audit.mjs. Рекомендация: Keep destructive commands confined to reviewed deploy scripts, validate resolved paths, and never add them to the readiness agent.
+3. P2 SEC-005: Destructive shell operations exist and require guardrails. Файл/область: .github/workflows/vps-deploy.yml, reports/project-readiness/latest.md, tools/vps-release-audit.mjs. Рекомендация: Keep destructive commands confined to reviewed deploy scripts, validate resolved paths, and never add them to the readiness agent.
 4. P2 PROMPT-003: Long prompts risk pulling obsolete context into new chats. Файл/область: docs/ai-handoff/LIVE_CONTEXT.md. Рекомендация: For new runs, use `reports/project-readiness/latest-chat.md` as the entry prompt and link to the latest report/context files only.
 
 Next implementation packet for VPS-only/Rust transition:
@@ -277,26 +266,26 @@ P0/P1 рекомендации:
 - `docs/synthetic-cwv-readiness-evidence.md`
 - `reports/project-readiness/synthetic-cwv-evidence.json`
 - Git working tree status:
-  - ` M api-router.js`
-  - ` M app.js`
-  - ` M components/app-product-utils.js`
+  - ` M .github/workflows/vps-deploy.yml`
+  - ` M docs/ai-handoff/ACTIVE_CONTEXT.md`
+  - ` M docs/ai-handoff/CURRENT_STATUS.md`
+  - ` M docs/roadmap-checklist.md`
+  - ` M docs/rust-account-orders-admin-cutover-runbook.md`
+  - ` M docs/rust-auth-orders-admin-migration-plan.md`
+  - ` M docs/rust-deploy-runbook.md`
+  - ` M docs/rust-full-migration-plan.md`
+  - ` M docs/vps-rust-runtime-map.md`
   - ` M package.json`
   - ` M reports/project-readiness/latest-chat.md`
   - ` M reports/project-readiness/latest.md`
+  - ` M rust-server/Cargo.lock`
+  - ` M rust-server/Cargo.toml`
   - ` M rust-server/src/main.rs`
   - ` M rust-server/src/ssr_tests.rs`
-  - ` M server-routes/_lib/catalog-query.js`
-  - ` M server-routes/_lib/http.js`
-  - ` M server-routes/admin/catalog.js`
-  - ` M server-routes/admin/content.js`
-  - ` M server-routes/admin/import-batches.js`
-  - ` M server-routes/admin/product-images.js`
-  - ` M server-routes/auth/login.js`
-  - ` M server-routes/auth/me.js`
-  - ` M server-routes/auth/register.js`
-  - ` M server-routes/briefs.js`
-  - ` M server-routes/orders.js`
-  - ` M server.mjs`
+  - ` M tools/rust-orders-briefs-cutover-smoke.mjs`
+  - ` M tools/rust-orders-write-smoke.mjs`
+  - ` M tools/vps-release-audit.mjs`
+  - `?? output/`
 - Diff/PR URL: unavailable in local repository context.
 
 ## 9. Limitations

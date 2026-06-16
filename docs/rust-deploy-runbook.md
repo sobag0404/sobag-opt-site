@@ -43,6 +43,9 @@ node /opt/sobag-opt/current/tools/rust-catalog-shadow-smoke.mjs --node-base http
 node /opt/sobag-opt/current/tools/rust-auth-me-cutover-smoke.mjs --rust-bin /opt/sobag-opt/shared/sobag-opt-rust
 node /opt/sobag-opt/current/tools/rust-auth-write-cutover-smoke.mjs --rust-bin /opt/sobag-opt/shared/sobag-opt-rust
 node /opt/sobag-opt/current/tools/rust-orders-write-smoke.mjs --rust-bin /opt/sobag-opt/shared/sobag-opt-rust
+node /opt/sobag-opt/current/tools/rust-orders-write-smoke.mjs --rust-bin /opt/sobag-opt/shared/sobag-opt-rust --store-provider redis
+node /opt/sobag-opt/current/tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin /opt/sobag-opt/shared/sobag-opt-rust
+node /opt/sobag-opt/current/tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin /opt/sobag-opt/shared/sobag-opt-rust --store-provider redis
 node /opt/sobag-opt/current/tools/rust-admin-orders-cutover-smoke.mjs --rust-bin /opt/sobag-opt/shared/sobag-opt-rust
 node /opt/sobag-opt/current/tools/rust-admin-users-cutover-smoke.mjs --rust-bin /opt/sobag-opt/shared/sobag-opt-rust
 node /opt/sobag-opt/current/tools/rust-admin-content-cutover-smoke.mjs --rust-bin /opt/sobag-opt/shared/sobag-opt-rust

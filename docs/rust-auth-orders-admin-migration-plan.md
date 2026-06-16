@@ -13,14 +13,14 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 - Rust is live on VPS as `sobag-opt-rust` at `127.0.0.1:3001`.
 - Nginx routes only `/api/catalog-query` and `/api/catalog-detail` to Rust.
 - Rust internal preview routes exist for catalog/search/product and content pages.
-- Rust auth/store foundation helpers exist for Node-compatible `sobag_session`, session store keys, file-store key/wrapper handling, and PBKDF2 SHA-256 verification fixtures.
+- Rust auth/store foundation helpers exist for Node-compatible `sobag_session`, session store keys, file-store key/wrapper handling, Redis/Upstash REST store access, and PBKDF2 SHA-256 verification fixtures.
 - Internal `/rust/auth/me` preview exists for file-store/session fixtures and preserves the current `GET /api/auth/me` response shape without exposing password fields or internal buyer-hidden notes.
 - Internal `/rust/admin/orders` and `/rust/admin/users` previews exist for admin/manager order and user/customer views from the same Node-compatible file-store.
 - Deploy-time `tools/rust-auth-me-shadow-smoke.mjs` compares Node `/api/auth/me` and Rust `/rust/auth/me` on a temporary file-store for anonymous, buyer, manager, content, admin, and expired sessions; it also compares Node admin orders/users reads with Rust preview routes for admin/manager sessions and verifies unauthorized/forbidden cases. Rust-only temporary write checks cover admin order status/manager/comment PATCH plus admin user invite, role patch, and employee removal without touching production data.
 - Internal `/rust/orders` preview can create an order in a temporary file-store and `tools/rust-orders-write-smoke.mjs` verifies minimum total, quantity sanitizing, server-side persistence, and admin visibility without touching production data.
 - Internal `/rust/briefs` preview can create a custom print brief in a temporary file-store, mirror it into a `custom_brief` admin order, and verify validation/persistence through the same smoke without touching production data.
 - Node remains fallback and still owns auth, account, carts, orders, briefs, admin, content writes, reviews, import/PIM, and media writes.
-- VPS storage uses file-store for shared app data; PostgreSQL currently backs public catalog reads.
+- VPS shared app data uses Redis; PostgreSQL currently backs public catalog reads. Rust Redis-backed store parity is implemented, but production `/api/orders` and `/api/briefs` stay on Node fallback until Redis smokes pass in GitHub/VPS and the exact-route re-cutover is applied.
 
 ## Contracts To Preserve
 
@@ -59,7 +59,7 @@ This plan covers auth, account, orders, briefs, admin orders, admin users, admin
 4. Orders and briefs:
    - Implement `/api/orders` POST/PATCH and `/api/briefs` POST in Rust temp-store mode.
    - Verify minimum order, guest order visibility in admin, buyer comments, internal-note filtering, and custom brief mirroring.
-   - Current status: preview POST `/rust/orders` and `/rust/briefs` write only to the configured temp file-store; deploy smoke verifies successful order create, custom brief mirroring, admin visibility, and validation failures. Production `/api/orders` and `/api/briefs` still stay on Node.
+   - Current status: preview POST `/rust/orders` and `/rust/briefs` write to the configured file-store or Redis-compatible provider; deploy smoke verifies successful order create, custom brief mirroring, admin visibility, and validation failures in both fixture modes. Production `/api/orders` and `/api/briefs` still stay on Node until re-cutover gates are green.
 
 5. Admin orders/users:
    - Implement admin/manager order list/update and admin users/employees management.

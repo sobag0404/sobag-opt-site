@@ -247,7 +247,9 @@ jobs:
               node tools/rust-auth-me-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-auth-write-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-orders-write-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-orders-write-smoke.mjs --rust-bin "$rust_binary" --store-provider redis &&
               node tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin "$rust_binary" --store-provider redis &&
               node tools/rust-admin-orders-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-admin-users-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-admin-content-cutover-smoke.mjs --rust-bin "$rust_binary" &&

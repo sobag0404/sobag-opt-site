@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createServer } from "node:http";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -11,15 +12,16 @@ const DEFAULT_NODE_ENTRY = "server.mjs";
 const SESSION_COOKIE = "sobag_session";
 
 function parseArgs(argv = process.argv.slice(2)) {
-  const args = { nodeEntry: DEFAULT_NODE_ENTRY, rustBin: DEFAULT_RUST_BIN, timeout: 20000, selfTest: false };
+  const args = { nodeEntry: DEFAULT_NODE_ENTRY, rustBin: DEFAULT_RUST_BIN, timeout: 20000, selfTest: false, storeProvider: "file" };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === "--node-entry") args.nodeEntry = argv[++index] || args.nodeEntry;
     else if (token === "--rust-bin") args.rustBin = argv[++index] || args.rustBin;
     else if (token === "--timeout") args.timeout = Number(argv[++index] || args.timeout) || args.timeout;
+    else if (token === "--store-provider") args.storeProvider = String(argv[++index] || args.storeProvider).toLowerCase();
     else if (token === "--self-test") args.selfTest = true;
     else if (token === "--help") {
-      console.log("Usage: node tools/rust-orders-write-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust");
+      console.log("Usage: node tools/rust-orders-write-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust [--store-provider file|redis]");
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${token}`);
@@ -66,6 +68,66 @@ async function createFixtureStore(dir) {
   await writeStoreValue(dir, "sobag:store:v1", fixtureStore());
   await writeStoreValue(dir, "sobag:session:buyer", { email: "buyer@example.test", createdAt: "2026-06-11T00:00:00.000Z" }, 3600);
   await writeStoreValue(dir, "sobag:session:admin", { email: "admin@example.test", createdAt: "2026-06-11T00:00:00.000Z" }, 3600);
+}
+
+async function startFakeRedis() {
+  const values = new Map();
+  const expirations = new Map();
+  function setValue(key, value, ttlSeconds = 0) {
+    values.set(key, JSON.stringify(value));
+    if (ttlSeconds > 0) expirations.set(key, Date.now() + ttlSeconds * 1000);
+    else expirations.delete(key);
+  }
+  function getValue(key) {
+    const expiresAt = expirations.get(key);
+    if (expiresAt && expiresAt <= Date.now()) {
+      values.delete(key);
+      expirations.delete(key);
+      return null;
+    }
+    return values.has(key) ? values.get(key) : null;
+  }
+  async function seedFixture() {
+    values.clear();
+    expirations.clear();
+    setValue("sobag:store:v1", fixtureStore());
+    setValue("sobag:session:buyer", { email: "buyer@example.test", createdAt: "2026-06-11T00:00:00.000Z" }, 3600);
+    setValue("sobag:session:admin", { email: "admin@example.test", createdAt: "2026-06-11T00:00:00.000Z" }, 3600);
+  }
+  const server = createServer(async (request, response) => {
+    try {
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const command = JSON.parse(Buffer.concat(chunks).toString("utf8") || "[]");
+      const executeCommand = ([name, key, value, option, ttl]) => {
+        if (String(name).toUpperCase() === "GET") return getValue(key);
+        if (String(name).toUpperCase() === "SET") {
+        const ttlSeconds = String(option || "").toUpperCase() === "EX" ? Number(ttl || 0) : 0;
+        values.set(key, typeof value === "string" ? value : JSON.stringify(value));
+        if (ttlSeconds > 0) expirations.set(key, Date.now() + ttlSeconds * 1000);
+        else expirations.delete(key);
+          return "OK";
+        }
+        if (String(name).toUpperCase() === "DEL") {
+          const deleted = values.delete(key) ? 1 : 0;
+        expirations.delete(key);
+          return deleted;
+        }
+        throw new Error(`unsupported redis command ${name}`);
+      };
+      const result = Array.isArray(command[0])
+        ? command.map((item) => ({ result: executeCommand(item) }))
+        : executeCommand(command);
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ result }));
+    } catch (error) {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: String(error?.message || error) }));
+    }
+  });
+  await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
+  const { port } = server.address();
+  return { server, url: `http://127.0.0.1:${port}`, seedFixture };
 }
 
 function startProcess(command, args, env) {
@@ -318,11 +380,19 @@ async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-orders-write-"));
   const nodePort = 54000 + Math.floor(Math.random() * 1000);
   const rustPort = 55000 + Math.floor(Math.random() * 1000);
-  await createFixtureStore(temp);
+  const storeProvider = args.storeProvider === "redis" ? "redis" : "file";
+  const fakeRedis = storeProvider === "redis" ? await startFakeRedis() : null;
+  async function resetFixtureStore() {
+    if (fakeRedis) await fakeRedis.seedFixture();
+    else await createFixtureStore(temp);
+  }
+  await resetFixtureStore();
   const env = {
     NODE_ENV: "test",
-    SOBAG_STORE_PROVIDER: "file",
-    SOBAG_FILE_STORE_DIR: temp,
+    SOBAG_STORE_PROVIDER: storeProvider,
+    ...(fakeRedis
+      ? { UPSTASH_REDIS_REST_URL: fakeRedis.url, UPSTASH_REDIS_REST_TOKEN: "test-token", KV_REST_API_URL: "", KV_REST_API_TOKEN: "" }
+      : { SOBAG_FILE_STORE_DIR: temp }),
     SOBAG_ADMIN_EMAIL: "",
     SOBAG_ADMIN_PASSWORD: "",
   };
@@ -338,7 +408,7 @@ async function runSmoke(args) {
       body: orderBody(orderFixture),
     });
     const nodeAccountAfterOrder = await requestJson(`http://127.0.0.1:${nodePort}/api/auth/me`, { token: "buyer" });
-    await createFixtureStore(temp);
+    await resetFixtureStore();
     const created = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
       token: "buyer",
       method: "POST",
@@ -396,13 +466,13 @@ async function runSmoke(args) {
     if (adminOrders.status !== 200) throw new Error(`admin orders status ${adminOrders.status}`);
     if (adminOrders.payload.orders?.[0]?.source !== "rust-write-smoke") throw new Error("created order not visible to admin");
 
-    await createFixtureStore(temp);
+    await resetFixtureStore();
     const nodeBrief = await requestJson(`http://127.0.0.1:${nodePort}/api/briefs`, {
       token: "buyer",
       method: "POST",
       body: briefBody(),
     });
-    await createFixtureStore(temp);
+    await resetFixtureStore();
     const rustBriefParity = await requestJson(`http://127.0.0.1:${rustPort}/rust/briefs`, {
       token: "buyer",
       method: "POST",
@@ -410,7 +480,7 @@ async function runSmoke(args) {
     });
     assertSame("brief create", briefCreateSlice(rustBriefParity), briefCreateSlice(nodeBrief));
 
-    await createFixtureStore(temp);
+    await resetFixtureStore();
     const brief = await requestJson(`http://127.0.0.1:${rustPort}/rust/briefs`, {
       token: "buyer",
       method: "POST",
@@ -445,6 +515,7 @@ async function runSmoke(args) {
   } finally {
     node.child.kill("SIGTERM");
     rust.child.kill("SIGTERM");
+    if (fakeRedis) await new Promise((resolveClose) => fakeRedis.server.close(resolveClose));
     await rm(temp, { recursive: true, force: true });
   }
 }
@@ -453,6 +524,8 @@ function selfTest() {
   if (keyFileName("sobag:store:v1") !== "736f6261673a73746f72653a7631.json") throw new Error("file key mismatch");
   const store = fixtureStore();
   if (!store.users["buyer@example.test"] || store.orders.length !== 0) throw new Error("fixture mismatch");
+  const redisArgs = parseArgs(["--store-provider", "redis"]);
+  if (redisArgs.storeProvider !== "redis") throw new Error("redis provider arg mismatch");
   console.log("Rust orders/briefs write smoke self-test passed");
 }
 

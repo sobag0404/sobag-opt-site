@@ -48,7 +48,8 @@ Next.js runtime is not present. Cleanup targets the old Vercel serverless/deploy
 - Deployed commit `cefeb12` hardens VPS static cache policy: HTML is `no-cache`, versioned JS/CSS query URLs are `public, max-age=31536000, immutable`, product data and public catalog/price-list APIs use short public cache, and auth/health/order APIs stay `no-store`.
 - Live catalog cold requests return current imported facets: `Подушки 517`, `Наволочки 517`, `Мешки для обуви 170`, `Чехлы на чемодан 37`, `Ремувки 19`, `Флаги 65`. `/api/catalog` returns `no-store`; `/api/catalog-query` returns short public cache only.
 - Production order writes are intentionally routed back to Node after live smoke found Rust write routes still depend on file-store semantics while the VPS app store provider is Redis-backed. Rollback backup: `/etc/nginx/sites-available/sobag-opt.pre-node-orders-20260616T122736Z`.
-- Before re-cutting `/api/orders` or `/api/briefs` to Rust, implement Redis-backed Rust write-store parity or an approved store bridge, then rerun live order/brief smokes against the real VPS provider.
+- Redis-backed Rust write-store parity is implemented in code: Rust can read/write/delete the same Redis/Upstash REST keys used by Node, and the order/brief write and cutover smokes now run against both file-store and Redis fixture modes. Production `/api/orders` and `/api/briefs` still remain on Node fallback until GitHub/VPS release smokes pass with this code and an exact-route Nginx re-cutover is applied.
+- Before re-cutting `/api/orders` or `/api/briefs` to Rust, rerun real VPS order/brief smokes against the live provider, confirm Node fallback visibility for Rust-created records, and keep the current Node rollback backup available.
 
 ## VPS Access And Cutover Input
 

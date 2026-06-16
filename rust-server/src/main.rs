@@ -1,10 +1,4 @@
-use std::{
-    collections::HashMap,
-    env,
-    net::SocketAddr,
-    path::{Path as FsPath, PathBuf},
-    sync::Arc,
-};
+use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
 
 use axum::{
     extract::{Path, Query, State},
@@ -14,13 +8,25 @@ use axum::{
     Json, Router,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use pbkdf2::pbkdf2_hmac;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use tower_http::trace::TraceLayer;
+
+mod store;
+use store::{
+    delete_store_value as delete_file_store_value, load_store_value as load_file_store_value,
+    save_store_value as save_file_store_value,
+    save_store_value_with_ttl as save_file_store_value_with_ttl, session_store_key,
+};
+#[cfg(test)]
+use store::{
+    file_key_hex, file_store_path_for_key, file_store_unwrap_value, normalized_store_provider,
+    redis_del_command, redis_get_command, redis_result_to_value, redis_set_command, StoreProvider,
+};
 
 const SESSION_COOKIE: &str = "sobag_session";
 const SESSION_TTL_SECONDS: i64 = 60 * 60 * 24 * 30;
@@ -1759,111 +1765,6 @@ async fn load_current_user_from_file_store(
     Ok(Some((store, user)))
 }
 
-async fn load_file_store_value(key: &str) -> Result<Option<Value>, std::io::Error> {
-    if !is_file_store_provider() {
-        return Ok(None);
-    }
-    let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
-    let path = file_store_path_for_key(dir, key);
-    let text = match tokio::fs::read_to_string(path).await {
-        Ok(value) => value,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => return Err(error),
-    };
-    let record: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
-    Ok(file_store_unwrap_value(&record, Utc::now().timestamp()))
-}
-
-async fn save_file_store_value(key: &str, value: &Value) -> Result<(), std::io::Error> {
-    if !is_file_store_provider() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "file store provider is not enabled",
-        ));
-    }
-    let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
-    tokio::fs::create_dir_all(&dir).await?;
-    let path = file_store_path_for_key(dir, key);
-    let record = json!({
-        "version": 1,
-        "expiresAt": "",
-        "value": value
-    });
-    let text = serde_json::to_string_pretty(&record)
-        .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error.to_string()))?;
-    tokio::fs::write(path, format!("{text}\n")).await
-}
-
-async fn save_file_store_value_with_ttl(
-    key: &str,
-    value: &Value,
-    ttl_seconds: i64,
-) -> Result<(), std::io::Error> {
-    if !is_file_store_provider() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "file store provider is not enabled",
-        ));
-    }
-    let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
-    tokio::fs::create_dir_all(&dir).await?;
-    let path = file_store_path_for_key(dir, key);
-    let expires_at = if ttl_seconds > 0 {
-        (Utc::now() + chrono::Duration::seconds(ttl_seconds)).to_rfc3339()
-    } else {
-        String::new()
-    };
-    let record = json!({
-        "version": 1,
-        "expiresAt": expires_at,
-        "value": value
-    });
-    let text = serde_json::to_string_pretty(&record)
-        .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error.to_string()))?;
-    tokio::fs::write(path, format!("{text}\n")).await
-}
-
-async fn delete_file_store_value(key: &str) -> Result<(), std::io::Error> {
-    if !is_file_store_provider() {
-        return Ok(());
-    }
-    let dir = env::var("SOBAG_FILE_STORE_DIR").unwrap_or_else(|_| ".sobag-store".to_string());
-    let path = file_store_path_for_key(dir, key);
-    match tokio::fs::remove_file(path).await {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error),
-    }
-}
-
-fn is_file_store_provider() -> bool {
-    matches!(
-        env::var("SOBAG_STORE_PROVIDER")
-            .unwrap_or_default()
-            .trim()
-            .to_ascii_lowercase()
-            .as_str(),
-        "file" | "filesystem" | "fs"
-    )
-}
-
-fn file_key_hex(value: &str) -> String {
-    value
-        .as_bytes()
-        .iter()
-        .map(|byte| format!("{:02x}", byte))
-        .collect::<Vec<_>>()
-        .join("")
-}
-
-fn file_store_path_for_key(dir: impl AsRef<FsPath>, key: &str) -> PathBuf {
-    dir.as_ref().join(format!("{}.json", file_key_hex(key)))
-}
-
-fn session_store_key(token: &str) -> String {
-    format!("sobag:session:{}", token.trim())
-}
-
 fn content_store_key() -> String {
     env::var("SOBAG_CONTENT_KEY").unwrap_or_else(|_| CONTENT_KEY.to_string())
 }
@@ -1924,23 +1825,6 @@ fn percent_decode_cookie(value: &str) -> String {
         index += 1;
     }
     String::from_utf8_lossy(&bytes).to_string()
-}
-
-fn file_store_unwrap_value(record: &Value, now_unix: i64) -> Option<Value> {
-    if !record.is_object() || record.get("value").is_none() {
-        return Some(record.clone());
-    }
-    if let Some(expires_at) = record.get("expiresAt").and_then(Value::as_str) {
-        if !expires_at.trim().is_empty() {
-            let expired = DateTime::parse_from_rfc3339(expires_at)
-                .map(|date| date.timestamp() <= now_unix)
-                .unwrap_or(false);
-            if expired {
-                return None;
-            }
-        }
-    }
-    Some(record.get("value").cloned().unwrap_or(Value::Null))
 }
 
 fn auth_me_payload_from_values(store: &Value, session: &Value) -> Value {

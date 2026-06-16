@@ -52,7 +52,7 @@ These routes must not be exposed as public `/api/*` routes until the matching cu
 
 ## Current Candidate
 
-Candidate 1 is the full account-state route `GET` and `PUT /api/auth/me`, and it is switched in production as an exact Nginx route after temporary-store cutover smoke and no-write public validation. Candidate 3, orders/briefs writes, has already been switched in production as exact `/api/orders` and `/api/briefs` Nginx routes. Admin order read/update, admin users/employees, and admin content/review moderation have also been switched in production as exact `/api/admin/orders`, `/api/admin/users`, and `/api/admin/content`. The next auth candidate is session writes (`/api/auth/login`, `/api/auth/register`, `/api/auth/logout`) only after a separate exact-route cutover smoke and rollback gate.
+Candidate 1 is the full account-state route `GET` and `PUT /api/auth/me`, and it is switched in production as an exact Nginx route after temporary-store cutover smoke and no-write public validation. Candidate 3, orders/briefs writes, was rolled back to Node fallback on 2026-06-16 after live Rust writes exposed a Redis-vs-file-store gap on the VPS provider. Rust now has Redis/Upstash REST store parity and Redis fixture smokes, but production `/api/orders` and `/api/briefs` must not be re-cut until release smokes pass on VPS and the exact Nginx route switch is re-applied with rollback. Admin order read/update, admin users/employees, and admin content/review moderation remain switched in production as exact `/api/admin/orders`, `/api/admin/users`, and `/api/admin/content`. The next auth candidate is session writes (`/api/auth/login`, `/api/auth/register`, `/api/auth/logout`) only after a separate exact-route cutover smoke and rollback gate.
 
 Reason: public `/api/auth/me` is one URL for both account reads and account-state writes. A simple exact Nginx route could not safely switch only `GET` while leaving `PUT` on Node. Before it was switched, `tools/rust-auth-me-shadow-smoke.mjs` compared Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, expired sessions, profile updates, cart/favorite/saved-cart writes, buyer review validation, no password fields, no buyer-hidden internal fields, and unsupported `POST`/`DELETE` staying `405` on both runtimes. Public `/api/auth/me` is now switched only as the full `GET+PUT` exact route with rollback backup.
 
@@ -66,7 +66,9 @@ Before any route group switch:
 - `node tools/rust-auth-me-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `node tools/rust-auth-write-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `node tools/rust-orders-write-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
+- `node tools/rust-orders-write-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust --store-provider redis`
 - `node tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
+- `node tools/rust-orders-briefs-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust --store-provider redis`
 - `node tools/rust-admin-orders-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `node tools/rust-admin-users-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
 - `node tools/rust-admin-content-cutover-smoke.mjs --rust-bin rust-server/target/release/sobag-opt-rust`
@@ -102,7 +104,7 @@ Before a public `/api/auth/me` switch, run `tools/rust-auth-me-cutover-smoke.mjs
 
 Before public auth session write switches, run `tools/rust-auth-write-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates exact route-level cutover for `/api/auth/login`, `/api/auth/register`, and `/api/auth/logout`, verifies Rust registration, login by email and phone, logout/session clearing, Node fallback session visibility, access/validation guards, and unrelated APIs still fall back to Node.
 
-Before a public `/api/orders` and `/api/briefs` switch, run `tools/rust-orders-briefs-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates exact route-level cutover for only `/api/orders` and `/api/briefs`, verifies order and brief creation through Rust, verifies Node fallback `/api/admin/orders` sees the created records, verifies Node fallback `/api/auth/me` sees order profile side effects, and verifies unrelated APIs still fall back to Node.
+Before a public `/api/orders` and `/api/briefs` switch, run `tools/rust-orders-briefs-cutover-smoke.mjs` twice: default file-store mode and `--store-provider redis`. It starts temporary Node and Rust runtimes with the same temporary store, simulates exact route-level cutover for only `/api/orders` and `/api/briefs`, verifies order and brief creation through Rust, verifies Node fallback `/api/admin/orders` sees the created records, verifies Node fallback `/api/auth/me` sees order profile side effects, and verifies unrelated APIs still fall back to Node.
 
 Before a public `/api/admin/orders` switch, run `tools/rust-admin-orders-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates exact route-level cutover for only `/api/admin/orders`, verifies admin/manager reads and PATCH updates through Rust, verifies Node fallback `/api/auth/me` sees the safe customer-visible order update without internal CRM leakage, verifies access/validation guards, and verifies unrelated APIs still fall back to Node.
 
