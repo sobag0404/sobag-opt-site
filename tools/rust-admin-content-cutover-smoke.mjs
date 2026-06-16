@@ -189,7 +189,7 @@ async function requestJson(base, path, { token = "", method = "GET", body = null
 
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-admin-content-cutover-"));
-  const nodePort = 54000 + Math.floor(Math.random() * 1000);
+  const nodePort = 61000 + Math.floor(Math.random() * 1000);
   const rustPort = nodePort + 1000;
   const proxyPort = nodePort + 2000;
   await createFixtureStore(temp);

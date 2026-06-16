@@ -193,7 +193,7 @@ function accountStateBody() {
 
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-auth-cutover-"));
-  const nodePort = 54000 + Math.floor(Math.random() * 1000);
+  const nodePort = 43000 + Math.floor(Math.random() * 1000);
   const rustPort = nodePort + 1000;
   const proxyPort = nodePort + 2000;
   await createFixtureStore(temp);

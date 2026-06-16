@@ -380,7 +380,7 @@ function briefCreateSlice(response) {
 
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-orders-write-"));
-  const nodePort = 54000 + Math.floor(Math.random() * 1000);
+  const nodePort = 49000 + Math.floor(Math.random() * 1000);
   const rustPort = 55000 + Math.floor(Math.random() * 1000);
   const storeProvider = args.storeProvider === "redis" ? "redis" : "file";
   const fakeRedis = storeProvider === "redis" ? await startFakeRedis() : null;

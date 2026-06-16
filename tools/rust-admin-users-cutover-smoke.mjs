@@ -183,7 +183,7 @@ function assertNoPasswordFields(label, payload) {
 
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-admin-users-cutover-"));
-  const nodePort = 54000 + Math.floor(Math.random() * 1000);
+  const nodePort = 58000 + Math.floor(Math.random() * 1000);
   const rustPort = nodePort + 1000;
   const proxyPort = nodePort + 2000;
   await createFixtureStore(temp);
