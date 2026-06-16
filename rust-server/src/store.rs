@@ -123,17 +123,16 @@ struct RedisRestConfig {
 }
 
 fn redis_rest_config() -> Result<RedisRestConfig, std::io::Error> {
-    let url = env::var("KV_REST_API_URL")
-        .or_else(|_| env::var("UPSTASH_REDIS_REST_URL"))
-        .unwrap_or_default()
-        .trim()
-        .trim_end_matches('/')
-        .to_string();
-    let token = env::var("KV_REST_API_TOKEN")
-        .or_else(|_| env::var("UPSTASH_REDIS_REST_TOKEN"))
-        .unwrap_or_default()
-        .trim()
-        .to_string();
+    let url = first_non_empty_value(
+        env::var("KV_REST_API_URL").ok().as_deref(),
+        env::var("UPSTASH_REDIS_REST_URL").ok().as_deref(),
+    )
+    .trim_end_matches('/')
+    .to_string();
+    let token = first_non_empty_value(
+        env::var("KV_REST_API_TOKEN").ok().as_deref(),
+        env::var("UPSTASH_REDIS_REST_TOKEN").ok().as_deref(),
+    );
     if url.is_empty() || token.is_empty() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::Other,
@@ -141,6 +140,14 @@ fn redis_rest_config() -> Result<RedisRestConfig, std::io::Error> {
         ));
     }
     Ok(RedisRestConfig { url, token })
+}
+
+pub(crate) fn first_non_empty_value(primary: Option<&str>, fallback: Option<&str>) -> String {
+    let primary = primary.unwrap_or("").trim();
+    if !primary.is_empty() {
+        return primary.to_string();
+    }
+    fallback.unwrap_or("").trim().to_string()
 }
 
 async fn load_redis_store_value(key: &str) -> Result<Option<Value>, std::io::Error> {

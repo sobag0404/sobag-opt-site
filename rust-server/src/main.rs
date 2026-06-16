@@ -24,8 +24,9 @@ use store::{
 };
 #[cfg(test)]
 use store::{
-    file_key_hex, file_store_path_for_key, file_store_unwrap_value, normalized_store_provider,
-    redis_del_command, redis_get_command, redis_result_to_value, redis_set_command, StoreProvider,
+    file_key_hex, file_store_path_for_key, file_store_unwrap_value, first_non_empty_value,
+    normalized_store_provider, redis_del_command, redis_get_command, redis_result_to_value,
+    redis_set_command, StoreProvider,
 };
 
 const SESSION_COOKIE: &str = "sobag_session";

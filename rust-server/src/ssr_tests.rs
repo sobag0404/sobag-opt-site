@@ -221,6 +221,22 @@ fn store_provider_defaults_to_redis_with_file_aliases() {
 }
 
 #[test]
+fn redis_config_ignores_empty_primary_env_aliases() {
+    assert_eq!(
+        first_non_empty_value(Some(""), Some("https://redis.example.test/")),
+        "https://redis.example.test/"
+    );
+    assert_eq!(
+        first_non_empty_value(
+            Some("  https://kv.example.test  "),
+            Some("https://redis.example.test")
+        ),
+        "https://kv.example.test"
+    );
+    assert_eq!(first_non_empty_value(None, Some(" token ")), "token");
+}
+
+#[test]
 fn redis_store_commands_match_upstash_rest_contract() {
     assert_eq!(
         redis_get_command(STORE_KEY).expect("get command"),
