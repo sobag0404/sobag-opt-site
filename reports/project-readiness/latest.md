@@ -2,7 +2,7 @@
 
 Generated: 2026-06-16T07:01:06+00:00
 Project: sobag-opt-site
-Git: `main` / `79c4238`
+Git: `main` / `6797b29`
 
 ## 1. Executive Summary
 
