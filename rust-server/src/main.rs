@@ -23,11 +23,15 @@ use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use tower_http::trace::TraceLayer;
 
 mod admin_pim;
+mod admin_prices;
 mod content_pages;
 mod store;
 use admin_pim::admin_pim_preview;
 #[cfg(test)]
 use admin_pim::{pim_csv_for_view, pim_report_for_view};
+use admin_prices::{admin_prices_get, admin_prices_post};
+#[cfg(test)]
+use admin_prices::{fixture_price_record_for_test, parse_price_import_rows_for_test};
 use content_pages::{ContentPageSpec, CONTENT_PAGES};
 use store::{
     delete_store_value as delete_file_store_value, load_store_value as load_file_store_value,
@@ -474,6 +478,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .patch(admin_content_review_patch_preview),
         )
         .route("/rust/admin/pim", get(admin_pim_preview))
+        .route(
+            "/rust/admin/prices",
+            get(admin_prices_get).post(admin_prices_post),
+        )
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 

@@ -30,6 +30,10 @@ const ROUTE_GROUPS = {
     publicRoutes: ["/api/admin/pim"],
     rustRoutes: ["/rust/admin/pim"],
   },
+  "admin-prices": {
+    publicRoutes: ["/api/admin/prices"],
+    rustRoutes: ["/rust/admin/prices"],
+  },
 };
 
 const BLOCKED_PUBLIC_ROUTES = [

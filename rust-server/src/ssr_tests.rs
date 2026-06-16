@@ -846,6 +846,23 @@ fn admin_pim_report_preserves_non_zero_variant_prices() {
 }
 
 #[test]
+fn admin_price_import_builds_sku_change_and_rejects_bad_rows() {
+    let record = fixture_price_record_for_test();
+    let valid = json!({ "sku": "SKU-1", "price": "230" });
+    let (changes, errors) =
+        parse_price_import_rows_for_test(std::slice::from_ref(&record), &[valid]);
+    assert!(errors.is_empty());
+    assert_eq!(changes.len(), 1);
+    assert_eq!(changes[0]["kind"], "sku_price");
+    assert_eq!(changes[0]["newPrice"], 230);
+    assert_eq!(changes[0]["oldPrices"][0], 220);
+
+    let invalid = json!({ "group": "=SUM(A1:A2)", "price": "0" });
+    let (_, errors) = parse_price_import_rows_for_test(&[record], &[invalid]);
+    assert_eq!(errors[0]["error"], "formula_input_rejected");
+}
+
+#[test]
 fn admin_pim_csv_rejects_unknown_views() {
     let catalog = json!({ "products": [{ "id": "p1", "baseSku": "opt_1", "variants": [] }] });
     let error = pim_csv_for_view(&catalog, "unknown").expect_err("unsupported csv");
