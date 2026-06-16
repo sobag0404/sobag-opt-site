@@ -2112,7 +2112,7 @@ function updateCatalogPageBack(isHome) {
   updateButtonText(catalogPageBack, isHome ? "На главную" : getSiteContent().catalogBackButton, { preserveCase: true });
   if (isHome) {
     delete catalogPageBack.dataset.backCatalog;
-    catalogPageBack.dataset.nav = "index.html";
+    catalogPageBack.dataset.nav = "/";
     return;
   }
   if (catalogListingBack) {
@@ -2485,7 +2485,8 @@ function updateCatalogSeo() {
     canonical.setAttribute("rel", "canonical");
     document.head.appendChild(canonical);
   }
-  canonical.setAttribute("href", `${location.origin}${location.pathname}${location.search}`);
+  const canonicalPath = location.pathname === "/index.html" ? "/" : location.pathname;
+  canonical.setAttribute("href", `${location.origin}${canonicalPath}`);
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",

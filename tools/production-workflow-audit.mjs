@@ -7,6 +7,7 @@ const WORKFLOW = ".github/workflows/production-smoke.yml";
 const REQUIRED_PHRASES = [
   "https://sobag-shop.online",
   "node tools/production-smoke.mjs",
+  "node tools/canonical-url-smoke.mjs",
   "node tools/production-performance-smoke.mjs",
   "node tools/production-storage-readiness.mjs",
   "SOBAG_PRODUCTION_BASE_URL",

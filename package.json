@@ -23,6 +23,7 @@
     "rehearse:pim:postgres": "node tools/pim-postgres-rehearsal.mjs",
     "upload:photos": "node tools/bulk-upload-product-photos.mjs",
     "smoke:prod": "node tools/production-smoke.mjs",
+    "smoke:canonical-url": "node tools/canonical-url-smoke.mjs",
     "smoke:prod:performance": "node tools/production-performance-smoke.mjs",
     "smoke:prod:storage": "node tools/production-storage-readiness.mjs",
     "smoke:rust:shadow": "node tools/rust-catalog-shadow-smoke.mjs",

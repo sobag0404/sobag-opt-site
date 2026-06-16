@@ -2066,8 +2066,8 @@ function adminListTextarea(name, title, value, note) {
 function adminSectionHref(anchor) {
   return (
     {
-      global: "index.html",
-      home: "index.html",
+      global: "/",
+      home: "/",
       catalog: "catalog.html",
       marketplaces: "marketplaces.html",
       custom: "custom.html",
@@ -2081,8 +2081,8 @@ function adminSectionHref(anchor) {
       "seller-support": "seller-support.html",
       wholesale: "wholesale.html",
       cart: "cart.html",
-      footer: "index.html#footer",
-    }[anchor] || "index.html"
+      footer: "/#footer",
+    }[anchor] || "/"
   );
 }
 function adminSectionPreviewHtml(anchor) {

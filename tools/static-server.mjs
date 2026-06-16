@@ -47,7 +47,15 @@ function resolveRequest(pathname) {
 }
 
 createServer((request, response) => {
-  const { pathname } = parse(request.url || "/");
+  const { pathname, search } = parse(request.url || "/");
+  if (pathname === "/index.html") {
+    response.writeHead(301, {
+      Location: `/${search || ""}`,
+      "Content-Type": "text/plain; charset=utf-8",
+    });
+    response.end("Moved permanently to /");
+    return;
+  }
   const filePath = resolveRequest(pathname);
 
   if (!filePath) {

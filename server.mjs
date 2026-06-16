@@ -110,6 +110,19 @@ function resolveStaticFile(pathname) {
     .find((filePath) => isInsideRoot(filePath) && existsSync(filePath) && statSync(filePath).isFile());
 }
 
+function redirectCanonicalPath(request, response, pathname) {
+  if (pathname !== "/index.html") return false;
+  const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
+  applySecurityHeaders(response);
+  response.writeHead(301, {
+    Location: `/${url.search}`,
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+  });
+  response.end("Moved permanently to /");
+  return true;
+}
+
 async function handleApi(request, response, pathname) {
   applySecurityHeaders(response);
   await handleApiRequest(request, response, pathname);
@@ -151,6 +164,7 @@ export function createSobagServer() {
   return createServer(async (request, response) => {
     const { pathname = "/" } = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
     try {
+      if (redirectCanonicalPath(request, response, pathname)) return;
       if (pathname.startsWith("/api/") && (await handleApi(request, response, pathname))) return;
       serveStatic(request, response, pathname);
     } catch (error) {

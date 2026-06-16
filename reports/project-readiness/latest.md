@@ -4,6 +4,13 @@ Generated: 2026-06-15T15:41:15+00:00
 Project: sobag-opt-site
 Git: `main` / `5ece96d`
 
+## Manual Update - 2026-06-16 Canonical URL Cleanup
+
+- Status remains **NOT_READY**, score **74/100**: PROD-002 real CWV field packet is still incomplete.
+- Local canonical URL packet is prepared: `/` is canonical, `/index.html` redirects to `/`, and root links were moved away from `index.html`.
+- Local checks passed for canonical URL self-test, local server canonical smoke, content audit, `npm run check`, `npm run ui:smoke`, targeted `node --check`, and `git diff --check`.
+- Python readiness regeneration was not available in this sandbox because Python is not installed/in PATH; this manual section records the current packet until the agent can be rerun.
+
 ## 1. Executive Summary
 
 Проект не готов к следующему этапу без исправления high-блокеров: PROD-002. Итог: NOT_READY, 74/100, нельзя передавать, нужны исправления.

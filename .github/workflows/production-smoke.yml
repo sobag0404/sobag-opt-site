@@ -56,6 +56,10 @@ jobs:
         env:
           SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}
         run: node tools/production-smoke.mjs --timeout 15000 --retries 6 --retry-delay 20000
+      - name: Run read-only canonical URL smoke
+        env:
+          SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}
+        run: node tools/canonical-url-smoke.mjs --base-url "$SOBAG_PRODUCTION_BASE_URL" --timeout 15000
       - name: Run read-only production performance smoke
         env:
           SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}

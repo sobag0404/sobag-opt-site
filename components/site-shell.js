@@ -17,7 +17,7 @@
     header: {
       commerce: `    <nav class="header">
       <div class="container header__inner">
-        <a class="brand" href="index.html" aria-label="Sobag Opt">
+        <a class="brand" href="/" aria-label="Sobag Opt">
           <span class="brand__mark">S</span>
           <span class="brand__name">Sobag <b>Opt</b></span>
         </a>
@@ -50,7 +50,7 @@
     </nav>`,
       cart: `    <nav class="header">
       <div class="container header__inner">
-        <a class="brand" href="index.html" aria-label="Sobag Opt">
+        <a class="brand" href="/" aria-label="Sobag Opt">
           <span class="brand__mark">S</span>
           <span class="brand__name">Sobag <b>Opt</b></span>
         </a>
