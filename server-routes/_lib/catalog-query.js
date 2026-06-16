@@ -431,4 +431,5 @@ module.exports = {
   productDetail,
   publicProducts,
   queryCatalog,
+  skuKey,
 };

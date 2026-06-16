@@ -19,7 +19,7 @@ module.exports = async function handler(req, res) {
       return sendJson(res, 200, content || { content: {}, updatedAt: null, source: "empty" });
     }
     if (req.method === "PATCH") {
-      const data = await readJson(req);
+      const data = await readJson(req, { maxBytes: 512 * 1024 });
       const reviewId = String(data.reviewId || "").trim();
       if (!reviewId) return sendJson(res, 400, { error: "invalid_review", message: "Отзыв не найден." });
 
@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
     }
     if (req.method !== "PUT") return methodNotAllowed(res);
 
-    const data = await readJson(req);
+    const data = await readJson(req, { maxBytes: MAX_CONTENT_BYTES + 128 * 1024 });
     const content = data.content && typeof data.content === "object" && !Array.isArray(data.content) ? data.content : null;
     if (!content) return sendJson(res, 400, { error: "invalid_content", message: "Некорректные настройки сайта." });
     if (Buffer.byteLength(JSON.stringify(content), "utf8") > MAX_CONTENT_BYTES) {

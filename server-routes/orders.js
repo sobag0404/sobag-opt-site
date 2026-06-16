@@ -1,26 +1,8 @@
+const { checkRateLimit } = require("./_lib/api-security");
 const { currentUser, normalizePhone } = require("./_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("./_lib/http");
+const { MIN_ORDER_TOTAL, normalizeOrderPricing } = require("./_lib/order-pricing");
 const { saveStore } = require("./_lib/store");
-
-const MIN_ORDER_TOTAL = 30000;
-
-function sanitizeLine(line) {
-  return {
-    key: String(line.key || ""),
-    productId: String(line.productId || ""),
-    productName: String(line.productName || ""),
-    productImage: String(line.productImage || ""),
-    qty: Math.max(1, Number(line.qty || 1)),
-    variant: {
-      sku: String(line.variant?.sku || ""),
-      name: String(line.variant?.name || ""),
-      type: String(line.variant?.type || ""),
-      size: String(line.variant?.size || ""),
-      material: String(line.variant?.material || ""),
-      price: Number(line.variant?.price || 0),
-    },
-  };
-}
 
 function uniqueNonEmpty(items) {
   return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
@@ -37,6 +19,8 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === "PATCH") {
       const data = await readJson(req);
+      const limited = checkRateLimit(req, { key: "orders:comment", limit: 60 });
+      if (limited) throw limited;
       const { user, store } = await currentUser(req);
       if (!user) return sendJson(res, 401, { error: "unauthorized", message: "Нужно войти в аккаунт." });
       const text = String(data.commentText || "").trim().slice(0, 1200);
@@ -68,13 +52,13 @@ module.exports = async function handler(req, res) {
     if (req.method !== "POST") return methodNotAllowed(res);
 
     const data = await readJson(req);
+    const limited = checkRateLimit(req, { key: "orders:create", limit: 30 });
+    if (limited) throw limited;
     const { user, store } = await currentUser(req);
-    const items = Array.isArray(data.items) ? data.items.map(sanitizeLine).filter((line) => line.variant.sku) : [];
-    const total = Number(data.total || 0);
+    const pricing = await normalizeOrderPricing(data);
     const customer = data.customer || {};
 
-    if (!items.length) return sendJson(res, 400, { error: "empty_order", message: "В заказе нет товаров." });
-    if (!Number.isFinite(total) || total < MIN_ORDER_TOTAL) {
+    if (pricing.total < MIN_ORDER_TOTAL) {
       return sendJson(res, 400, {
         error: "minimum_total",
         message: `Минимальная сумма заказа ${MIN_ORDER_TOTAL.toLocaleString("ru-RU")} ₽.`,
@@ -104,8 +88,12 @@ module.exports = async function handler(req, res) {
         layoutFileName: String(customer.layoutFileName || ""),
         comment: String(customer.comment || ""),
       },
-      items,
-      total,
+      items: pricing.items,
+      subtotal: pricing.subtotal,
+      discountPercent: pricing.discountPercent,
+      discountAmount: pricing.discountAmount,
+      total: pricing.total,
+      clientTotal: pricing.clientTotal,
       promo: String(data.promo || ""),
       source: String(data.source || "site"),
     };

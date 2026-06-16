@@ -101,6 +101,8 @@ const {
   productHasCategory,
   normalizeProductImageMetadata,
   normalizeProductImages,
+  resolveProductImageUrl,
+  normalizeProductImageUrls,
   productImageMetadataUrl,
   productImageMetadataForUrl,
   PRODUCT_IMAGE_SIZES,
@@ -466,11 +468,18 @@ function serverCatalogImageMeta(card) {
 }
 function serverCatalogProduct(card = {}) {
   const imageMeta = serverCatalogImageMeta(card);
-  const image = String(card.image || imageMeta?.url || "assets/production-workshop-1.png").trim();
-  const categories = uniqueList([...(Array.isArray(card.categories) ? card.categories : splitList(card.category)), card.category]);
-  return {
+  const productIdentity = {
     id: String(card.id || card.baseSku || "").trim(),
     baseSku: String(card.baseSku || card.id || "").trim(),
+    photoFolder: String(card.photoFolder || card.baseSku || card.id || "").trim(),
+  };
+  const normalizedImageMeta = imageMeta ? normalizeProductImageUrls(productIdentity, imageMeta) : null;
+  const image = resolveProductImageUrl(productIdentity, card.image || normalizedImageMeta?.url || "assets/production-workshop-1.png");
+  const categories = uniqueList([...(Array.isArray(card.categories) ? card.categories : splitList(card.category)), card.category]);
+  return {
+    id: productIdentity.id,
+    baseSku: productIdentity.baseSku,
+    photoFolder: productIdentity.photoFolder,
     name: String(card.name || "").trim(),
     category: categories[0] || String(card.category || "").trim(),
     categories,
@@ -483,7 +492,7 @@ function serverCatalogProduct(card = {}) {
     status: "published",
     hidden: false,
     image,
-    images: imageMeta ? [imageMeta] : [],
+    images: normalizedImageMeta ? [normalizedImageMeta] : [],
     gallery: [image],
     types: [],
     sizes: [],

@@ -197,7 +197,7 @@ module.exports = async function handler(req, res) {
     if (!user) return sendJson(res, req.method === "GET" ? 200 : 401, { user: null, error: req.method === "GET" ? undefined : "unauthorized" });
 
     if (req.method === "PUT") {
-      const data = await readJson(req);
+      const data = await readJson(req, { maxBytes: 1024 * 1024 });
       if (Object.prototype.hasOwnProperty.call(data, "cartItems")) {
         store.carts[user.email] = {
           items: sanitizeCart(data.cartItems),

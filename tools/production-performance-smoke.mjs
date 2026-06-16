@@ -68,6 +68,7 @@ async function fetchText(base, path, args, options = {}) {
         "user-agent": "sobag-production-performance-smoke/1.0",
         ...(options.headers || {}),
       },
+      redirect: options.redirect || "follow",
       signal: controller.signal,
     });
     const body = await response.text();
@@ -122,6 +123,21 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
   const checks = [];
   const warnings = [];
 
+  const home = await fetchText(base, "/", args);
+  assert(home.ok, `${home.path}: expected 2xx, got ${home.status}`);
+  assert(home.contentType.includes("text/html"), `${home.path}: expected text/html`);
+  assert((home.cacheControl || "").includes("no-cache") || (home.cacheControl || "").includes("max-age=0"), `${home.path}: HTML shell should revalidate`);
+  checks.push({ name: "home-html", path: home.path, bytes: home.bytes, elapsedMs: home.elapsedMs });
+
+  const canonical = await fetchText(base, "/index.html", args, { method: "HEAD", redirect: "manual" });
+  assert([301, 308].includes(canonical.status), `${canonical.path}: expected canonical redirect, got ${canonical.status}`);
+  checks.push({ name: "index-redirect", path: canonical.path, bytes: canonical.bytes, elapsedMs: canonical.elapsedMs });
+
+  const health = await fetchText(base, "/api/health", args);
+  parseJson(health);
+  assert((health.cacheControl || "").includes("no-store"), `${health.path}: API health should be no-store`);
+  checks.push({ name: "api-health", path: health.path, bytes: health.bytes, elapsedMs: health.elapsedMs });
+
   const query = await fetchText(base, "/api/catalog-query?pageSize=48&sort=popular", args);
   const queryPayload = parseJson(query);
   assertFast(query, args.maxMs);
@@ -159,6 +175,20 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
     checks.push({ name: path.slice(1), path, bytes: asset.bytes, elapsedMs: asset.elapsedMs });
   }
 
+  const data = await fetchText(base, "/data/products-live.json", args);
+  assert(data.ok, `${data.path}: expected 2xx, got ${data.status}`);
+  assert(data.contentType.includes("application/json"), `${data.path}: expected JSON MIME`);
+  assert(data.cacheControl.includes("max-age=300"), `${data.path}: product data should use short cache`);
+  checks.push({ name: "products-json", path: data.path, bytes: data.bytes, elapsedMs: data.elapsedMs });
+
+  const imagePath = detailPayload.product?.images?.find((item) => item?.url)?.url || queryPayload.items[0]?.image || "/assets/production-hero-1.png";
+  const image = await fetchText(base, imagePath, args, { method: "HEAD" });
+  assert(image.ok, `${image.path}: expected image HEAD 2xx, got ${image.status}`);
+  assert(image.contentType.startsWith("image/"), `${image.path}: expected image MIME, got ${image.contentType}`);
+  assert(image.cacheControl.includes("max-age=86400") || image.cacheControl.includes("max-age=31536000"), `${image.path}: image cache header missing`);
+  assert(!image.contentType.includes("text/html"), `${image.path}: image URL must not fall back to HTML`);
+  checks.push({ name: "image-head", path: image.path, bytes: image.bytes, elapsedMs: image.elapsedMs });
+
   if (!queryPayload.pageInfo?.hasMore) warnings.push("catalog-query has no next page; real catalog growth still needs later CWV audit");
   return { ok: true, baseUrl: base, checks, warnings };
 }
@@ -180,6 +210,21 @@ async function createSelfTestServer() {
   const card = { id: "p1", baseSku: "opt_1", name: "Test", minPrice: 100, maxPrice: 120, variantCount: 2, image: "/x.webp" };
   const product = { ...card, variants: [{ sku: "opt_1_a", price: 100 }], images: [{ url: "/x.webp" }] };
   const server = createServer((req, res) => {
+    if (req.url === "/") {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
+      res.end("<!doctype html><title>Sobag</title>");
+      return;
+    }
+    if (req.url === "/index.html") {
+      res.writeHead(301, { location: "/", "cache-control": "public, max-age=3600" });
+      res.end();
+      return;
+    }
+    if (req.url === "/api/health") {
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
     if (req.url.startsWith("/api/catalog-query")) {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
       res.end(JSON.stringify({ items: [card], total: 1, pageInfo: { pageSize: 48, hasMore: false } }));
@@ -202,6 +247,16 @@ async function createSelfTestServer() {
         return;
       }
       res.end("body{}");
+      return;
+    }
+    if (req.url === "/data/products-live.json") {
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
+      res.end("[]");
+      return;
+    }
+    if (req.url === "/x.webp") {
+      res.writeHead(200, { "content-type": "image/webp", "cache-control": "public, max-age=86400, stale-while-revalidate=604800" });
+      res.end();
       return;
     }
     res.writeHead(404).end("not found");

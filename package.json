@@ -9,6 +9,7 @@
     "start:vps": "node server.mjs",
     "smoke:vps": "node tools/vps-server-smoke.mjs",
     "smoke:vps:write": "node tools/vps-write-smoke.mjs",
+    "smoke:api-security": "node tools/api-security-smoke.mjs",
     "preflight:vps": "node tools/vps-preflight.mjs",
     "preflight:vps:self-test": "node tools/vps-preflight.mjs --self-test",
     "backup:store": "node tools/file-store-backup.mjs",

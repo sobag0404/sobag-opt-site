@@ -1,3 +1,4 @@
+const { checkRateLimit } = require("../_lib/api-security");
 const { createSession, hashPassword, isValidEmail, normalizeEmail, normalizePhone, publicUser } = require("../_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { getStore, saveStore } = require("../_lib/store");
@@ -7,6 +8,8 @@ module.exports = async function handler(req, res) {
   try {
     const data = await readJson(req);
     const email = normalizeEmail(data.email);
+    const limited = checkRateLimit(req, { key: `auth:register:${email}`, limit: 6, windowMs: 10 * 60_000 });
+    if (limited) throw limited;
     const password = String(data.password || "");
     const name = String(data.name || "").trim();
     const phone = normalizePhone(data.phone);

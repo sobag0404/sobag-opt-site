@@ -39,14 +39,19 @@ function applySecurityHeaders(response) {
   Object.entries(securityHeaders).forEach(([key, value]) => response.setHeader(key, value));
 }
 
+function isFingerprintedAsset(pathname) {
+  return /\.[a-f0-9]{8,}\.(?:css|js|png|jpe?g|svg|webp|ico|woff2?)$/i.test(pathname);
+}
+
 function cacheControlFor(pathname) {
+  if (isFingerprintedAsset(pathname)) return "public, max-age=31536000, immutable";
   if (pathname.startsWith("/assets/")) return "public, max-age=86400, stale-while-revalidate=604800";
   if (pathname === "/data/products-live.json") return "public, max-age=300, stale-while-revalidate=3600";
   if (pathname.startsWith("/api/")) return "no-store";
   if ([".css", ".js", ".json", ".svg", ".png", ".jpg", ".jpeg", ".webp"].includes(extname(pathname).toLowerCase())) {
     return "public, max-age=3600, stale-while-revalidate=86400";
   }
-  return "public, max-age=0, must-revalidate";
+  return "no-cache";
 }
 
 function staticEntityHeaders(filePath) {

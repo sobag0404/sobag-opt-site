@@ -221,6 +221,46 @@ function normalizeProductImages(images) {
     });
 }
 
+function productPreviewFolder(value) {
+  return String(value || "")
+    .trim()
+    .replace(/_/g, "-")
+    .replace(/[^a-zA-Z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+}
+
+function legacyProductPreviewUrl(product, url) {
+  const rawUrl = String(url || "").trim();
+  if (!rawUrl || !/\/sobag-products\/products\//i.test(rawUrl)) return "";
+  if (/[?#]/.test(rawUrl)) return "";
+  const match = rawUrl.match(/\/sobag-products\/products\/([^/?#]+)\/[^/?#]*-(\d+)(?:-\d+w)?\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i);
+  const folder = productPreviewFolder(match?.[1] || product?.photoFolder || product?.baseSku || product?.id);
+  const index = Number(match?.[2] || 1);
+  if (!folder || !Number.isFinite(index) || index < 1) return "";
+  return `assets/product-preview-live/${folder}/${index}.webp`;
+}
+
+function resolveProductImageUrl(product, url) {
+  return legacyProductPreviewUrl(product, url) || String(url || "").trim();
+}
+
+function isLegacyGeneratedVariantUrl(url) {
+  return /\/sobag-products\/products\/[^/?#]+\/[^/?#]*-\d+-\d+w\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i.test(String(url || "").trim());
+}
+
+function normalizeProductImageUrls(product, image) {
+  if (!image) return image;
+  const sourceUrl = productImageMetadataUrl(image);
+  const fallbackUrl = legacyProductPreviewUrl(product, sourceUrl);
+  return {
+    ...image,
+    url: fallbackUrl || sourceUrl,
+    variants: fallbackUrl ? (image.variants || []).filter((variant) => !isLegacyGeneratedVariantUrl(productImageMetadataUrl(variant))) : image.variants || [],
+  };
+}
+
 function productImageMetadataUrl(image) {
   return String(image?.url || image?.publicUrl || "").trim();
 }
@@ -229,7 +269,10 @@ function productImageMetadataForUrl(product, url) {
   const target = String(url || "").trim();
   if (!target) return null;
   return (product?.images || []).find(
-    (image) => productImageMetadataUrl(image) === target || (image.variants || []).some((variant) => productImageMetadataUrl(variant) === target)
+    (image) =>
+      productImageMetadataUrl(image) === target ||
+      resolveProductImageUrl(product, productImageMetadataUrl(image)) === target ||
+      (image.variants || []).some((variant) => productImageMetadataUrl(variant) === target)
   );
 }
 
@@ -287,13 +330,15 @@ function productImageSourcesHtml(product, url) {
 }
 
 function productPictureHtml(product, url, alt, attrs = "") {
-  const src = String(url || "").trim() || "assets/production-workshop-1.png";
+  const src = resolveProductImageUrl(product, url) || "assets/production-workshop-1.png";
   const img = `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt || "")}" ${attrs} />`;
   const sources = productImageSourcesHtml(product, src);
   return sources ? `<picture>${sources}${img}</picture>` : img;
 }
 
 function applyProductImageVariantSrcset(node, product, url) {
+  const src = resolveProductImageUrl(product, url);
+  if (node && src) node.src = src;
   const picture = node?.closest?.("picture");
   if (picture) {
     picture.querySelectorAll("source[data-product-source]").forEach((source) => source.remove());
@@ -323,9 +368,9 @@ function normalizeProduct(product) {
   const categories = normalizeListField(product, "categories", splitList(product.category || ""));
   const normalizedCategories = categories.length ? categories : [product.category || "Подушки"];
   const status = normalizeProductStatus(product);
-  const imageMetadata = normalizeProductImages(product.images);
+  const imageMetadata = normalizeProductImages(product.images).map((image) => normalizeProductImageUrls(product, image));
   const metadataUrls = imageMetadata.map(productImageMetadataUrl).filter(Boolean);
-  const primaryImage = String(product.image || metadataUrls[0] || "assets/production-workshop-1.png").trim();
+  const primaryImage = resolveProductImageUrl(product, product.image || metadataUrls[0] || "assets/production-workshop-1.png");
   const normalized = {
     ...product,
     status,
@@ -340,7 +385,9 @@ function normalizeProduct(product) {
     collections: normalizeListField(product, "collections", product.theme ? [product.theme] : []),
     holidays: normalizeListField(product, "holidays"),
     tags: normalizeTags(product),
-    gallery: [...new Set([primaryImage, ...(product.gallery || []), ...metadataUrls])].filter(Boolean),
+    gallery: [
+      ...new Set([primaryImage, ...(product.gallery || []).map((image) => resolveProductImageUrl(product, image)), ...metadataUrls]),
+    ].filter(Boolean),
     detailDescription:
       product.detailDescription ||
       "Карточка показывает товар с несколькими фотографиями, быстрыми тегами и настройкой варианта под оптовую заявку.",
@@ -376,6 +423,11 @@ function normalizeProduct(product) {
     productHasCategory,
     normalizeProductImageMetadata,
     normalizeProductImages,
+    productPreviewFolder,
+    legacyProductPreviewUrl,
+    resolveProductImageUrl,
+    isLegacyGeneratedVariantUrl,
+    normalizeProductImageUrls,
     productImageMetadataUrl,
     productImageMetadataForUrl,
     PRODUCT_IMAGE_SIZES,

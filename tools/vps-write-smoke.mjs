@@ -31,6 +31,12 @@ function cookieFrom(response) {
   return value ? value.split(";")[0] : "";
 }
 
+function discountedTotal(unitPrice, qty) {
+  const subtotal = unitPrice * qty;
+  const discount = subtotal >= 300000 ? 18 : subtotal >= 150000 ? 12 : subtotal >= 70000 ? 7 : subtotal >= 30000 ? 5 : 0;
+  return Math.round((subtotal - (subtotal * discount) / 100) * 100) / 100;
+}
+
 async function request(baseUrl, path, options = {}) {
   const headers = {
     accept: "application/json",
@@ -136,8 +142,8 @@ try {
   const variant = detail.payload.product?.variants?.[0];
   assert(variant?.sku, "catalog-detail should return a generated variant");
   const unitPrice = Number(variant.price || 100);
-  const orderQty = Math.max(1, Math.ceil(30000 / unitPrice));
-  const orderTotal = unitPrice * orderQty;
+  const orderQty = Math.max(1, Math.ceil(32000 / unitPrice));
+  const orderTotal = discountedTotal(unitPrice, orderQty);
 
   const orderCreate = await request(baseUrl, "/api/orders", {
     method: "POST",

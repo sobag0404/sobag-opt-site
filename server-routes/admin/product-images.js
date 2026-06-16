@@ -68,7 +68,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      const data = await readJson(req);
+      const data = await readJson(req, { maxBytes: MAX_JSON_IMAGE_BYTES * 2 });
       const action = text(data.action || "upload");
 
       if (action === "mark-unused") {
@@ -94,7 +94,7 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "DELETE") {
       const url = parseUrl(req);
-      const body = await readJson(req);
+      const body = await readJson(req, { maxBytes: 512 * 1024 });
       const data = {
         ...(body && typeof body === "object" ? body : {}),
         url: url.searchParams.get("url") || body?.url,

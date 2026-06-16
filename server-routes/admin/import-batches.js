@@ -264,7 +264,7 @@ module.exports = async function handler(req, res) {
     }
     if (req.method !== "POST") return methodNotAllowed(res);
 
-    const data = await readJson(req);
+    const data = await readJson(req, { maxBytes: 6 * 1024 * 1024 });
     const action = text(data.action || "preview");
     const catalog = await getCatalog();
     const currentProducts = latestCatalogProducts(catalog);

@@ -484,11 +484,21 @@ fn builds_and_persists_order_preview_record() {
             "qty": 0,
             "variant": { "sku": "sku-1", "price": 520 }
         }],
-        "total": 30000,
+        "total": 30400,
         "customer": { "name": "Buyer" },
         "source": "site"
     });
-    let order = build_order_record(&data, Some(&user)).expect("order");
+    let trusted_items = vec![json!({
+        "key": "sku-1",
+        "productId": "p1",
+        "productName": "Pillow",
+        "productImage": "",
+        "qty": 1,
+        "variant": { "sku": "sku-1", "price": 32000 },
+        "subtotal": 32000
+    })];
+    let order =
+        build_order_record_from_trusted_items(&data, Some(&user), trusted_items).expect("order");
     assert_eq!(order["userEmail"], "buyer@example.test");
     assert_eq!(order["customer"]["phone"], "+7 968 959-32-54");
     assert_eq!(order["items"][0]["qty"], 1);
@@ -506,7 +516,7 @@ fn order_create_updates_user_profile_like_node() {
     });
     let data = json!({
         "items": [{ "key": "sku-1", "variant": { "sku": "sku-1", "price": 520 } }],
-        "total": 30000,
+        "total": 30400,
         "customer": {
             "name": "Buyer",
             "company": "Sobag LLC",
@@ -519,7 +529,17 @@ fn order_create_updates_user_profile_like_node() {
             "comment": "Call first"
         }
     });
-    let order = build_order_record(&data, Some(&user)).expect("order");
+    let trusted_items = vec![json!({
+        "key": "sku-1",
+        "productId": "p1",
+        "productName": "Pillow",
+        "productImage": "",
+        "qty": 1,
+        "variant": { "sku": "sku-1", "price": 32000 },
+        "subtotal": 32000
+    })];
+    let order =
+        build_order_record_from_trusted_items(&data, Some(&user), trusted_items).expect("order");
     let mut store = json!({
         "users": {
             "buyer@example.test": {
@@ -545,16 +565,46 @@ fn order_create_updates_user_profile_like_node() {
 
 #[test]
 fn rejects_below_minimum_order_preview_record() {
-    let error = build_order_record(
+    let error = build_order_record_from_trusted_items(
         &json!({
             "items": [{ "variant": { "sku": "sku-1" } }],
             "total": 29999,
             "customer": { "phone": "+7 968 959-32-54" }
         }),
         None,
+        vec![json!({
+            "key": "sku-1",
+            "productId": "p1",
+            "productName": "Pillow",
+            "qty": 1,
+            "variant": { "sku": "sku-1", "price": 29999 },
+            "subtotal": 29999
+        })],
     )
     .expect_err("minimum error");
     assert_eq!(error.code, "minimum_total");
+}
+
+#[test]
+fn rejects_order_total_mismatch_with_trusted_items() {
+    let error = build_order_record_from_trusted_items(
+        &json!({
+            "items": [{ "variant": { "sku": "sku-1", "price": 1 } }],
+            "total": 30000,
+            "customer": { "phone": "+7 968 959-32-54" }
+        }),
+        None,
+        vec![json!({
+            "key": "sku-1",
+            "productId": "p1",
+            "productName": "Pillow",
+            "qty": 1,
+            "variant": { "sku": "sku-1", "price": 32000 },
+            "subtotal": 32000
+        })],
+    )
+    .expect_err("mismatch error");
+    assert_eq!(error.code, "ORDER_TOTAL_MISMATCH");
 }
 
 #[test]

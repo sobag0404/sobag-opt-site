@@ -73,7 +73,7 @@ module.exports = async function handler(req, res) {
     }
     if (req.method !== "PUT") return methodNotAllowed(res);
 
-    const data = await readJson(req);
+    const data = await readJson(req, { maxBytes: 8 * 1024 * 1024 });
     const products = Array.isArray(data.products) ? data.products.map(cleanProduct).filter(Boolean) : [];
     if (!products.length) return sendJson(res, 400, { error: "empty_catalog", message: "Каталог не должен быть пустым." });
     if (products.length > MAX_PRODUCTS) return sendJson(res, 400, { error: "catalog_too_large", message: "Слишком много товаров в одном сохранении." });

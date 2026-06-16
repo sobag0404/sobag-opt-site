@@ -14,9 +14,22 @@ function methodNotAllowed(res) {
   sendJson(res, 405, { error: "method_not_allowed", message: "Метод не поддерживается." });
 }
 
-async function readJson(req) {
+const DEFAULT_JSON_MAX_BYTES = Number(process.env.SOBAG_JSON_MAX_BYTES || 256 * 1024);
+
+function payloadTooLarge(maxBytes) {
+  const error = new Error("Payload too large.");
+  error.statusCode = 413;
+  error.code = "payload_too_large";
+  error.publicMessage = "Request payload is too large.";
+  error.maxBytes = maxBytes;
+  return error;
+}
+
+async function readJson(req, options = {}) {
+  const maxBytes = Math.max(1, Number(options.maxBytes || DEFAULT_JSON_MAX_BYTES));
   if (req.body && typeof req.body === "object") return req.body;
   if (typeof req.body === "string") {
+    if (Buffer.byteLength(req.body, "utf8") > maxBytes) throw payloadTooLarge(maxBytes);
     try {
       return JSON.parse(req.body);
     } catch {
@@ -27,7 +40,12 @@ async function readJson(req) {
     }
   }
   const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
+  let totalBytes = 0;
+  for await (const chunk of req) {
+    totalBytes += chunk.length;
+    if (totalBytes > maxBytes) throw payloadTooLarge(maxBytes);
+    chunks.push(chunk);
+  }
   if (!chunks.length) return {};
   try {
     return JSON.parse(Buffer.concat(chunks).toString("utf8"));
@@ -100,4 +118,4 @@ function handleError(res, error, req = null) {
   });
 }
 
-module.exports = { handleError, methodNotAllowed, readJson, sendJson };
+module.exports = { DEFAULT_JSON_MAX_BYTES, handleError, methodNotAllowed, readJson, sendJson };

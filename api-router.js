@@ -1,4 +1,5 @@
-const { methodNotAllowed, sendJson } = require("./server-routes/_lib/http");
+const { checkRateLimit, enforceSameOriginForCookieMutation, isUnsafeMethod } = require("./server-routes/_lib/api-security");
+const { handleError, methodNotAllowed, sendJson } = require("./server-routes/_lib/http");
 const catalog = require("./server-routes/catalog.js");
 const catalogQuery = require("./server-routes/catalog-query.js");
 const catalogDetail = require("./server-routes/catalog-detail.js");
@@ -51,6 +52,17 @@ function requestPath(req) {
 }
 
 async function handleApiRequest(req, res, pathname = requestPath(req)) {
+  try {
+    if (isUnsafeMethod(req.method)) {
+      const originError = enforceSameOriginForCookieMutation(req);
+      if (originError) throw originError;
+      const rateError = checkRateLimit(req, { key: `route:${routeKey(pathname)}` });
+      if (rateError) throw rateError;
+    }
+  } catch (error) {
+    handleError(res, error, req);
+    return true;
+  }
   const handler = apiRoutes.get(routeKey(pathname));
   if (!handler) {
     if (req.method && req.method !== "GET") return methodNotAllowed(res);

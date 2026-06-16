@@ -51,6 +51,11 @@ try {
   const home = await readText(baseUrl, "/");
   assert(home.text.includes("Sobag"), "home page should include Sobag marker");
   assert(home.response.headers.get("x-content-type-options") === "nosniff", "security headers should be set");
+  assert((home.response.headers.get("cache-control") || "").includes("no-cache"), "HTML shell should require revalidation");
+
+  const indexRedirect = await fetch(new URL("/index.html", baseUrl), { redirect: "manual" });
+  assert(indexRedirect.status === 301, `/index.html should redirect to /, got ${indexRedirect.status}`);
+  assert(indexRedirect.headers.get("location") === "/", "/index.html should redirect to root");
 
   const appJs = await readText(baseUrl, "/app.js");
   assert((appJs.response.headers.get("cache-control") || "").includes("max-age=3600"), "static JS should be browser-cacheable");
@@ -62,6 +67,15 @@ try {
   const headAppJs = await fetch(new URL("/app.js", baseUrl), { method: "HEAD" });
   assert(headAppJs.ok, `static JS HEAD should return 2xx, got ${headAppJs.status}`);
   assert((await headAppJs.text()) === "", "static JS HEAD should not return a body");
+
+  const styles = await readText(baseUrl, "/styles.css");
+  assert((styles.response.headers.get("content-type") || "").includes("text/css"), "CSS should use text/css MIME");
+  assert((styles.response.headers.get("cache-control") || "").includes("max-age=3600"), "non-fingerprinted CSS should use short static cache");
+
+  const heroImage = await fetch(new URL("/assets/production-hero-1.png", baseUrl), { method: "HEAD" });
+  assert(heroImage.ok, `image HEAD should return 2xx, got ${heroImage.status}`);
+  assert((heroImage.headers.get("content-type") || "").includes("image/png"), "image should use image/png MIME");
+  assert((heroImage.headers.get("cache-control") || "").includes("max-age=86400"), "assets images should use cautious one-day cache");
 
   const catalogPage = await readText(baseUrl, "/catalog");
   assert(catalogPage.text.includes("Каталог"), "clean catalog URL should resolve to catalog.html");
@@ -80,6 +94,8 @@ try {
   assert(health.ok === true, "health should be ready with file store");
   assert(health.store?.provider === "file", "health should expose safe file store provider");
   assert(health.store?.configured === true, "file store should be configured");
+  const healthResponse = await fetch(new URL("/api/health", baseUrl));
+  assert((healthResponse.headers.get("cache-control") || "").includes("no-store"), "API health should not be cached");
 
   const query = await readJson(baseUrl, "/api/catalog-query?pageSize=2");
   assert(query.items?.length === 2, "catalog-query should return compact cards");

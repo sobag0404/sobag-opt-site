@@ -1,8 +1,8 @@
 # Project Readiness Report
 
-Generated: 2026-06-16T08:05:07+00:00
+Generated: 2026-06-16T08:54:09+00:00
 Project: sobag-opt-site
-Git: `main` / `633745d`
+Git: `main` / `3b1e229`
 
 ## 1. Executive Summary
 
@@ -11,6 +11,12 @@ Git: `main` / `633745d`
 - Итоговая оценка: **87/100**
 - Итоговый статус: **READY_WITH_WARNINGS**
 - Главный вывод: **можно передавать с предупреждениями**
+
+Current post-transition implementation evidence:
+- Security backlog TASK-001..TASK-004 first pass is implemented for Node and Rust order paths: server-side order repricing, client total mismatch rejection, JSON body caps, rate limiting, and cookie-auth same-origin mutation guard.
+- RBAC/API regression coverage is extended through `tools/api-security-smoke.mjs` and `npm run check`.
+- VPS/static cache policy is hardened in `server.mjs`: HTML revalidates, API stays `no-store`, catalog API keeps short public cache, non-fingerprinted assets use cautious browser cache, and fingerprinted assets are immutable.
+- Cache/header evidence is covered by `tools/vps-server-smoke.mjs` and `tools/production-performance-smoke.mjs --self-test`; live production header checks are blocked in this local shell by outbound network failure and must be verified by GitHub/VPS after deploy.
 
 ## 2. Readiness Score
 
@@ -37,7 +43,7 @@ Git: `main` / `633745d`
 
 - Severity: `medium`
 - Priority: `P2`
-- File / area: `app.js (4655 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4685 lines)`
+- File / area: `app.js (4664 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4817 lines)`
 - Description: Several implementation files are above the configured size threshold.
 - Why it matters: The project is still maintainable, but future changes will be harder to isolate.
 - Recommendation: Document ownership boundaries and extract modules when touching these areas.
@@ -77,7 +83,7 @@ Git: `main` / `633745d`
 
 - Severity: `medium`
 - Priority: `P2`
-- File / area: `.github/workflows/vps-deploy.yml, reports/project-readiness/latest.md, tools/vps-release-audit.mjs`
+- File / area: `.github/workflows/vps-deploy.yml, tools/vps-release-audit.mjs`
 - Description: The repository contains shell snippets with `rm -rf` or equivalent destructive cleanup commands.
 - Why it matters: These commands may be legitimate in deploy cleanup, but they are high-impact if path validation regresses.
 - Recommendation: Keep destructive commands confined to reviewed deploy scripts, validate resolved paths, and never add them to the readiness agent.
@@ -209,9 +215,9 @@ Reason: critical=0, high=0, medium=4, low=6, info=2. Score is reduced only for w
 - Активная продуктовая цель: завершить Rust/no-Node переход только после прохождения cutover smoke/audit gates и сохранения rollback-пути.
 
 Задачи по приоритету:
-1. P2 ARCH-001: Large source files need explicit ownership. Файл/область: app.js (4655 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4685 lines). Рекомендация: Document ownership boundaries and extract modules when touching these areas.
+1. P2 ARCH-001: Large source files need explicit ownership. Файл/область: app.js (4664 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4817 lines). Рекомендация: Document ownership boundaries and extract modules when touching these areas.
 2. P2 CODE-003: No standard lint configuration is detected. Файл/область: repository. Рекомендация: Add ESLint with a small ruleset that complements, not replaces, the existing custom invariant checks.
-3. P2 SEC-005: Destructive shell operations exist and require guardrails. Файл/область: .github/workflows/vps-deploy.yml, reports/project-readiness/latest.md, tools/vps-release-audit.mjs. Рекомендация: Keep destructive commands confined to reviewed deploy scripts, validate resolved paths, and never add them to the readiness agent.
+3. P2 SEC-005: Destructive shell operations exist and require guardrails. Файл/область: .github/workflows/vps-deploy.yml, tools/vps-release-audit.mjs. Рекомендация: Keep destructive commands confined to reviewed deploy scripts, validate resolved paths, and never add them to the readiness agent.
 4. P2 PROMPT-003: Long prompts risk pulling obsolete context into new chats. Файл/область: docs/ai-handoff/LIVE_CONTEXT.md. Рекомендация: For new runs, use `reports/project-readiness/latest-chat.md` as the entry prompt and link to the latest report/context files only.
 
 Next implementation packet for VPS-only/Rust transition:
@@ -260,9 +266,26 @@ P0/P1 рекомендации:
 - `docs/synthetic-cwv-readiness-evidence.md`
 - `reports/project-readiness/synthetic-cwv-evidence.json`
 - Git working tree status:
-  - ` M docs/synthetic-cwv-readiness-evidence.md`
-  - ` M reports/project-readiness/synthetic-cwv-evidence.json`
-  - ` M tools/project_readiness_agent/runner.py`
+  - ` M api-router.js`
+  - ` M app.js`
+  - ` M components/app-product-utils.js`
+  - ` M package.json`
+  - ` M reports/project-readiness/latest-chat.md`
+  - ` M reports/project-readiness/latest.md`
+  - ` M rust-server/src/main.rs`
+  - ` M rust-server/src/ssr_tests.rs`
+  - ` M server-routes/_lib/catalog-query.js`
+  - ` M server-routes/_lib/http.js`
+  - ` M server-routes/admin/catalog.js`
+  - ` M server-routes/admin/content.js`
+  - ` M server-routes/admin/import-batches.js`
+  - ` M server-routes/admin/product-images.js`
+  - ` M server-routes/auth/login.js`
+  - ` M server-routes/auth/me.js`
+  - ` M server-routes/auth/register.js`
+  - ` M server-routes/briefs.js`
+  - ` M server-routes/orders.js`
+  - ` M server.mjs`
 - Diff/PR URL: unavailable in local repository context.
 
 ## 9. Limitations

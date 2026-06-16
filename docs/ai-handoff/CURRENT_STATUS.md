@@ -32,6 +32,7 @@ Production URLs:
 - Health: `https://sobag-shop.online/api/health`
 
 Current focus:
+- Post-transition security/cache pass is in progress: server-side order repricing, JSON limits, route rate limits, same-origin cookie mutation guard, API security smoke, and VPS static cache smoke are implemented locally. After commit/push, GitHub/VPS deploy plus live cache/header smokes must verify production behavior.
 - Rust/VPS transition can be handed off with warnings after successful GitHub/VPS gates. Do not start external review backlog TASK-001..TASK-015 until the user asks for the post-transition review pass.
 - Current canonical URL cleanup: commit `3fa61ef` is pushed. `server.mjs` and local `tools/static-server.mjs` redirect `/index.html` to `/` with 301, shared header/home links point to `/`, `tools/canonical-url-smoke.mjs` covers root canonical, `/index.html` redirect, key pages, and root CSS/JS assets, and production-smoke workflow runs the canonical smoke after VPS deploy.
 - External developer/security review `C:\Users\SoBag\Downloads\AI_DEVELOPER_REVIEW.md` is reference-only for the current transition pass. Do not start TASK-001..TASK-015 until the Rust/VPS transition gates are complete. Post-transition P0/P1 backlog captured from the review: server-side order repricing/trust boundary, public endpoint rate limiting, CSRF/origin enforcement, JSON body-size limits, persistence concurrency/locking, CI gate reliability, and real CWV/goal evidence.

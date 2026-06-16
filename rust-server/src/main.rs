@@ -34,6 +34,9 @@ const MAX_CART_LINES: usize = 500;
 const MAX_FAVORITES: usize = 5000;
 const MAX_SAVED_CARTS: usize = 50;
 const MAX_REVIEWS: usize = 5000;
+const MIN_ORDER_TOTAL: i64 = 30_000;
+const BASKET_DISCOUNT_TIERS: &[(i64, i64)] =
+    &[(30_000, 5), (70_000, 7), (150_000, 12), (300_000, 18)];
 const FACET_GROUPS: &[(&str, &str, bool)] = &[
     ("category", "categories", true),
     ("collection", "collections", true),
@@ -1368,6 +1371,7 @@ async fn admin_content_review_patch_preview(
 }
 
 async fn order_create_preview(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
@@ -1387,7 +1391,7 @@ async fn order_create_preview(
             .unwrap_or_else(default_store_value)
     };
     let user = context.as_ref().map(|(_, user)| user);
-    let order = build_order_record(&data, user)?;
+    let order = build_order_record(&state.pool, &data, user).await?;
     push_order_record(&mut store, order.clone());
     update_user_profile_from_order(&mut store, &order);
     save_file_store_value(STORE_KEY, &store)
@@ -2859,36 +2863,45 @@ fn digits_only(value: &str, limit: usize) -> String {
         .collect()
 }
 
-fn build_order_record(data: &Value, user: Option<&Value>) -> AppResult<Value> {
-    let items = data
-        .get("items")
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .map(sanitize_order_line)
-                .filter(|line| {
-                    line.get("variant")
-                        .and_then(|variant| variant.get("sku"))
-                        .and_then(Value::as_str)
-                        .map(|sku| !sku.trim().is_empty())
-                        .unwrap_or(false)
-                })
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
+async fn build_order_record(pool: &PgPool, data: &Value, user: Option<&Value>) -> AppResult<Value> {
+    let items = trusted_order_lines(pool, data).await?;
+    build_order_record_from_trusted_items(data, user, items)
+}
+
+fn build_order_record_from_trusted_items(
+    data: &Value,
+    user: Option<&Value>,
+    items: Vec<Value>,
+) -> AppResult<Value> {
     if items.is_empty() {
         return Err(AppError::bad_request(
             "empty_order",
             "В заказе нет товаров.",
         ));
     }
-    let total = data.get("total").and_then(Value::as_f64).unwrap_or(0.0);
-    if !total.is_finite() || total < 30_000.0 {
+    let subtotal: i64 = items
+        .iter()
+        .map(|item| item.get("subtotal").and_then(Value::as_i64).unwrap_or(0))
+        .sum();
+    let discount_percent = basket_discount(subtotal);
+    let discount_amount = ((subtotal as f64) * (discount_percent as f64 / 100.0)).round() as i64;
+    let total = subtotal - discount_amount;
+    if total < MIN_ORDER_TOTAL {
         return Err(AppError::bad_request(
             "minimum_total",
             "Минимальная сумма заказа 30 000 ₽.",
         ));
+    }
+    if let Some(client_total) = data.get("total").and_then(Value::as_f64) {
+        if client_total.is_finite()
+            && client_total > 0.0
+            && (client_total.round() as i64 - total).abs() > 1
+        {
+            return Err(AppError::conflict(
+                "ORDER_TOTAL_MISMATCH",
+                "Order total does not match current catalog prices.",
+            ));
+        }
     }
     let customer = data.get("customer").unwrap_or(&Value::Null);
     let phone = normalize_phone(
@@ -2924,10 +2937,129 @@ fn build_order_record(data: &Value, user: Option<&Value>) -> AppResult<Value> {
             "comment": string_field(customer, "comment").unwrap_or_default()
         },
         "items": items,
+        "subtotal": subtotal,
+        "discountPercent": discount_percent,
+        "discountAmount": discount_amount,
         "total": total,
+        "clientTotal": data.get("total").and_then(Value::as_f64).unwrap_or(0.0),
         "promo": string_field(data, "promo").unwrap_or_default(),
         "source": string_field(data, "source").unwrap_or_else(|| "site".to_string())
     }))
+}
+
+async fn trusted_order_lines(pool: &PgPool, data: &Value) -> AppResult<Vec<Value>> {
+    let requested = data
+        .get("items")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|line| {
+                    let variant = line.get("variant").unwrap_or(&Value::Null);
+                    let sku = clean_text(variant.get("sku"), 120)
+                        .or_else(|| clean_text(line.get("sku"), 120))
+                        .or_else(|| clean_text(line.get("variantSku"), 120))?;
+                    let qty = clamp_i64(
+                        line.get("qty")
+                            .and_then(Value::as_f64)
+                            .unwrap_or(1.0)
+                            .round() as i64,
+                        1,
+                        99_999,
+                    );
+                    Some((sku, qty))
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    if requested.is_empty() {
+        return Ok(Vec::new());
+    }
+    let skus = requested
+        .iter()
+        .map(|(sku, _)| sku.clone())
+        .collect::<Vec<_>>();
+    let rows = sqlx::query(
+        "SELECT v.sku, v.type, v.size, v.material, v.price, p.id AS product_id, p.base_sku, p.name AS product_name, COALESCE(p.status, 'published') AS status
+         FROM variants v
+         JOIN public_catalog_products p ON p.id = v.product_id
+         WHERE v.sku = ANY($1)",
+    )
+    .bind(&skus)
+    .fetch_all(pool)
+    .await
+    .map_err(|error| AppError::internal(error.to_string()))?;
+    let mut trusted = HashMap::<String, Value>::new();
+    for row in rows {
+        let sku: String = row.try_get("sku").unwrap_or_default();
+        let status: String = row
+            .try_get("status")
+            .unwrap_or_else(|_| "published".to_string());
+        if sku.is_empty() || status != "published" {
+            continue;
+        }
+        trusted.insert(
+            sku.clone(),
+            json!({
+                "productId": row.try_get::<String, _>("product_id").unwrap_or_default(),
+                "productName": row.try_get::<String, _>("product_name").unwrap_or_default(),
+                "baseSku": row.try_get::<String, _>("base_sku").unwrap_or_default(),
+                "variant": {
+                    "sku": sku,
+                    "name": row.try_get::<String, _>("sku").unwrap_or_default(),
+                    "type": row.try_get::<String, _>("type").unwrap_or_default(),
+                    "size": row.try_get::<String, _>("size").unwrap_or_default(),
+                    "material": row.try_get::<String, _>("material").unwrap_or_default(),
+                    "price": row.try_get::<i64, _>("price").unwrap_or(0)
+                }
+            }),
+        );
+    }
+    let mut out = Vec::new();
+    for (sku, qty) in requested {
+        let Some(trusted_line) = trusted.get(&sku) else {
+            return Err(AppError::bad_request(
+                "invalid_sku",
+                "Order item SKU is not available.",
+            ));
+        };
+        let price = trusted_line
+            .get("variant")
+            .and_then(|variant| variant.get("price"))
+            .and_then(Value::as_i64)
+            .unwrap_or(0);
+        if price <= 0 {
+            return Err(AppError::bad_request(
+                "invalid_price",
+                "Order item price is not available.",
+            ));
+        }
+        out.push(json!({
+            "key": sku,
+            "productId": trusted_line.get("productId").cloned().unwrap_or_default(),
+            "productName": trusted_line.get("productName").cloned().unwrap_or_default(),
+            "productImage": "",
+            "baseSku": trusted_line.get("baseSku").cloned().unwrap_or_default(),
+            "qty": qty,
+            "variant": trusted_line.get("variant").cloned().unwrap_or_default(),
+            "subtotal": price * qty
+        }));
+    }
+    Ok(out)
+}
+
+fn basket_discount(subtotal: i64) -> i64 {
+    BASKET_DISCOUNT_TIERS
+        .iter()
+        .rev()
+        .find_map(|(amount, discount)| {
+            if subtotal >= *amount {
+                Some(*discount)
+            } else {
+                None
+            }
+        })
+        .unwrap_or(0)
 }
 
 fn apply_buyer_order_comment_patch(

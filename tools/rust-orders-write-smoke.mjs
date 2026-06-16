@@ -120,10 +120,33 @@ function assertSame(label, actual, expected) {
   }
 }
 
-function orderBody() {
+function discountedTotal(unitPrice, qty) {
+  const subtotal = unitPrice * qty;
+  const discount = subtotal >= 300000 ? 18 : subtotal >= 150000 ? 12 : subtotal >= 70000 ? 7 : subtotal >= 30000 ? 5 : 0;
+  return Math.round((subtotal - (subtotal * discount) / 100) * 100) / 100;
+}
+
+async function loadOrderFixture(baseUrl) {
+  const query = await requestJson(`${baseUrl}/api/catalog-query?pageSize=1`);
+  const card = query.payload.items?.[0];
+  if (!card?.baseSku) throw new Error("catalog-query did not return a product card");
+  const detail = await requestJson(`${baseUrl}/api/catalog-detail?baseSku=${encodeURIComponent(card.baseSku)}`);
+  const product = detail.payload.product || {};
+  const variant = product.variants?.[0];
+  if (!variant?.sku) throw new Error("catalog-detail did not return a variant");
+  const unitPrice = Number(variant.price || 0);
+  const qty = Math.max(1, Math.ceil(32000 / unitPrice));
+  return { product, variant, qty, total: discountedTotal(unitPrice, qty) };
+}
+
+function orderBody(fixture = null, options = {}) {
+  const variant = fixture?.variant || { sku: "sku-1", price: 520 };
+  const product = fixture?.product || { id: "", name: "Pillow" };
+  const qty = fixture?.qty || 1;
+  const total = Object.prototype.hasOwnProperty.call(options, "total") ? options.total : fixture?.total || 30000;
   return {
-    items: [{ key: "sku-1", productName: "Pillow", qty: 0, variant: { sku: "sku-1", price: 520 } }],
-    total: 30000,
+    items: [{ key: variant.sku, productId: product.id || "", productName: product.name || "", qty, variant }],
+    total,
     customer: {
       name: "Buyer",
       company: "Sobag LLC",
@@ -308,17 +331,18 @@ async function runSmoke(args) {
   try {
     await waitForJson(`http://127.0.0.1:${nodePort}/api/health`, args.timeout);
     await waitForJson(`http://127.0.0.1:${rustPort}/api/health-rust`, args.timeout);
+    const orderFixture = await loadOrderFixture(`http://127.0.0.1:${nodePort}`);
     const nodeCreated = await requestJson(`http://127.0.0.1:${nodePort}/api/orders`, {
       token: "buyer",
       method: "POST",
-      body: orderBody(),
+      body: orderBody(orderFixture),
     });
     const nodeAccountAfterOrder = await requestJson(`http://127.0.0.1:${nodePort}/api/auth/me`, { token: "buyer" });
     await createFixtureStore(temp);
     const created = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
       token: "buyer",
       method: "POST",
-      body: orderBody(),
+      body: orderBody(orderFixture),
     });
     const rustAccountAfterOrder = await requestJson(`http://127.0.0.1:${rustPort}/rust/auth/me`, { token: "buyer" });
     assertSame("order create", orderCreateSlice(created), orderCreateSlice(nodeCreated));
@@ -355,7 +379,7 @@ async function runSmoke(args) {
 
     const belowMinimum = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
       method: "POST",
-      body: { ...orderBody(), total: 29999 },
+      body: orderBody(orderFixture, { total: 29999 }),
     });
     if (belowMinimum.status !== 400 || belowMinimum.payload.error !== "minimum_total") {
       throw new Error(`minimum check mismatch: ${belowMinimum.status} ${JSON.stringify(belowMinimum.payload)}`);

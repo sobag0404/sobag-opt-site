@@ -165,10 +165,33 @@ async function requestJson(base, path, { token = "", method = "GET", body = null
   };
 }
 
-function orderBody() {
+function discountedTotal(unitPrice, qty) {
+  const subtotal = unitPrice * qty;
+  const discount = subtotal >= 300000 ? 18 : subtotal >= 150000 ? 12 : subtotal >= 70000 ? 7 : subtotal >= 30000 ? 5 : 0;
+  return Math.round((subtotal - (subtotal * discount) / 100) * 100) / 100;
+}
+
+async function loadOrderFixture(base) {
+  const query = await requestJson(base, "/api/catalog-query?pageSize=1");
+  const card = query.payload.items?.[0];
+  if (!card?.baseSku) throw new Error("catalog-query did not return a product card");
+  const detail = await requestJson(base, `/api/catalog-detail?baseSku=${encodeURIComponent(card.baseSku)}`);
+  const product = detail.payload.product || {};
+  const variant = product.variants?.[0];
+  if (!variant?.sku) throw new Error("catalog-detail did not return a variant");
+  const unitPrice = Number(variant.price || 0);
+  const qty = Math.max(1, Math.ceil(32000 / unitPrice));
+  return { product, variant, qty, total: discountedTotal(unitPrice, qty) };
+}
+
+function orderBody(fixture = null, options = {}) {
+  const variant = fixture?.variant || { sku: "sku-1", price: 520 };
+  const product = fixture?.product || { id: "", name: "Pillow" };
+  const qty = fixture?.qty || 1;
+  const total = Object.prototype.hasOwnProperty.call(options, "total") ? options.total : fixture?.total || 30000;
   return {
-    items: [{ key: "sku-1", productName: "Pillow", qty: 0, variant: { sku: "sku-1", price: 520 } }],
-    total: 30000,
+    items: [{ key: variant.sku, productId: product.id || "", productName: product.name || "", qty, variant }],
+    total,
     customer: {
       name: "Buyer",
       company: "Sobag LLC",
@@ -218,8 +241,9 @@ async function runSmoke(args) {
     await waitForJson(`http://127.0.0.1:${rustPort}/api/health-rust`, args.timeout);
     proxy = await startProxy({ port: proxyPort, nodePort, rustPort });
     const base = `http://127.0.0.1:${proxyPort}`;
+    const orderFixture = await loadOrderFixture(base);
 
-    const created = await requestJson(base, "/api/orders", { token: "buyer", method: "POST", body: orderBody() });
+    const created = await requestJson(base, "/api/orders", { token: "buyer", method: "POST", body: orderBody(orderFixture) });
     if (created.status !== 201 || created.payload.order?.source !== "rust-cutover-smoke") {
       throw new Error(`order create through Rust route failed: ${created.status} ${JSON.stringify(created.payload)}`);
     }
@@ -252,7 +276,7 @@ async function runSmoke(args) {
     }
     console.log("OK PATCH /api/orders through Rust");
 
-    const belowMinimum = await requestJson(base, "/api/orders", { method: "POST", body: { ...orderBody(), total: 29999 } });
+    const belowMinimum = await requestJson(base, "/api/orders", { method: "POST", body: orderBody(orderFixture, { total: 29999 }) });
     if (belowMinimum.status !== 400 || belowMinimum.payload.error !== "minimum_total") {
       throw new Error(`minimum check mismatch: ${belowMinimum.status} ${JSON.stringify(belowMinimum.payload)}`);
     }
