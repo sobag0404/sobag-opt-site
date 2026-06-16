@@ -350,6 +350,60 @@ test("catalog local fallback renders compact product pages", async ({ page }) =>
   await expect(page.locator(".product-card")).toHaveCount(Math.min(96, count));
 });
 
+test("catalog home first load uses server category summary over stale fallback", async ({ page }) => {
+  const categoryRows = [
+    { value: "Подушки", count: 517 },
+    { value: "Наволочки", count: 517 },
+    { value: "Мешки для обуви", count: 170 },
+    { value: "Чехлы на чемодан", count: 37 },
+    { value: "Ремувки", count: 19 },
+    { value: "Флаги", count: 65 },
+  ];
+  await page.evaluate(() => {
+    localStorage.removeItem("sobag.products.v8");
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith("sobag.publicApiCache.v1."))
+      .forEach((key) => localStorage.removeItem(key));
+  });
+  await page.route("**/api/catalog", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({ error: "qa_full_catalog_unavailable" }),
+    });
+  });
+  await page.route("**/data/products-live.json", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify([]),
+    });
+  });
+  await page.route("**/api/catalog-query?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        items: [],
+        total: 808,
+        facets: { categories: categoryRows, collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        facetOptions: { categories: categoryRows, collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        pageInfo: { page: 1, pageSize: 1, offset: 0, total: 808, totalPages: 808, hasMore: true, nextCursor: "MQ" },
+        source: "qa-category-summary",
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/catalog.html?qa=category-summary`, { waitUntil: "domcontentloaded" });
+  await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
+  const tileText = await page.locator("#categoryTiles").innerText();
+  const normalizedTileText = tileText.toLocaleLowerCase("ru-RU");
+  for (const row of categoryRows) {
+    expect(normalizedTileText).toContain(row.value.toLocaleLowerCase("ru-RU"));
+    expect(tileText).toContain(String(row.count));
+  }
+});
+
 test("account favorites are per-user and orders can be repeated into cart", async ({ page }) => {
   const category = await largestCategory(page);
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });

@@ -154,6 +154,11 @@ const state = {
     source: "",
     loadingMore: false,
   },
+  catalogHomeSummary: {
+    status: "idle",
+    counts: {},
+    source: "",
+  },
   cart: new Map(),
   favorites: new Set(cleanFavoriteIds(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"))),
   recentProducts: cleanFavoriteIds(JSON.parse(localStorage.getItem(STORAGE.recentProducts) || "[]")),
@@ -1211,6 +1216,56 @@ async function loadServerProducts() {
     return false;
   }
 }
+function catalogCategorySummaryRows(data = {}) {
+  const rows = data.facets?.categories || data.facetOptions?.categories || [];
+  return Array.isArray(rows) ? rows : [];
+}
+function catalogCategoryCountsFromRows(rows = []) {
+  return rows.reduce((counts, row) => {
+    const name = String(row?.value || "").trim();
+    const count = Number(row?.count || 0) || 0;
+    if (name && count > 0) counts[name] = count;
+    return counts;
+  }, {});
+}
+function fallbackCatalogCategory(name) {
+  const existing = catalogContentItem(defaultSiteContent.catalogCategories, name);
+  return existing || { name, icon: "tag", description: "Категория из текущего каталога.", image: "" };
+}
+function applyCatalogHomeSummary(data = {}) {
+  const counts = catalogCategoryCountsFromRows(catalogCategorySummaryRows(data));
+  if (!Object.keys(counts).length) return false;
+  state.catalogHomeSummary = {
+    status: "ready",
+    counts,
+    source: String(data.source || "server"),
+  };
+  renderCatalogHome();
+  return true;
+}
+async function refreshCatalogHomeSummary() {
+  if (!categoryTiles || shouldLoadAdminCatalog()) return false;
+  if (hasActiveCatalogState()) return false;
+  const path = "/api/catalog-query?pageSize=1&sort=popular";
+  const cached = getPublicApiCache(path);
+  if (cached && applyCatalogHomeSummary(cached)) {
+    apiRequest(path)
+      .then(applyCatalogHomeSummary)
+      .catch((error) => {
+        if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
+      });
+    return true;
+  }
+  state.catalogHomeSummary.status = "loading";
+  try {
+    const data = await apiRequest(path);
+    return applyCatalogHomeSummary(data);
+  } catch (error) {
+    state.catalogHomeSummary.status = "fallback";
+    if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
+    return false;
+  }
+}
 function replaceLoadedProduct(product) {
   const normalized = normalizeProduct(product);
   const key = productKey(normalized);
@@ -2257,7 +2312,14 @@ function renderCatalogHome() {
       countByCategory[category] = (countByCategory[category] || 0) + 1;
     });
   });
-  const visibleCategories = content.catalogCategories.filter((category) => (countByCategory[category.name] || 0) > 0);
+  const serverCounts = state.catalogHomeSummary.status === "ready" ? state.catalogHomeSummary.counts : {};
+  Object.entries(serverCounts).forEach(([category, count]) => {
+    if (count > 0) countByCategory[category] = count;
+  });
+  const categoryItems = Object.keys(serverCounts).length
+    ? addMissingCatalogItems(content.catalogCategories, Object.keys(serverCounts), fallbackCatalogCategory)
+    : content.catalogCategories;
+  const visibleCategories = categoryItems.filter((category) => (countByCategory[category.name] || 0) > 0);
   categoryTiles.innerHTML = visibleCategories
     .map(
       (category, index) => `
@@ -3883,6 +3945,7 @@ function boot() {
   updateCustomCalculator();
   initActualSlider();
   loadServerSiteContent();
+  refreshCatalogHomeSummary();
   loadPublishedProducts();
   loadImportBatches();
   initFormEnhancements();
