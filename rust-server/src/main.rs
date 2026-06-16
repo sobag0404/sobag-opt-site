@@ -1614,7 +1614,11 @@ async fn admin_content_review_patch_preview(
     ))
 }
 
-async fn admin_pim_preview(headers: HeaderMap, uri: Uri) -> AppResult<Response> {
+async fn admin_pim_preview(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
+) -> AppResult<Response> {
     let cookie_header = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -1648,9 +1652,7 @@ async fn admin_pim_preview(headers: HeaderMap, uri: Uri) -> AppResult<Response> 
         ));
     }
 
-    let catalog = load_catalog_record()
-        .await
-        .map_err(|error| AppError::internal(error.to_string()))?;
+    let catalog = load_catalog_record(&state.pool).await?;
     let Some(catalog) = catalog else {
         let response = json!({
             "view": "summary",
@@ -1687,10 +1689,13 @@ async fn admin_pim_preview(headers: HeaderMap, uri: Uri) -> AppResult<Response> 
         .into_response())
 }
 
-async fn load_catalog_record() -> Result<Option<Value>, std::io::Error> {
+async fn load_catalog_record(pool: &PgPool) -> AppResult<Option<Value>> {
     let key = env::var("SOBAG_CATALOG_KEY").unwrap_or_else(|_| CATALOG_KEY.to_string());
-    let Some(mut catalog) = load_file_store_value(&key).await? else {
-        return Ok(None);
+    let Some(mut catalog) = load_file_store_value(&key)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+    else {
+        return load_catalog_record_from_postgres(pool).await;
     };
     if catalog.is_array() {
         catalog = json!({
@@ -1725,6 +1730,213 @@ async fn load_catalog_record() -> Result<Option<Value>, std::io::Error> {
         }
     }
     Ok(Some(catalog))
+}
+
+async fn load_catalog_record_from_postgres(pool: &PgPool) -> AppResult<Option<Value>> {
+    let product_rows = sqlx::query(
+        "SELECT p.id, p.base_sku, p.name, p.status, p.hidden, p.description, p.detail_description,
+                p.stock, p.popular::bigint AS popular_int,
+                COALESCE(NULLIF(p.min_price::double precision, 0), vp.min_price, 0) AS min_price,
+                COALESCE(NULLIF(p.max_price::double precision, 0), vp.max_price, 0) AS max_price,
+                COALESCE(NULLIF(p.variant_count::bigint, 0), vp.variant_count, 0) AS variant_count,
+                array(
+                    SELECT t.name FROM product_taxonomies pt
+                    JOIN taxonomies t ON t.id = pt.taxonomy_id
+                    WHERE pt.product_id = p.id AND pt.type = 'category'
+                    ORDER BY t.name
+                )::text[] AS categories,
+                array(
+                    SELECT t.name FROM product_taxonomies pt
+                    JOIN taxonomies t ON t.id = pt.taxonomy_id
+                    WHERE pt.product_id = p.id AND pt.type = 'collection'
+                    ORDER BY t.name
+                )::text[] AS collections,
+                array(
+                    SELECT t.name FROM product_taxonomies pt
+                    JOIN taxonomies t ON t.id = pt.taxonomy_id
+                    WHERE pt.product_id = p.id AND pt.type = 'holiday'
+                    ORDER BY t.name
+                )::text[] AS holidays,
+                array(
+                    SELECT t.name FROM product_taxonomies pt
+                    JOIN taxonomies t ON t.id = pt.taxonomy_id
+                    WHERE pt.product_id = p.id AND pt.type = 'tag'
+                    ORDER BY t.name
+                )::text[] AS tags
+         FROM products p
+         LEFT JOIN LATERAL (
+             SELECT MIN(NULLIF(v.price::double precision, 0)) AS min_price,
+                    MAX(NULLIF(v.price::double precision, 0)) AS max_price,
+                    COUNT(*)::bigint AS variant_count
+             FROM variants v
+             WHERE v.product_id = p.id OR v.base_sku = p.base_sku
+         ) vp ON TRUE
+         ORDER BY p.base_sku ASC",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|error| AppError::internal(error.to_string()))?;
+    if product_rows.is_empty() {
+        return Ok(None);
+    }
+
+    let variant_rows = sqlx::query(
+        "SELECT id, product_id, base_sku, sku, type, size, material,
+                concat_ws(' / ', NULLIF(type, ''), NULLIF(size, ''), NULLIF(material, '')) AS variant_name,
+                price::double precision AS price_float,
+                payload
+         FROM variants
+         ORDER BY product_id ASC, sku ASC",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|error| AppError::internal(error.to_string()))?;
+    let image_rows = sqlx::query(
+        "SELECT id, product_id, url, storage_key, provider, width, height, mime,
+                uploaded_at, sort_order, is_primary, payload
+         FROM images
+         ORDER BY product_id ASC, is_primary DESC, sort_order ASC, id ASC",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|error| AppError::internal(error.to_string()))?;
+    let batch_rows = sqlx::query(
+        "SELECT id, source, status,
+                COALESCE(created_at::text, '') AS created_at_text,
+                COALESCE(applied_at::text, '') AS applied_at_text,
+                row_count::bigint AS row_count_int,
+                product_count::bigint AS product_count_int,
+                snapshot_product_count::bigint AS snapshot_product_count_int,
+                created::bigint AS created_int,
+                updated::bigint AS updated_int,
+                skipped::bigint AS skipped_int,
+                errors::bigint AS errors_int
+         FROM import_batches
+         ORDER BY COALESCE(created_at, applied_at) DESC NULLS LAST, id DESC
+         LIMIT 50",
+    )
+    .fetch_all(pool)
+    .await
+    .unwrap_or_default();
+
+    let mut variants_by_product: HashMap<String, Vec<Value>> = HashMap::new();
+    for row in variant_rows {
+        let product_id: String = row.try_get("product_id").unwrap_or_default();
+        let payload = row
+            .try_get::<Value, _>("payload")
+            .unwrap_or_else(|_| json!({}));
+        variants_by_product
+            .entry(product_id.clone())
+            .or_default()
+            .push(json!({
+                "id": row.try_get::<String, _>("id").unwrap_or_default(),
+                "productId": product_id,
+                "baseSku": row.try_get::<String, _>("base_sku").unwrap_or_default(),
+                "sku": row.try_get::<String, _>("sku").unwrap_or_default(),
+                "type": row.try_get::<String, _>("type").unwrap_or_default(),
+                "size": row.try_get::<String, _>("size").unwrap_or_default(),
+                "material": row.try_get::<String, _>("material").unwrap_or_default(),
+                "name": row.try_get::<String, _>("variant_name").unwrap_or_default(),
+                "price": row_i64(&row, "price_float"),
+                "priceSource": payload.get("priceSource")
+                    .or_else(|| payload.get("price_group"))
+                    .or_else(|| payload.get("priceGroup"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+            }));
+    }
+
+    let mut images_by_product: HashMap<String, Vec<Value>> = HashMap::new();
+    for row in image_rows {
+        let product_id: String = row.try_get("product_id").unwrap_or_default();
+        let payload = row
+            .try_get::<Value, _>("payload")
+            .unwrap_or_else(|_| json!({}));
+        let is_primary = row.try_get::<bool, _>("is_primary").unwrap_or(false);
+        images_by_product
+            .entry(product_id.clone())
+            .or_default()
+            .push(json!({
+                "id": row.try_get::<String, _>("id").unwrap_or_default(),
+                "productId": product_id,
+                "role": if is_primary { "main" } else { "gallery" },
+                "source": "postgres",
+                "url": row.try_get::<String, _>("url").unwrap_or_default(),
+                "storageKey": row.try_get::<String, _>("storage_key").unwrap_or_default(),
+                "provider": row.try_get::<String, _>("provider").unwrap_or_default(),
+                "width": row.try_get::<i64, _>("width").unwrap_or(0),
+                "height": row.try_get::<i64, _>("height").unwrap_or(0),
+                "mime": row.try_get::<String, _>("mime").unwrap_or_default(),
+                "fileName": "",
+                "size": 0,
+                "status": "active",
+                "uploadedAt": row
+                    .try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("uploaded_at")
+                    .ok()
+                    .flatten()
+                    .map(|value| value.to_rfc3339())
+                    .unwrap_or_default(),
+                "variants": payload.get("variants").cloned().unwrap_or_else(|| json!([]))
+            }));
+    }
+
+    let mut products = Vec::new();
+    for row in product_rows {
+        let id: String = row.try_get("id").unwrap_or_default();
+        let categories: Vec<String> = row.try_get("categories").unwrap_or_default();
+        products.push(json!({
+            "id": id,
+            "baseSku": row.try_get::<String, _>("base_sku").unwrap_or_default(),
+            "name": row.try_get::<String, _>("name").unwrap_or_default(),
+            "status": row.try_get::<String, _>("status").unwrap_or_else(|_| "published".to_string()),
+            "hidden": row.try_get::<bool, _>("hidden").unwrap_or(false),
+            "category": categories.first().cloned().unwrap_or_default(),
+            "categories": categories,
+            "collections": row.try_get::<Vec<String>, _>("collections").unwrap_or_default(),
+            "holidays": row.try_get::<Vec<String>, _>("holidays").unwrap_or_default(),
+            "tags": row.try_get::<Vec<String>, _>("tags").unwrap_or_default(),
+            "description": row.try_get::<String, _>("description").unwrap_or_default(),
+            "detailDescription": row.try_get::<String, _>("detail_description").unwrap_or_default(),
+            "basePrice": row_i64(&row, "min_price"),
+            "stock": row.try_get::<String, _>("stock").unwrap_or_default(),
+            "popular": row_i64(&row, "popular_int"),
+            "minPrice": row_i64(&row, "min_price"),
+            "maxPrice": row_i64(&row, "max_price"),
+            "variantCount": row_i64(&row, "variant_count"),
+            "variants": variants_by_product.remove(&id).unwrap_or_default(),
+            "images": images_by_product.remove(&id).unwrap_or_default()
+        }));
+    }
+
+    let import_batches = batch_rows
+        .into_iter()
+        .map(|row| {
+            json!({
+                "id": row.try_get::<String, _>("id").unwrap_or_default(),
+                "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                "createdAt": row.try_get::<String, _>("created_at_text").unwrap_or_default(),
+                "appliedAt": row.try_get::<String, _>("applied_at_text").unwrap_or_default(),
+                "rowCount": row_i64(&row, "row_count_int"),
+                "productCount": row_i64(&row, "product_count_int"),
+                "snapshotProductCount": row_i64(&row, "snapshot_product_count_int"),
+                "counts": {
+                    "created": row_i64(&row, "created_int"),
+                    "updated": row_i64(&row, "updated_int"),
+                    "skipped": row_i64(&row, "skipped_int"),
+                    "errors": row_i64(&row, "errors_int")
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+
+    Ok(Some(json!({
+        "products": products.clone(),
+        "updatedAt": Utc::now().to_rfc3339(),
+        "updatedBy": "postgres",
+        "version": 1,
+        "pim": build_pim_from_products(products, import_batches)
+    })))
 }
 
 async fn load_import_batch_summaries() -> Result<Vec<Value>, std::io::Error> {
