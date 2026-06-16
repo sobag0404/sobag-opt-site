@@ -99,6 +99,7 @@ async function startFakeRedis() {
       const chunks = [];
       for await (const chunk of request) chunks.push(chunk);
       const command = JSON.parse(Buffer.concat(chunks).toString("utf8") || "[]");
+      const isPipeline = String(request.url || "").includes("/pipeline");
       const executeCommand = ([name, key, value, option, ttl]) => {
         if (String(name).toUpperCase() === "GET") return getValue(key);
         if (String(name).toUpperCase() === "SET") {
@@ -119,7 +120,7 @@ async function startFakeRedis() {
         ? command.map((item) => ({ result: executeCommand(item) }))
         : executeCommand(command);
       response.writeHead(200, { "content-type": "application/json" });
-      response.end(JSON.stringify({ result }));
+      response.end(JSON.stringify(isPipeline ? result : { result }));
     } catch (error) {
       response.writeHead(200, { "content-type": "application/json" });
       response.end(JSON.stringify({ error: String(error?.message || error) }));
@@ -153,7 +154,8 @@ async function waitForJson(url, timeout) {
     try {
       const response = await fetch(url);
       if (response.ok) return await response.json();
-      lastError = new Error(`${url} -> HTTP ${response.status}`);
+      const body = await response.text().catch(() => "");
+      lastError = new Error(`${url} -> HTTP ${response.status}${body ? `: ${body.slice(0, 500)}` : ""}`);
     } catch (error) {
       lastError = error;
     }
