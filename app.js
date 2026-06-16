@@ -3107,10 +3107,10 @@ function productModalHtml(product) {
                 <small id="detailDiscount">${basketDiscountHint}</small>
               </div>
             </div>
-            <button class="ghost-button detail-price-download" type="button" data-download-product-price="${escapeHtml(product.id)}" title="Скачать прайс" aria-label="Скачать прайс по товару">
+            <a class="ghost-button detail-price-download" href="/api/price-list" title="Скачать прайс" aria-label="Скачать прайс">
               <i data-lucide="download"></i>
               Скачать прайс
-            </button>
+            </a>
             <div class="detail-total">
               <span>ИТОГО</span>
               <strong id="detailTotal">${formatMoney(total)}</strong>

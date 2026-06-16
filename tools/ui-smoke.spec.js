@@ -607,7 +607,7 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await page.locator("#detailQty").fill("0");
   await expect(page.locator("#detailQty")).toHaveValue("0");
   await expect(page.locator(".variant-matrix")).toHaveCount(0);
-  await expect(page.locator('[data-download-product-price]')).toBeVisible();
+  await expect(page.locator('.detail-price-download[href="/api/price-list"]')).toBeVisible();
   await expect(page.locator(".related-products .mini-product-card")).toHaveCount(await page.locator(".related-products .mini-product-card").count());
   await expect(page.locator(".related-products .mini-product-card").first()).toBeVisible();
   const imageGeometry = await page.evaluate(() => {
