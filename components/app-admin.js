@@ -433,7 +433,7 @@ function adminProductCardHtml(product) {
           <div>
             <strong>${escapeHtml(product.baseSku)}</strong>
             ${statusLabel}
-            <button class="copy-sku-button" type="button" data-copy-sku="${escapeHtml(product.baseSku)}" title="Скопировать артикул" aria-label="Скопировать артикул ${escapeHtml(product.baseSku)}">
+            <button class="copy-sku-button" type="button" data-copy-sku="${escapeHtml(product.baseSku)}" data-tooltip="Скопировать артикул" title="Скопировать артикул" aria-label="Скопировать артикул ${escapeHtml(product.baseSku)}">
               <i data-lucide="copy"></i>
             </button>
           </div>

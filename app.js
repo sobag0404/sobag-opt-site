@@ -679,6 +679,27 @@ function updateYandexMap(address, target = "") {
     link.href = `https://yandex.ru/maps/?text=${encoded}`;
   }
 }
+const MARKETPLACE_LINKS = [
+  { label: "Wildberries", href: "https://www.wildberries.ru/seller/167187" },
+  { label: "Ozon", href: "https://ozon.ru/s/sobag" },
+  { label: "Яндекс Маркет", href: "https://market.yandex.ru/cc/84GXiW" },
+];
+function marketplaceLinksHtml(className = "") {
+  const classes = ["marketplace-links", className].filter(Boolean).join(" ");
+  return `<div class="${classes}" aria-label="Sobag на маркетплейсах">${MARKETPLACE_LINKS.map(
+    (item) => `<a href="${item.href}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.label)}</a>`
+  ).join("")}</div>`;
+}
+function renderMarketplaceLinks() {
+  document.querySelectorAll("[data-marketplace-links]").forEach((node) => {
+    node.innerHTML = marketplaceLinksHtml(node.dataset.marketplaceLinks || "");
+  });
+  const footerAddress = document.querySelector("[data-footer-address]");
+  const footerColumn = footerAddress?.parentElement;
+  if (footerColumn && !footerColumn.querySelector(".marketplace-links--footer")) {
+    footerAddress.insertAdjacentHTML("afterend", marketplaceLinksHtml("marketplace-links--footer"));
+  }
+}
 function updateFavoriteButtons(productId) {
   const active = state.favorites.has(productId);
   document.querySelectorAll("[data-favorite]").forEach((button) => {
@@ -1002,7 +1023,12 @@ function renderSiteContent() {
   });
   setButtonText("[data-back-catalog]", content.catalogBackButton, { preserveCase: true });
   setText("#catalogHome .catalog-home__head:not(.catalog-home__head--themes) h3", content.catalogHomeTitle);
-  setText("#catalogHome .catalog-home__head:not(.catalog-home__head--themes) span", content.catalogHomeSubtitle);
+  const catalogHomeSubtitle = document.querySelector("#catalogHome .catalog-home__head:not(.catalog-home__head--themes) span");
+  if (catalogHomeSubtitle) {
+    const subtitle = String(content.catalogHomeSubtitle || "").trim();
+    catalogHomeSubtitle.textContent = subtitle;
+    catalogHomeSubtitle.hidden = !subtitle;
+  }
   const catalogThemeHeads = document.querySelectorAll("#catalogHome .catalog-home__head--themes h3");
   [content.catalogActualTitle, content.catalogCollectionsTitle, content.catalogHolidaysTitle].forEach((value, index) => {
     if (catalogThemeHeads[index]) catalogThemeHeads[index].textContent = value;
@@ -1055,13 +1081,18 @@ function renderSiteContent() {
   });
   const marketplaceCards = document.querySelectorAll(".marketplace-card");
   [
-    [content.marketplaceOneName, content.marketplaceOneTitle, content.marketplaceOneText],
-    [content.marketplaceTwoName, content.marketplaceTwoTitle, content.marketplaceTwoText],
-    [content.marketplaceThreeName, content.marketplaceThreeTitle, content.marketplaceThreeText],
-  ].forEach(([name, title, text], index) => {
+    [content.marketplaceOneName, content.marketplaceOneTitle, content.marketplaceOneText, MARKETPLACE_LINKS[0]],
+    [content.marketplaceTwoName, content.marketplaceTwoTitle, content.marketplaceTwoText, MARKETPLACE_LINKS[1]],
+    [content.marketplaceThreeName, content.marketplaceThreeTitle, content.marketplaceThreeText, MARKETPLACE_LINKS[2]],
+  ].forEach(([name, title, text, link], index) => {
     marketplaceCards[index]?.querySelector("span") && (marketplaceCards[index].querySelector("span").textContent = name);
     marketplaceCards[index]?.querySelector("strong") && (marketplaceCards[index].querySelector("strong").textContent = title);
     marketplaceCards[index]?.querySelector("small") && (marketplaceCards[index].querySelector("small").textContent = text);
+    if (marketplaceCards[index] && link) {
+      marketplaceCards[index].href = link.href;
+      marketplaceCards[index].target = "_blank";
+      marketplaceCards[index].rel = "noopener noreferrer";
+    }
   });
   setText(".custom h2", content.customTitle);
   setText(".custom__content > p:not(.eyebrow)", content.customText);
@@ -1107,6 +1138,7 @@ function renderSiteContent() {
       footerPhone.href = phoneHref(content.footerPhone);
     });
   }
+  renderMarketplaceLinks();
   if (
     catalogTitle &&
     !isFavoritesPage &&
@@ -2219,7 +2251,6 @@ function clearAllCatalogFilters() {
 function renderCatalogHome() {
   if (!categoryTiles || !actualTiles || !collectionTiles || !holidayTiles) return;
   const content = getSiteContent();
-  const shouldAnimate = !catalogHomeHasAnimated;
   const countByCategory = Object.fromEntries(content.catalogCategories.map((category) => [category.name, 0]));
   products.forEach((product) => {
     (product.categories || [product.category]).forEach((category) => {
@@ -2230,7 +2261,7 @@ function renderCatalogHome() {
   categoryTiles.innerHTML = visibleCategories
     .map(
       (category, index) => `
-        <button class="category-tile${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-category="${escapeHtml(category.name)}">
+        <button class="category-tile" type="button" data-open-category="${escapeHtml(category.name)}">
           <span class="category-tile__top">
             <span class="category-tile__icon"><i data-lucide="${escapeHtml(category.icon)}"></i></span>
             <span class="category-tile__schema" aria-hidden="true">
@@ -2249,7 +2280,7 @@ function renderCatalogHome() {
   actualTiles.innerHTML = content.actualSlides
     .map(
       (item, index) => `
-        <button class="actual-tile actual-tile--${(index % 3) + 1}${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-${item.type}="${escapeHtml(item.label)}">
+        <button class="actual-tile actual-tile--${(index % 3) + 1}" type="button" data-open-${item.type}="${escapeHtml(item.label)}">
           <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.label)}" ${imageAttrs(640, 360)} />
           <span>${escapeHtml(item.label)}</span>
           <b>${escapeHtml(item.label)}</b>
@@ -2263,7 +2294,7 @@ function renderCatalogHome() {
     ...visibleCollections
     .map(
       (collection, index) => `
-        <button class="theme-tile${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-collection="${escapeHtml(collection.name)}">
+        <button class="theme-tile" type="button" data-open-collection="${escapeHtml(collection.name)}">
           ${collection.image ? `<img class="theme-tile__image" src="${escapeHtml(collection.image)}" alt="" ${imageAttrs(520, 520)} />` : `<i data-lucide="${escapeHtml(collection.icon)}"></i>`}
           <span>${escapeHtml(collection.name)}</span>
         </button>
@@ -2276,7 +2307,7 @@ function renderCatalogHome() {
   holidayTiles.innerHTML = content.catalogHolidays
     .map(
       (holiday, index) => `
-        <button class="theme-tile${shouldAnimate ? ` motion-enter motion-delay-${Math.min(index, 8)}` : ""}" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
+        <button class="theme-tile" type="button" data-open-holiday="${escapeHtml(holiday.name)}">
           ${holiday.image ? `<img class="theme-tile__image" src="${escapeHtml(holiday.image)}" alt="" ${imageAttrs(520, 520)} />` : `<i data-lucide="${escapeHtml(holiday.icon)}"></i>`}
           <span>${escapeHtml(holiday.name)}</span>
         </button>
@@ -2481,7 +2512,7 @@ function updateCatalogSeo() {
   else if (state.selectedCollection) titleParts.push(state.selectedCollection);
   else if (state.selectedHoliday) titleParts.push(state.selectedHoliday);
   else if (state.search.trim()) titleParts.push(`Поиск: ${state.search.trim()}`);
-  else titleParts.push(content.catalogTitleDefault || "Каталог продукции");
+  else titleParts.push(content.catalogTitleDefault || "Каталог");
   const title = `${titleParts.join(" · ")} | Sobag Opt`;
   const description = `Оптовый каталог Sobag Opt: ${titleParts.join(", ")}. Текстиль с принтами, варианты по размеру, материалу и типу изделия.`;
   document.title = title;
@@ -2663,7 +2694,7 @@ function productCardHtml(product) {
           <div class="product-card__body">
             <div class="product-card__sku-row">
               <span class="product-card__sku">${productSku}</span>
-              <button class="copy-sku-button" type="button" data-copy-sku="${productSku}" title="Скопировать артикул" aria-label="Скопировать артикул ${productSku}">
+              <button class="copy-sku-button" type="button" data-copy-sku="${productSku}" data-tooltip="Скопировать артикул" title="Скопировать артикул" aria-label="Скопировать артикул ${productSku}">
                 <i data-lucide="copy"></i>
               </button>
             </div>
@@ -3053,7 +3084,7 @@ function productModalHtml(product) {
               <span>Выбранный артикул</span>
               <div class="sku-line__value">
                 <strong id="selectedSku">${variant.sku}</strong>
-                <button class="copy-sku-button copy-sku-button--detail" type="button" data-copy-sku="${variant.sku}" title="Скопировать артикул" aria-label="Скопировать выбранный артикул ${variant.sku}">
+                <button class="copy-sku-button copy-sku-button--detail" type="button" data-copy-sku="${variant.sku}" data-tooltip="Скопировать артикул" title="Скопировать артикул" aria-label="Скопировать выбранный артикул ${variant.sku}">
                   <i data-lucide="copy"></i>
                 </button>
               </div>
@@ -3061,7 +3092,6 @@ function productModalHtml(product) {
             ${variantControls("type", "Тип товара", product.types)}
             ${variantControls("size", "Размер", product.sizes)}
             ${variantControls("material", "Материал", product.materials)}
-            ${variantMatrixHtml(product)}
             <div class="detail-qty">
               <label>
                 Количество, шт.
@@ -3081,6 +3111,10 @@ function productModalHtml(product) {
                 <small id="detailDiscount">${basketDiscountHint}</small>
               </div>
             </div>
+            <button class="ghost-button detail-price-download" type="button" data-download-product-price="${escapeHtml(product.id)}" title="Скачать прайс" aria-label="Скачать прайс по товару">
+              <i data-lucide="download"></i>
+              Скачать прайс
+            </button>
             <div class="detail-total">
               <span>ИТОГО</span>
               <strong id="detailTotal">${formatMoney(total)}</strong>

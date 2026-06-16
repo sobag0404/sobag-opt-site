@@ -2113,6 +2113,12 @@ select[aria-invalid="true"] {
   gap: 4px;
 }
 
+.detail-price-download {
+  width: 100%;
+  min-height: 44px;
+  margin: 0 0 16px;
+}
+
 .detail-price small {
   color: var(--amber);
 }
@@ -2229,6 +2235,18 @@ select[aria-invalid="true"] {
 
 .account-tab-panel.is-active {
   display: block;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .orders-list,
@@ -5081,7 +5099,7 @@ main {
 .sku-line__value {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -5094,7 +5112,8 @@ main {
 }
 
 .sku-line__value {
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
 }
 
 .sku-line__value strong {
@@ -5103,6 +5122,7 @@ main {
 }
 
 .copy-sku-button {
+  position: relative;
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
@@ -5121,10 +5141,62 @@ main {
   height: 14px;
 }
 
-.copy-sku-button:hover {
+.copy-sku-button::after {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  bottom: calc(100% + 8px);
+  max-width: min(210px, calc(100vw - 24px));
+  padding: 7px 9px;
+  color: var(--canvas);
+  background: var(--on-dark);
+  border-radius: 8px;
+  box-shadow: var(--shadow-soft);
+  content: attr(data-tooltip);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  opacity: 0;
+  overflow-wrap: normal;
+  pointer-events: none;
+  text-transform: none;
+  transform: translateY(4px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  white-space: nowrap;
+}
+
+.copy-sku-button::before {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 3px);
+  width: 10px;
+  height: 10px;
+  background: var(--on-dark);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transform: rotate(45deg) translateY(4px);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.copy-sku-button:hover,
+.copy-sku-button:focus-visible {
   color: var(--on-dark);
   background: rgba(17, 17, 17, 0.06);
   transform: translateY(-1px);
+}
+
+.copy-sku-button:hover::after,
+.copy-sku-button:hover::before,
+.copy-sku-button:focus-visible::after,
+.copy-sku-button:focus-visible::before {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.copy-sku-button:hover::before,
+.copy-sku-button:focus-visible::before {
+  transform: rotate(45deg) translateY(0);
 }
 
 .copy-sku-button--detail {
@@ -5144,7 +5216,8 @@ body.theme-night .copy-sku-button {
   border: 0;
 }
 
-body.theme-night .copy-sku-button:hover {
+body.theme-night .copy-sku-button:hover,
+body.theme-night .copy-sku-button:focus-visible {
   color: var(--on-dark);
   background: rgba(255, 138, 31, 0.16);
 }
@@ -5223,6 +5296,37 @@ body.theme-night .copy-sku-button:hover {
   color: var(--body);
   font-size: 14px;
   line-height: 1.45;
+}
+
+.marketplace-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.marketplace-links a {
+  min-height: 34px;
+  padding: 8px 11px;
+  color: var(--on-dark);
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.marketplace-links a:hover,
+.marketplace-links a:focus-visible {
+  color: var(--canvas);
+  background: var(--on-dark);
+  border-color: var(--on-dark);
+  transform: none;
+}
+
+.marketplace-links--footer {
+  margin-top: 4px;
 }
 
 .section-head h1,
@@ -5481,7 +5585,8 @@ body.theme-night .copy-sku-button:hover {
   }
 }
 
-.copy-sku-button:hover {
+.copy-sku-button:hover,
+.copy-sku-button:focus-visible {
   color: var(--on-dark);
   background: transparent;
   transform: none;
@@ -5725,6 +5830,15 @@ body.theme-night .hero__actions .ghost-button:hover {
 
 .catalog-page .section-head {
   margin-bottom: 14px;
+}
+
+.catalog-page .catalog-section-head {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .catalog-page .accent-stripe {
@@ -6649,13 +6763,13 @@ body.theme-night .theme-toggle__track::after {
 }
 
 .product-card__sku-row {
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-start;
+  gap: 4px;
   margin-bottom: 0;
 }
 
 .product-card__sku-row .product-card__sku {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
 .product-card__sku-row .copy-sku-button {
