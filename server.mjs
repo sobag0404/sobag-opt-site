@@ -43,8 +43,10 @@ function isFingerprintedAsset(pathname) {
   return /\.[a-f0-9]{8,}\.(?:css|js|png|jpe?g|svg|webp|ico|woff2?)$/i.test(pathname);
 }
 
-function cacheControlFor(pathname) {
+function cacheControlFor(pathname, searchParams = new URLSearchParams()) {
+  const hasVersionToken = ["v", "ver", "version", "hash", "rev"].some((key) => searchParams.has(key));
   if (isFingerprintedAsset(pathname)) return "public, max-age=31536000, immutable";
+  if (hasVersionToken && [".css", ".js"].includes(extname(pathname).toLowerCase())) return "public, max-age=31536000, immutable";
   if (pathname.startsWith("/assets/")) return "public, max-age=86400, stale-while-revalidate=604800";
   if (pathname === "/data/products-live.json") return "public, max-age=300, stale-while-revalidate=3600";
   if (pathname.startsWith("/api/")) return "no-store";
@@ -134,7 +136,7 @@ async function handleApi(request, response, pathname) {
   return true;
 }
 
-function serveStatic(request, response, pathname) {
+function serveStatic(request, response, pathname, searchParams = new URLSearchParams()) {
   const filePath = resolveStaticFile(pathname);
   applySecurityHeaders(response);
   if (!filePath) {
@@ -148,7 +150,7 @@ function serveStatic(request, response, pathname) {
   const entity = staticEntityHeaders(filePath);
   const headers = {
     "Content-Type": contentTypes[extname(filePath).toLowerCase()] || "application/octet-stream",
-    "Cache-Control": cacheControlFor(pathname),
+    "Cache-Control": cacheControlFor(pathname, searchParams),
     ETag: entity.etag,
     "Last-Modified": entity.modified,
   };
@@ -167,11 +169,11 @@ function serveStatic(request, response, pathname) {
 
 export function createSobagServer() {
   return createServer(async (request, response) => {
-    const { pathname = "/" } = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
+    const { pathname = "/", searchParams } = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
     try {
       if (redirectCanonicalPath(request, response, pathname)) return;
       if (pathname.startsWith("/api/") && (await handleApi(request, response, pathname))) return;
-      serveStatic(request, response, pathname);
+      serveStatic(request, response, pathname, searchParams);
     } catch (error) {
       if (!response.headersSent) {
         applySecurityHeaders(response);

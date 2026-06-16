@@ -153,6 +153,14 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
   });
   checks.push({ name: "catalog-query", path: query.path, bytes: query.bytes, elapsedMs: query.elapsedMs });
 
+  const priceList = await fetchText(base, "/api/price-list?format=json", args);
+  const priceListPayload = parseJson(priceList);
+  assertFast(priceList, args.maxMs);
+  assertPublicCache(priceList);
+  assert(Array.isArray(priceListPayload.rows), "price-list should include rows[]");
+  assert(priceListPayload.rows.length > 0, "price-list should expose public price rows");
+  checks.push({ name: "price-list", path: priceList.path, bytes: priceList.bytes, elapsedMs: priceList.elapsedMs });
+
   const firstSku = queryPayload.items[0]?.baseSku;
   assert(firstSku, "catalog-query first card should include baseSku");
   const detail = await fetchText(base, `/api/catalog-detail?baseSku=${encodeURIComponent(firstSku)}`, args);
@@ -175,6 +183,13 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
     checks.push({ name: path.slice(1), path, bytes: asset.bytes, elapsedMs: asset.elapsedMs });
   }
 
+  for (const path of ["/app.js?v=cache-smoke", "/styles.css?v=cache-smoke"]) {
+    const asset = await fetchText(base, path, args);
+    assert(asset.ok, `${path}: expected 2xx, got ${asset.status}`);
+    assert(asset.cacheControl.includes("max-age=31536000") && asset.cacheControl.includes("immutable"), `${path}: versioned assets should use immutable long cache`);
+    checks.push({ name: `versioned-${path.split("?")[0].slice(1)}`, path, bytes: asset.bytes, elapsedMs: asset.elapsedMs });
+  }
+
   const data = await fetchText(base, "/data/products-live.json", args);
   assert(data.ok, `${data.path}: expected 2xx, got ${data.status}`);
   assert(data.contentType.includes("application/json"), `${data.path}: expected JSON MIME`);
@@ -188,6 +203,11 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
   assert(image.cacheControl.includes("max-age=86400") || image.cacheControl.includes("max-age=31536000"), `${image.path}: image cache header missing`);
   assert(!image.contentType.includes("text/html"), `${image.path}: image URL must not fall back to HTML`);
   checks.push({ name: "image-head", path: image.path, bytes: image.bytes, elapsedMs: image.elapsedMs });
+
+  const missingAsset = await fetchText(base, "/assets/missing-cache-smoke.webp", args, { redirect: "manual" });
+  assert(missingAsset.status === 404, `${missingAsset.path}: missing asset should return 404, got ${missingAsset.status}`);
+  assert(!missingAsset.contentType.includes("text/html"), `${missingAsset.path}: missing asset must not fall back to HTML`);
+  checks.push({ name: "missing-asset-404", path: missingAsset.path, bytes: missingAsset.bytes, elapsedMs: missingAsset.elapsedMs });
 
   if (!queryPayload.pageInfo?.hasMore) warnings.push("catalog-query has no next page; real catalog growth still needs later CWV audit");
   return { ok: true, baseUrl: base, checks, warnings };
@@ -210,38 +230,46 @@ async function createSelfTestServer() {
   const card = { id: "p1", baseSku: "opt_1", name: "Test", minPrice: 100, maxPrice: 120, variantCount: 2, image: "/x.webp" };
   const product = { ...card, variants: [{ sku: "opt_1_a", price: 100 }], images: [{ url: "/x.webp" }] };
   const server = createServer((req, res) => {
-    if (req.url === "/") {
+    const url = new URL(req.url || "/", "http://127.0.0.1");
+    if (url.pathname === "/") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
       res.end("<!doctype html><title>Sobag</title>");
       return;
     }
-    if (req.url === "/index.html") {
+    if (url.pathname === "/index.html") {
       res.writeHead(301, { location: "/", "cache-control": "public, max-age=3600" });
       res.end();
       return;
     }
-    if (req.url === "/api/health") {
+    if (url.pathname === "/api/health") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
       res.end(JSON.stringify({ ok: true }));
       return;
     }
-    if (req.url.startsWith("/api/catalog-query")) {
+    if (url.pathname === "/api/catalog-query") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
       res.end(JSON.stringify({ items: [card], total: 1, pageInfo: { pageSize: 48, hasMore: false } }));
       return;
     }
-    if (req.url.startsWith("/api/catalog-detail")) {
+    if (url.pathname === "/api/price-list") {
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
+      res.end(JSON.stringify({ rows: [{ group: "Test", price: 100 }] }));
+      return;
+    }
+    if (url.pathname === "/api/catalog-detail") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
       res.end(JSON.stringify({ product }));
       return;
     }
-    if (req.url === "/app.js" || req.url === "/styles.css") {
+    if (url.pathname === "/app.js" || url.pathname === "/styles.css") {
       if (req.headers["if-none-match"] === '"fixture"') {
-        res.writeHead(304, { "cache-control": "public, max-age=3600", etag: '"fixture"' });
+        const cache = url.searchParams.has("v") ? "public, max-age=31536000, immutable" : "public, max-age=3600";
+        res.writeHead(304, { "cache-control": cache, etag: '"fixture"' });
         res.end();
         return;
       }
-      res.writeHead(200, { "content-type": req.url.endsWith(".css") ? "text/css" : "application/javascript", "cache-control": "public, max-age=3600", etag: '"fixture"' });
+      const cache = url.searchParams.has("v") ? "public, max-age=31536000, immutable" : "public, max-age=3600";
+      res.writeHead(200, { "content-type": url.pathname.endsWith(".css") ? "text/css" : "application/javascript", "cache-control": cache, etag: '"fixture"' });
       if (req.method === "HEAD") {
         res.end();
         return;
@@ -249,12 +277,12 @@ async function createSelfTestServer() {
       res.end("body{}");
       return;
     }
-    if (req.url === "/data/products-live.json") {
+    if (url.pathname === "/data/products-live.json") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
       res.end("[]");
       return;
     }
-    if (req.url === "/x.webp") {
+    if (url.pathname === "/x.webp") {
       res.writeHead(200, { "content-type": "image/webp", "cache-control": "public, max-age=86400, stale-while-revalidate=604800" });
       res.end();
       return;

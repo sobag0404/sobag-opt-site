@@ -68,6 +68,10 @@ try {
   assert(headAppJs.ok, `static JS HEAD should return 2xx, got ${headAppJs.status}`);
   assert((await headAppJs.text()) === "", "static JS HEAD should not return a body");
 
+  const versionedAppJs = await readText(baseUrl, "/app.js?v=cache-smoke");
+  const versionedCache = versionedAppJs.response.headers.get("cache-control") || "";
+  assert(versionedCache.includes("max-age=31536000") && versionedCache.includes("immutable"), "versioned JS should use immutable long cache");
+
   const styles = await readText(baseUrl, "/styles.css");
   assert((styles.response.headers.get("content-type") || "").includes("text/css"), "CSS should use text/css MIME");
   assert((styles.response.headers.get("cache-control") || "").includes("max-age=3600"), "non-fingerprinted CSS should use short static cache");
@@ -76,6 +80,10 @@ try {
   assert(heroImage.ok, `image HEAD should return 2xx, got ${heroImage.status}`);
   assert((heroImage.headers.get("content-type") || "").includes("image/png"), "image should use image/png MIME");
   assert((heroImage.headers.get("cache-control") || "").includes("max-age=86400"), "assets images should use cautious one-day cache");
+
+  const missingAsset = await fetch(new URL("/assets/missing-cache-smoke.webp", baseUrl), { redirect: "manual" });
+  assert(missingAsset.status === 404, `missing asset should return 404, got ${missingAsset.status}`);
+  assert(!((missingAsset.headers.get("content-type") || "").includes("text/html")), "missing asset must not fall back to HTML");
 
   const catalogPage = await readText(baseUrl, "/catalog");
   assert(catalogPage.text.includes("Каталог"), "clean catalog URL should resolve to catalog.html");
@@ -102,6 +110,11 @@ try {
   assert(!("variants" in query.items[0]), "catalog-query cards should not include full variants");
   const queryResponse = await fetch(new URL("/api/catalog-query?pageSize=1", baseUrl));
   assert((queryResponse.headers.get("cache-control") || "").includes("max-age=300"), "catalog-query should be browser-cacheable");
+
+  const priceListResponse = await fetch(new URL("/api/price-list?format=json", baseUrl));
+  assert(priceListResponse.ok, `price-list should return 2xx, got ${priceListResponse.status}`);
+  assert((priceListResponse.headers.get("content-type") || "").includes("application/json"), "price-list JSON should use JSON MIME");
+  assert((priceListResponse.headers.get("cache-control") || "").includes("max-age=300"), "public price-list should use short public cache");
 
   const detail = await readJson(baseUrl, `/api/catalog-detail?baseSku=${encodeURIComponent(query.items[0].baseSku)}`);
   assert(detail.product?.baseSku === query.items[0].baseSku, "catalog-detail should resolve from baseSku");
