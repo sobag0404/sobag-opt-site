@@ -1,8 +1,8 @@
 # Project Readiness Report
 
-Generated: 2026-06-16T16:27:48+00:00
+Generated: 2026-06-16T17:58:00+00:00
 Project: sobag-opt-site
-Git: `main` / `129740b`
+Git: `main` / `743c63e`
 
 ## 1. Executive Summary
 
@@ -13,11 +13,14 @@ Git: `main` / `129740b`
 - Главный вывод: **можно передавать с предупреждениями**
 
 Current Rust/VPS evidence:
+- Rust auth write parity is implemented and deployed at `743c63e`; exact production `/api/auth/login`, `/api/auth/register`, and `/api/auth/logout` are cut over to Rust. Nginx backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-auth-write-20260616T174643Z`.
+- GitHub gates passed for `743c63e`: `autofix-check` run `27636611825`, `rust-check` run `27636614336`, `vps-deploy` run `27636661153`, and `production-smoke` run `27636762936`.
+- Live auth write smoke passed after cutover: register/login/logout, production cookie attributes, invalid credentials, duplicate registration, missing consent, CSRF-origin rejection, and no-order review guard returned expected results without logging cookies or secrets.
 - Rust Redis-backed write-store parity for `/api/orders` and `/api/briefs` is implemented and deployed at `129740b`.
 - GitHub `autofix-check` and `rust-check` passed for `129740b`; `vps-deploy` run `27631682347` passed with file-store and Redis fixture order/brief smokes before release activation.
 - Live checks from this Codex thread passed after deploy: `/` 200 `no-cache`, `/api/health` 200 `no-store`, catalog prices are non-zero, production smoke, production performance/cache smoke, and production storage readiness.
 - Production exact `/api/orders` and `/api/briefs` are now cut over to Rust. Nginx backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-orders-briefs-20260616T164606Z`.
-- Live write smoke passed after cutover: Rust-created order `SO-468985` and custom brief `BR-470565` persisted through Redis, trusted pricing stayed non-zero, buyer PATCH worked, and account/admin visibility remained compatible with existing Node/Rust fallback routes.
+- Live order/brief smoke remains green after auth cutover: catalog prices are non-zero, a safe Rust-created order and brief persisted through Redis, minimum-total validation stayed active, and production smoke/performance/storage checks passed.
 
 ## 2. Readiness Score
 
@@ -140,9 +143,9 @@ Current Rust/VPS evidence:
 - Severity: `info`
 - Priority: `P3`
 - File / area: `docs/ai-handoff/ACTIVE_CONTEXT.md`
-- Description: The repository documents the current Node/VPS path and the later Rust/no-Node migration direction.
+- Description: The repository documents the current Node/VPS path and the remaining Rust/no-Node migration direction. Auth writes and order/brief writes are cut over; admin catalog/import/media/PIM remains the main fallback zone.
 - Why it matters: This helps handoff, but it also means GoAL prompts must distinguish current blockers from the active Rust transition finish line.
-- Recommendation: Use the next GoAL prompt to finish the Rust transition only after P0/P1 readiness blockers are controlled.
+- Recommendation: Use the next GoAL prompt to finish admin catalog/import/media/PIM parity and exact-route cutover only after P0/P1 readiness blockers are controlled.
 
 ### Prompt Engineering
 
@@ -190,7 +193,7 @@ Current Rust/VPS evidence:
 - [Chat / GoAL Context] (CHAT-002) CHAT-002: Use only repository artifacts for readiness decisions; start a new GoAL chat from the generated latest-chat prompt.
 - [Code Quality] (CODE-004) CODE-004: Convert real work into tracked checklist items and remove stale markers.
 - [Product Readiness] (PROD-002) PROD-002: Collect real field CWV after production traffic is available; keep synthetic evidence separate from field data.
-- [Product Readiness] (PROD-004) PROD-004: Use the next GoAL prompt to finish the Rust transition only after P0/P1 readiness blockers are controlled.
+- [Product Readiness] (PROD-004) PROD-004: Use the next GoAL prompt to finish admin catalog/import/media/PIM parity and exact-route cutover only after P0/P1 readiness blockers are controlled.
 - [Security] (SEC-001) SEC-001: Keep `.env*` ignored, add only safe variable names to documentation, and verify `git ls-files .env*` remains empty.
 - [Tests] (TEST-004) TEST-004: Run UI smoke before release/cutover or add a separate scheduled browser workflow if runtime cost is acceptable.
 
@@ -222,11 +225,11 @@ Reason: critical=0, high=0, medium=4, low=6, info=2. Score is reduced only for w
 4. P2 PROMPT-003: Long prompts risk pulling obsolete context into new chats. Файл/область: docs/ai-handoff/LIVE_CONTEXT.md. Рекомендация: For new runs, use `reports/project-readiness/latest-chat.md` as the entry prompt and link to the latest report/context files only.
 
 Next implementation packet for VPS-only/Rust transition:
-1. Run real product-photo migration gates against the confirmed photo source and the S3-compatible VPS/MinIO target; keep secrets out of Git/chat.
-2. Fill `local-import-output/cwv-field-audit-packet.json` only from real post-migration field measurements, then run strict goal-input/readiness gates.
-3. Keep Vercel/Next absent from active runtime/deploy, rerun VPS release/storage/error/smoke audits, and do not reintroduce Vercel Blob/provider aliases.
-4. Re-verify Rust on Linux/VPS/CI with `cd rust-server && cargo fmt --check && cargo check --locked && cargo test --locked`; local Windows MSVC `link.exe` blocker is environment-only until toolchain is installed.
-5. Continue only small modularity slices when touching related code; remaining ARCH-001 is P2 ownership debt.
+1. Inventory admin catalog/import/media/PIM Node contracts and Rust gaps; keep UI unchanged and do not do a broad proxy switch.
+2. Implement parity smokes for admin catalog/import/media/PIM using safe fixtures, auth roles, no-secret logs, Redis/file-store compatibility, and validation/error contracts.
+3. Prepare exact-route Nginx cutover only after smokes pass; backup the current site config, switch one bounded route group at a time, and keep rollback commands ready.
+4. Run release gates: `cargo fmt --check`, `cargo check --locked`, `cargo test --locked`, `npm.cmd run check`, GitHub `autofix-check`, `rust-check`, `vps-deploy`, `production-smoke`, plus live admin-safe validation.
+5. Keep Vercel/Next absent; real field CWV remains post-launch monitoring and must not be labeled synthetic evidence.
 
 P0/P1 рекомендации:
 - Нет P0/P1 рекомендаций; сохраняй существующие guardrails и не расширяй scope без причины.
