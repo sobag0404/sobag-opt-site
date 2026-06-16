@@ -1,8 +1,8 @@
 # Project Readiness Report
 
-Generated: 2026-06-16T06:58:52+00:00
+Generated: 2026-06-16T07:01:06+00:00
 Project: sobag-opt-site
-Git: `main` / `4c8892f`
+Git: `main` / `600612a`
 
 ## 1. Executive Summary
 
