@@ -1,8 +1,8 @@
 # Project Readiness Report
 
-Generated: 2026-06-16T17:58:00+00:00
+Generated: 2026-06-16T18:05:00+00:00
 Project: sobag-opt-site
-Git: `main` / `743c63e`
+Git: `main` / `9932b03`
 
 ## 1. Executive Summary
 
@@ -14,7 +14,7 @@ Git: `main` / `743c63e`
 
 Current Rust/VPS evidence:
 - Rust auth write parity is implemented and deployed at `743c63e`; exact production `/api/auth/login`, `/api/auth/register`, and `/api/auth/logout` are cut over to Rust. Nginx backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-auth-write-20260616T174643Z`.
-- GitHub gates passed for `743c63e`: `autofix-check` run `27636611825`, `rust-check` run `27636614336`, `vps-deploy` run `27636661153`, and `production-smoke` run `27636762936`.
+- GitHub gates passed for the latest deployed commit `9932b03`: `autofix-check` run `27637574364`, `rust-check` run `27637574179`, `vps-deploy` run `27637632119`, and `production-smoke` run `27637747742`.
 - Live auth write smoke passed after cutover: register/login/logout, production cookie attributes, invalid credentials, duplicate registration, missing consent, CSRF-origin rejection, and no-order review guard returned expected results without logging cookies or secrets.
 - Rust Redis-backed write-store parity for `/api/orders` and `/api/briefs` is implemented and deployed at `129740b`.
 - GitHub `autofix-check` and `rust-check` passed for `129740b`; `vps-deploy` run `27631682347` passed with file-store and Redis fixture order/brief smokes before release activation.

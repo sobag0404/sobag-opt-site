@@ -5,7 +5,7 @@ Date: 2026-06-16
 Latest production status:
 - Rust auth write routes are now cut over: production exact `/api/auth/login`, `/api/auth/register`, and `/api/auth/logout` route to Rust after auth parity hardening. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-auth-write-20260616T174643Z`.
 - Rust Redis-backed write-store parity is implemented and deployed; production exact `/api/orders` and `/api/briefs` are now cut over to Rust after live write smoke. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-orders-briefs-20260616T164606Z`.
-- Latest deployed release marker: `20260616T174326Z-743c63e`.
+- Latest deployed release marker: `20260616T180115Z-9932b03`.
 - Cache hardening code commit `cefeb12` is deployed on `sobag-shop.online`; later docs-only releases may advance the release marker without changing runtime code. GitHub `autofix-check`, `rust-check`, `vps-deploy`, and `production-smoke` passed for the cache hardening release.
 - Live checks passed: `/api/health` 200 `no-store`, `/api/catalog-query` prices are non-zero with real imported category facets, `/api/price-list?format=json` returns 31 rows with short public cache, `/` is `no-cache`, and versioned JS/CSS URLs are immutable.
 - Production `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`, `/api/auth/me`, `/api/orders`, and `/api/briefs` route exact paths to Rust; Node remains fallback for non-switched root/cart and admin catalog/import/media/PIM routes.
@@ -18,7 +18,7 @@ Transition readiness:
 - Real field CWV is still unavailable and remains post-launch monitoring; synthetic 10k catalog/performance evidence is tracked in `docs/synthetic-cwv-readiness-evidence.md`.
 
 Current deployed VPS release:
-- Runtime code is at release `20260616T174326Z-743c63e`; Rust auth write parity fix was finalized in `743c63e`, and the Rust Redis store code was introduced at `129740b`.
+- Runtime code is at release `20260616T180115Z-9932b03`; Rust auth write parity fix was finalized in `743c63e`, deploy-smoke port collision hardening in `9932b03`, and the Rust Redis store code was introduced at `129740b`.
 - Rollback release kept on VPS: `/opt/sobag-opt/releases/20260612T123649Z-6c76c30`.
 
 Repository:
@@ -1225,7 +1225,7 @@ Backend/storage state:
 - Current 2026-06-15 Rust verification: `cargo fmt --check` and `cargo metadata --locked` pass locally; VPS/Linux `cargo check --locked && cargo test --locked` passes on the current release as `sobag` with 25 tests; local Windows `cargo check --locked` is blocked by missing MSVC `link.exe`. `.github/workflows/rust-check.yml` now runs `cargo fmt --check`, metadata, check, and test on Ubuntu with `contents: read`.
 
 Important remaining work:
-- Current Rust auth write production cutover: exact `/api/auth/login`, `/api/auth/register`, and `/api/auth/logout` now proxy to Rust. Rollback backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-auth-write-20260616T174643Z`. Verified with GitHub `autofix-check`/`rust-check`/`vps-deploy`/`production-smoke`, live register/login/logout/session cookie smoke, CSRF-origin rejection, no-order review guard, health/catalog price smoke, order/brief write smoke, production performance/cache smoke, and storage readiness. Remaining Rust fallback zone: admin catalog/import/media/PIM.
+- Current Rust auth write production cutover: exact `/api/auth/login`, `/api/auth/register`, and `/api/auth/logout` now proxy to Rust. Rollback backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-auth-write-20260616T174643Z`. Verified with GitHub `autofix-check` `27637574364`, `rust-check` `27637574179`, `vps-deploy` `27637632119`, `production-smoke` `27637747742`, live register/login/logout/session cookie smoke, CSRF-origin rejection, no-order review guard, health/catalog price smoke, order/brief write smoke, production performance/cache smoke, and storage readiness. Remaining Rust fallback zone: admin catalog/import/media/PIM.
 - Current Rust review moderation preview slice: internal `PATCH /rust/admin/content` now supports temporary-store review approve/hide/delete moderation with audit records. Deploy smoke verifies valid moderation, invalid status rejection, deletion, and persisted review list. Public `/api/admin/content` still stays on Node.
 - Current Rust admin content preview slice: internal `/rust/admin/content` now supports admin/content GET and PUT against temporary Node-compatible content store data, plus `?reviews=1` read preview. Deploy smoke verifies content-role access, buyer rejection, invalid payload rejection, persistence, and review-list read. Public `/api/admin/content` and review moderation PATCH still stay on Node.
 - Current Rust auth write preview slice: internal `/rust/auth/login`, `/rust/auth/register`, `/rust/auth/logout`, and `PUT /rust/auth/me` are implemented for temporary file-store validation only. Deploy smoke now verifies login by phone/email, invalid credentials, profile update sanitizing, registration, session cookie set/clear, and no password-field leaks. Public `/api/auth/*` still stays on Node.
