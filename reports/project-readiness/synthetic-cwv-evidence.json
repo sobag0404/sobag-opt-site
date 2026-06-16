@@ -9,6 +9,12 @@
     "vps-deploy": "PASS",
     "production-smoke": "PASS"
   },
+  "externalGateRuns": {
+    "autofix-check": "27601300541",
+    "rust-check": "27601300644",
+    "vps-deploy": "27601339072",
+    "production-smoke": "27601476435"
+  },
   "liveChecks": {
     "https://sobag-shop.online/": 200,
     "https://sobag-shop.online/index.html": 301

@@ -1,8 +1,8 @@
 # Project Readiness Report
 
-Generated: 2026-06-16T07:52:28+00:00
+Generated: 2026-06-16T08:05:07+00:00
 Project: sobag-opt-site
-Git: `main` / `baacadd`
+Git: `main` / `633745d`
 
 ## 1. Executive Summary
 
@@ -257,7 +257,12 @@ P0/P1 рекомендации:
 - `tools/project_readiness_agent/reporting/`
 - `docs/project-readiness-agent.md`
 - `docs/vps-rust-runtime-map.md`
-- Git working tree status: clean at scan time.
+- `docs/synthetic-cwv-readiness-evidence.md`
+- `reports/project-readiness/synthetic-cwv-evidence.json`
+- Git working tree status:
+  - ` M docs/synthetic-cwv-readiness-evidence.md`
+  - ` M reports/project-readiness/synthetic-cwv-evidence.json`
+  - ` M tools/project_readiness_agent/runner.py`
 - Diff/PR URL: unavailable in local repository context.
 
 ## 9. Limitations

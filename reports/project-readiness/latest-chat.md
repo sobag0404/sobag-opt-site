@@ -7,5 +7,5 @@ Next implementation packet:
 Статус проекта: READY_WITH_WARNINGS. Оценка: 87/100.
 Блокеры: ARCH-001: Large source files need explicit ownership; CODE-003: No standard lint configuration is detected; PROMPT-003: Long prompts risk pulling obsolete context into new chats; SEC-005: Destructive shell operations exist and require guardrails
 Решение: можно передавать с предупреждениями.
-Отчёт: reports/project-readiness/latest.md. GoAL: reports/project-readiness/latest-chat.md. Commit: baacadd; PR unavailable.
+Отчёт: reports/project-readiness/latest.md. GoAL: reports/project-readiness/latest-chat.md. Commit: 633745d; PR unavailable.
 Промпт: открой новый GoAL-чат из этого файла и `latest.md`; текущая стартовая точка только latest readiness package и связанные repo artifacts. Сначала P0/P1, без лишних изменений, не печатать секреты.

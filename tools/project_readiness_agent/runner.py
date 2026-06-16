@@ -62,6 +62,8 @@ def run_agent(root: Path, config_path: Path | None = None) -> ProjectReport:
         "tools/project_readiness_agent/reporting/",
         "docs/project-readiness-agent.md",
         "docs/vps-rust-runtime-map.md",
+        "docs/synthetic-cwv-readiness-evidence.md",
+        "reports/project-readiness/synthetic-cwv-evidence.json",
     ]
     limitations = build_limitations(context)
     return ProjectReport(

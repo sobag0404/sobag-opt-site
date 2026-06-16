@@ -7,15 +7,15 @@ Structured evidence:
 
 Scope:
 - Domain: `https://sobag-shop.online`
-- Commit baseline: `3a3dad4` and later
+- Commit baseline: `3a3dad4` and later; readiness finalized at `633745d` and later
 - Deploy target: VPS only
 - Runtime target: Rust-first with current Node fallback
 
 Verified external gates, 2026-06-16:
-- `autofix-check`: PASS
-- `rust-check`: PASS
-- `vps-deploy`: PASS
-- `production-smoke`: PASS
+- `autofix-check`: PASS, run `27601300541`
+- `rust-check`: PASS, run `27601300644`
+- `vps-deploy`: PASS, run `27601339072`
+- `production-smoke`: PASS, run `27601476435`
 - `https://sobag-shop.online/`: 200
 - `https://sobag-shop.online/index.html`: 301 to `/`
 
