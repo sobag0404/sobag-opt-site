@@ -75,7 +75,7 @@ jobs:
             target="$(readlink -f "$1")"
             case "$target" in
               "$app_dir/releases"/*|"$repo_dir"|"$rust_target_dir/debug")
-                rm -rf -- "$target"
+                sudo rm -rf --one-file-system -- "$target"
                 ;;
               *)
                 echo "Refusing unsafe rm -rf target: $target"
@@ -263,8 +263,9 @@ jobs:
           mapfile -t releases < <(ls -1dt "$app_dir"/releases/* 2>/dev/null || true)
           keep_current="$(readlink -f "$app_dir/current")"
           for old_release in "${releases[@]}"; do
-            if [ "$old_release" != "$keep_current" ]; then
-              safe_rm_rf "$old_release"
+            old_release_resolved="$(readlink -f "$old_release")"
+            if [ "$old_release_resolved" != "$keep_current" ]; then
+              safe_rm_rf "$old_release_resolved"
             fi
           done
           REMOTE

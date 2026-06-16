@@ -1,8 +1,8 @@
 # Project Readiness Report
 
-Generated: 2026-06-16T07:01:06+00:00
+Generated: 2026-06-16T07:10:53+00:00
 Project: sobag-opt-site
-Git: `main` / `6797b29`
+Git: `main` / `4d158ec`
 
 ## 1. Executive Summary
 
@@ -77,7 +77,7 @@ Git: `main` / `6797b29`
 
 - Severity: `medium`
 - Priority: `P2`
-- File / area: `.github/workflows/vps-deploy.yml, reports/project-readiness/latest.md`
+- File / area: `.github/workflows/vps-deploy.yml, reports/project-readiness/latest.md, tools/vps-release-audit.mjs`
 - Description: The repository contains shell snippets with `rm -rf` or equivalent destructive cleanup commands.
 - Why it matters: These commands may be legitimate in deploy cleanup, but they are high-impact if path validation regresses.
 - Recommendation: Keep destructive commands confined to reviewed deploy scripts, validate resolved paths, and never add them to the readiness agent.
@@ -253,7 +253,9 @@ P0/P1 рекомендации:
 - `tools/project_readiness_agent/reporting/`
 - `docs/project-readiness-agent.md`
 - `docs/vps-rust-runtime-map.md`
-- Git working tree status: clean at scan time.
+- Git working tree status:
+  - ` M .github/workflows/vps-deploy.yml`
+  - ` M tools/vps-release-audit.mjs`
 - Diff/PR URL: unavailable in local repository context.
 
 ## 9. Limitations

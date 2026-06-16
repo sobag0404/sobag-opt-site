@@ -100,6 +100,7 @@ const REQUIRED_VPS_DEPLOY_MARKERS = [
   "cleanup_failed_release()",
   "safe_rm_rf()",
   "target=\"$(readlink -f \"$1\")\"",
+  "sudo rm -rf --one-file-system -- \"$target\"",
   "rust_target_dir=\"$app_dir/shared/cargo-target\"",
   "export CARGO_TARGET_DIR=\"$rust_target_dir\"",
   "export NODE_ENV=production",
@@ -121,6 +122,7 @@ const REQUIRED_VPS_DEPLOY_MARKERS = [
   "node tools/rust-admin-users-cutover-smoke.mjs --rust-bin \"$rust_binary\"",
   "node tools/rust-admin-content-cutover-smoke.mjs --rust-bin \"$rust_binary\"",
   "safe_rm_rf \"$rust_target_dir/debug\"",
+  "old_release_resolved=\"$(readlink -f \"$old_release\")\"",
   "::add-mask::%s",
   "Rust health failed; restoring previous binary",
 ];
