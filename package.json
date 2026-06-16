@@ -11,6 +11,7 @@
     "smoke:vps:write": "node tools/vps-write-smoke.mjs",
     "smoke:api-security": "node tools/api-security-smoke.mjs",
     "smoke:price-integrity": "node tools/price-integrity-smoke.mjs",
+    "smoke:price-groups": "node tools/price-groups-smoke.mjs",
     "preflight:vps": "node tools/vps-preflight.mjs",
     "preflight:vps:self-test": "node tools/vps-preflight.mjs --self-test",
     "backup:store": "node tools/file-store-backup.mjs",

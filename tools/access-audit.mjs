@@ -8,6 +8,7 @@ const routeMatrix = [
   { file: "server-routes/catalog.js", route: "/api/catalog", methods: ["GET"], access: "public" },
   { file: "server-routes/catalog-query.js", route: "/api/catalog-query", methods: ["GET"], access: "public" },
   { file: "server-routes/catalog-detail.js", route: "/api/catalog-detail", methods: ["GET"], access: "public" },
+  { file: "server-routes/price-list.js", route: "/api/price-list", methods: ["GET"], access: "public" },
   { file: "server-routes/content.js", route: "/api/content", methods: ["GET"], access: "public" },
   { file: "server-routes/health.js", route: "/api/health", methods: ["GET"], access: "public" },
   { file: "server-routes/auth/login.js", route: "/api/auth/login", methods: ["POST"], access: "public" },
@@ -21,6 +22,7 @@ const routeMatrix = [
   { file: "server-routes/admin/import-batches.js", route: "/api/admin/import-batches", methods: ["GET", "POST"], access: "role", roles: ["admin", "content"] },
   { file: "server-routes/admin/orders.js", route: "/api/admin/orders", methods: ["GET", "PATCH"], access: "role", roles: ["admin", "manager"] },
   { file: "server-routes/admin/pim.js", route: "/api/admin/pim", methods: ["GET"], access: "role", roles: ["admin", "content"] },
+  { file: "server-routes/admin/prices.js", route: "/api/admin/prices", methods: ["GET", "POST"], access: "role", roles: ["admin", "content"] },
   { file: "server-routes/admin/product-images.js", route: "/api/admin/product-images", methods: ["GET", "POST", "DELETE"], access: "role", roles: ["admin", "content"] },
   {
     file: "server-routes/admin/users.js",

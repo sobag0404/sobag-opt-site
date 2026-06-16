@@ -3,6 +3,7 @@ const { handleError, methodNotAllowed, sendJson } = require("./server-routes/_li
 const catalog = require("./server-routes/catalog.js");
 const catalogQuery = require("./server-routes/catalog-query.js");
 const catalogDetail = require("./server-routes/catalog-detail.js");
+const priceList = require("./server-routes/price-list.js");
 const content = require("./server-routes/content.js");
 const health = require("./server-routes/health.js");
 const orders = require("./server-routes/orders.js");
@@ -16,6 +17,7 @@ const adminContent = require("./server-routes/admin/content.js");
 const adminImportBatches = require("./server-routes/admin/import-batches.js");
 const adminOrders = require("./server-routes/admin/orders.js");
 const adminPim = require("./server-routes/admin/pim.js");
+const adminPrices = require("./server-routes/admin/prices.js");
 const adminProductImages = require("./server-routes/admin/product-images.js");
 const adminUsers = require("./server-routes/admin/users.js");
 
@@ -24,6 +26,7 @@ const apiRoutes = new Map(
     ["/api/catalog", catalog],
     ["/api/catalog-query", catalogQuery],
     ["/api/catalog-detail", catalogDetail],
+    ["/api/price-list", priceList],
     ["/api/content", content],
     ["/api/health", health],
     ["/api/orders", orders],
@@ -37,6 +40,7 @@ const apiRoutes = new Map(
     ["/api/admin/import-batches", adminImportBatches],
     ["/api/admin/orders", adminOrders],
     ["/api/admin/pim", adminPim],
+    ["/api/admin/prices", adminPrices],
     ["/api/admin/product-images", adminProductImages],
     ["/api/admin/users", adminUsers],
   ]
