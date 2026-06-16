@@ -1,16 +1,8 @@
 # Project Readiness Report
 
-Generated: 2026-06-16T06:46:19+00:00
+Generated: 2026-06-16T06:58:52+00:00
 Project: sobag-opt-site
-Git: `main` / `3fa61ef`
-
-## Manual Update - 2026-06-16 Canonical URL / Readiness Follow-up
-
-- Status remains **NOT_READY**, score **74/100**: PROD-002 real CWV field packet is still incomplete.
-- Canonical URL cleanup is committed and pushed as `3fa61ef`: `/index.html` redirects to `/`, shared home links use `/`, and production-smoke workflow includes canonical URL smoke.
-- Python readiness blocker is removed for this machine by using Unity-bundled Python: readiness unit tests and `tools/project_readiness_agent/run.py` passed.
-- Local gates passed: `npm.cmd run check`, `npm.cmd run ui:smoke`, canonical URL self-test/local server smoke, content/workflow/VPS audits, and `git diff --check`.
-- Still blocked from this shell: live `https://sobag-shop.online` smoke, GitHub Actions API, and crates.io download access. Verify those from GitHub/VPS or a network-enabled shell before declaring the Rust/VPS transition complete.
+Git: `main` / `4c8892f`
 
 ## 1. Executive Summary
 
