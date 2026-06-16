@@ -16,7 +16,8 @@ Current Rust/VPS evidence:
 - Rust Redis-backed write-store parity for `/api/orders` and `/api/briefs` is implemented and deployed at `129740b`.
 - GitHub `autofix-check` and `rust-check` passed for `129740b`; `vps-deploy` run `27631682347` passed with file-store and Redis fixture order/brief smokes before release activation.
 - Live checks from this Codex thread passed after deploy: `/` 200 `no-cache`, `/api/health` 200 `no-store`, catalog prices are non-zero, production smoke, production performance/cache smoke, and production storage readiness.
-- Production `/api/orders` and `/api/briefs` remain intentionally on Node fallback until the next exact-route Nginx re-cutover and live write smoke. This is a controlled cutover gate, not a current P0/P1 blocker.
+- Production exact `/api/orders` and `/api/briefs` are now cut over to Rust. Nginx backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-orders-briefs-20260616T164606Z`.
+- Live write smoke passed after cutover: Rust-created order `SO-468985` and custom brief `BR-470565` persisted through Redis, trusted pricing stayed non-zero, buyer PATCH worked, and account/admin visibility remained compatible with existing Node/Rust fallback routes.
 
 ## 2. Readiness Score
 

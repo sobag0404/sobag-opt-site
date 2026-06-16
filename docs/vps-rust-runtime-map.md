@@ -20,7 +20,7 @@ Last updated: 2026-06-16
 | `/api/catalog-query`, `/api/catalog-detail` | Rust/PostgreSQL path on VPS | cut over | route back to Node/API fallback |
 | `/api/auth/me` | Rust for `GET+PUT` | cut over | route exact path back to Node |
 | `/api/auth/login`, `/api/auth/register`, `/api/auth/logout` | Node fallback | pending Rust auth-write cutover | keep Node |
-| `/api/orders`, `/api/briefs` | Node fallback | rolled back from Rust exact routes on production | keep Node until Rust write store supports the live Redis-backed provider |
+| `/api/orders`, `/api/briefs` | Rust exact routes | cut over after Redis-backed parity | route exact paths back to Node backup |
 | `/api/admin/orders`, `/api/admin/users`, `/api/admin/content` | Rust exact routes | cut over | route exact paths back to Node |
 | Admin catalog/import/media/PIM writes | Node fallback | pending | keep Node |
 
@@ -47,9 +47,9 @@ Next.js runtime is not present. Cleanup targets the old Vercel serverless/deploy
 
 - Deployed commit `cefeb12` hardens VPS static cache policy: HTML is `no-cache`, versioned JS/CSS query URLs are `public, max-age=31536000, immutable`, product data and public catalog/price-list APIs use short public cache, and auth/health/order APIs stay `no-store`.
 - Live catalog cold requests return current imported facets: `Подушки 517`, `Наволочки 517`, `Мешки для обуви 170`, `Чехлы на чемодан 37`, `Ремувки 19`, `Флаги 65`. `/api/catalog` returns `no-store`; `/api/catalog-query` returns short public cache only.
-- Production order writes are intentionally routed back to Node until the next exact-route re-cutover. The previous Redis/file-store code gap is closed; rollback backup remains `/etc/nginx/sites-available/sobag-opt.pre-node-orders-20260616T122736Z`.
-- Redis-backed Rust write-store parity is deployed at `129740b`: Rust reads/writes/deletes the same Redis/Upstash REST keys used by Node, and VPS deploy run `27631682347` passed both file-store and Redis fixture order/brief smokes before accepting the release.
-- Before re-cutting `/api/orders` or `/api/briefs` to Rust, backup current Nginx config, switch only exact routes, run live price/order/brief smokes against the live provider, confirm Node fallback admin/account visibility for Rust-created records, and keep the current Node rollback backup available.
+- Production `/api/orders` and `/api/briefs` are cut over to Rust exact routes after Redis-backed store parity. Current route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-orders-briefs-20260616T164606Z`; previous Node-restore backup remains `/etc/nginx/sites-available/sobag-opt.pre-node-orders-20260616T122736Z`.
+- Redis-backed Rust write-store parity is deployed at `129740b`: Rust reads/writes/deletes the same Redis/Upstash REST keys used by Node, and VPS deploy runs passed both file-store and Redis fixture order/brief smokes before accepting the release.
+- Live cutover smoke passed after the exact-route switch: health/catalog prices stayed valid, Rust-created order `SO-468985` and custom brief `BR-470565` persisted through Redis, Node/Rust admin/account fallback visibility was confirmed, `GET /api/briefs` still returns 405, and production smoke/storage/cache checks stayed green.
 
 ## VPS Access And Cutover Input
 
