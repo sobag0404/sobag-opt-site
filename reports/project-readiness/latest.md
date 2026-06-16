@@ -1,15 +1,16 @@
 # Project Readiness Report
 
-Generated: 2026-06-15T15:41:15+00:00
+Generated: 2026-06-16T06:46:19+00:00
 Project: sobag-opt-site
-Git: `main` / `5ece96d`
+Git: `main` / `3fa61ef`
 
-## Manual Update - 2026-06-16 Canonical URL Cleanup
+## Manual Update - 2026-06-16 Canonical URL / Readiness Follow-up
 
 - Status remains **NOT_READY**, score **74/100**: PROD-002 real CWV field packet is still incomplete.
-- Local canonical URL packet is prepared: `/` is canonical, `/index.html` redirects to `/`, and root links were moved away from `index.html`.
-- Local checks passed for canonical URL self-test, local server canonical smoke, content audit, `npm run check`, `npm run ui:smoke`, targeted `node --check`, and `git diff --check`.
-- Python readiness regeneration was not available in this sandbox because Python is not installed/in PATH; this manual section records the current packet until the agent can be rerun.
+- Canonical URL cleanup is committed and pushed as `3fa61ef`: `/index.html` redirects to `/`, shared home links use `/`, and production-smoke workflow includes canonical URL smoke.
+- Python readiness blocker is removed for this machine by using Unity-bundled Python: readiness unit tests and `tools/project_readiness_agent/run.py` passed.
+- Local gates passed: `npm.cmd run check`, `npm.cmd run ui:smoke`, canonical URL self-test/local server smoke, content/workflow/VPS audits, and `git diff --check`.
+- Still blocked from this shell: live `https://sobag-shop.online` smoke, GitHub Actions API, and crates.io download access. Verify those from GitHub/VPS or a network-enabled shell before declaring the Rust/VPS transition complete.
 
 ## 1. Executive Summary
 
@@ -44,7 +45,7 @@ Git: `main` / `5ece96d`
 
 - Severity: `medium`
 - Priority: `P2`
-- File / area: `app.js (4654 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4685 lines)`
+- File / area: `app.js (4655 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4685 lines)`
 - Description: Several implementation files are above the configured size threshold.
 - Why it matters: The project is still maintainable, but future changes will be harder to isolate.
 - Recommendation: Document ownership boundaries and extract modules when touching these areas.
@@ -218,11 +219,11 @@ Git: `main` / `5ece96d`
 1. P1 PROD-002: Real external input packets are incomplete. Файл/область: local-import-output/cwv-field-audit-packet.json. Рекомендация: Collect the real packets locally, keep secrets out of Git/chat, then run strict goal completion/readiness audits.
 
 Next implementation packet for VPS-only/Rust transition:
-1. Fill `local-import-output/cwv-field-audit-packet.json` only from real post-migration field measurements after realistic 10k+ catalog scale, then run strict goal-input/readiness gates.
-2. Resolve the GitHub Actions billing/spending-limit blocker, then rerun `autofix-check`, `rust-check`, and `vps-deploy`; do not weaken VPS-only gates or secret handling.
-3. Monitor VPS release `20260615Tmanual-427f171` on `sobag-shop.online`: production smoke, storage smoke, performance smoke, Node health, Rust health, and rollback readiness.
-4. Keep Vercel/Next absent from active runtime/deploy, rerun VPS release/storage/error/smoke audits, and do not reintroduce Vercel Blob/provider aliases.
-5. Continue only small modularity/functional slices when they do not slow the Rust/VPS critical path.
+1. Run real product-photo migration gates against the confirmed photo source and the S3-compatible VPS/MinIO target; keep secrets out of Git/chat.
+2. Fill `local-import-output/cwv-field-audit-packet.json` only from real post-migration field measurements, then run strict goal-input/readiness gates.
+3. Keep Vercel/Next absent from active runtime/deploy, rerun VPS release/storage/error/smoke audits, and do not reintroduce Vercel Blob/provider aliases.
+4. Re-verify Rust on Linux/VPS/CI with `cd rust-server && cargo fmt --check && cargo check --locked && cargo test --locked`; local Windows MSVC `link.exe` blocker is environment-only until toolchain is installed.
+5. Continue only small modularity slices when touching related code; remaining ARCH-001 is P2 ownership debt.
 
 P0/P1 рекомендации:
 - P1 PROD-002: PROD-002: Collect the real packets locally, keep secrets out of Git/chat, then run strict goal completion/readiness audits.
@@ -260,8 +261,7 @@ P0/P1 рекомендации:
 - `tools/project_readiness_agent/reporting/`
 - `docs/project-readiness-agent.md`
 - `docs/vps-rust-runtime-map.md`
-- Git working tree status:
-  - ` M .github/workflows/vps-deploy.yml`
+- Git working tree status: clean at scan time.
 - Diff/PR URL: unavailable in local repository context.
 
 ## 9. Limitations
