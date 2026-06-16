@@ -1,8 +1,8 @@
 # Project Readiness Report
 
-Generated: 2026-06-16T15:41:35+00:00
+Generated: 2026-06-16T16:27:48+00:00
 Project: sobag-opt-site
-Git: `main` / `d8fc363`
+Git: `main` / `129740b`
 
 ## 1. Executive Summary
 
@@ -13,10 +13,10 @@ Git: `main` / `d8fc363`
 - Главный вывод: **можно передавать с предупреждениями**
 
 Current Rust/VPS evidence:
-- Rust write-store helpers now support both file-store and Redis/Upstash REST providers for shared Node-compatible keys (`sobag:store:v1`, `sobag:session:*`, content keys).
-- `/api/orders` and `/api/briefs` are still protected by Node fallback in production until an explicit exact-route re-cutover, but Redis-backed Rust parity is implemented and covered by file+Redis fixture smokes.
-- VPS deploy gates now run both `tools/rust-orders-write-smoke.mjs` and `tools/rust-orders-briefs-cutover-smoke.mjs` in default file-store mode and `--store-provider redis` mode before accepting a Rust release.
-- `rust-server/src/main.rs` was reduced below the readiness huge-file threshold by moving store-provider logic into `rust-server/src/store.rs`; remaining large-file ownership is P2 warning debt, not a transition blocker.
+- Rust Redis-backed write-store parity for `/api/orders` and `/api/briefs` is implemented and deployed at `129740b`.
+- GitHub `autofix-check` and `rust-check` passed for `129740b`; `vps-deploy` run `27631682347` passed with file-store and Redis fixture order/brief smokes before release activation.
+- Live checks from this Codex thread passed after deploy: `/` 200 `no-cache`, `/api/health` 200 `no-store`, catalog prices are non-zero, production smoke, production performance/cache smoke, and production storage readiness.
+- Production `/api/orders` and `/api/briefs` remain intentionally on Node fallback until the next exact-route Nginx re-cutover and live write smoke. This is a controlled cutover gate, not a current P0/P1 blocker.
 
 ## 2. Readiness Score
 
@@ -43,7 +43,7 @@ Current Rust/VPS evidence:
 
 - Severity: `medium`
 - Priority: `P2`
-- File / area: `app.js (4757 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4897 lines)`
+- File / area: `app.js (4757 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4898 lines)`
 - Description: Several implementation files are above the configured size threshold.
 - Why it matters: The project is still maintainable, but future changes will be harder to isolate.
 - Recommendation: Document ownership boundaries and extract modules when touching these areas.
@@ -215,7 +215,7 @@ Reason: critical=0, high=0, medium=4, low=6, info=2. Score is reduced only for w
 - Активная продуктовая цель: завершить Rust/no-Node переход только после прохождения cutover smoke/audit gates и сохранения rollback-пути.
 
 Задачи по приоритету:
-1. P2 ARCH-001: Large source files need explicit ownership. Файл/область: app.js (4757 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4897 lines). Рекомендация: Document ownership boundaries and extract modules when touching these areas.
+1. P2 ARCH-001: Large source files need explicit ownership. Файл/область: app.js (4757 lines), components/app-admin.js (2604 lines), rust-server/src/main.rs (4898 lines). Рекомендация: Document ownership boundaries and extract modules when touching these areas.
 2. P2 CODE-003: No standard lint configuration is detected. Файл/область: repository. Рекомендация: Add ESLint with a small ruleset that complements, not replaces, the existing custom invariant checks.
 3. P2 SEC-005: Destructive shell operations exist and require guardrails. Файл/область: .github/workflows/vps-deploy.yml, reports/project-readiness/latest.md, tools/vps-release-audit.mjs. Рекомендация: Keep destructive commands confined to reviewed deploy scripts, validate resolved paths, and never add them to the readiness agent.
 4. P2 PROMPT-003: Long prompts risk pulling obsolete context into new chats. Файл/область: docs/ai-handoff/LIVE_CONTEXT.md. Рекомендация: For new runs, use `reports/project-readiness/latest-chat.md` as the entry prompt and link to the latest report/context files only.
@@ -266,25 +266,10 @@ P0/P1 рекомендации:
 - `docs/synthetic-cwv-readiness-evidence.md`
 - `reports/project-readiness/synthetic-cwv-evidence.json`
 - Git working tree status:
-  - ` M .github/workflows/vps-deploy.yml`
   - ` M docs/ai-handoff/ACTIVE_CONTEXT.md`
   - ` M docs/ai-handoff/CURRENT_STATUS.md`
-  - ` M docs/roadmap-checklist.md`
-  - ` M docs/rust-account-orders-admin-cutover-runbook.md`
-  - ` M docs/rust-auth-orders-admin-migration-plan.md`
-  - ` M docs/rust-deploy-runbook.md`
-  - ` M docs/rust-full-migration-plan.md`
   - ` M docs/vps-rust-runtime-map.md`
-  - ` M package.json`
   - ` M reports/project-readiness/latest-chat.md`
-  - ` M reports/project-readiness/latest.md`
-  - ` M rust-server/Cargo.lock`
-  - ` M rust-server/Cargo.toml`
-  - ` M rust-server/src/main.rs`
-  - ` M rust-server/src/ssr_tests.rs`
-  - ` M tools/rust-orders-briefs-cutover-smoke.mjs`
-  - ` M tools/rust-orders-write-smoke.mjs`
-  - ` M tools/vps-release-audit.mjs`
   - `?? output/`
 - Diff/PR URL: unavailable in local repository context.
 
