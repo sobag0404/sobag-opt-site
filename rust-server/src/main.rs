@@ -971,6 +971,18 @@ async fn auth_me_update_preview(
                 "Поставьте оценку и напишите отзыв от 5 символов.",
             ));
         };
+        if !has_eligible_review_order(&store, &user, &review) {
+            return Err(AppError::forbidden_code(
+                "REVIEW_ORDER_REQUIRED",
+                "Отзыв можно оставить только после подтвержденного заказа этого товара.",
+            ));
+        }
+        if has_duplicate_review(&store, &user, &review) {
+            return Err(AppError::conflict(
+                "REVIEW_ALREADY_EXISTS",
+                "Отзыв на этот товар уже отправлен.",
+            ));
+        }
         push_review_record(&mut store, review);
     }
     save_file_store_value(STORE_KEY, &store)
@@ -2873,6 +2885,93 @@ fn sanitize_review_value(input: &Value, user: &Value) -> Option<Value> {
         "createdAt": now.to_rfc3339(),
         "updatedAt": now.to_rfc3339()
     }))
+}
+
+fn review_key(value: Option<&Value>) -> String {
+    value
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase()
+}
+
+fn review_matches_order_item(review: &Value, item: &Value) -> bool {
+    let review_product_id = review_key(review.get("productId"));
+    let review_base_sku = review_key(review.get("baseSku"));
+    let item_product_id = review_key(item.get("productId"));
+    let item_base_sku = review_key(item.get("baseSku"));
+    let item_key = review_key(item.get("key"));
+    let variant_sku = item
+        .get("variant")
+        .and_then(|variant| variant.get("sku"))
+        .or_else(|| item.get("sku"));
+    let variant_sku = review_key(variant_sku);
+    (!review_product_id.is_empty()
+        && !item_product_id.is_empty()
+        && review_product_id == item_product_id)
+        || (!review_base_sku.is_empty()
+            && !item_base_sku.is_empty()
+            && review_base_sku == item_base_sku)
+        || (!review_base_sku.is_empty() && !item_key.is_empty() && review_base_sku == item_key)
+        || (!review_base_sku.is_empty()
+            && !variant_sku.is_empty()
+            && review_base_sku == variant_sku)
+}
+
+fn has_eligible_review_order(store: &Value, user: &Value, review: &Value) -> bool {
+    let email = normalize_email(&string_field(user, "email").unwrap_or_default());
+    if email.is_empty() {
+        return false;
+    }
+    store
+        .get("orders")
+        .and_then(Value::as_array)
+        .map(|orders| {
+            orders.iter().any(|order| {
+                let order_email = normalize_email(
+                    &string_field(order, "userEmail")
+                        .or_else(|| {
+                            order
+                                .get("customer")
+                                .and_then(|customer| string_field(customer, "email"))
+                        })
+                        .unwrap_or_default(),
+                );
+                let status = review_key(order.get("status"));
+                if order_email != email || !matches!(status.as_str(), "shipped" | "done") {
+                    return false;
+                }
+                order
+                    .get("items")
+                    .and_then(Value::as_array)
+                    .map(|items| {
+                        items
+                            .iter()
+                            .any(|item| review_matches_order_item(review, item))
+                    })
+                    .unwrap_or(false)
+            })
+        })
+        .unwrap_or(false)
+}
+
+fn has_duplicate_review(store: &Value, user: &Value, review: &Value) -> bool {
+    let email = normalize_email(&string_field(user, "email").unwrap_or_default());
+    let review_product_id = review_key(review.get("productId"));
+    let review_base_sku = review_key(review.get("baseSku"));
+    store
+        .get("reviews")
+        .and_then(Value::as_array)
+        .map(|reviews| {
+            reviews.iter().any(|item| {
+                normalize_email(&string_field(item, "userEmail").unwrap_or_default()) == email
+                    && ((!review_product_id.is_empty()
+                        && review_key(item.get("productId")) == review_product_id)
+                        || (!review_base_sku.is_empty()
+                            && review_key(item.get("baseSku")) == review_base_sku))
+            })
+        })
+        .unwrap_or(false)
 }
 
 fn non_negative_rounded_i64(value: Option<&Value>) -> i64 {

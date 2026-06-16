@@ -184,6 +184,50 @@ function sanitizeReview(input, user) {
   };
 }
 
+const REVIEW_ELIGIBLE_ORDER_STATUSES = new Set(["shipped", "done"]);
+
+function normalized(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function reviewMatchesOrderItem(review, item = {}) {
+  const reviewProductId = normalized(review.productId);
+  const reviewBaseSku = normalized(review.baseSku);
+  const itemProductId = normalized(item.productId);
+  const itemBaseSku = normalized(item.baseSku);
+  const itemKey = normalized(item.key);
+  const variantSku = normalized(item.variant?.sku || item.sku);
+  return Boolean(
+    (reviewProductId && itemProductId && reviewProductId === itemProductId) ||
+      (reviewBaseSku && itemBaseSku && reviewBaseSku === itemBaseSku) ||
+      (reviewBaseSku && itemKey && reviewBaseSku === itemKey) ||
+      (reviewBaseSku && variantSku && reviewBaseSku === variantSku)
+  );
+}
+
+function hasEligibleReviewOrder(store, user, review) {
+  const email = normalized(user.email);
+  return (store.orders || []).some((order) => {
+    const orderEmail = normalized(order.userEmail || order.customer?.email);
+    if (!email || orderEmail !== email) return false;
+    if (!REVIEW_ELIGIBLE_ORDER_STATUSES.has(normalized(order.status))) return false;
+    return (order.items || []).some((item) => reviewMatchesOrderItem(review, item));
+  });
+}
+
+function hasDuplicateReview(store, user, review) {
+  const email = normalized(user.email);
+  const reviewProductId = normalized(review.productId);
+  const reviewBaseSku = normalized(review.baseSku);
+  return (store.reviews || []).some((item) => {
+    if (normalized(item.userEmail) !== email) return false;
+    return (
+      (reviewProductId && normalized(item.productId) === reviewProductId) ||
+      (reviewBaseSku && normalized(item.baseSku) === reviewBaseSku)
+    );
+  });
+}
+
 function publicOrder(order) {
   return {
     ...order,
@@ -226,6 +270,12 @@ module.exports = async function handler(req, res) {
       if (Object.prototype.hasOwnProperty.call(data, "review")) {
         const review = sanitizeReview(data.review, store.users[user.email] || user);
         if (!review) return sendJson(res, 400, { error: "invalid_review", message: "Поставьте оценку и напишите отзыв от 5 символов." });
+        if (!hasEligibleReviewOrder(store, user, review)) {
+          return sendJson(res, 403, { error: "REVIEW_ORDER_REQUIRED", message: "Отзыв можно оставить только после подтвержденного заказа этого товара." });
+        }
+        if (hasDuplicateReview(store, user, review)) {
+          return sendJson(res, 409, { error: "REVIEW_ALREADY_EXISTS", message: "Отзыв на этот товар уже отправлен." });
+        }
         store.reviews = [review, ...(store.reviews || [])].slice(0, MAX_REVIEWS);
       }
       await saveStore(store);

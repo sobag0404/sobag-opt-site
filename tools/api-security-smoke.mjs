@@ -209,6 +209,83 @@ async function securitySmoke() {
     });
     assert(valid.payload.order?.total === total, "valid order should store server-calculated total");
     assert(valid.payload.order?.items?.[0]?.variant?.price === unitPrice, "valid order should store trusted unit price");
+    resetRateLimits();
+
+    const reviewBody = {
+      review: {
+        productId: detail.payload.product.id,
+        baseSku: detail.payload.product.baseSku,
+        productName: detail.payload.product.name,
+        rating: 5,
+        text: "Verified buyer review",
+      },
+    };
+    const noOrderReview = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: reviewBody,
+      allowFailure: true,
+    });
+    assert(noOrderReview.response.status === 403 && noOrderReview.payload.error === "REVIEW_ORDER_REQUIRED", "review without eligible order should be rejected");
+
+    const buyerOrder = await request(baseUrl, "/api/orders", {
+      method: "POST",
+      cookie: buyerCookie,
+      body: {
+        total,
+        customer: { name: "Buyer Security", phone: "+79990010000", email: "buyer-security@example.test" },
+        items: [{ productId: detail.payload.product.id, qty, variant }],
+      },
+    });
+    await request(baseUrl, "/api/admin/orders", {
+      method: "PATCH",
+      cookie: adminCookie,
+      body: { id: buyerOrder.payload.order.id, status: "done" },
+    });
+    const allowedReview = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: reviewBody,
+    });
+    assert(allowedReview.payload.user?.reviews?.some((review) => review.text === "Verified buyer review"), "eligible completed order should allow review");
+    const duplicateReview = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: reviewBody,
+      allowFailure: true,
+    });
+    assert(duplicateReview.response.status === 409 && duplicateReview.payload.error === "REVIEW_ALREADY_EXISTS", "duplicate review should be rejected");
+
+    const pendingBuyer = await request(baseUrl, "/api/auth/register", {
+      method: "POST",
+      body: {
+        email: "pending-review@example.test",
+        password: "buyer-pass",
+        name: "Pending Buyer",
+        phone: "+79990010006",
+        personalDataConsent: true,
+      },
+    });
+    await request(baseUrl, "/api/orders", {
+      method: "POST",
+      cookie: pendingBuyer.cookie,
+      body: {
+        total,
+        customer: { name: "Pending Buyer", phone: "+79990010006", email: "pending-review@example.test" },
+        items: [{ productId: detail.payload.product.id, qty, variant }],
+      },
+    });
+    resetRateLimits();
+    const pendingReview = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: pendingBuyer.cookie,
+      body: reviewBody,
+      allowFailure: true,
+    });
+    assert(
+      pendingReview.response.status === 403 && pendingReview.payload.error === "REVIEW_ORDER_REQUIRED",
+      `pending order should not allow review, got ${pendingReview.response.status} ${JSON.stringify(pendingReview.payload)}`
+    );
 
     console.log(`api-security smoke passed: ${baseUrl}`);
   } finally {
