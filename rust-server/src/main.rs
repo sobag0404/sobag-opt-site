@@ -4510,13 +4510,23 @@ fn push_where<'a>(
 
 async fn load_cards(pool: &PgPool, query: &CatalogQuery) -> AppResult<Vec<CatalogCard>> {
     let mut builder = sqlx::QueryBuilder::<sqlx::Postgres>::new(
-        "SELECT id, base_sku, name, description, stock,
-                popular::bigint AS popular,
-                min_price::double precision AS min_price,
-                max_price::double precision AS max_price,
-                variant_count::bigint AS variant_count,
-                category, categories, collections, holidays, tags, image, image_meta
-         FROM public_catalog_cards",
+        "SELECT id, base_sku, name, description, stock, popular, min_price, max_price, variant_count, category, categories, collections, holidays, tags, image, image_meta
+         FROM (
+           SELECT c.id, c.base_sku, c.name, c.description, c.stock,
+                  c.popular::bigint AS popular,
+                  COALESCE(NULLIF(c.min_price::double precision, 0), vp.min_price, 0) AS min_price,
+                  COALESCE(NULLIF(c.max_price::double precision, 0), vp.max_price, 0) AS max_price,
+                  COALESCE(NULLIF(c.variant_count::bigint, 0), vp.variant_count, 0) AS variant_count,
+                  c.category, c.categories, c.collections, c.holidays, c.tags, c.image, c.image_meta
+           FROM public_catalog_cards c
+           LEFT JOIN LATERAL (
+             SELECT MIN(NULLIF(v.price::double precision, 0)) AS min_price,
+                    MAX(NULLIF(v.price::double precision, 0)) AS max_price,
+                    COUNT(*)::bigint AS variant_count
+             FROM variants v
+             WHERE v.base_sku = c.base_sku OR v.product_id = c.id
+           ) vp ON TRUE
+         ) public_catalog_cards",
     );
     push_where(&mut builder, query, None);
     builder.push(" ORDER BY ").push(sort_sql(&query.sort));
@@ -4559,13 +4569,23 @@ async fn load_related_cards(
         return Ok(Vec::new());
     }
     let rows = sqlx::query(
-        "SELECT id, base_sku, name, description, stock,
-                popular::bigint AS popular,
-                min_price::double precision AS min_price,
-                max_price::double precision AS max_price,
-                variant_count::bigint AS variant_count,
-                category, categories, collections, holidays, tags, image, image_meta
-         FROM public_catalog_cards
+        "SELECT id, base_sku, name, description, stock, popular, min_price, max_price, variant_count, category, categories, collections, holidays, tags, image, image_meta
+         FROM (
+           SELECT c.id, c.base_sku, c.name, c.description, c.stock,
+                  c.popular::bigint AS popular,
+                  COALESCE(NULLIF(c.min_price::double precision, 0), vp.min_price, 0) AS min_price,
+                  COALESCE(NULLIF(c.max_price::double precision, 0), vp.max_price, 0) AS max_price,
+                  COALESCE(NULLIF(c.variant_count::bigint, 0), vp.variant_count, 0) AS variant_count,
+                  c.category, c.categories, c.collections, c.holidays, c.tags, c.image, c.image_meta
+           FROM public_catalog_cards c
+           LEFT JOIN LATERAL (
+             SELECT MIN(NULLIF(v.price::double precision, 0)) AS min_price,
+                    MAX(NULLIF(v.price::double precision, 0)) AS max_price,
+                    COUNT(*)::bigint AS variant_count
+             FROM variants v
+             WHERE v.base_sku = c.base_sku OR v.product_id = c.id
+           ) vp ON TRUE
+         ) public_catalog_cards
          WHERE base_sku <> $1
            AND (categories && $2::text[] OR collections && $3::text[] OR holidays && $4::text[] OR tags && $5::text[])
          ORDER BY popular DESC, name ASC
@@ -4757,6 +4777,18 @@ async fn load_product_detail(
     let variants = load_variants(pool, &product_id).await?;
     let images = load_images(pool, &product_id).await?;
     let categories: Vec<String> = product_row.try_get("categories").unwrap_or_default();
+    let min_variant_price = variants
+        .iter()
+        .filter_map(|variant| (variant.price > 0).then_some(variant.price))
+        .min()
+        .unwrap_or(0);
+    let max_variant_price = variants
+        .iter()
+        .filter_map(|variant| (variant.price > 0).then_some(variant.price))
+        .max()
+        .unwrap_or(0);
+    let product_min_price = row_i64(&product_row, "min_price_float");
+    let product_max_price = row_i64(&product_row, "max_price_float");
     Ok(Some(ProductDetail {
         id: product_id,
         base_sku: product_row.try_get("base_sku").unwrap_or_default(),
@@ -4775,8 +4807,16 @@ async fn load_product_detail(
             .try_get("detail_description")
             .unwrap_or_default(),
         base_price: 0,
-        min_price: row_i64(&product_row, "min_price_float"),
-        max_price: row_i64(&product_row, "max_price_float"),
+        min_price: if product_min_price > 0 {
+            product_min_price
+        } else {
+            min_variant_price
+        },
+        max_price: if product_max_price > 0 {
+            product_max_price
+        } else {
+            max_variant_price
+        },
         popular: row_i64(&product_row, "popular_int"),
         stock: product_row.try_get("stock").unwrap_or_default(),
         variants,
