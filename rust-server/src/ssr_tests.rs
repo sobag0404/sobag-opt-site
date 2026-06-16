@@ -808,3 +808,46 @@ fn rejects_invalid_brief_email() {
     .expect_err("email error");
     assert_eq!(error.code, "invalid_email");
 }
+
+#[test]
+fn admin_pim_report_preserves_non_zero_variant_prices() {
+    let catalog = json!({
+        "products": [{
+            "id": "pim-product-1",
+            "baseSku": "opt_pim_1",
+            "name": "PIM Pillow",
+            "status": "published",
+            "category": "Podushki",
+            "variants": [{
+                "id": "pim-variant-1",
+                "sku": "PIM-SKU-1",
+                "type": "Pillow",
+                "size": "40x40",
+                "material": "Velvet",
+                "name": "PIM Pillow 40x40",
+                "price": 1200,
+                "priceSource": "group"
+            }],
+            "images": [{
+                "url": "https://sobag-shop.online/sobag-products/products/opt_pim_1/1.webp",
+                "storageKey": "products/opt_pim_1/1.webp",
+                "provider": "s3-compatible",
+                "mime": "image/webp"
+            }]
+        }],
+        "updatedAt": "2026-06-16T00:00:00.000Z",
+        "version": 1
+    });
+    let report = pim_report_for_view(&catalog, "variants").expect("variants report");
+    assert_eq!(report["view"], "variants");
+    assert_eq!(report["rows"][0]["sku"], "PIM-SKU-1");
+    assert_eq!(report["rows"][0]["price"], 1200);
+    assert!(report["diagnostics"]["ok"].as_bool().unwrap_or(false));
+}
+
+#[test]
+fn admin_pim_csv_rejects_unknown_views() {
+    let catalog = json!({ "products": [{ "id": "p1", "baseSku": "opt_1", "variants": [] }] });
+    let error = pim_csv_for_view(&catalog, "unknown").expect_err("unsupported csv");
+    assert_eq!(error.code, "unsupported_pim_csv_view");
+}

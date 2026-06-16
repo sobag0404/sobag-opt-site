@@ -253,6 +253,7 @@ jobs:
               node tools/rust-admin-orders-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-admin-users-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-admin-content-cutover-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-admin-pim-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-public-route-smoke.mjs --base https://sobag-shop.online
             }; then
               echo "Rust smoke failed; restoring previous binary"

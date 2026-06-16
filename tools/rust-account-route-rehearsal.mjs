@@ -26,11 +26,14 @@ const ROUTE_GROUPS = {
     publicRoutes: ["/api/admin/content"],
     rustRoutes: ["/rust/admin/content"],
   },
+  "admin-pim": {
+    publicRoutes: ["/api/admin/pim"],
+    rustRoutes: ["/rust/admin/pim"],
+  },
 };
 
 const BLOCKED_PUBLIC_ROUTES = [
   "/api/admin/catalog",
-  "/api/admin/pim",
   "/api/admin/product-images",
   "/api/admin/import-batches",
 ];
