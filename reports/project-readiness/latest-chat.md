@@ -7,5 +7,5 @@ Next implementation packet:
 Статус проекта: NOT_READY. Оценка: 74/100.
 Блокеры: PROD-002: Real external input packets are incomplete; ARCH-001: Large source files need explicit ownership; CODE-003: No standard lint configuration is detected; PROMPT-003: Long prompts risk pulling obsolete context into new chats
 Решение: нельзя передавать, нужны исправления.
-Отчёт: reports/project-readiness/latest.md. GoAL: reports/project-readiness/latest-chat.md. Commit: 4d158ec; PR unavailable.
+Отчёт: reports/project-readiness/latest.md. GoAL: reports/project-readiness/latest-chat.md. Commit: 738f05e; PR unavailable.
 Промпт: открой новый GoAL-чат из этого файла и `latest.md`; текущая стартовая точка только latest readiness package и связанные repo artifacts. Сначала P0/P1, без лишних изменений, не печатать секреты.
