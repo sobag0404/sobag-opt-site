@@ -4517,7 +4517,9 @@ async fn load_cards(pool: &PgPool, query: &CatalogQuery) -> AppResult<Vec<Catalo
                   COALESCE(NULLIF(c.min_price::double precision, 0), vp.min_price, 0) AS min_price,
                   COALESCE(NULLIF(c.max_price::double precision, 0), vp.max_price, 0) AS max_price,
                   COALESCE(NULLIF(c.variant_count::bigint, 0), vp.variant_count, 0) AS variant_count,
-                  c.category, c.categories, c.collections, c.holidays, c.tags, c.image, c.image_meta
+                  c.category, c.categories, c.collections, c.holidays, c.tags,
+                  c.types, c.sizes, c.materials, c.variant_skus,
+                  c.image, c.image_meta
            FROM public_catalog_cards c
            LEFT JOIN LATERAL (
              SELECT MIN(NULLIF(v.price::double precision, 0)) AS min_price,
