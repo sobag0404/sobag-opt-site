@@ -247,7 +247,9 @@ async function runSmoke(args) {
     if (created.status !== 201 || created.payload.order?.source !== "rust-cutover-smoke") {
       throw new Error(`order create through Rust route failed: ${created.status} ${JSON.stringify(created.payload)}`);
     }
-    if (created.payload.order?.items?.[0]?.qty !== 1) throw new Error("Rust order route did not sanitize quantity");
+    if (created.payload.order?.items?.[0]?.qty !== orderFixture.qty) {
+      throw new Error(`Rust order route quantity mismatch: ${created.payload.order?.items?.[0]?.qty} !== ${orderFixture.qty}`);
+    }
     console.log("OK POST /api/orders through Rust");
 
     const adminOrders = await requestJson(base, "/api/admin/orders", { token: "admin" });
@@ -276,7 +278,12 @@ async function runSmoke(args) {
     }
     console.log("OK PATCH /api/orders through Rust");
 
-    const belowMinimum = await requestJson(base, "/api/orders", { method: "POST", body: orderBody(orderFixture, { total: 29999 }) });
+    const belowMinimumFixture = {
+      ...orderFixture,
+      qty: 1,
+      total: discountedTotal(Number(orderFixture.variant.price || 0), 1),
+    };
+    const belowMinimum = await requestJson(base, "/api/orders", { method: "POST", body: orderBody(belowMinimumFixture) });
     if (belowMinimum.status !== 400 || belowMinimum.payload.error !== "minimum_total") {
       throw new Error(`minimum check mismatch: ${belowMinimum.status} ${JSON.stringify(belowMinimum.payload)}`);
     }
