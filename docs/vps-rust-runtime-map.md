@@ -23,7 +23,8 @@ Last updated: 2026-06-16
 | `/api/orders`, `/api/briefs` | Rust exact routes | cut over after Redis-backed parity | route exact paths back to Node backup |
 | `/api/admin/orders`, `/api/admin/users`, `/api/admin/content` | Rust exact routes | cut over | route exact paths back to Node |
 | `/api/admin/pim` | Rust exact route for read-only PIM diagnostics/export | cut over after PostgreSQL-backed PIM parity | restore `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-pim-20260616T193119Z` |
-| Admin catalog/import/media/price writes | Node fallback | pending | keep Node |
+| `/api/admin/prices` | Rust exact route | cut over after PostgreSQL price mutation parity | restore `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-prices-20260616T205931Z` |
+| Admin catalog/import/media writes | Node fallback | pending | keep Node |
 
 ## Vercel-Era Removal State
 
@@ -55,6 +56,8 @@ Next.js runtime is not present. Cleanup targets the old Vercel serverless/deploy
 - Orders/briefs live smoke remains green after auth-write cutover: health/catalog prices stayed valid, a safe Rust-created order and brief persisted through Redis, minimum-total validation stayed active, and production smoke/storage/cache checks stayed green.
 - Production exact `/api/admin/pim` is cut over to Rust for read-only PIM diagnostics/export after adding PostgreSQL-backed fallback when the file-store catalog is absent. Current route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-pim-20260616T193119Z`.
 - Admin PIM live smoke passed after the exact-route switch: anonymous access returned 401, a temporary content-role session read summary/variants/CSV through Rust, 12,943 variants included non-zero prices, invalid views returned 400, and the temporary user/session were removed. Admin catalog/import/media/price mutation routes remain on Node fallback.
+- Production exact `/api/admin/prices` is cut over to Rust for price-group/SKU price preview and PostgreSQL apply. Current route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-prices-20260616T205931Z`.
+- Admin prices live smoke passed after the exact-route switch: anonymous access returned 401, a temporary content-role session listed 31 price groups, previewed a safe SKU price row, rejected a zero-price row, applied the same non-zero SKU price without changing business value, verified catalog-detail prices stayed non-zero, and removed the temporary user/session. Admin catalog/import/media writes remain on Node fallback.
 
 ## VPS Access And Cutover Input
 
