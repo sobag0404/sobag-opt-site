@@ -379,9 +379,14 @@ async function runSmoke(args) {
     });
     if (guestPatch.status !== 401) throw new Error(`guest patch status ${guestPatch.status}`);
 
+    const belowMinimumFixture = {
+      ...orderFixture,
+      qty: 1,
+      total: discountedTotal(Number(orderFixture.variant.price || 0), 1),
+    };
     const belowMinimum = await requestJson(`http://127.0.0.1:${rustPort}/rust/orders`, {
       method: "POST",
-      body: orderBody(orderFixture, { total: 29999 }),
+      body: orderBody(belowMinimumFixture),
     });
     if (belowMinimum.status !== 400 || belowMinimum.payload.error !== "minimum_total") {
       throw new Error(`minimum check mismatch: ${belowMinimum.status} ${JSON.stringify(belowMinimum.payload)}`);
