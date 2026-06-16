@@ -255,6 +255,33 @@ impl IntoResponse for AppError {
 
 type AppResult<T> = Result<T, AppError>;
 
+fn row_i64(row: &sqlx::postgres::PgRow, column: &str) -> i64 {
+    if let Ok(value) = row.try_get::<i64, _>(column) {
+        return value;
+    }
+    if let Ok(value) = row.try_get::<i32, _>(column) {
+        return i64::from(value);
+    }
+    if let Ok(value) = row.try_get::<i16, _>(column) {
+        return i64::from(value);
+    }
+    if let Ok(value) = row.try_get::<f64, _>(column) {
+        return value.round() as i64;
+    }
+    if let Ok(value) = row.try_get::<f32, _>(column) {
+        return f64::from(value).round() as i64;
+    }
+    if let Ok(value) = row.try_get::<String, _>(column) {
+        return value
+            .trim()
+            .replace(',', ".")
+            .parse::<f64>()
+            .unwrap_or(0.0)
+            .round() as i64;
+    }
+    0
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct CatalogQuery {
     q: String,
@@ -2893,10 +2920,7 @@ fn build_order_record_from_trusted_items(
         ));
     }
     if let Some(client_total) = data.get("total").and_then(Value::as_f64) {
-        if client_total.is_finite()
-            && client_total > 0.0
-            && (client_total.round() as i64 - total).abs() > 1
-        {
+        if client_total.is_finite() && (client_total.round() as i64 - total).abs() > 1 {
             return Err(AppError::conflict(
                 "ORDER_TOTAL_MISMATCH",
                 "Order total does not match current catalog prices.",
@@ -3010,7 +3034,7 @@ async fn trusted_order_lines(pool: &PgPool, data: &Value) -> AppResult<Vec<Value
                     "type": row.try_get::<String, _>("type").unwrap_or_default(),
                     "size": row.try_get::<String, _>("size").unwrap_or_default(),
                     "material": row.try_get::<String, _>("material").unwrap_or_default(),
-                    "price": row.try_get::<i64, _>("price").unwrap_or(0)
+                    "price": row_i64(&row, "price")
                 }
             }),
         );
@@ -4617,10 +4641,10 @@ fn card_from_row(row: sqlx::postgres::PgRow) -> AppResult<CatalogCard> {
             .filter(|value| !value.is_empty())
             .unwrap_or_else(|| row.try_get("image").unwrap_or_default()),
         image_meta,
-        min_price: row.try_get("min_price").unwrap_or(0),
-        max_price: row.try_get("max_price").unwrap_or(0),
-        variant_count: row.try_get("variant_count").unwrap_or(0),
-        popular: row.try_get("popular").unwrap_or(0),
+        min_price: row_i64(&row, "min_price"),
+        max_price: row_i64(&row, "max_price"),
+        variant_count: row_i64(&row, "variant_count"),
+        popular: row_i64(&row, "popular"),
     })
 }
 
@@ -4725,9 +4749,9 @@ async fn load_product_detail(
             .try_get("detail_description")
             .unwrap_or_default(),
         base_price: 0,
-        min_price: product_row.try_get("min_price").unwrap_or(0),
-        max_price: product_row.try_get("max_price").unwrap_or(0),
-        popular: product_row.try_get("popular").unwrap_or(0),
+        min_price: row_i64(&product_row, "min_price"),
+        max_price: row_i64(&product_row, "max_price"),
+        popular: row_i64(&product_row, "popular"),
         stock: product_row.try_get("stock").unwrap_or_default(),
         variants,
         images,
@@ -4751,7 +4775,7 @@ async fn load_variants(pool: &PgPool, product_id: &str) -> AppResult<Vec<Variant
             size: row.try_get("size").unwrap_or_default(),
             material: row.try_get("material").unwrap_or_default(),
             name: String::new(),
-            price: row.try_get("price").unwrap_or(0),
+            price: row_i64(&row, "price"),
             price_source: String::new(),
         })
         .filter(|variant| !variant.id.is_empty() && !variant.sku.is_empty())

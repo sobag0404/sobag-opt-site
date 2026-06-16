@@ -15,9 +15,7 @@ function fakeClient() {
     calls,
     async query(sql, params) {
       calls.push({ sql, params });
-      if (sql.includes("facet_values")) return { rows: [{ value: "Pillows", count: 51 }] };
-      if (sql.includes("COUNT(*)")) return { rows: [{ total: 51 }] };
-      if (sql.includes("FROM public_catalog_cards")) {
+      if (/^SELECT id, base_sku, name, description, stock, popular, min_price, max_price, variant_count, category, categories, collections, holidays, tags, image, image_meta\b/.test(sql)) {
         return {
           rows: [
             {
@@ -36,6 +34,8 @@ function fakeClient() {
           ],
         };
       }
+      if (sql.includes("facet_values")) return { rows: [{ value: "Pillows", count: 51 }] };
+      if (sql.includes("COUNT(*)")) return { rows: [{ total: 51 }] };
       if (sql.includes("FROM public_catalog_products")) {
         return { rows: [{ id: "p1", base_sku: "OPT_1", name: "Catalog item", status: "published", categories: ["Pillows"], types: ["Pillow"] }] };
       }

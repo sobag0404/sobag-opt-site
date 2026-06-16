@@ -114,8 +114,9 @@ async function normalizeOrderPricing(payload = {}) {
   const discountPercent = basketDiscount(subtotal);
   const discountAmount = money((subtotal * discountPercent) / 100);
   const total = money(subtotal - discountAmount);
+  const hasClientTotal = Object.hasOwn(payload, "total") && payload.total !== "" && payload.total !== null && payload.total !== undefined;
   const clientTotal = Number(payload.total || 0);
-  if (Number.isFinite(clientTotal) && clientTotal > 0 && Math.abs(money(clientTotal) - total) > 0.01) {
+  if (hasClientTotal && Number.isFinite(clientTotal) && Math.abs(money(clientTotal) - total) > 0.01) {
     throw orderError("ORDER_TOTAL_MISMATCH", "Order total does not match current catalog prices.", 409);
   }
   return {

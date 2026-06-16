@@ -19,6 +19,39 @@ const FILTER_COLUMNS = {
 
 const MAX_PAGE_SIZE = 120;
 const DEFAULT_PAGE_SIZE = 48;
+const CATALOG_CARDS_SOURCE_SQL = `(
+  SELECT
+    c.id,
+    c.base_sku,
+    c.name,
+    c.description,
+    c.stock,
+    c.popular,
+    COALESCE(NULLIF(vp.min_price, 0), NULLIF(c.min_price, 0), 0) AS min_price,
+    COALESCE(NULLIF(vp.max_price, 0), NULLIF(c.max_price, 0), NULLIF(vp.min_price, 0), NULLIF(c.min_price, 0), 0) AS max_price,
+    GREATEST(COALESCE(vp.variant_count, 0), COALESCE(c.variant_count, 0)) AS variant_count,
+    c.category,
+    c.categories,
+    c.collections,
+    c.holidays,
+    c.tags,
+    c.types,
+    c.sizes,
+    c.materials,
+    COALESCE(vp.variant_skus, c.variant_skus, ARRAY[]::text[]) AS variant_skus,
+    c.image,
+    c.image_meta
+  FROM public_catalog_cards c
+  LEFT JOIN LATERAL (
+    SELECT
+      MIN(v.price)::int AS min_price,
+      MAX(v.price)::int AS max_price,
+      COUNT(*)::int AS variant_count,
+      ARRAY_AGG(v.sku ORDER BY v.sku)::text[] AS variant_skus
+    FROM variants v
+    WHERE v.product_id = c.id AND v.price > 0
+  ) vp ON true
+) public_catalog_cards`;
 const FACET_BUCKETS = {
   category: { bucket: "categories", column: "categories", array: true },
   collection: { bucket: "collections", column: "collections", array: true },
@@ -97,7 +130,7 @@ function buildCatalogCardsSql(query = {}) {
   return {
     sql: [
       "SELECT id, base_sku, name, description, stock, popular, min_price, max_price, variant_count, category, categories, collections, holidays, tags, image, image_meta",
-      "FROM public_catalog_cards",
+      `FROM ${CATALOG_CARDS_SOURCE_SQL}`,
       where,
       `ORDER BY ${sort}`,
       `LIMIT ${limit} OFFSET ${offset}`,
@@ -112,7 +145,7 @@ function buildCatalogCountSql(query = {}) {
   const params = [];
   const where = buildWhere(query, params);
   return {
-    sql: ["SELECT COUNT(*)::int AS total", "FROM public_catalog_cards", where].filter(Boolean).join(" "),
+    sql: ["SELECT COUNT(*)::int AS total", `FROM ${CATALOG_CARDS_SOURCE_SQL}`, where].filter(Boolean).join(" "),
     params,
   };
 }
@@ -163,7 +196,7 @@ function buildCatalogFacetSql(query = {}, group, options = {}) {
   return {
     bucket: config.bucket,
     sql: [
-      `SELECT value, COUNT(*)::int AS count FROM (SELECT ${valueSql} AS value FROM public_catalog_cards`,
+      `SELECT value, COUNT(*)::int AS count FROM (SELECT ${valueSql} AS value FROM ${CATALOG_CARDS_SOURCE_SQL}`,
       where,
       ") facet_values",
       "WHERE value IS NOT NULL AND btrim(value) <> ''",
@@ -181,6 +214,7 @@ module.exports = {
   buildCatalogCountSql,
   buildCatalogDetailSql,
   buildCatalogFacetSql,
+  CATALOG_CARDS_SOURCE_SQL,
   FACET_BUCKETS,
   pageSize,
 };
