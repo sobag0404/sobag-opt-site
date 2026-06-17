@@ -24,7 +24,9 @@ Last updated: 2026-06-16
 | `/api/admin/orders`, `/api/admin/users`, `/api/admin/content` | Rust exact routes | cut over | route exact paths back to Node |
 | `/api/admin/pim` | Rust exact route for read-only PIM diagnostics/export | cut over after PostgreSQL-backed PIM parity | restore `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-pim-20260616T193119Z` |
 | `/api/admin/prices` | Rust exact route | cut over after PostgreSQL price mutation parity | restore `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-prices-20260616T205931Z` |
-| Admin catalog/import/media writes | Node fallback | pending | keep Node |
+| `/api/admin/catalog` | Rust exact route prepared in deploy gate | pending live verification for `7e8d225` | restore pre-cutover Nginx backup if the deploy gate switches it |
+| `/api/admin/import-batches` | Rust parity implemented, Node fallback still public | parity ready, no production switch yet | keep Node until live import dry-run/apply/rollback gates pass |
+| Admin media writes | Node fallback | pending | keep Node |
 
 ## Vercel-Era Removal State
 
@@ -58,6 +60,8 @@ Next.js runtime is not present. Cleanup targets the old Vercel serverless/deploy
 - Admin PIM live smoke passed after the exact-route switch: anonymous access returned 401, a temporary content-role session read summary/variants/CSV through Rust, 12,943 variants included non-zero prices, invalid views returned 400, and the temporary user/session were removed. Admin catalog/import/media/price mutation routes remain on Node fallback.
 - Production exact `/api/admin/prices` is cut over to Rust for price-group/SKU price preview and PostgreSQL apply. Current route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-prices-20260616T205931Z`.
 - Admin prices live smoke passed after the exact-route switch: anonymous access returned 401, a temporary content-role session listed 31 price groups, previewed a safe SKU price row, rejected a zero-price row, applied the same non-zero SKU price without changing business value, verified catalog-detail prices stayed non-zero, and removed the temporary user/session. Admin catalog/import/media writes remain on Node fallback.
+- Rust admin catalog parity is pushed in `240e423`; deploy-gate exact-route switch is pushed in `7e8d225` and creates a timestamped `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-catalog-*` backup before routing only `/api/admin/catalog` to `/rust/admin/catalog`. Local network access in this shell cannot verify GitHub/VPS/live status, so production ownership must be confirmed from Actions/VPS before treating the route as fully cut over.
+- Rust admin import-batches parity is pushed in `1c2a72e`: `/rust/admin/import-batches` supports admin/content `GET`, preview, reject, apply, and latest-batch rollback against the shared store with catalog price guards and local parity tests. Public `/api/admin/import-batches` should remain on Node until live admin import dry-run/apply/rollback gates are added and pass.
 
 ## VPS Access And Cutover Input
 

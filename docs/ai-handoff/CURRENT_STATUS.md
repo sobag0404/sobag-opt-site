@@ -3,6 +3,8 @@
 Date: 2026-06-16
 
 Latest production status:
+- Rust admin catalog parity is pushed in `240e423`, and deploy-gate exact-route switching is pushed in `7e8d225`. The workflow creates a timestamped Nginx backup before routing only `/api/admin/catalog` to Rust and verifies anonymous 401. This shell cannot reach GitHub Actions or the live domain, so production route ownership still needs Actions/VPS verification before marking catalog cutover PASS.
+- Rust admin import-batches parity is pushed in `1c2a72e`: Rust now has `/rust/admin/import-batches` for admin/content list, preview, reject, apply, and latest-batch rollback with catalog price guards and local tests. Public `/api/admin/import-batches` remains on Node until a live import dry-run/apply/rollback gate is added and passes.
 - Rust admin PIM read-only route is now cut over: production exact `/api/admin/pim` routes to Rust after PostgreSQL-backed PIM parity. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-pim-20260616T193119Z`.
 - Rust admin prices route is now cut over: production exact `/api/admin/prices` routes to Rust for price-group/SKU preview and PostgreSQL apply. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-prices-20260616T205931Z`.
 - Rust auth write routes are now cut over: production exact `/api/auth/login`, `/api/auth/register`, and `/api/auth/logout` route to Rust after auth parity hardening. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-auth-write-20260616T174643Z`.
@@ -10,7 +12,7 @@ Latest production status:
 - Latest admin-prices runtime-change release: `20260616T205347Z-32076fd`; later documentation-only deploys may advance the VPS release marker without changing runtime behavior.
 - Cache hardening code commit `cefeb12` is deployed on `sobag-shop.online`; later docs-only releases may advance the release marker without changing runtime code. GitHub `autofix-check`, `rust-check`, `vps-deploy`, and `production-smoke` passed for the cache hardening release.
 - Live checks passed: `/api/health` 200 `no-store`, `/api/catalog-query` prices are non-zero with real imported category facets, `/api/price-list?format=json` returns 31 rows with short public cache, `/` is `no-cache`, and versioned JS/CSS URLs are immutable.
-- Production `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`, `/api/auth/me`, `/api/orders`, `/api/briefs`, `/api/admin/pim`, and `/api/admin/prices` route exact paths to Rust; Node remains fallback for non-switched root/cart and admin catalog/import/media mutation routes.
+- Production `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`, `/api/auth/me`, `/api/orders`, `/api/briefs`, `/api/admin/pim`, and `/api/admin/prices` route exact paths to Rust; `/api/admin/catalog` has a pushed deploy-gate switch pending live verification; Node remains fallback for non-switched root/cart and admin import/media mutation routes.
 - Remaining business decision: promo/order-pricing precedence and XLSX red styling require explicit business rules before implementing promo pricing beyond the current public price-list rows.
 
 Transition readiness:
