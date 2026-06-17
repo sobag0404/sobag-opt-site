@@ -936,6 +936,12 @@ fn admin_media_guards_storage_keys_and_upload_metadata() {
     assert!(!crate::admin_media::validate_storage_key_for_test(
         "private/OPT-1/file.png"
     ));
+    assert!(crate::admin_media::validate_storage_prefix_for_test(
+        "products/OPT-1/"
+    ));
+    assert!(!crate::admin_media::validate_storage_prefix_for_test(
+        "products/../"
+    ));
     let image = crate::admin_media::normalize_image_for_test(json!({
         "publicUrl": "https://cdn.example/products/OPT-1/file.png",
         "key": "products/OPT-1/file.png",

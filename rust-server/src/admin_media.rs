@@ -486,7 +486,7 @@ async fn s3_list_by_product(config: &S3Config, product_key: &str) -> AppResult<V
         PRODUCT_IMAGE_PREFIX,
         safe_path_segment(product_key, "unknown-product")
     );
-    validate_storage_key(&prefix)?;
+    validate_storage_prefix(&prefix)?;
     let mut query = BTreeMap::new();
     query.insert("list-type".to_string(), "2".to_string());
     query.insert("prefix".to_string(), prefix);
@@ -841,6 +841,15 @@ fn validate_storage_key(key: &str) -> AppResult<()> {
     Ok(())
 }
 
+fn validate_storage_prefix(prefix: &str) -> AppResult<()> {
+    let prefix = prefix.trim();
+    if !prefix.ends_with('/') {
+        return validate_storage_key(prefix);
+    }
+    let key_like = prefix.trim_end_matches('/');
+    validate_storage_key(key_like)
+}
+
 fn decode_key_path(path: &str) -> String {
     path.split('/')
         .filter(|segment| !segment.is_empty())
@@ -976,6 +985,11 @@ pub(crate) fn normalize_image_for_test(value: Value) -> Value {
 #[cfg(test)]
 pub(crate) fn validate_storage_key_for_test(key: &str) -> bool {
     validate_storage_key(key).is_ok()
+}
+
+#[cfg(test)]
+pub(crate) fn validate_storage_prefix_for_test(prefix: &str) -> bool {
+    validate_storage_prefix(prefix).is_ok()
 }
 
 #[cfg(test)]
