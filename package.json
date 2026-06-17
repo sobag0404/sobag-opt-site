@@ -47,6 +47,7 @@
     "smoke:rust:admin-pim-cutover": "node tools/rust-admin-pim-cutover-smoke.mjs",
     "smoke:rust:admin-prices-cutover": "node tools/rust-admin-prices-cutover-smoke.mjs",
     "smoke:rust:admin-catalog-cutover": "node tools/rust-admin-catalog-cutover-smoke.mjs",
+    "smoke:rust:admin-import-batches-cutover": "node tools/rust-admin-import-batches-cutover-smoke.mjs",
     "audit:rust-account-cutover": "node tools/rust-account-orders-admin-cutover-audit.mjs",
     "audit:rust-local-env": "node tools/rust-local-env-audit.mjs",
     "rehearse:rust-account-routes": "node tools/rust-account-route-rehearsal.mjs",

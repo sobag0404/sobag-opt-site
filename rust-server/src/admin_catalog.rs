@@ -98,7 +98,7 @@ async fn require_admin_catalog_user(headers: &HeaderMap) -> AppResult<Value> {
     Ok(user)
 }
 
-fn clean_product(product: &Value) -> Option<Value> {
+pub(crate) fn clean_product(product: &Value) -> Option<Value> {
     let object = product.as_object()?;
     let base_sku = text(object.get("baseSku"));
     let name = text(object.get("name"));

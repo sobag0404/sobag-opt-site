@@ -900,6 +900,25 @@ fn admin_catalog_clean_product_preserves_identity_and_price_guards() {
 }
 
 #[test]
+fn admin_import_batch_preview_skips_existing_without_update() {
+    let current = vec![json!({
+        "baseSku": "EXIST-1",
+        "name": "Existing product",
+        "status": "published"
+    })];
+    let raw = vec![
+        json!({ "baseSku": "EXIST-1", "name": "Duplicate", "basePrice": 100 }),
+        json!({ "baseSku": "NEW-1", "name": "New product", "basePrice": 250, "types": ["A"], "sizes": ["40x40"], "materials": ["Velvet"] }),
+    ];
+    let batch = crate::admin_import_batches::make_batch_for_test(&raw, &current);
+    assert_eq!(batch["counts"]["skipped"], 1);
+    assert_eq!(batch["counts"]["created"], 1);
+    assert_eq!(batch["rows"][0]["reason"], "base_sku_exists");
+    assert_eq!(batch["products"].as_array().unwrap().len(), 1);
+    assert_eq!(batch["products"][0]["product"]["basePrice"], 250);
+}
+
+#[test]
 fn admin_pim_csv_rejects_unknown_views() {
     let catalog = json!({ "products": [{ "id": "p1", "baseSku": "opt_1", "variants": [] }] });
     let error = pim_csv_for_view(&catalog, "unknown").expect_err("unsupported csv");

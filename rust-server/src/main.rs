@@ -23,11 +23,13 @@ use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use tower_http::trace::TraceLayer;
 
 mod admin_catalog;
+mod admin_import_batches;
 mod admin_pim;
 mod admin_prices;
 mod content_pages;
 mod store;
 use admin_catalog::{admin_catalog_get, admin_catalog_put};
+use admin_import_batches::{admin_import_batches_get, admin_import_batches_post};
 use admin_pim::admin_pim_preview;
 #[cfg(test)]
 use admin_pim::{pim_csv_for_view, pim_report_for_view};
@@ -121,7 +123,7 @@ impl AppError {
         }
     }
 
-    fn not_found(code: &'static str, message: impl Into<String>) -> Self {
+    pub(crate) fn not_found(code: &'static str, message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::NOT_FOUND,
             code,
@@ -485,6 +487,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             get(admin_catalog_get)
                 .put(admin_catalog_put)
                 .layer(DefaultBodyLimit::max(8 * 1024 * 1024)),
+        )
+        .route(
+            "/rust/admin/import-batches",
+            get(admin_import_batches_get)
+                .post(admin_import_batches_post)
+                .layer(DefaultBodyLimit::max(6 * 1024 * 1024)),
         )
         .route(
             "/rust/admin/prices",
