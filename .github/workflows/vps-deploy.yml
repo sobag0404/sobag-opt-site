@@ -5,6 +5,11 @@ on:
     workflows: ["autofix-check"]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      deploy_sha:
+        description: "Commit SHA to deploy. Defaults to the selected ref SHA."
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -22,6 +27,7 @@ jobs:
           github.ref_name == 'main'
         ) ||
         (
+          github.event_name == 'workflow_run' &&
           github.event.workflow_run.conclusion == 'success' &&
           github.event.workflow_run.event == 'push' &&
           github.event.workflow_run.head_branch == 'main'
@@ -30,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_dispatch' && (inputs.deploy_sha || github.sha) || github.event.workflow_run.head_sha }}
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_USER: ${{ secrets.VPS_USER }}
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
