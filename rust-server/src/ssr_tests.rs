@@ -863,6 +863,43 @@ fn admin_price_import_builds_sku_change_and_rejects_bad_rows() {
 }
 
 #[test]
+fn admin_catalog_clean_product_preserves_identity_and_price_guards() {
+    let product = json!({
+        "baseSku": "TEST-1",
+        "name": "Test product",
+        "status": "published",
+        "basePrice": 0,
+        "category": "Category A",
+        "categories": ["Category A", "Category A"],
+        "images": [
+            "https://cdn.example.test/a.webp",
+            { "storageKey": "products/test/a.webp", "mime": "image/webp", "width": 100 }
+        ],
+        "variantPrices": { "SKU-1": 250 },
+        "variants": [{ "sku": "ignored" }],
+        "minPrice": 1,
+        "maxPrice": 2
+    });
+    let clean = crate::admin_catalog::clean_product_for_test(&product).expect("valid product");
+    assert_eq!(clean.get("baseSku").and_then(Value::as_str), Some("TEST-1"));
+    assert_eq!(clean.get("id").and_then(Value::as_str), Some("TEST-1"));
+    assert_eq!(clean.get("hidden").and_then(Value::as_bool), Some(false));
+    assert_eq!(clean.get("basePrice").and_then(Value::as_i64), Some(1));
+    assert!(clean.get("variants").is_none());
+    assert!(clean.get("minPrice").is_none());
+    assert_eq!(
+        clean
+            .pointer("/variantPrices/SKU-1")
+            .and_then(Value::as_i64),
+        Some(250)
+    );
+    assert_eq!(
+        clean.get("images").and_then(Value::as_array).unwrap().len(),
+        2
+    );
+}
+
+#[test]
 fn admin_pim_csv_rejects_unknown_views() {
     let catalog = json!({ "products": [{ "id": "p1", "baseSku": "opt_1", "variants": [] }] });
     let error = pim_csv_for_view(&catalog, "unknown").expect_err("unsupported csv");

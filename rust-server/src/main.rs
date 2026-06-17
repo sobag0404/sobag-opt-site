@@ -7,7 +7,7 @@ use std::{
 };
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{DefaultBodyLimit, Path, Query, State},
     http::{header, HeaderMap, StatusCode, Uri},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
@@ -22,10 +22,12 @@ use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use tower_http::trace::TraceLayer;
 
+mod admin_catalog;
 mod admin_pim;
 mod admin_prices;
 mod content_pages;
 mod store;
+use admin_catalog::{admin_catalog_get, admin_catalog_put};
 use admin_pim::admin_pim_preview;
 #[cfg(test)]
 use admin_pim::{pim_csv_for_view, pim_report_for_view};
@@ -478,6 +480,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .patch(admin_content_review_patch_preview),
         )
         .route("/rust/admin/pim", get(admin_pim_preview))
+        .route(
+            "/rust/admin/catalog",
+            get(admin_catalog_get)
+                .put(admin_catalog_put)
+                .layer(DefaultBodyLimit::max(8 * 1024 * 1024)),
+        )
         .route(
             "/rust/admin/prices",
             get(admin_prices_get).post(admin_prices_post),

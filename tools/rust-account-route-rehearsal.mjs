@@ -34,10 +34,14 @@ const ROUTE_GROUPS = {
     publicRoutes: ["/api/admin/prices"],
     rustRoutes: ["/rust/admin/prices"],
   },
+  "admin-catalog": {
+    publicRoutes: ["/api/admin/catalog"],
+    rustRoutes: ["/rust/admin/catalog"],
+    methods: ["GET", "PUT"],
+  },
 };
 
 const BLOCKED_PUBLIC_ROUTES = [
-  "/api/admin/catalog",
   "/api/admin/product-images",
   "/api/admin/import-batches",
 ];
