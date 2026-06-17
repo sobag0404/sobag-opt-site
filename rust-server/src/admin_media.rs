@@ -247,8 +247,12 @@ fn object_storage_status() -> Value {
 }
 
 fn s3_config() -> AppResult<S3Config> {
-    s3_config_raw()
-        .ok_or_else(|| AppError::internal("S3-compatible object storage is not configured."))
+    s3_config_raw().ok_or_else(|| {
+        AppError::service_unavailable(
+            "s3_storage_not_configured",
+            "S3-compatible object storage is not configured.",
+        )
+    })
 }
 
 fn s3_config_raw() -> Option<S3Config> {
@@ -430,10 +434,10 @@ async fn s3_upload(
     )
     .await?;
     if !response.status().is_success() {
-        return Err(AppError::internal(format!(
-            "S3 upload failed with HTTP {}.",
-            response.status().as_u16()
-        )));
+        return Err(AppError::bad_gateway(
+            "s3_upload_failed",
+            format!("S3 upload failed with HTTP {}.", response.status().as_u16()),
+        ));
     }
     let etag = response
         .headers()
@@ -468,10 +472,10 @@ async fn s3_delete(config: &S3Config, key: &str) -> AppResult<()> {
     )
     .await?;
     if !response.status().is_success() && response.status().as_u16() != 404 {
-        return Err(AppError::internal(format!(
-            "S3 delete failed with HTTP {}.",
-            response.status().as_u16()
-        )));
+        return Err(AppError::bad_gateway(
+            "s3_delete_failed",
+            format!("S3 delete failed with HTTP {}.", response.status().as_u16()),
+        ));
     }
     Ok(())
 }
@@ -489,10 +493,10 @@ async fn s3_list_by_product(config: &S3Config, product_key: &str) -> AppResult<V
     query.insert("max-keys".to_string(), "100".to_string());
     let response = s3_fetch(config, Method::GET, "", query, Vec::new(), None).await?;
     if !response.status().is_success() {
-        return Err(AppError::internal(format!(
-            "S3 list failed with HTTP {}.",
-            response.status().as_u16()
-        )));
+        return Err(AppError::bad_gateway(
+            "s3_list_failed",
+            format!("S3 list failed with HTTP {}.", response.status().as_u16()),
+        ));
     }
     let xml = response
         .text()
@@ -536,7 +540,7 @@ async fn s3_fetch(
     request
         .send()
         .await
-        .map_err(|error| AppError::internal(error.to_string()))
+        .map_err(|error| AppError::bad_gateway("s3_request_failed", error.to_string()))
 }
 
 fn build_s3_url(config: &S3Config, key: &str, query: &BTreeMap<String, String>) -> AppResult<Url> {
@@ -597,10 +601,7 @@ fn sign_s3_request(
     for (key, value) in headers {
         all.insert(key.to_ascii_lowercase(), normalize_header_value(&value));
     }
-    all.insert(
-        "host".to_string(),
-        url.host_str().unwrap_or_default().to_string(),
-    );
+    all.insert("host".to_string(), canonical_host(url));
     all.insert("x-amz-content-sha256".to_string(), payload_hash.clone());
     all.insert("x-amz-date".to_string(), amz_date.clone());
     if !config.session_token.is_empty() {
@@ -678,6 +679,14 @@ fn encode_key_path(key: &str) -> String {
 
 fn encode_uri_segment(value: &str) -> String {
     url::form_urlencoded::byte_serialize(value.as_bytes()).collect()
+}
+
+fn canonical_host(url: &Url) -> String {
+    match (url.host_str(), url.port()) {
+        (Some(host), Some(port)) => format!("{}:{}", host, port),
+        (Some(host), None) => host.to_string(),
+        _ => String::new(),
+    }
 }
 
 fn public_url_for_key(config: &S3Config, key: &str) -> String {
@@ -967,4 +976,11 @@ pub(crate) fn normalize_image_for_test(value: Value) -> Value {
 #[cfg(test)]
 pub(crate) fn validate_storage_key_for_test(key: &str) -> bool {
     validate_storage_key(key).is_ok()
+}
+
+#[cfg(test)]
+pub(crate) fn canonical_host_for_test(raw_url: &str) -> String {
+    Url::parse(raw_url)
+        .map(|url| canonical_host(&url))
+        .unwrap_or_default()
 }

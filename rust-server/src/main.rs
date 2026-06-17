@@ -159,6 +159,22 @@ impl AppError {
         }
     }
 
+    pub(crate) fn bad_gateway(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::BAD_GATEWAY,
+            code,
+            message: message.into(),
+        }
+    }
+
+    pub(crate) fn service_unavailable(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::SERVICE_UNAVAILABLE,
+            code,
+            message: message.into(),
+        }
+    }
+
     fn forbidden_code(code: &'static str, message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::FORBIDDEN,

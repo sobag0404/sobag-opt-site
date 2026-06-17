@@ -948,6 +948,16 @@ fn admin_media_guards_storage_keys_and_upload_metadata() {
     assert_eq!(image["storageKey"], "products/OPT-1/file.png");
     assert_eq!(image["mime"], "image/png");
     assert_eq!(image["status"], "active");
+    assert_eq!(
+        crate::admin_media::canonical_host_for_test("http://127.0.0.1:9000/bucket/products/a.png"),
+        "127.0.0.1:9000"
+    );
+    assert_eq!(
+        crate::admin_media::canonical_host_for_test(
+            "https://storage.example.test/bucket/products/a.png"
+        ),
+        "storage.example.test"
+    );
 }
 
 #[test]
