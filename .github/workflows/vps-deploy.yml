@@ -261,6 +261,7 @@ jobs:
               node tools/rust-admin-content-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-admin-pim-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-admin-catalog-cutover-smoke.mjs --self-test &&
+              node tools/rust-admin-media-cutover-smoke.mjs --self-test &&
               node tools/rust-public-route-smoke.mjs --base https://sobag-shop.online
             }; then
               echo "Rust smoke failed; restoring previous binary"
@@ -330,6 +331,79 @@ jobs:
               echo "Rust admin catalog exact route active; backup: $backup"
             }
             switch_admin_catalog_route
+            switch_admin_media_route() {
+              nginx_site="/etc/nginx/sites-available/sobag-opt"
+              backup="/etc/nginx/sites-available/sobag-opt.pre-rust-admin-media-$(date -u +%Y%m%dT%H%M%SZ)"
+              [ -f "$nginx_site" ] || return 0
+              sudo cp "$nginx_site" "$backup"
+              media_block="$(cat <<'NGINX'
+    location = /api/admin/product-images {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://sobag_opt_rust/rust/admin/product-images;
+    }
+NGINX
+)"
+              restore_nginx() {
+                sudo cp "$backup" "$nginx_site"
+                sudo nginx -t
+                sudo systemctl reload nginx
+              }
+              if sudo grep -Eq '^[[:space:]]*location = /api/admin/product-images[[:space:]]*\{' "$nginx_site"; then
+                if ! sudo grep -A12 -E '^[[:space:]]*location = /api/admin/product-images[[:space:]]*\{' "$nginx_site" | grep -q '/rust/admin/product-images'; then
+                  echo "Existing /api/admin/product-images location does not target Rust"
+                  return 1
+                fi
+              else
+                tmp="$(mktemp)"
+                if ! sudo awk -v block="$media_block" '
+                  BEGIN { inserted = 0 }
+                  !inserted && /^[[:space:]]*location = \/api\/admin\/import-batches[[:space:]]*\{/ {
+                    print block
+                    inserted = 1
+                  }
+                  !inserted && /^[[:space:]]*location = \/api\/admin\/catalog[[:space:]]*\{/ {
+                    print block
+                    inserted = 1
+                  }
+                  { print }
+                  END { if (!inserted) exit 42 }
+                ' "$nginx_site" > "$tmp"; then
+                  rm -f "$tmp"
+                  echo "Could not insert exact /api/admin/product-images location safely"
+                  return 1
+                fi
+                sudo cp "$tmp" "$nginx_site"
+                rm -f "$tmp"
+              fi
+              if ! sudo nginx -t; then
+                restore_nginx
+                return 1
+              fi
+              if ! sudo systemctl reload nginx; then
+                restore_nginx
+                return 1
+              fi
+              if ! sudo grep -A12 -E '^[[:space:]]*location = /api/admin/product-images[[:space:]]*\{' "$nginx_site" | grep -q '/rust/admin/product-images'; then
+                restore_nginx
+                return 1
+              fi
+              media_status="$(curl -ksS -o /dev/null -w '%{http_code}' https://sobag-shop.online/api/admin/product-images)"
+              if [ "$media_status" != "401" ]; then
+                echo "Unexpected anonymous /api/admin/product-images status: $media_status"
+                restore_nginx
+                return 1
+              fi
+              if ! node tools/rust-admin-media-cutover-smoke.mjs --base-url https://sobag-shop.online; then
+                restore_nginx
+                return 1
+              fi
+              echo "Rust admin media exact route active; backup: $backup"
+            }
+            switch_admin_media_route
             safe_rm_rf "$rust_target_dir/debug"
           fi
 

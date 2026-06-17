@@ -44,10 +44,14 @@ const ROUTE_GROUPS = {
     rustRoutes: ["/rust/admin/import-batches"],
     methods: ["GET", "POST"],
   },
+  "admin-media": {
+    publicRoutes: ["/api/admin/product-images"],
+    rustRoutes: ["/rust/admin/product-images"],
+    methods: ["GET", "POST", "DELETE"],
+  },
 };
 
 const BLOCKED_PUBLIC_ROUTES = [
-  "/api/admin/product-images",
 ];
 
 function parseArgs(argv = process.argv.slice(2)) {

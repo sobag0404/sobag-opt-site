@@ -1,17 +1,17 @@
 # Project Readiness Report
 
-Generated: 2026-06-17T00:00:00+00:00
+Generated: 2026-06-17T11:30:00+00:00
 Project: sobag-opt-site
-Git: `main` / `1c2a72e`
+Git: `main` / media-cutover working tree
 
 ## 1. Executive Summary
 
 Status: **READY_WITH_WARNINGS**.
 Score: **87/100**.
 
-The VPS/Rust transition remains production-ready with warnings. The latest verified production cutover moved exact `/api/admin/prices` to Rust after PostgreSQL price mutation parity and live rollback-ready validation. New admin catalog/import-batches Rust work is pushed: `7e8d225` adds the deploy-gate exact `/api/admin/catalog` route switch, and `1c2a72e` adds local Rust parity for `/rust/admin/import-batches`.
+The VPS/Rust transition remains production-ready with warnings. The latest verified production baseline includes the deploy workflow YAML fixes `0ace8a6`, `c2c1b56`, and `637f20d`; `vps-deploy` `27675967030` and `production-smoke` `27676234502` passed. New admin media Rust parity and exact-route deploy gate are prepared for `/api/admin/product-images`.
 
-Remaining warning scope is not a P0/P1 blocker for the current route-by-route Rust transition: catalog cutover still needs live Actions/VPS confirmation from this network-restricted shell, import-batches needs live dry-run/apply/rollback gates before public switch, and media mutations still use Node fallback. Real field CWV remains post-launch monitoring; synthetic/performance evidence must stay separate from field data.
+Remaining warning scope is not a P0/P1 blocker for the current route-by-route Rust transition: media cutover still needs GitHub/VPS live upload/list/delete confirmation after push, and import-batches needs authenticated dry-run/apply/rollback evidence before marking full write cutover. Real field CWV remains post-launch monitoring; synthetic/performance evidence must stay separate from field data.
 
 ## 2. Current Rust/VPS Evidence
 
@@ -21,8 +21,10 @@ Remaining warning scope is not a P0/P1 blocker for the current route-by-route Ru
 - Live admin prices smoke passed: anonymous 401, temporary content-role list/preview/apply, zero-price rejection, non-zero catalog-detail prices, cleanup of temporary user/session.
 - Production exact Rust routes now include auth writes, auth/me, orders, briefs, admin orders/users/content, read-only admin PIM, and admin prices.
 - Remaining Node fallback zone: admin catalog/import/media mutation routes.
-- Admin catalog parity/deploy switch: `240e423` + `7e8d225` pushed; live route ownership still needs Actions/VPS confirmation because this shell cannot reach GitHub Actions/live domain.
+- Coordinator-verified deploy baseline: workflow YAML fixes `0ace8a6`, `c2c1b56`, `637f20d`; `vps-deploy` `27675967030` PASS; `production-smoke` `27676234502` PASS.
+- Admin catalog parity/deploy switch: `240e423` + `7e8d225` pushed; live anonymous `/api/admin/catalog` returned 401 in coordinator smoke.
 - Admin import-batches parity: `1c2a72e` pushed; local checks passed, public route remains Node until live import gates exist.
+- Admin media parity/deploy switch: Rust route and deploy gate prepared for exact `/api/admin/product-images`, with S3-compatible upload/list/delete and path traversal guards.
 
 ## 3. Readiness Score
 
@@ -30,7 +32,7 @@ Remaining warning scope is not a P0/P1 blocker for the current route-by-route Ru
 | --- | ---: | --- | --- |
 | Architecture | 80 | WARN | Route-by-route Rust cutover is controlled; `rust-server/src/main.rs` still has large-file ownership debt. |
 | Code Quality | 84 | WARN | Custom checks are strong; a standard lint layer remains P2. |
-| Security | 86 | WARN | Admin price mutation route enforces roles and rejects zero/invalid prices; deploy cleanup guardrails remain monitored. |
+| Security | 86 | WARN | Admin price/media mutation routes enforce roles; media storage keys are confined to `products/*`; deploy cleanup guardrails remain monitored. |
 | Tests | 94 | WARN | Local checks passed for new catalog/import-batches parity; GitHub/deploy/live smokes remain the gate before marking new routes cut over. |
 | Documentation | 94 | OK | Runtime map and handoff docs reflect the latest route ownership. |
 | CI/CD | 94 | WARN | GitHub and VPS deploy gates passed; SHA-pinning actions remains optional hardening. |
@@ -41,7 +43,7 @@ Remaining warning scope is not a P0/P1 blocker for the current route-by-route Ru
 
 ### P1
 
-No active P1 blocker remains for the completed `/api/admin/prices` cutover. The next Rust transition slice should verify `7e8d225` on Actions/VPS, then either mark `/api/admin/catalog` cut over or roll it back; after that, add live import-batches dry-run/apply/rollback gates before any public import route switch.
+No active P1 blocker remains for the completed `/api/admin/prices` cutover. The media slice is ready for GitHub/VPS deployment and live upload/list/delete verification. Import-batches still needs authenticated dry-run/apply/rollback evidence before marking the write path complete.
 
 ### P2
 
@@ -64,11 +66,10 @@ Reason: no critical/high blockers are open for the current Rust/VPS transition s
 
 ## 6. Next Implementation Packet
 
-1. Verify GitHub/VPS deploy for `7e8d225`/`1c2a72e`: `autofix-check`, `rust-check`, `vps-deploy`, `production-smoke`, and live `/api/admin/catalog` anonymous 401 through Rust.
-2. If catalog gate fails, restore the Nginx backup and keep Node fallback; if it passes, record the backup path and live evidence.
-3. For `/api/admin/import-batches`, add a production-safe smoke that previews, applies, verifies readback, and rolls back/cleans up a temporary import before any exact-route switch.
-4. Keep media mutation routes on Node until upload/list/delete temp-file gates include MIME/size/path traversal guards and cleanup.
-5. Continue running `cargo fmt --check`, `cargo check --locked`, `cargo test --locked`, `npm.cmd run check`, GitHub `autofix-check`, `rust-check`, `vps-deploy`, `production-smoke`, plus live admin-safe validation.
+1. Push the media cutover packet and verify GitHub/VPS `autofix-check`, `rust-check`, `vps-deploy`, and `production-smoke`.
+2. Confirm live `/api/admin/product-images` exact route with anonymous 401 plus authenticated temporary upload/list/delete cleanup; rollback from `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-media-*` if any gate fails.
+3. For `/api/admin/import-batches`, add or run a production-safe authenticated smoke that previews, applies, verifies readback, and rolls back/cleans up a temporary import before marking the write path complete.
+4. Continue running `cargo fmt --check`, `cargo check --locked`, `cargo test --locked`, `npm.cmd run check`, GitHub `autofix-check`, `rust-check`, `vps-deploy`, `production-smoke`, plus live admin-safe validation.
 
 ## 7. Changed Files / Relevant Links
 
@@ -87,3 +88,6 @@ Reason: no critical/high blockers are open for the current Rust/VPS transition s
 - `rust-server/src/admin_import_batches.rs`
 - `tools/rust-admin-catalog-cutover-smoke.mjs`
 - `tools/rust-admin-import-batches-cutover-smoke.mjs`
+- `rust-server/src/admin_media.rs`
+- `tools/rust-admin-media-cutover-smoke.mjs`
+- `.github/workflows/vps-deploy.yml`

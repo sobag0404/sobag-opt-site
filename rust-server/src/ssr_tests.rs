@@ -919,6 +919,38 @@ fn admin_import_batch_preview_skips_existing_without_update() {
 }
 
 #[test]
+fn admin_media_guards_storage_keys_and_upload_metadata() {
+    let key =
+        crate::admin_media::product_image_key_for_test("../OPT 1", "../../evil.php", "image/png");
+    assert!(key.starts_with("products/OPT-1/"));
+    assert!(key.ends_with(".php.png"));
+    assert!(crate::admin_media::validate_storage_key_for_test(
+        "products/OPT-1/file.png"
+    ));
+    assert!(!crate::admin_media::validate_storage_key_for_test(
+        "../products/OPT-1/file.png"
+    ));
+    assert!(!crate::admin_media::validate_storage_key_for_test(
+        "products/../file.png"
+    ));
+    assert!(!crate::admin_media::validate_storage_key_for_test(
+        "private/OPT-1/file.png"
+    ));
+    let image = crate::admin_media::normalize_image_for_test(json!({
+        "publicUrl": "https://cdn.example/products/OPT-1/file.png",
+        "key": "products/OPT-1/file.png",
+        "provider": "minio",
+        "width": "100",
+        "height": 100,
+        "contentType": "image/png"
+    }));
+    assert_eq!(image["provider"], "s3-compatible");
+    assert_eq!(image["storageKey"], "products/OPT-1/file.png");
+    assert_eq!(image["mime"], "image/png");
+    assert_eq!(image["status"], "active");
+}
+
+#[test]
 fn admin_pim_csv_rejects_unknown_views() {
     let catalog = json!({ "products": [{ "id": "p1", "baseSku": "opt_1", "variants": [] }] });
     let error = pim_csv_for_view(&catalog, "unknown").expect_err("unsupported csv");

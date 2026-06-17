@@ -24,12 +24,16 @@ use tower_http::trace::TraceLayer;
 
 mod admin_catalog;
 mod admin_import_batches;
+mod admin_media;
 mod admin_pim;
 mod admin_prices;
 mod content_pages;
 mod store;
 use admin_catalog::{admin_catalog_get, admin_catalog_put};
 use admin_import_batches::{admin_import_batches_get, admin_import_batches_post};
+use admin_media::{
+    admin_product_images_delete, admin_product_images_get, admin_product_images_post,
+};
 use admin_pim::admin_pim_preview;
 #[cfg(test)]
 use admin_pim::{pim_csv_for_view, pim_report_for_view};
@@ -493,6 +497,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             get(admin_import_batches_get)
                 .post(admin_import_batches_post)
                 .layer(DefaultBodyLimit::max(6 * 1024 * 1024)),
+        )
+        .route(
+            "/rust/admin/product-images",
+            get(admin_product_images_get)
+                .post(admin_product_images_post)
+                .delete(admin_product_images_delete)
+                .layer(DefaultBodyLimit::max(16 * 1024 * 1024)),
         )
         .route(
             "/rust/admin/prices",
