@@ -7,7 +7,6 @@ function routeTarget(pathname, nodeBase, rustBase) {
 
 function selfTest() {
   if (routeTarget("/api/admin/prices", "node", "rust") !== "rust/rust/admin/prices") throw new Error("admin prices should route to Rust");
-  if (routeTarget("/api/admin/catalog", "node", "rust") !== "node/api/admin/catalog") throw new Error("admin catalog should stay Node");
   if (routeTarget("/api/admin/import-batches", "node", "rust") !== "node/api/admin/import-batches") throw new Error("admin import batches should stay Node");
   if (routeTarget("/api/admin/product-images", "node", "rust") !== "node/api/admin/product-images") throw new Error("admin product images should stay Node");
 

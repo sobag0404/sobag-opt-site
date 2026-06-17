@@ -254,12 +254,78 @@ jobs:
               node tools/rust-admin-users-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-admin-content-cutover-smoke.mjs --rust-bin "$rust_binary" &&
               node tools/rust-admin-pim-cutover-smoke.mjs --rust-bin "$rust_binary" &&
+              node tools/rust-admin-catalog-cutover-smoke.mjs --self-test &&
               node tools/rust-public-route-smoke.mjs --base https://sobag-shop.online
             }; then
               echo "Rust smoke failed; restoring previous binary"
               restore_previous_rust
               exit 1
             fi
+            switch_admin_catalog_route() {
+              nginx_site="/etc/nginx/sites-available/sobag-opt"
+              backup="/etc/nginx/sites-available/sobag-opt.pre-rust-admin-catalog-$(date -u +%Y%m%dT%H%M%SZ)"
+              [ -f "$nginx_site" ] || return 0
+              sudo cp "$nginx_site" "$backup"
+              catalog_block="$(cat <<'NGINX'
+    location = /api/admin/catalog {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://sobag_opt_rust/rust/admin/catalog;
+    }
+NGINX
+)"
+              restore_nginx() {
+                sudo cp "$backup" "$nginx_site"
+                sudo nginx -t
+                sudo systemctl reload nginx
+              }
+              if sudo grep -Eq '^[[:space:]]*location = /api/admin/catalog[[:space:]]*\{' "$nginx_site"; then
+                if ! sudo grep -A12 -E '^[[:space:]]*location = /api/admin/catalog[[:space:]]*\{' "$nginx_site" | grep -q '/rust/admin/catalog'; then
+                  echo "Existing /api/admin/catalog location does not target Rust"
+                  return 1
+                fi
+              else
+                tmp="$(mktemp)"
+                if ! sudo awk -v block="$catalog_block" '
+                  BEGIN { inserted = 0 }
+                  !inserted && /^[[:space:]]*location = \/api\/admin\/prices[[:space:]]*\{/ {
+                    print block
+                    inserted = 1
+                  }
+                  { print }
+                  END { if (!inserted) exit 42 }
+                ' "$nginx_site" > "$tmp"; then
+                  rm -f "$tmp"
+                  echo "Could not insert exact /api/admin/catalog location safely"
+                  return 1
+                fi
+                sudo cp "$tmp" "$nginx_site"
+                rm -f "$tmp"
+              fi
+              if ! sudo nginx -t; then
+                restore_nginx
+                return 1
+              fi
+              if ! sudo systemctl reload nginx; then
+                restore_nginx
+                return 1
+              fi
+              if ! sudo grep -A12 -E '^[[:space:]]*location = /api/admin/catalog[[:space:]]*\{' "$nginx_site" | grep -q '/rust/admin/catalog'; then
+                restore_nginx
+                return 1
+              fi
+              catalog_status="$(curl -ksS -o /dev/null -w '%{http_code}' https://sobag-shop.online/api/admin/catalog)"
+              if [ "$catalog_status" != "401" ]; then
+                echo "Unexpected anonymous /api/admin/catalog status: $catalog_status"
+                restore_nginx
+                return 1
+              fi
+              echo "Rust admin catalog exact route active; backup: $backup"
+            }
+            switch_admin_catalog_route
             safe_rm_rf "$rust_target_dir/debug"
           fi
 

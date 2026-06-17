@@ -299,7 +299,6 @@ async function runSmoke(args) {
 
 function selfTest() {
   if (routeTarget("/api/admin/pim", "node", "rust") !== "rust/rust/admin/pim") throw new Error("admin PIM should route to Rust");
-  if (routeTarget("/api/admin/catalog", "node", "rust") !== "node/api/admin/catalog") throw new Error("admin catalog should stay Node");
   if (routeTarget("/api/admin/product-images", "node", "rust") !== "node/api/admin/product-images") throw new Error("admin product images should stay Node");
   const catalog = fixtureCatalog();
   if (Number(catalog.products?.[0]?.variants?.[0]?.price || 0) <= 0) throw new Error("fixture variant price must be non-zero");
