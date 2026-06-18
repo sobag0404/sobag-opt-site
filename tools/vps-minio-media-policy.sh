@@ -359,7 +359,7 @@ if ! mc admin policy create "$admin_alias" "$policy_name" "$policy_file" >/dev/n
 fi
 
 printf '%s\n' "sobag media policy smoke" > "$probe_file"
-probe_key="products/.cutover-policy-smoke/$(date -u +%Y%m%dT%H%M%SZ)-$$.txt"
+probe_key="products/opt_policy_smoke/cutover-policy-smoke-$(date -u +%Y%m%dT%H%M%SZ)-$$.webp"
 
 verify_app_write() {
   rm -f "$verify_log"
@@ -384,7 +384,7 @@ fi
 if grep -Eiq "quota|507|disk full|no space|XMinioStorageFull" "$verify_log"; then
   echo "MinIO media write hit storage quota/disk; attempting scoped smoke cleanup and bucket quota clear"
   mc rm --incomplete --recursive --force "${admin_alias}/${SOBAG_S3_BUCKET}/products/" >/dev/null 2>&1 || true
-  mc rm --recursive --force "${admin_alias}/${SOBAG_S3_BUCKET}/products/.cutover-policy-smoke/" >/dev/null 2>&1 || true
+  mc rm --recursive --force "${admin_alias}/${SOBAG_S3_BUCKET}/products/opt_policy_smoke/" >/dev/null 2>&1 || true
   mc quota clear "${admin_alias}/${SOBAG_S3_BUCKET}" >/dev/null 2>&1 || true
   if verify_app_write; then
     set_env_value "$app_env_file" SOBAG_S3_ENDPOINT "$endpoint"
@@ -461,6 +461,18 @@ if [ "$media_credential_created" = "1" ]; then
   fi
 fi
 
+if mc cp "$probe_file" "${admin_alias}/${SOBAG_S3_BUCKET}/${probe_key}" >/dev/null 2>"$verify_log"; then
+  mc rm "${admin_alias}/${SOBAG_S3_BUCKET}/${probe_key}" >/dev/null 2>&1 || true
+  SOBAG_S3_ACCESS_KEY_ID="$root_user"
+  SOBAG_S3_SECRET_ACCESS_KEY="$root_password"
+  export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
+  set_env_value "$app_env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
+  set_env_value "$app_env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
+  echo "MinIO media write verified with admin alias direct fallback"
+  exit 0
+fi
+echo "MinIO admin alias direct write unavailable; class=$(safe_verify_error_class)"
+
 SOBAG_S3_ACCESS_KEY_ID="$root_user"
 SOBAG_S3_SECRET_ACCESS_KEY="$root_password"
 export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
@@ -470,6 +482,7 @@ if verify_app_write; then
   echo "MinIO media write verified with server root credential fallback"
   exit 0
 fi
+echo "MinIO server root credential fallback unavailable; class=$(safe_verify_error_class)"
 
 try_root_write_pair() {
   source_label="$1"
