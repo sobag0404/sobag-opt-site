@@ -97,6 +97,17 @@ jobs:
           trap cleanup_failed_release ERR
 
           sudo install -d -o "$USER" -g "$USER" "$app_dir/releases" "$app_dir/shared" "$repo_dir" /var/lib/sobag-opt/store /var/backups/sobag-opt
+          mapfile -t pre_releases < <(ls -1dt "$app_dir"/releases/* 2>/dev/null || true)
+          keep_current="$(readlink -f "$app_dir/current" 2>/dev/null || true)"
+          for old_release in "${pre_releases[@]}"; do
+            old_release_resolved="$(readlink -f "$old_release")"
+            if [ -n "$old_release_resolved" ] && [ "$old_release_resolved" != "$keep_current" ]; then
+              safe_rm_rf "$old_release_resolved"
+            fi
+          done
+          if [ -d "$rust_target_dir/debug" ]; then
+            safe_rm_rf "$rust_target_dir/debug"
+          fi
 
           export GIT_SSH_COMMAND="ssh -i /home/$USER/.ssh/github_repo_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
           if [ ! -d "$repo_dir/.git" ]; then
