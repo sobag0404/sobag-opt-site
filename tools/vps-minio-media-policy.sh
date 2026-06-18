@@ -141,6 +141,10 @@ if ! mc admin policy attach sobag-minio-admin "$policy_name" --user "$SOBAG_S3_A
     :
   elif mc admin accesskey edit sobag-minio-admin "$SOBAG_S3_ACCESS_KEY_ID" --policy "$policy_file" >/dev/null 2>&1; then
     :
+  elif mc admin accesskey edit "sobag-minio-admin/${SOBAG_S3_ACCESS_KEY_ID}" --policy "$policy_file" >/dev/null 2>&1; then
+    :
+  elif mc admin user svcacct edit sobag-minio-admin "$SOBAG_S3_ACCESS_KEY_ID" --policy "$policy_file" >/dev/null 2>&1; then
+    :
   else
     media_user="sobagmedia$(date -u +%m%d%H%M%S)"
     media_secret="$(openssl rand -hex 32)"
@@ -152,6 +156,10 @@ if ! mc admin policy attach sobag-minio-admin "$policy_name" --user "$SOBAG_S3_A
         fi
       fi
     elif mc admin accesskey create "sobag-minio-admin/${root_user}" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
+      :
+    elif mc admin accesskey create sobag-minio-admin --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
+      :
+    elif mc admin user svcacct add sobag-minio-admin "$root_user" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
       :
     else
       echo "Could not create dedicated MinIO media credential"
