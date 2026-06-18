@@ -290,6 +290,25 @@ cleanup() {
 trap cleanup EXIT
 admin_alias="sobag-minio-admin"
 
+configure_discovered_admin_alias() {
+  discovered_alias="sobag-minio-admin-discovered"
+  if mc alias set "$discovered_alias" "$endpoint" "$root_user" "$root_password" >/dev/null 2>&1 \
+    && mc admin info "$discovered_alias" >/dev/null 2>&1; then
+    admin_alias="$discovered_alias"
+    echo "MinIO admin alias source: discovered-credentials"
+    return 0
+  fi
+  return 1
+}
+
+configure_default_admin_alias() {
+  if mc alias set "$admin_alias" "$endpoint" "$root_user" "$root_password" >/dev/null 2>&1; then
+    echo "MinIO admin alias source: discovered-credentials"
+    return 0
+  fi
+  return 1
+}
+
 find_existing_admin_alias() {
   for alias_name in sobag-minio-root minio local myminio minio-local; do
     if mc admin info "$alias_name" >/dev/null 2>&1; then
@@ -330,10 +349,7 @@ cat > "$policy_file" <<POLICY_JSON
 }
 POLICY_JSON
 
-if ! find_existing_admin_alias; then
-  mc alias set "$admin_alias" "$endpoint" "$root_user" "$root_password" >/dev/null
-  echo "MinIO admin alias source: discovered-credentials"
-fi
+configure_discovered_admin_alias || find_existing_admin_alias || configure_default_admin_alias
 if ! mc admin info "$admin_alias" >/dev/null 2>&1; then
   echo "MinIO root admin login failed; cannot repair media policy"
   exit 2
