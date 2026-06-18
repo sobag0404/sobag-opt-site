@@ -320,6 +320,18 @@ find_existing_admin_alias() {
   return 1
 }
 
+existing_admin_aliases() {
+  {
+    printf '%s\n' sobag-minio-root minio local myminio minio-local
+    mc alias list 2>/dev/null \
+      | awk '
+          /^[[:alnum:]_.-]+[[:space:]]/ { print $1 }
+          /^[[:alnum:]_.-]+[[:space:]]*:/ { sub(/:.*/, "", $1); print $1 }
+        ' \
+      | sed -E 's/[^[:alnum:]_.-].*$//'
+  } | awk 'NF && !seen[$0]++'
+}
+
 cat > "$policy_file" <<POLICY_JSON
 {
   "Version": "2012-10-17",
@@ -379,6 +391,9 @@ verify_app_write() {
   mc rm "sobag-minio-app/${SOBAG_S3_BUCKET}/${probe_key}" >/dev/null 2>&1 || true
   return 0
 }
+
+original_app_access_key_id="$SOBAG_S3_ACCESS_KEY_ID"
+original_app_secret_access_key="$SOBAG_S3_SECRET_ACCESS_KEY"
 
 if verify_app_write; then
   set_env_value "$app_env_file" SOBAG_S3_ENDPOINT "$endpoint"
@@ -443,8 +458,14 @@ if mc admin user add "$admin_alias" "$media_user" "$media_secret" >/dev/null 2>&
   fi
   echo "Dedicated MinIO media user created"
   media_credential_created=1
+elif mc admin accesskey create "${admin_alias}/" "$root_user" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
+  echo "Dedicated MinIO media access key created under root user"
+  media_credential_created=1
 elif mc admin accesskey create "${admin_alias}/${root_user}" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
   echo "Dedicated MinIO media access key created under root user"
+  media_credential_created=1
+elif mc admin accesskey create "${admin_alias}/" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
+  echo "Dedicated MinIO media access key created"
   media_credential_created=1
 elif mc admin accesskey create "$admin_alias" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
   echo "Dedicated MinIO media access key created"
@@ -488,6 +509,85 @@ if mc cp "$probe_file" "${admin_alias}/${SOBAG_S3_BUCKET}/${probe_key}" >/dev/nu
   exit 0
 fi
 echo "MinIO admin alias direct write unavailable; class=$(safe_verify_error_class)"
+
+attempt_alias_policy_repair() {
+  candidate_alias="$1"
+  source_label="$2"
+  [ -n "$candidate_alias" ] || return 1
+  if [ "$candidate_alias" = "$admin_alias" ]; then
+    return 1
+  fi
+  if ! mc admin info "$candidate_alias" >/dev/null 2>&1; then
+    return 1
+  fi
+  echo "MinIO admin alias fallback source: $source_label"
+  if mc admin policy create "$candidate_alias" "$policy_name" "$policy_file" >/dev/null 2>&1; then
+    echo "MinIO fallback policy command: create"
+  elif mc admin policy add "$candidate_alias" "$policy_name" "$policy_file" >/dev/null 2>&1; then
+    echo "MinIO fallback policy command: add"
+  else
+    echo "MinIO fallback policy create unavailable"
+  fi
+
+  if mc admin policy attach "$candidate_alias" "$policy_name" --user "$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
+    echo "MinIO fallback policy attached to existing access key as user"
+  elif mc admin policy set "$candidate_alias" "$policy_name" "user=$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
+    echo "MinIO fallback policy set on existing access key as user"
+  else
+    echo "MinIO fallback existing access key direct-user attach unavailable"
+  fi
+  if mc admin accesskey edit "$candidate_alias" "$SOBAG_S3_ACCESS_KEY_ID" --policy "$policy_file" >/dev/null 2>&1; then
+    echo "MinIO fallback access key policy edited"
+  elif mc admin accesskey edit "${candidate_alias}/${SOBAG_S3_ACCESS_KEY_ID}" --policy "$policy_file" >/dev/null 2>&1; then
+    echo "MinIO fallback nested access key policy edited"
+  elif mc admin user svcacct edit "$candidate_alias" "$SOBAG_S3_ACCESS_KEY_ID" --policy "$policy_file" >/dev/null 2>&1; then
+    echo "MinIO fallback service account policy edited"
+  else
+    echo "MinIO fallback existing access key policy edit unavailable"
+  fi
+  if verify_app_write; then
+    echo "MinIO scoped media policy verified via fallback admin alias"
+    exit 0
+  fi
+
+  fallback_media_user="sobagmedia$(date -u +%m%d%H%M%S)fb"
+  fallback_media_secret="$(openssl rand -hex 32)"
+  fallback_media_credential_created=0
+  if mc admin user add "$candidate_alias" "$fallback_media_user" "$fallback_media_secret" >/dev/null 2>&1; then
+    if mc admin policy attach "$candidate_alias" "$policy_name" --user "$fallback_media_user" >/dev/null 2>&1 \
+      || mc admin policy set "$candidate_alias" "$policy_name" "user=$fallback_media_user" >/dev/null 2>&1; then
+      echo "MinIO fallback dedicated media user created"
+      fallback_media_credential_created=1
+    else
+      echo "MinIO fallback dedicated user policy attach unavailable"
+    fi
+  elif mc admin accesskey create "${candidate_alias}/" --access-key "$fallback_media_user" --secret-key "$fallback_media_secret" --policy "$policy_file" >/dev/null 2>&1; then
+    echo "MinIO fallback dedicated media access key created"
+    fallback_media_credential_created=1
+  elif mc admin accesskey create "$candidate_alias" --access-key "$fallback_media_user" --secret-key "$fallback_media_secret" --policy "$policy_file" >/dev/null 2>&1; then
+    echo "MinIO fallback dedicated media access key created"
+    fallback_media_credential_created=1
+  else
+    echo "MinIO fallback dedicated credential creation unavailable"
+  fi
+  if [ "$fallback_media_credential_created" = "1" ]; then
+    previous_key="$SOBAG_S3_ACCESS_KEY_ID"
+    previous_secret="$SOBAG_S3_SECRET_ACCESS_KEY"
+    SOBAG_S3_ACCESS_KEY_ID="$fallback_media_user"
+    SOBAG_S3_SECRET_ACCESS_KEY="$fallback_media_secret"
+    export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
+    if verify_app_write; then
+      set_env_value "$app_env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
+      set_env_value "$app_env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
+      echo "MinIO scoped media policy verified with fallback dedicated media credential"
+      exit 0
+    fi
+    SOBAG_S3_ACCESS_KEY_ID="$previous_key"
+    SOBAG_S3_SECRET_ACCESS_KEY="$previous_secret"
+    export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
+  fi
+  return 1
+}
 
 SOBAG_S3_ACCESS_KEY_ID="$root_user"
 SOBAG_S3_SECRET_ACCESS_KEY="$root_password"
@@ -572,6 +672,14 @@ try_all_root_write_candidates() {
 }
 
 try_all_root_write_candidates || true
+
+SOBAG_S3_ACCESS_KEY_ID="$original_app_access_key_id"
+SOBAG_S3_SECRET_ACCESS_KEY="$original_app_secret_access_key"
+export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
+
+for candidate_alias in $(existing_admin_aliases); do
+  attempt_alias_policy_repair "$candidate_alias" "existing" || true
+done
 
 echo "Scoped media policy verification upload failed; class=$(safe_verify_error_class)"
 exit 2
