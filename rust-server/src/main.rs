@@ -1753,7 +1753,7 @@ fn render_page_head_with_routes(title: &str, routes: &RenderRoutes) -> String {
     format!(
         "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} | Sobag Opt</title><style>{}</style><script defer src=\"https://unpkg.com/htmx.org@1.9.12\"></script>{}</head><body>{}",
         escape_html(title),
-        "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-shell-top{border-bottom:1px solid #ddd;background:#f7f7f7}.rust-shell-top__inner,.rust-shell-header__inner{max-width:1180px;margin:0 auto;padding:8px 24px;display:flex;align-items:center;gap:18px}.rust-shell-top__inner{justify-content:center}.rust-shell-top a,.rust-shell-header a{color:#111;text-decoration:none;font-weight:700}.rust-shell-header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #ddd}.rust-shell-logo{display:flex;align-items:center;gap:12px;font-size:24px;font-weight:900;letter-spacing:1px}.rust-shell-logo span{display:grid;place-items:center;width:48px;height:48px;border-radius:10px;background:#111;color:#fff}.rust-shell-catalog,.rust-shell-cart{border-radius:8px;background:#111;color:#fff!important;padding:14px 18px}.rust-shell-search{flex:1;display:flex}.rust-shell-search input{width:100%;padding:14px 16px;border:1px solid #ddd;border-radius:12px;background:#f4f4f4}.rust-shell-actions{display:flex;gap:8px}.rust-shell-icon{border:1px solid #ccc;border-radius:8px;padding:12px}.rust-catalog,.rust-product,.rust-content-page{max-width:1180px;margin:0 auto;padding:24px}.rust-catalog-layout{display:grid;grid-template-columns:240px 1fr;gap:24px}.rust-filter-panel{border-right:1px solid #ddd;padding-right:16px}.rust-filter-group{border-top:1px solid #ddd;padding:14px 0}.rust-filter-group h2{font-size:16px;margin:0 0 10px}.rust-filter-option{display:flex;gap:8px;align-items:flex-start;margin:8px 0}.rust-filter-option input{margin-top:3px}.rust-filter-option span:last-child{color:#666}.rust-toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-clear-filters{border:1px solid #bbb;border-radius:6px;color:#111;padding:12px;text-decoration:none}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-pager{margin-top:18px}.rust-product-layout{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:28px}.rust-product-main-image,.rust-product-thumbs img{width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px;background:#eee}.rust-product-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.rust-product-meta{display:flex;flex-wrap:wrap;gap:8px}.rust-chip{border:1px solid #bbb;border-radius:999px;padding:6px 10px}.rust-variant-table{width:100%;border-collapse:collapse}.rust-variant-table th,.rust-variant-table td{border-bottom:1px solid #ddd;padding:10px;text-align:left}.rust-variant-qty{max-width:90px;padding:8px;border:1px solid #bbb;border-radius:6px}.rust-related{margin-top:28px}.rust-content-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}.rust-content-nav a{border:1px solid #bbb;border-radius:6px;padding:8px 10px;color:#111;text-decoration:none}.rust-content-hero{border-bottom:2px solid #111;padding-bottom:18px}.rust-content-hero h1{font-size:44px;line-height:1;margin:0 0 12px}.rust-content-panel{background:#f4f4f4;border:1px solid #ddd;border-radius:8px;margin-top:18px;padding:18px}.rust-content-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.rust-address{font-weight:700}@media(max-width:760px){.rust-shell-top__inner{display:none}.rust-shell-header__inner{flex-wrap:wrap}.rust-shell-search{order:3;flex-basis:100%}.rust-catalog-layout,.rust-product-layout{grid-template-columns:1fr}.rust-filter-panel{border-right:0;border-bottom:1px solid #ddd;padding-right:0}.rust-toolbar input,.rust-toolbar select,.rust-toolbar button{width:100%}}",
+        "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#111}.rust-shell-top{border-bottom:1px solid #ddd;background:#f7f7f7}.rust-shell-top__inner,.rust-shell-header__inner{max-width:1180px;margin:0 auto;padding:8px 24px;display:flex;align-items:center;gap:18px}.rust-shell-top__inner{justify-content:center}.rust-shell-top a,.rust-shell-header a{color:#111;text-decoration:none;font-weight:700}.rust-shell-header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #ddd}.rust-shell-logo{display:flex;align-items:center;gap:12px;font-size:24px;font-weight:900;letter-spacing:1px}.rust-shell-logo span{display:grid;place-items:center;width:48px;height:48px;border-radius:10px;background:#111;color:#fff}.rust-shell-catalog,.rust-shell-cart{border-radius:8px;background:#111;color:#fff!important;padding:14px 18px}.rust-shell-search{flex:1;display:flex}.rust-shell-search input{width:100%;padding:14px 16px;border:1px solid #ddd;border-radius:12px;background:#f4f4f4}.rust-shell-actions{display:flex;gap:8px;align-items:center}.rust-shell-icon{border:1px solid #ccc;border-radius:8px;padding:12px}.rust-shell-account{display:grid;place-items:center;width:44px;height:44px;padding:0}.rust-shell-account svg{width:20px;height:20px}.rust-catalog,.rust-product,.rust-content-page{max-width:1180px;margin:0 auto;padding:24px}.rust-catalog-layout{display:grid;grid-template-columns:240px 1fr;gap:24px}.rust-filter-panel{border-right:1px solid #ddd;padding-right:16px}.rust-filter-group{border-top:1px solid #ddd;padding:14px 0}.rust-filter-group h2{font-size:16px;margin:0 0 10px}.rust-filter-option{display:flex;gap:8px;align-items:flex-start;margin:8px 0}.rust-filter-option input{margin-top:3px}.rust-filter-option span:last-child{color:#666}.rust-toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}.rust-toolbar input,.rust-toolbar select{padding:12px;border:1px solid #bbb;border-radius:6px}.rust-clear-filters{border:1px solid #bbb;border-radius:6px;color:#111;padding:12px;text-decoration:none}.rust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.rust-card{border:1px solid #bbb;border-radius:8px;overflow:hidden;background:#fff}.rust-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.rust-card__body{padding:12px}.rust-card__price{font-weight:800}.rust-sku-row{display:inline-flex;align-items:center;gap:6px;max-width:100%;flex-wrap:wrap}.rust-copy-sku{position:relative;display:inline-grid;place-items:center;width:28px;height:28px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#111;cursor:pointer}.rust-copy-sku svg{width:15px;height:15px}.rust-copy-sku:hover,.rust-copy-sku:focus-visible{border-color:#111}.rust-copy-sku::after{content:attr(data-tooltip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);max-width:180px;padding:6px 8px;border-radius:6px;background:#111;color:#fff;font-size:12px;line-height:1.2;white-space:nowrap;opacity:0;pointer-events:none;z-index:20}.rust-copy-sku:hover::after,.rust-copy-sku:focus-visible::after{opacity:1}.rust-pager{margin-top:18px}.rust-product-layout{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:28px}.rust-product-main-image,.rust-product-thumbs img{width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid #bbb;border-radius:8px;background:#eee}.rust-product-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.rust-product-meta{display:flex;flex-wrap:wrap;gap:8px}.rust-chip{border:1px solid #bbb;border-radius:999px;padding:6px 10px}.rust-variant-table{width:100%;border-collapse:collapse}.rust-variant-table th,.rust-variant-table td{border-bottom:1px solid #ddd;padding:10px;text-align:left}.rust-variant-qty{max-width:90px;padding:8px;border:1px solid #bbb;border-radius:6px}.rust-related{margin-top:28px}.rust-content-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}.rust-content-nav a{border:1px solid #bbb;border-radius:6px;padding:8px 10px;color:#111;text-decoration:none}.rust-content-hero{border-bottom:2px solid #111;padding-bottom:18px}.rust-content-hero h1{font-size:44px;line-height:1;margin:0 0 12px}.rust-content-panel{background:#f4f4f4;border:1px solid #ddd;border-radius:8px;margin-top:18px;padding:18px}.rust-content-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.marketplace-card{display:block;color:#111;text-decoration:none}.rust-address{font-weight:700}.contacts-maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.rust-map-panel{display:grid;grid-template-rows:auto 280px;gap:12px}.rust-map-panel iframe{width:100%;height:100%;border:0;border-radius:8px;background:#eee}.rust-map-panel .map-link{display:inline-flex;margin-top:8px;color:#111;font-weight:700}@media(max-width:760px){.rust-shell-top__inner{display:none}.rust-shell-header__inner{flex-wrap:wrap}.rust-shell-search{order:3;flex-basis:100%}.rust-catalog-layout,.rust-product-layout{grid-template-columns:1fr}.rust-filter-panel{border-right:0;border-bottom:1px solid #ddd;padding-right:0}.rust-toolbar input,.rust-toolbar select,.rust-toolbar button{width:100%}.rust-map-panel{grid-template-rows:auto 240px}}",
         render_cart_bridge_script(),
         render_preview_shell_header(routes)
     )
@@ -1816,6 +1816,18 @@ fn render_cart_bridge_script() -> &'static str {
   document.addEventListener("DOMContentLoaded",ensureVariantButtons);
   document.body&&document.body.addEventListener("htmx:afterSwap",ensureVariantButtons);
   document.addEventListener("click",function(event){
+    var copyButton=event.target.closest("[data-copy-sku]");
+    if(copyButton){
+      var sku=copyButton.getAttribute("data-copy-sku")||"";
+      if(!sku)return;
+      var done=function(){
+        copyButton.setAttribute("data-copied","1");
+        setTimeout(function(){copyButton.removeAttribute("data-copied");},1200);
+      };
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(sku).then(done).catch(done);
+      else done();
+      return;
+    }
     var button=event.target.closest("[data-rust-add-cart]");
     if(!button)return;
     var row=button.closest("[data-rust-variant-row]");
@@ -1843,7 +1855,7 @@ fn render_cart_bridge_script() -> &'static str {
 
 fn render_preview_shell_header(routes: &RenderRoutes) -> String {
     format!(
-        "<div class=\"rust-shell-top\"><nav class=\"rust-shell-top__inner\" aria-label=\"Верхняя навигация\"><a href=\"/marketplaces\">Мы на маркетплейсах</a><a href=\"/business\">Условия для бизнеса</a><a href=\"/about\">О компании</a><a href=\"/contacts\">Контакты</a></nav></div><header class=\"rust-shell-header\"><div class=\"rust-shell-header__inner\"><a class=\"rust-shell-logo\" href=\"/\"><span>S</span>SOBAG OPT</a><a class=\"rust-shell-catalog\" href=\"{}\">Каталог</a><form class=\"rust-shell-search\" action=\"{}\" method=\"get\"><input name=\"q\" placeholder=\"Поиск: пледы, подушки, тираж, принт\"></form><nav class=\"rust-shell-actions\" aria-label=\"Действия\"><a class=\"rust-shell-icon\" href=\"/account\">Вход</a><a class=\"rust-shell-icon\" href=\"/favorites\">Избранное</a><a class=\"rust-shell-cart\" href=\"/cart\">Корзина</a></nav></div></header>",
+        "<div class=\"rust-shell-top\"><nav class=\"rust-shell-top__inner\" aria-label=\"Верхняя навигация\"><a href=\"/marketplaces\">Мы на маркетплейсах</a><a href=\"/business\">Условия для бизнеса</a><a href=\"/about\">О компании</a><a href=\"/contacts\">Контакты</a></nav></div><header class=\"rust-shell-header\"><div class=\"rust-shell-header__inner\"><a class=\"rust-shell-logo\" href=\"/\"><span>S</span>SOBAG OPT</a><a class=\"rust-shell-catalog\" href=\"{}\">Каталог</a><form class=\"rust-shell-search\" action=\"{}\" method=\"get\"><input name=\"q\" placeholder=\"Поиск: пледы, подушки, тираж, принт\"></form><nav class=\"rust-shell-actions\" aria-label=\"Действия\"><a class=\"rust-shell-icon rust-shell-account\" href=\"/account\" aria-label=\"Войти или зарегистрироваться\" title=\"Войти или зарегистрироваться\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20 21a8 8 0 0 0-16 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"/><circle cx=\"12\" cy=\"7\" r=\"4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/></svg></a><a class=\"rust-shell-icon\" href=\"/favorites\">Избранное</a><a class=\"rust-shell-cart\" href=\"/cart\">Корзина</a></nav></div></header>",
         routes.catalog_path,
         routes.search_path
     )
@@ -4092,27 +4104,61 @@ fn render_business_content(content: &Value) -> String {
     )
 }
 
+fn normalized_contact_address(key: &str, value: String) -> String {
+    if key == "contactsLegalAddress"
+        && value.contains("Наборные Сыреси")
+        && value.contains("Крупской")
+    {
+        return "431815, Республика Мордовия, Атяшевский район, с. Наборные Сыреси, ул. Крупской, д. 18".to_string();
+    }
+    if key == "contactsProductionAddress" && value.contains("Литовская") {
+        return "305014, Курская область, г. Курск, ул. Литовская, д. 12".to_string();
+    }
+    value
+}
+
+fn render_map_panel(title: &str, address: &str, frame_id: &str) -> String {
+    let encoded = url_encode(address);
+    format!(
+        "<article class=\"rust-content-panel rust-map-panel map-panel\"><div><h2>{}</h2><p class=\"rust-address\">{}</p><a class=\"map-link\" href=\"https://yandex.ru/maps/?text={}\" target=\"_blank\" rel=\"noopener noreferrer\">Открыть на карте</a></div><iframe id=\"{}\" title=\"{}\" loading=\"lazy\" referrerpolicy=\"no-referrer-when-downgrade\" src=\"https://yandex.ru/map-widget/v1/?text={}&z=16\"></iframe></article>",
+        escape_html(title),
+        escape_html(address),
+        encoded,
+        escape_attr(frame_id),
+        escape_attr(title),
+        encoded
+    )
+}
+
 fn render_contacts_content(content: &Value) -> String {
-    let legal = content_text(
-        content,
+    let legal = normalized_contact_address(
         "contactsLegalAddress",
-        "431815, Республика Мордовия, Атяшевский р-н, село Наборные Сыреси, ул. Крупской, д. 18",
+        content_text(
+            content,
+            "contactsLegalAddress",
+            "431815, Республика Мордовия, Атяшевский район, с. Наборные Сыреси, ул. Крупской, д. 18",
+        ),
     );
-    let production = content_text(
-        content,
+    let production = normalized_contact_address(
         "contactsProductionAddress",
-        "г. Курск, ул. Литовская, д. 12",
+        content_text(
+            content,
+            "contactsProductionAddress",
+            "305014, Курская область, г. Курск, ул. Литовская, д. 12",
+        ),
     );
     let email = content_text(content, "footerEmail", "ip.burago@yandex.ru");
     let phone = content_text(content, "footerPhone", "+7 901 879-41-62");
     format!(
-        "<section class=\"rust-content-grid\"><article class=\"rust-content-panel\"><h2>Отдел опта</h2><p><a href=\"mailto:{}\">{}</a></p><p><a href=\"tel:{}\">{}</a></p></article><article class=\"rust-content-panel\"><h2>Юридический адрес</h2><p class=\"rust-address\">{}</p></article><article class=\"rust-content-panel\"><h2>Адрес производства</h2><p class=\"rust-address\">{}</p></article></section>",
+        "<section class=\"rust-content-grid\"><article class=\"rust-content-panel\"><h2>Отдел опта</h2><p><a href=\"mailto:{}\">{}</a></p><p><a href=\"tel:{}\">{}</a></p></article><article class=\"rust-content-panel\"><h2>Юридический адрес</h2><p class=\"rust-address\">{}</p></article><article class=\"rust-content-panel\"><h2>Филиал / производство</h2><p class=\"rust-address\">{}</p></article></section><section class=\"contacts-maps\" aria-label=\"Карты адресов\">{}{}</section>",
         escape_attr(&email),
         escape_html(&email),
         escape_attr(&phone.replace([' ', '-'], "")),
         escape_html(&phone),
         escape_html(&legal),
-        escape_html(&production)
+        escape_html(&production),
+        render_map_panel("Юридический адрес", &legal, "yandexMapFrame-legal"),
+        render_map_panel("Филиал / производство", &production, "yandexMapFrame-production")
     )
 }
 
@@ -4125,6 +4171,7 @@ fn render_marketplaces_content(content: &Value) -> String {
             "Витрина Sobag",
             "marketplaceOneText",
             "Витрина для просмотра части готового ассортимента Sobag.",
+            "https://www.wildberries.ru/seller/167187",
         ),
         (
             "marketplaceTwoName",
@@ -4133,6 +4180,7 @@ fn render_marketplaces_content(content: &Value) -> String {
             "Товары в наличии",
             "marketplaceTwoText",
             "Подходит для просмотра готовых коллекций.",
+            "https://ozon.ru/s/sobag",
         ),
         (
             "marketplaceThreeName",
@@ -4141,16 +4189,20 @@ fn render_marketplaces_content(content: &Value) -> String {
             "Проверка ассортимента",
             "marketplaceThreeText",
             "Дополнительный канал для проверки готовых коллекций и наличия.",
+            "https://market.yandex.ru/cc/84GXiW",
         ),
     ];
     format!(
         "<section class=\"rust-content-grid\">{}</section>",
         cards
             .iter()
-            .map(|(name_key, default_name, title_key, default_title, text_key, default_text)| {
+            .map(|(name_key, default_name, title_key, default_title, text_key, default_text, href)| {
+                let name = content_text(content, name_key, default_name);
                 format!(
-                    "<article class=\"rust-content-panel\"><span>{}</span><h2>{}</h2><p>{}</p></article>",
-                    escape_html(&content_text(content, name_key, default_name)),
+                    "<a class=\"rust-content-panel marketplace-card\" href=\"{}\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"Sobag на {}\"><span>{}</span><h2>{}</h2><p>{}</p></a>",
+                    escape_attr(href),
+                    escape_attr(&name),
+                    escape_html(&name),
                     escape_html(&content_text(content, title_key, default_title)),
                     escape_html(&content_text(content, text_key, default_text))
                 )
@@ -4265,6 +4317,14 @@ fn render_clear_filters_link(fragment_path: &str, query: &CatalogQuery) -> Strin
     )
 }
 
+fn render_copy_sku_button(sku: &str) -> String {
+    format!(
+        "<button class=\"rust-copy-sku\" type=\"button\" data-copy-sku=\"{}\" data-tooltip=\"Скопировать артикул\" title=\"Скопировать артикул\" aria-label=\"Скопировать артикул {}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"10\" height=\"10\" rx=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/><path d=\"M5 15V5h10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg></button>",
+        escape_attr(sku),
+        escape_attr(sku)
+    )
+}
+
 fn render_card(product: &CatalogCard) -> String {
     render_card_with_routes(product, &RUST_ROUTES)
 }
@@ -4276,12 +4336,13 @@ fn render_card_with_routes(product: &CatalogCard, routes: &RenderRoutes) -> Stri
         product.image.as_str()
     };
     format!(
-        "<article class=\"rust-card\"><a href=\"{}?baseSku={}\"><img loading=\"lazy\" src=\"{}\" alt=\"{}\"></a><div class=\"rust-card__body\"><small>{}</small><h2>{}</h2><p>{}</p><div class=\"rust-card__price\">от {} ₽</div></div></article>",
+        "<article class=\"rust-card\"><a href=\"{}?baseSku={}\"><img loading=\"lazy\" src=\"{}\" alt=\"{}\"></a><div class=\"rust-card__body\"><small class=\"rust-sku-row\"><span>{}</span>{}</small><h2>{}</h2><p>{}</p><div class=\"rust-card__price\">от {} ₽</div></div></article>",
         routes.product_path,
         url_encode(&product.base_sku),
         escape_attr(image),
         escape_attr(&product.name),
         escape_html(&product.base_sku),
+        render_copy_sku_button(&product.base_sku),
         escape_html(&product.name),
         escape_html(&product.category),
         product.min_price
@@ -4359,7 +4420,7 @@ fn render_product_fragment_with_routes(
         )
     };
     format!(
-        "<main class=\"rust-product\" id=\"rustProduct\"><a href=\"{}\">В каталог</a><div class=\"rust-product-layout\"><section class=\"rust-product-gallery\"><img class=\"rust-product-main-image\" src=\"{}\" alt=\"{}\"><div class=\"rust-product-thumbs\">{}</div></section><section class=\"rust-product-info\"><h1>{}</h1><div class=\"rust-product-meta\">{}</div><p>{}</p><p><b>Артикул:</b> {}</p><p><b>Цена:</b> от {} ₽</p><table class=\"rust-variant-table\"><thead><tr><th>SKU</th><th>Тип</th><th>Размер</th><th>Цена</th><th>Кол-во</th></tr></thead><tbody>{}</tbody></table></section></div>{}</main>",
+        "<main class=\"rust-product\" id=\"rustProduct\"><a href=\"{}\">В каталог</a><div class=\"rust-product-layout\"><section class=\"rust-product-gallery\"><img class=\"rust-product-main-image\" src=\"{}\" alt=\"{}\"><div class=\"rust-product-thumbs\">{}</div></section><section class=\"rust-product-info\"><h1>{}</h1><div class=\"rust-product-meta\">{}</div><p>{}</p><p class=\"rust-sku-row\"><b>Артикул:</b> <span>{}</span>{}</p><p><b>Цена:</b> от {} ₽</p><table class=\"rust-variant-table\"><thead><tr><th>SKU</th><th>Тип</th><th>Размер</th><th>Цена</th><th>Кол-во</th></tr></thead><tbody>{}</tbody></table></section></div>{}</main>",
         routes.catalog_path,
         escape_attr(image),
         escape_attr(&product.name),
@@ -4368,6 +4429,7 @@ fn render_product_fragment_with_routes(
         chips,
         escape_html(detail),
         escape_html(&product.base_sku),
+        render_copy_sku_button(&product.base_sku),
         product.min_price,
         variants,
         related_html
