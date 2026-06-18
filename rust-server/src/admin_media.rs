@@ -508,7 +508,7 @@ async fn s3_upload(
                 "S3 upload failed with HTTP {}; class={}; {}.",
                 status,
                 classify_s3_error_body(&body),
-                safe_s3_diagnostics(config)
+                safe_s3_diagnostics(config, Some(key))
             ),
         ));
     }
@@ -553,7 +553,7 @@ async fn s3_delete(config: &S3Config, key: &str) -> AppResult<()> {
                 "S3 delete failed with HTTP {}; class={}; {}.",
                 status,
                 classify_s3_error_body(&body),
-                safe_s3_diagnostics(config)
+                safe_s3_diagnostics(config, Some(key))
             ),
         ));
     }
@@ -571,6 +571,7 @@ async fn s3_list_by_product(config: &S3Config, product_key: &str) -> AppResult<V
     query.insert("list-type".to_string(), "2".to_string());
     query.insert("prefix".to_string(), prefix);
     query.insert("max-keys".to_string(), "100".to_string());
+    let diagnostics_key = query.get("prefix").cloned();
     let response = s3_fetch(config, Method::GET, "", query, Vec::new(), None).await?;
     if !response.status().is_success() {
         let status = response.status().as_u16();
@@ -581,7 +582,7 @@ async fn s3_list_by_product(config: &S3Config, product_key: &str) -> AppResult<V
                 "S3 list failed with HTTP {}; class={}; {}.",
                 status,
                 classify_s3_error_body(&body),
-                safe_s3_diagnostics(config)
+                safe_s3_diagnostics(config, diagnostics_key.as_deref())
             ),
         ));
     }
@@ -671,7 +672,7 @@ fn build_s3_url(config: &S3Config, key: &str, query: &BTreeMap<String, String>) 
     Ok(url)
 }
 
-fn safe_s3_diagnostics(config: &S3Config) -> String {
+fn safe_s3_diagnostics(config: &S3Config, key: Option<&str>) -> String {
     let endpoint = Url::parse(&config.endpoint).ok();
     let endpoint_host = endpoint
         .as_ref()
@@ -692,10 +693,34 @@ fn safe_s3_diagnostics(config: &S3Config) -> String {
     } else {
         "set"
     };
+    let token = if config.session_token.is_empty() {
+        "absent"
+    } else {
+        "present"
+    };
+    let key_prefix = key
+        .map(storage_key_prefix)
+        .unwrap_or_else(|| "none".to_string());
     format!(
-        "endpointSource={}, endpointHost={}, endpointPath={}, pathStyle={}, region={}",
-        config.endpoint_source, endpoint_host, endpoint_path, config.force_path_style, region
+        "endpointSource={}, endpointHost={}, endpointPath={}, pathStyle={}, region={}, bucketLen={}, token={}, keyPrefix={}",
+        config.endpoint_source,
+        endpoint_host,
+        endpoint_path,
+        config.force_path_style,
+        region,
+        config.bucket.len(),
+        token,
+        key_prefix
     )
+}
+
+fn storage_key_prefix(key: &str) -> String {
+    key.split('/')
+        .filter(|part| !part.is_empty())
+        .take(2)
+        .map(|part| safe_path_segment(part, "part"))
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 fn classify_s3_error_body(body: &str) -> String {
@@ -1154,4 +1179,9 @@ pub(crate) fn s3_url_for_test(
     build_s3_url(&config, key, &BTreeMap::new())
         .map(|url| url.to_string())
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+pub(crate) fn storage_key_prefix_for_test(key: &str) -> String {
+    storage_key_prefix(key)
 }

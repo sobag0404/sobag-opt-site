@@ -1024,6 +1024,10 @@ fn admin_media_guards_storage_keys_and_upload_metadata() {
         ),
         "http://127.0.0.1:9000/sobag-products/products/OPT-1/file.png"
     );
+    assert_eq!(
+        crate::admin_media::storage_key_prefix_for_test("products/OPT-1/file.png"),
+        "products/OPT-1"
+    );
 }
 
 #[test]
