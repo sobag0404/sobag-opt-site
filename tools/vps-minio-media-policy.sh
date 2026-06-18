@@ -17,6 +17,12 @@ systemd_env_value() {
     | head -n 1
 }
 
+systemd_env_files() {
+  sudo systemctl show minio -p EnvironmentFiles --value 2>/dev/null \
+    | tr ' ' '\n' \
+    | sed -n -E 's#^(/[^[:space:]]+).*$#\1#p'
+}
+
 env_file_value() {
   file="$1"
   key="$2"
@@ -66,7 +72,14 @@ root_user="${MINIO_ROOT_USER:-}"
 root_password="${MINIO_ROOT_PASSWORD:-}"
 root_user_file="${MINIO_ROOT_USER_FILE:-}"
 root_password_file="${MINIO_ROOT_PASSWORD_FILE:-}"
-for minio_env_file in /etc/default/minio /etc/minio/minio.env /etc/sysconfig/minio; do
+minio_env_candidates="/etc/default/minio /etc/minio/minio.env /etc/minio/env /etc/sysconfig/minio $(systemd_env_files)"
+checked_minio_env_files=""
+for minio_env_file in $minio_env_candidates; do
+  [ -n "$minio_env_file" ] || continue
+  case " $checked_minio_env_files " in
+    *" $minio_env_file "*) continue ;;
+  esac
+  checked_minio_env_files="$checked_minio_env_files $minio_env_file"
   if [ -z "$root_user" ]; then
     root_user="$(env_file_value "$minio_env_file" MINIO_ROOT_USER)"
   fi
