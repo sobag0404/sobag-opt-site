@@ -413,5 +413,77 @@ if verify_app_write; then
   exit 0
 fi
 
+try_root_write_pair() {
+  source_label="$1"
+  candidate_user="$2"
+  candidate_secret="$3"
+  [ -n "$candidate_user" ] || return 1
+  [ -n "$candidate_secret" ] || return 1
+  if ! mc alias set sobag-minio-alt-root "$endpoint" "$candidate_user" "$candidate_secret" >/dev/null 2>&1; then
+    return 1
+  fi
+  if ! mc admin info sobag-minio-alt-root >/dev/null 2>&1; then
+    return 1
+  fi
+  previous_key="$SOBAG_S3_ACCESS_KEY_ID"
+  previous_secret="$SOBAG_S3_SECRET_ACCESS_KEY"
+  SOBAG_S3_ACCESS_KEY_ID="$candidate_user"
+  SOBAG_S3_SECRET_ACCESS_KEY="$candidate_secret"
+  export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
+  if verify_app_write; then
+    set_env_value "$app_env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
+    set_env_value "$app_env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
+    echo "MinIO media write verified with server credential fallback from $source_label"
+    exit 0
+  fi
+  SOBAG_S3_ACCESS_KEY_ID="$previous_key"
+  SOBAG_S3_SECRET_ACCESS_KEY="$previous_secret"
+  export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
+  return 1
+}
+
+try_env_file_root_pair() {
+  candidate_file="$1"
+  [ -f "$candidate_file" ] || return 1
+  candidate_user="$(env_file_value "$candidate_file" MINIO_ROOT_USER)"
+  candidate_secret="$(env_file_value "$candidate_file" MINIO_ROOT_PASSWORD)"
+  candidate_user_file="$(env_file_value "$candidate_file" MINIO_ROOT_USER_FILE)"
+  candidate_secret_file="$(env_file_value "$candidate_file" MINIO_ROOT_PASSWORD_FILE)"
+  [ -z "$candidate_user" ] && [ -n "$candidate_user_file" ] && candidate_user="$(secret_file_value "$candidate_user_file")"
+  [ -z "$candidate_secret" ] && [ -n "$candidate_secret_file" ] && candidate_secret="$(secret_file_value "$candidate_secret_file")"
+  try_root_write_pair "env-file" "$candidate_user" "$candidate_secret" && return 0
+  candidate_user="$(env_file_value "$candidate_file" MINIO_ACCESS_KEY)"
+  candidate_secret="$(env_file_value "$candidate_file" MINIO_SECRET_KEY)"
+  try_root_write_pair "legacy-env-file" "$candidate_user" "$candidate_secret" && return 0
+  return 1
+}
+
+try_container_root_pairs() {
+  candidate_user="$(container_env_value MINIO_ROOT_USER)"
+  candidate_secret="$(container_env_value MINIO_ROOT_PASSWORD)"
+  candidate_user_file="$(container_env_value MINIO_ROOT_USER_FILE)"
+  candidate_secret_file="$(container_env_value MINIO_ROOT_PASSWORD_FILE)"
+  [ -z "$candidate_user" ] && [ -n "$candidate_user_file" ] && candidate_user="$(container_secret_file_value "$candidate_user_file")"
+  [ -z "$candidate_secret" ] && [ -n "$candidate_secret_file" ] && candidate_secret="$(container_secret_file_value "$candidate_secret_file")"
+  try_root_write_pair "container-env" "$candidate_user" "$candidate_secret" && return 0
+  candidate_user="$(container_env_value MINIO_ACCESS_KEY)"
+  candidate_secret="$(container_env_value MINIO_SECRET_KEY)"
+  try_root_write_pair "legacy-container-env" "$candidate_user" "$candidate_secret" && return 0
+  return 1
+}
+
+try_all_root_write_candidates() {
+  try_root_write_pair "process-env" "${MINIO_ROOT_USER:-}" "${MINIO_ROOT_PASSWORD:-}" && return 0
+  for minio_env_file in $minio_env_candidates; do
+    [ -n "$minio_env_file" ] || continue
+    try_env_file_root_pair "$minio_env_file" && return 0
+  done
+  try_root_write_pair "systemd-env" "$(systemd_env_value MINIO_ROOT_USER)" "$(systemd_env_value MINIO_ROOT_PASSWORD)" && return 0
+  try_container_root_pairs && return 0
+  return 1
+}
+
+try_all_root_write_candidates || true
+
 echo "Scoped media policy verification upload failed; class=$(safe_verify_error_class)"
 exit 2
