@@ -23,12 +23,17 @@ systemd_env_files() {
     | sed -n -E 's#^(/[^[:space:]]+).*$#\1#p'
 }
 
+minio_container_ids() {
+  runtime="$1"
+  sudo "$runtime" ps --format '{{.ID}} {{.Names}} {{.Image}} {{.Command}}' 2>/dev/null \
+    | awk 'tolower($0) ~ /minio/ { print $1 }'
+}
+
 container_env_value() {
   key="$1"
   for runtime in docker podman; do
     command -v "$runtime" >/dev/null 2>&1 || continue
-    sudo "$runtime" ps --format '{{.ID}} {{.Names}}' 2>/dev/null \
-      | awk 'tolower($0) ~ /minio/ { print $1 }' \
+    minio_container_ids "$runtime" \
       | while IFS= read -r container_id; do
           [ -n "$container_id" ] || continue
           sudo "$runtime" inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container_id" 2>/dev/null \
@@ -37,6 +42,48 @@ container_env_value() {
         done \
       | sed -n '1p'
   done | sed -n '1p'
+}
+
+container_secret_file_value() {
+  path="$1"
+  [ -n "$path" ] || return 0
+  for runtime in docker podman; do
+    command -v "$runtime" >/dev/null 2>&1 || continue
+    minio_container_ids "$runtime" \
+      | while IFS= read -r container_id; do
+          [ -n "$container_id" ] || continue
+          sudo "$runtime" exec "$container_id" sh -c 'file="$1"; [ -f "$file" ] && sed -n "1{s/[[:space:]]*$//;p;q;}" "$file"' sh "$path" 2>/dev/null
+        done \
+      | sed -n '1p'
+  done | sed -n '1p'
+}
+
+container_compose_env_files() {
+  for runtime in docker podman; do
+    command -v "$runtime" >/dev/null 2>&1 || continue
+    minio_container_ids "$runtime" \
+      | while IFS= read -r container_id; do
+          [ -n "$container_id" ] || continue
+          working_dir="$(sudo "$runtime" inspect --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "$container_id" 2>/dev/null || true)"
+          config_files="$(sudo "$runtime" inspect --format '{{ index .Config.Labels "com.docker.compose.project.config_files" }}' "$container_id" 2>/dev/null || true)"
+          [ -n "$working_dir" ] && [ "$working_dir" != "<no value>" ] && printf '%s/.env\n' "$working_dir"
+          printf '%s\n' "$config_files" | tr ',' '\n' | while IFS= read -r config_file; do
+            [ -n "$config_file" ] || continue
+            [ "$config_file" = "<no value>" ] && continue
+            config_dir="$(dirname "$config_file")"
+            printf '%s/.env\n' "$config_dir"
+            sudo sed -n -E 's/^[[:space:]]*-[[:space:]]*([^#[:space:]]+).*$/\1/p; s/^[[:space:]]*env_file:[[:space:]]*([^#[:space:]]+).*$/\1/p' "$config_file" 2>/dev/null \
+              | sed -E 's/^["'\'']?([^"'\'']+)["'\'']?$/\1/' \
+              | while IFS= read -r env_file; do
+                [ -n "$env_file" ] || continue
+                case "$env_file" in
+                  /*) printf '%s\n' "$env_file" ;;
+                  *) printf '%s/%s\n' "$config_dir" "$env_file" ;;
+                esac
+              done
+          done
+        done
+  done | awk 'NF && !seen[$0]++'
 }
 
 env_file_value() {
@@ -88,7 +135,8 @@ root_user="${MINIO_ROOT_USER:-}"
 root_password="${MINIO_ROOT_PASSWORD:-}"
 root_user_file="${MINIO_ROOT_USER_FILE:-}"
 root_password_file="${MINIO_ROOT_PASSWORD_FILE:-}"
-minio_env_candidates="/etc/default/minio /etc/minio/minio.env /etc/minio/env /etc/sysconfig/minio $(systemd_env_files)"
+root_source="process-env"
+minio_env_candidates="/etc/default/minio /etc/minio/minio.env /etc/minio/env /etc/sysconfig/minio $(systemd_env_files) $(container_compose_env_files)"
 checked_minio_env_files=""
 for minio_env_file in $minio_env_candidates; do
   [ -n "$minio_env_file" ] || continue
@@ -98,9 +146,11 @@ for minio_env_file in $minio_env_candidates; do
   checked_minio_env_files="$checked_minio_env_files $minio_env_file"
   if [ -z "$root_user" ]; then
     root_user="$(env_file_value "$minio_env_file" MINIO_ROOT_USER)"
+    [ -n "$root_user" ] && root_source="env-file"
   fi
   if [ -z "$root_password" ]; then
     root_password="$(env_file_value "$minio_env_file" MINIO_ROOT_PASSWORD)"
+    [ -n "$root_password" ] && root_source="env-file"
   fi
   if [ -z "$root_user_file" ]; then
     root_user_file="$(env_file_value "$minio_env_file" MINIO_ROOT_USER_FILE)"
@@ -110,22 +160,28 @@ for minio_env_file in $minio_env_candidates; do
   fi
   if [ -z "$root_user" ]; then
     root_user="$(env_file_value "$minio_env_file" MINIO_ACCESS_KEY)"
+    [ -n "$root_user" ] && root_source="legacy-env-file"
   fi
   if [ -z "$root_password" ]; then
     root_password="$(env_file_value "$minio_env_file" MINIO_SECRET_KEY)"
+    [ -n "$root_password" ] && root_source="legacy-env-file"
   fi
 done
 if [ -z "$root_user" ] && [ -n "$root_user_file" ]; then
   root_user="$(secret_file_value "$root_user_file")"
+  [ -n "$root_user" ] && root_source="host-secret-file"
 fi
 if [ -z "$root_password" ] && [ -n "$root_password_file" ]; then
   root_password="$(secret_file_value "$root_password_file")"
+  [ -n "$root_password" ] && root_source="host-secret-file"
 fi
 if [ -z "$root_user" ]; then
   root_user="$(systemd_env_value MINIO_ROOT_USER)"
+  [ -n "$root_user" ] && root_source="systemd-env"
 fi
 if [ -z "$root_password" ]; then
   root_password="$(systemd_env_value MINIO_ROOT_PASSWORD)"
+  [ -n "$root_password" ] && root_source="systemd-env"
 fi
 if [ -z "$root_user_file" ]; then
   root_user_file="$(systemd_env_value MINIO_ROOT_USER_FILE)"
@@ -135,9 +191,11 @@ if [ -z "$root_password_file" ]; then
 fi
 if [ -z "$root_user" ]; then
   root_user="$(container_env_value MINIO_ROOT_USER)"
+  [ -n "$root_user" ] && root_source="container-env"
 fi
 if [ -z "$root_password" ]; then
   root_password="$(container_env_value MINIO_ROOT_PASSWORD)"
+  [ -n "$root_password" ] && root_source="container-env"
 fi
 if [ -z "$root_user_file" ]; then
   root_user_file="$(container_env_value MINIO_ROOT_USER_FILE)"
@@ -147,21 +205,28 @@ if [ -z "$root_password_file" ]; then
 fi
 if [ -z "$root_user" ]; then
   root_user="$(container_env_value MINIO_ACCESS_KEY)"
+  [ -n "$root_user" ] && root_source="legacy-container-env"
 fi
 if [ -z "$root_password" ]; then
   root_password="$(container_env_value MINIO_SECRET_KEY)"
+  [ -n "$root_password" ] && root_source="legacy-container-env"
 fi
 if [ -z "$root_user" ] && [ -n "$root_user_file" ]; then
   root_user="$(secret_file_value "$root_user_file")"
+  [ -z "$root_user" ] && root_user="$(container_secret_file_value "$root_user_file")"
+  [ -n "$root_user" ] && root_source="secret-file"
 fi
 if [ -z "$root_password" ] && [ -n "$root_password_file" ]; then
   root_password="$(secret_file_value "$root_password_file")"
+  [ -z "$root_password" ] && root_password="$(container_secret_file_value "$root_password_file")"
+  [ -n "$root_password" ] && root_source="secret-file"
 fi
 
 if [ -z "$root_user" ] || [ -z "$root_password" ]; then
   echo "MinIO root credentials are not available to deploy user; cannot repair media policy"
   exit 2
 fi
+echo "MinIO root credential source: $root_source"
 
 set_env_value() {
   file="$1"
