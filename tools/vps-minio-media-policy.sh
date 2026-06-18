@@ -358,7 +358,10 @@ if ! mc admin policy create "$admin_alias" "$policy_name" "$policy_file" >/dev/n
   mc admin policy add "$admin_alias" "$policy_name" "$policy_file" >/dev/null 2>&1 || true
 fi
 
-printf '%s\n' "sobag media policy smoke" > "$probe_file"
+# 1x1 WebP probe, matching the media smoke object class closely without storing
+# customer data.
+printf '%s' "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA" | base64 -d > "$probe_file" 2>/dev/null \
+  || printf '%s\n' "sobag media policy smoke" > "$probe_file"
 probe_key="products/opt_policy_smoke/cutover-policy-smoke-$(date -u +%Y%m%dT%H%M%SZ)-$$.webp"
 
 verify_app_write() {
@@ -459,6 +462,15 @@ if [ "$media_credential_created" = "1" ]; then
     echo "MinIO scoped media policy verified with dedicated media credential"
     exit 0
   fi
+fi
+
+echo "MinIO admin alias direct write policy repair attempt"
+if mc admin policy attach "$admin_alias" "$policy_name" --user "$root_user" >/dev/null 2>&1; then
+  echo "MinIO policy attached to discovered admin user"
+elif mc admin policy set "$admin_alias" "$policy_name" "user=$root_user" >/dev/null 2>&1; then
+  echo "MinIO policy set on discovered admin user"
+else
+  echo "MinIO discovered admin user policy attach unavailable"
 fi
 
 if mc cp "$probe_file" "${admin_alias}/${SOBAG_S3_BUCKET}/${probe_key}" >/dev/null 2>"$verify_log"; then
