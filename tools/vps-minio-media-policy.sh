@@ -29,7 +29,7 @@ require_env SOBAG_S3_ACCESS_KEY_ID
 require_env SOBAG_S3_SECRET_ACCESS_KEY
 
 endpoint="${SOBAG_S3_LOCAL_ENDPOINT:-http://127.0.0.1:9000}"
-env_file="${SOBAG_ENV_FILE:-/opt/sobag-opt/shared/.env}"
+app_env_file="${SOBAG_ENV_FILE:-/opt/sobag-opt/shared/.env}"
 
 if ! command -v mc >/dev/null 2>&1; then
   echo "MinIO client mc is not installed; cannot repair media policy"
@@ -43,12 +43,12 @@ fi
 
 root_user="${MINIO_ROOT_USER:-}"
 root_password="${MINIO_ROOT_PASSWORD:-}"
-for env_file in /etc/default/minio /etc/minio/minio.env /etc/sysconfig/minio; do
+for minio_env_file in /etc/default/minio /etc/minio/minio.env /etc/sysconfig/minio; do
   if [ -z "$root_user" ]; then
-    root_user="$(env_file_value "$env_file" MINIO_ROOT_USER)"
+    root_user="$(env_file_value "$minio_env_file" MINIO_ROOT_USER)"
   fi
   if [ -z "$root_password" ]; then
-    root_password="$(env_file_value "$env_file" MINIO_ROOT_PASSWORD)"
+    root_password="$(env_file_value "$minio_env_file" MINIO_ROOT_PASSWORD)"
   fi
 done
 if [ -z "$root_user" ]; then
@@ -153,9 +153,9 @@ verify_app_write() {
 }
 
 if verify_app_write; then
-  set_env_value "$env_file" SOBAG_S3_ENDPOINT "$endpoint"
-  set_env_value "$env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
-  set_env_value "$env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
+  set_env_value "$app_env_file" SOBAG_S3_ENDPOINT "$endpoint"
+  set_env_value "$app_env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
+  set_env_value "$app_env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
   echo "MinIO scoped media policy verified for products/*"
   exit 0
 fi
@@ -166,9 +166,9 @@ if grep -Eiq "quota|507|disk full|no space|XMinioStorageFull" "$verify_log"; the
   mc rm --recursive --force "sobag-minio-admin/${SOBAG_S3_BUCKET}/products/.cutover-policy-smoke/" >/dev/null 2>&1 || true
   mc quota clear "sobag-minio-admin/${SOBAG_S3_BUCKET}" >/dev/null 2>&1 || true
   if verify_app_write; then
-    set_env_value "$env_file" SOBAG_S3_ENDPOINT "$endpoint"
-    set_env_value "$env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
-    set_env_value "$env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
+    set_env_value "$app_env_file" SOBAG_S3_ENDPOINT "$endpoint"
+    set_env_value "$app_env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
+    set_env_value "$app_env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
     echo "MinIO scoped media policy verified for products/* after quota cleanup"
     exit 0
   fi
@@ -176,9 +176,9 @@ if grep -Eiq "quota|507|disk full|no space|XMinioStorageFull" "$verify_log"; the
   exit 2
 fi
 
-set_env_value "$env_file" SOBAG_S3_ENDPOINT "$endpoint"
-set_env_value "$env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
-set_env_value "$env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
+set_env_value "$app_env_file" SOBAG_S3_ENDPOINT "$endpoint"
+set_env_value "$app_env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
+set_env_value "$app_env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
 
 echo "MinIO media write denied; attempting scoped credential/policy repair"
 mc admin policy attach sobag-minio-admin "$policy_name" --user "$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1 || true
@@ -216,8 +216,8 @@ if [ "$media_credential_created" = "1" ]; then
   SOBAG_S3_SECRET_ACCESS_KEY="$media_secret"
   export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
   if verify_app_write; then
-    set_env_value "$env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
-    set_env_value "$env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
+    set_env_value "$app_env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
+    set_env_value "$app_env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
     echo "MinIO scoped media policy verified with dedicated media credential"
     exit 0
   fi
@@ -227,8 +227,8 @@ SOBAG_S3_ACCESS_KEY_ID="$root_user"
 SOBAG_S3_SECRET_ACCESS_KEY="$root_password"
 export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
 if verify_app_write; then
-  set_env_value "$env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
-  set_env_value "$env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
+  set_env_value "$app_env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
+  set_env_value "$app_env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
   echo "MinIO media write verified with server root credential fallback"
   exit 0
 fi
