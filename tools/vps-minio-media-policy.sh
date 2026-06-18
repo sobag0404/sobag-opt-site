@@ -261,6 +261,18 @@ cleanup() {
   rm -f "$policy_file" "$probe_file" "$verify_log"
 }
 trap cleanup EXIT
+admin_alias="sobag-minio-admin"
+
+find_existing_admin_alias() {
+  for alias_name in sobag-minio-root minio local myminio minio-local; do
+    if mc admin info "$alias_name" >/dev/null 2>&1; then
+      admin_alias="$alias_name"
+      echo "MinIO admin alias source: existing"
+      return 0
+    fi
+  done
+  return 1
+}
 
 cat > "$policy_file" <<POLICY_JSON
 {
@@ -291,13 +303,16 @@ cat > "$policy_file" <<POLICY_JSON
 }
 POLICY_JSON
 
-mc alias set sobag-minio-admin "$endpoint" "$root_user" "$root_password" >/dev/null
-if ! mc admin info sobag-minio-admin >/dev/null 2>&1; then
+if ! find_existing_admin_alias; then
+  mc alias set "$admin_alias" "$endpoint" "$root_user" "$root_password" >/dev/null
+  echo "MinIO admin alias source: discovered-credentials"
+fi
+if ! mc admin info "$admin_alias" >/dev/null 2>&1; then
   echo "MinIO root admin login failed; cannot repair media policy"
   exit 2
 fi
-if ! mc admin policy create sobag-minio-admin "$policy_name" "$policy_file" >/dev/null 2>&1; then
-  mc admin policy add sobag-minio-admin "$policy_name" "$policy_file" >/dev/null 2>&1 || true
+if ! mc admin policy create "$admin_alias" "$policy_name" "$policy_file" >/dev/null 2>&1; then
+  mc admin policy add "$admin_alias" "$policy_name" "$policy_file" >/dev/null 2>&1 || true
 fi
 
 printf '%s\n' "sobag media policy smoke" > "$probe_file"
@@ -325,9 +340,9 @@ fi
 
 if grep -Eiq "quota|507|disk full|no space|XMinioStorageFull" "$verify_log"; then
   echo "MinIO media write hit storage quota/disk; attempting scoped smoke cleanup and bucket quota clear"
-  mc rm --incomplete --recursive --force "sobag-minio-admin/${SOBAG_S3_BUCKET}/products/" >/dev/null 2>&1 || true
-  mc rm --recursive --force "sobag-minio-admin/${SOBAG_S3_BUCKET}/products/.cutover-policy-smoke/" >/dev/null 2>&1 || true
-  mc quota clear "sobag-minio-admin/${SOBAG_S3_BUCKET}" >/dev/null 2>&1 || true
+  mc rm --incomplete --recursive --force "${admin_alias}/${SOBAG_S3_BUCKET}/products/" >/dev/null 2>&1 || true
+  mc rm --recursive --force "${admin_alias}/${SOBAG_S3_BUCKET}/products/.cutover-policy-smoke/" >/dev/null 2>&1 || true
+  mc quota clear "${admin_alias}/${SOBAG_S3_BUCKET}" >/dev/null 2>&1 || true
   if verify_app_write; then
     set_env_value "$app_env_file" SOBAG_S3_ENDPOINT "$endpoint"
     set_env_value "$app_env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
@@ -344,18 +359,18 @@ set_env_value "$app_env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-
 set_env_value "$app_env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
 
 echo "MinIO media write denied; attempting scoped credential/policy repair"
-if mc admin policy attach sobag-minio-admin "$policy_name" --user "$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
+if mc admin policy attach "$admin_alias" "$policy_name" --user "$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
   echo "MinIO policy attached to existing access key as user"
-elif mc admin policy set sobag-minio-admin "$policy_name" "user=$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
+elif mc admin policy set "$admin_alias" "$policy_name" "user=$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
   echo "MinIO policy set on existing access key as user"
 else
   echo "Existing access key is not a direct MinIO user"
 fi
-if mc admin accesskey edit sobag-minio-admin "$SOBAG_S3_ACCESS_KEY_ID" --policy "$policy_file" >/dev/null 2>&1; then
+if mc admin accesskey edit "$admin_alias" "$SOBAG_S3_ACCESS_KEY_ID" --policy "$policy_file" >/dev/null 2>&1; then
   echo "MinIO access key policy edited"
-elif mc admin accesskey edit "sobag-minio-admin/${SOBAG_S3_ACCESS_KEY_ID}" --policy "$policy_file" >/dev/null 2>&1; then
+elif mc admin accesskey edit "${admin_alias}/${SOBAG_S3_ACCESS_KEY_ID}" --policy "$policy_file" >/dev/null 2>&1; then
   echo "MinIO nested access key policy edited"
-elif mc admin user svcacct edit sobag-minio-admin "$SOBAG_S3_ACCESS_KEY_ID" --policy "$policy_file" >/dev/null 2>&1; then
+elif mc admin user svcacct edit "$admin_alias" "$SOBAG_S3_ACCESS_KEY_ID" --policy "$policy_file" >/dev/null 2>&1; then
   echo "MinIO service account policy edited"
 else
   echo "Existing access key policy edit unavailable"
@@ -369,22 +384,22 @@ fi
 media_user="sobagmedia$(date -u +%m%d%H%M%S)"
 media_secret="$(openssl rand -hex 32)"
 media_credential_created=0
-if mc admin user add sobag-minio-admin "$media_user" "$media_secret" >/dev/null 2>&1; then
-  if ! mc admin policy attach sobag-minio-admin "$policy_name" --user "$media_user" >/dev/null 2>&1; then
-    if ! mc admin policy set sobag-minio-admin "$policy_name" "user=$media_user" >/dev/null 2>&1; then
+if mc admin user add "$admin_alias" "$media_user" "$media_secret" >/dev/null 2>&1; then
+  if ! mc admin policy attach "$admin_alias" "$policy_name" --user "$media_user" >/dev/null 2>&1; then
+    if ! mc admin policy set "$admin_alias" "$policy_name" "user=$media_user" >/dev/null 2>&1; then
       echo "Could not attach scoped media policy to dedicated MinIO media user"
       exit 2
     fi
   fi
   echo "Dedicated MinIO media user created"
   media_credential_created=1
-elif mc admin accesskey create "sobag-minio-admin/${root_user}" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
+elif mc admin accesskey create "${admin_alias}/${root_user}" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
   echo "Dedicated MinIO media access key created under root user"
   media_credential_created=1
-elif mc admin accesskey create sobag-minio-admin --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
+elif mc admin accesskey create "$admin_alias" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
   echo "Dedicated MinIO media access key created"
   media_credential_created=1
-elif mc admin user svcacct add sobag-minio-admin "$root_user" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
+elif mc admin user svcacct add "$admin_alias" "$root_user" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
   echo "Dedicated MinIO media service account created"
   media_credential_created=1
 else
