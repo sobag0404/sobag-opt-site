@@ -24,6 +24,27 @@ env_file_value() {
   sudo sed -n -E "s/^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*$/\2/p" "$file" 2>/dev/null | head -n 1
 }
 
+secret_file_value() {
+  file="$1"
+  [ -n "$file" ] || return 0
+  [ -f "$file" ] || return 0
+  sudo sed -n '1{s/[[:space:]]*$//;p;q;}' "$file" 2>/dev/null
+}
+
+safe_verify_error_class() {
+  if grep -Eiq "AccessDenied|access denied|forbidden|403|insufficient" "$verify_log"; then
+    printf '%s\n' "access-denied"
+  elif grep -Eiq "InvalidAccessKey|invalid access key|SignatureDoesNotMatch|signature" "$verify_log"; then
+    printf '%s\n' "credential-or-signature"
+  elif grep -Eiq "NoSuchBucket|bucket does not exist" "$verify_log"; then
+    printf '%s\n' "bucket-missing"
+  elif grep -Eiq "quota|507|disk full|no space|XMinioStorageFull" "$verify_log"; then
+    printf '%s\n' "quota-or-disk"
+  else
+    printf '%s\n' "unknown"
+  fi
+}
+
 require_env SOBAG_S3_BUCKET
 require_env SOBAG_S3_ACCESS_KEY_ID
 require_env SOBAG_S3_SECRET_ACCESS_KEY
@@ -43,6 +64,8 @@ fi
 
 root_user="${MINIO_ROOT_USER:-}"
 root_password="${MINIO_ROOT_PASSWORD:-}"
+root_user_file="${MINIO_ROOT_USER_FILE:-}"
+root_password_file="${MINIO_ROOT_PASSWORD_FILE:-}"
 for minio_env_file in /etc/default/minio /etc/minio/minio.env /etc/sysconfig/minio; do
   if [ -z "$root_user" ]; then
     root_user="$(env_file_value "$minio_env_file" MINIO_ROOT_USER)"
@@ -50,12 +73,42 @@ for minio_env_file in /etc/default/minio /etc/minio/minio.env /etc/sysconfig/min
   if [ -z "$root_password" ]; then
     root_password="$(env_file_value "$minio_env_file" MINIO_ROOT_PASSWORD)"
   fi
+  if [ -z "$root_user_file" ]; then
+    root_user_file="$(env_file_value "$minio_env_file" MINIO_ROOT_USER_FILE)"
+  fi
+  if [ -z "$root_password_file" ]; then
+    root_password_file="$(env_file_value "$minio_env_file" MINIO_ROOT_PASSWORD_FILE)"
+  fi
+  if [ -z "$root_user" ]; then
+    root_user="$(env_file_value "$minio_env_file" MINIO_ACCESS_KEY)"
+  fi
+  if [ -z "$root_password" ]; then
+    root_password="$(env_file_value "$minio_env_file" MINIO_SECRET_KEY)"
+  fi
 done
+if [ -z "$root_user" ] && [ -n "$root_user_file" ]; then
+  root_user="$(secret_file_value "$root_user_file")"
+fi
+if [ -z "$root_password" ] && [ -n "$root_password_file" ]; then
+  root_password="$(secret_file_value "$root_password_file")"
+fi
 if [ -z "$root_user" ]; then
   root_user="$(systemd_env_value MINIO_ROOT_USER)"
 fi
 if [ -z "$root_password" ]; then
   root_password="$(systemd_env_value MINIO_ROOT_PASSWORD)"
+fi
+if [ -z "$root_user_file" ]; then
+  root_user_file="$(systemd_env_value MINIO_ROOT_USER_FILE)"
+fi
+if [ -z "$root_password_file" ]; then
+  root_password_file="$(systemd_env_value MINIO_ROOT_PASSWORD_FILE)"
+fi
+if [ -z "$root_user" ] && [ -n "$root_user_file" ]; then
+  root_user="$(secret_file_value "$root_user_file")"
+fi
+if [ -z "$root_password" ] && [ -n "$root_password_file" ]; then
+  root_password="$(secret_file_value "$root_password_file")"
 fi
 
 if [ -z "$root_user" ] || [ -z "$root_password" ]; then
@@ -133,6 +186,10 @@ cat > "$policy_file" <<POLICY_JSON
 POLICY_JSON
 
 mc alias set sobag-minio-admin "$endpoint" "$root_user" "$root_password" >/dev/null
+if ! mc admin info sobag-minio-admin >/dev/null 2>&1; then
+  echo "MinIO root admin login failed; cannot repair media policy"
+  exit 2
+fi
 if ! mc admin policy create sobag-minio-admin "$policy_name" "$policy_file" >/dev/null 2>&1; then
   mc admin policy add sobag-minio-admin "$policy_name" "$policy_file" >/dev/null 2>&1 || true
 fi
@@ -233,5 +290,5 @@ if verify_app_write; then
   exit 0
 fi
 
-echo "Scoped media policy verification upload failed"
+echo "Scoped media policy verification upload failed; class=$(safe_verify_error_class)"
 exit 2
