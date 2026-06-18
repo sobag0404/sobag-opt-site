@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { createServer as createNetServer } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 
 const DEFAULT_NODE_ENTRY = "server.mjs";
@@ -181,11 +182,22 @@ function assertNoPasswordFields(label, payload) {
   if (text.includes("passwordHash") || text.includes("passwordSalt")) throw new Error(`${label} leaked password fields`);
 }
 
+async function getFreePort() {
+  const server = createNetServer();
+  await new Promise((resolveListen, rejectListen) => {
+    server.once("error", rejectListen);
+    server.listen(0, "127.0.0.1", resolveListen);
+  });
+  const { port } = server.address();
+  await new Promise((resolveClose) => server.close(resolveClose));
+  return port;
+}
+
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-admin-users-cutover-"));
-  const nodePort = 58000 + Math.floor(Math.random() * 1000);
-  const rustPort = nodePort + 1000;
-  const proxyPort = nodePort + 2000;
+  const nodePort = await getFreePort();
+  const rustPort = await getFreePort();
+  const proxyPort = await getFreePort();
   await createFixtureStore(temp);
   const env = {
     NODE_ENV: "test",

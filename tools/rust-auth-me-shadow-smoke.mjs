@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { createServer as createNetServer } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 
 const DEFAULT_NODE_ENTRY = "server.mjs";
@@ -274,10 +275,21 @@ function reviewListSlice(response) {
   };
 }
 
+async function getFreePort() {
+  const server = createNetServer();
+  await new Promise((resolveListen, rejectListen) => {
+    server.once("error", rejectListen);
+    server.listen(0, "127.0.0.1", resolveListen);
+  });
+  const { port } = server.address();
+  await new Promise((resolveClose) => server.close(resolveClose));
+  return port;
+}
+
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-auth-shadow-"));
-  const nodePort = 53000 + Math.floor(Math.random() * 1000);
-  const rustPort = nodePort + 1000;
+  const nodePort = await getFreePort();
+  const rustPort = await getFreePort();
   const sessions = await createFixtureStore(temp);
   const env = {
     NODE_ENV: "test",
