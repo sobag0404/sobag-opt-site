@@ -168,6 +168,14 @@ async function startProxy({ port, nodePort, rustPort }) {
   return server;
 }
 
+async function getFreePort() {
+  const server = createServer();
+  await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
+  const { port } = server.address();
+  await new Promise((resolveClose) => server.close(resolveClose));
+  return port;
+}
+
 async function requestJson(base, path, { token = "", method = "GET", body = null } = {}) {
   const headers = token ? { cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` } : {};
   if (body) headers["content-type"] = "application/json";
@@ -185,9 +193,9 @@ async function requestJson(base, path, { token = "", method = "GET", body = null
 
 async function runSmoke(args) {
   const temp = await mkdtemp(join(tmpdir(), "sobag-rust-admin-orders-cutover-"));
-  const nodePort = 55000 + Math.floor(Math.random() * 1000);
-  const rustPort = nodePort + 1000;
-  const proxyPort = nodePort + 2000;
+  const nodePort = await getFreePort();
+  const rustPort = await getFreePort();
+  const proxyPort = await getFreePort();
   await createFixtureStore(temp);
   const env = {
     NODE_ENV: "test",
