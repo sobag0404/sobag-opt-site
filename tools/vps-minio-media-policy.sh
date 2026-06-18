@@ -23,6 +23,18 @@ systemd_env_files() {
     | sed -n -E 's#^(/[^[:space:]]+).*$#\1#p'
 }
 
+minio_process_env_value() {
+  key="$1"
+  sudo pgrep -f '(^|/|[[:space:]])minio([[:space:]]|$)' 2>/dev/null \
+    | while IFS= read -r pid; do
+        [ -n "$pid" ] || continue
+        sudo tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null \
+          | sed -n "s/^${key}=//p" \
+          | head -n 1
+      done \
+    | sed -n '1p'
+}
+
 minio_container_ids() {
   runtime="$1"
   sudo "$runtime" ps --format '{{.ID}} {{.Names}} {{.Image}} {{.Command}}' 2>/dev/null \
@@ -188,6 +200,20 @@ if [ -z "$root_user_file" ]; then
 fi
 if [ -z "$root_password_file" ]; then
   root_password_file="$(systemd_env_value MINIO_ROOT_PASSWORD_FILE)"
+fi
+if [ -z "$root_user" ]; then
+  root_user="$(minio_process_env_value MINIO_ROOT_USER)"
+  [ -n "$root_user" ] && root_source="minio-process-env"
+fi
+if [ -z "$root_password" ]; then
+  root_password="$(minio_process_env_value MINIO_ROOT_PASSWORD)"
+  [ -n "$root_password" ] && root_source="minio-process-env"
+fi
+if [ -z "$root_user_file" ]; then
+  root_user_file="$(minio_process_env_value MINIO_ROOT_USER_FILE)"
+fi
+if [ -z "$root_password_file" ]; then
+  root_password_file="$(minio_process_env_value MINIO_ROOT_PASSWORD_FILE)"
 fi
 if [ -z "$root_user" ]; then
   root_user="$(container_env_value MINIO_ROOT_USER)"
@@ -489,6 +515,7 @@ try_container_root_pairs() {
 
 try_all_root_write_candidates() {
   try_root_write_pair "process-env" "${MINIO_ROOT_USER:-}" "${MINIO_ROOT_PASSWORD:-}" && return 0
+  try_root_write_pair "minio-process-env" "$(minio_process_env_value MINIO_ROOT_USER)" "$(minio_process_env_value MINIO_ROOT_PASSWORD)" && return 0
   for minio_env_file in $minio_env_candidates; do
     [ -n "$minio_env_file" ] || continue
     try_env_file_root_pair "$minio_env_file" && return 0
