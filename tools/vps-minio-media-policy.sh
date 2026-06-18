@@ -11,14 +11,14 @@ require_env() {
 
 systemd_env_value() {
   key="$1"
-  sudo systemctl show minio -p Environment --value 2>/dev/null \
+  { sudo systemctl show minio -p Environment --value 2>/dev/null || true; } \
     | tr ' ' '\n' \
     | sed -n "s/^${key}=//p" \
     | head -n 1
 }
 
 systemd_env_files() {
-  sudo systemctl show minio -p EnvironmentFiles --value 2>/dev/null \
+  { sudo systemctl show minio -p EnvironmentFiles --value 2>/dev/null || true; } \
     | tr ' ' '\n' \
     | sed -n -E 's#^(/[^[:space:]]+).*$#\1#p'
 }
@@ -29,7 +29,7 @@ minio_process_env_value() {
   printf '%s\n' "$pids" \
     | while IFS= read -r pid; do
         [ -n "$pid" ] || continue
-        sudo tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null \
+        { sudo tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null || true; } \
           | sed -n "s/^${key}=//p" \
           | head -n 1
       done \
@@ -38,7 +38,7 @@ minio_process_env_value() {
 
 minio_container_ids() {
   runtime="$1"
-  sudo "$runtime" ps --format '{{.ID}} {{.Names}} {{.Image}} {{.Command}}' 2>/dev/null \
+  { sudo "$runtime" ps --format '{{.ID}} {{.Names}} {{.Image}} {{.Command}}' 2>/dev/null || true; } \
     | awk 'tolower($0) ~ /minio/ { print $1 }'
 }
 
@@ -46,10 +46,10 @@ container_env_value() {
   key="$1"
   for runtime in docker podman; do
     command -v "$runtime" >/dev/null 2>&1 || continue
-    minio_container_ids "$runtime" \
+    { minio_container_ids "$runtime" || true; } \
       | while IFS= read -r container_id; do
           [ -n "$container_id" ] || continue
-          sudo "$runtime" inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container_id" 2>/dev/null \
+          { sudo "$runtime" inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container_id" 2>/dev/null || true; } \
             | sed -n "s/^${key}=//p" \
             | head -n 1
         done \
@@ -62,10 +62,10 @@ container_secret_file_value() {
   [ -n "$path" ] || return 0
   for runtime in docker podman; do
     command -v "$runtime" >/dev/null 2>&1 || continue
-    minio_container_ids "$runtime" \
+    { minio_container_ids "$runtime" || true; } \
       | while IFS= read -r container_id; do
           [ -n "$container_id" ] || continue
-          sudo "$runtime" exec "$container_id" sh -c 'file="$1"; [ -f "$file" ] && sed -n "1{s/[[:space:]]*$//;p;q;}" "$file"' sh "$path" 2>/dev/null
+          sudo "$runtime" exec "$container_id" sh -c 'file="$1"; [ -f "$file" ] && sed -n "1{s/[[:space:]]*$//;p;q;}" "$file" || true' sh "$path" 2>/dev/null || true
         done \
       | sed -n '1p'
   done | sed -n '1p'
@@ -74,7 +74,7 @@ container_secret_file_value() {
 container_compose_env_files() {
   for runtime in docker podman; do
     command -v "$runtime" >/dev/null 2>&1 || continue
-    minio_container_ids "$runtime" \
+    { minio_container_ids "$runtime" || true; } \
       | while IFS= read -r container_id; do
           [ -n "$container_id" ] || continue
           working_dir="$(sudo "$runtime" inspect --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "$container_id" 2>/dev/null || true)"
@@ -85,7 +85,7 @@ container_compose_env_files() {
             [ "$config_file" = "<no value>" ] && continue
             config_dir="$(dirname "$config_file")"
             printf '%s/.env\n' "$config_dir"
-            sudo sed -n -E 's/^[[:space:]]*-[[:space:]]*([^#[:space:]]+).*$/\1/p; s/^[[:space:]]*env_file:[[:space:]]*([^#[:space:]]+).*$/\1/p' "$config_file" 2>/dev/null \
+            { sudo sed -n -E 's/^[[:space:]]*-[[:space:]]*([^#[:space:]]+).*$/\1/p; s/^[[:space:]]*env_file:[[:space:]]*([^#[:space:]]+).*$/\1/p' "$config_file" 2>/dev/null || true; } \
               | sed -E 's/^["'\'']?([^"'\'']+)["'\'']?$/\1/' \
               | while IFS= read -r env_file; do
                 [ -n "$env_file" ] || continue
@@ -103,14 +103,14 @@ env_file_value() {
   file="$1"
   key="$2"
   [ -f "$file" ] || return 0
-  sudo sed -n -E "s/^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*$/\2/p" "$file" 2>/dev/null | head -n 1
+  { sudo sed -n -E "s/^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*$/\2/p" "$file" 2>/dev/null || true; } | head -n 1
 }
 
 secret_file_value() {
   file="$1"
   [ -n "$file" ] || return 0
   [ -f "$file" ] || return 0
-  sudo sed -n '1{s/[[:space:]]*$//;p;q;}' "$file" 2>/dev/null
+  { sudo sed -n '1{s/[[:space:]]*$//;p;q;}' "$file" 2>/dev/null || true; }
 }
 
 safe_verify_error_class() {
@@ -149,7 +149,7 @@ root_password="${MINIO_ROOT_PASSWORD:-}"
 root_user_file="${MINIO_ROOT_USER_FILE:-}"
 root_password_file="${MINIO_ROOT_PASSWORD_FILE:-}"
 root_source="process-env"
-minio_env_candidates="/etc/default/minio /etc/minio/minio.env /etc/minio/env /etc/sysconfig/minio $(systemd_env_files) $(container_compose_env_files)"
+minio_env_candidates="/etc/default/minio /etc/minio/minio.env /etc/minio/env /etc/sysconfig/minio $(systemd_env_files || true) $(container_compose_env_files || true)"
 checked_minio_env_files=""
 for minio_env_file in $minio_env_candidates; do
   [ -n "$minio_env_file" ] || continue
