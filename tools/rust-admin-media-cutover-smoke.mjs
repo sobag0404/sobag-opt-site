@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 const DEFAULT_BASE_URL = "https://sobag-shop.online";
-const ONE_PIXEL_PNG =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+const ONE_PIXEL_WEBP =
+  "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA";
 
 function routeTarget(pathname, nodeBase, rustBase) {
   if (pathname === "/api/admin/product-images") return `${rustBase}/rust/admin/product-images`;
@@ -12,9 +12,9 @@ function routeTarget(pathname, nodeBase, rustBase) {
 function mediaFixture(productKey = "MEDIA-SMOKE") {
   return {
     productKey,
-    fileName: "rust-media-smoke.png",
-    mime: "image/png",
-    base64: ONE_PIXEL_PNG,
+    fileName: "rust-media-smoke.webp",
+    mime: "image/webp",
+    base64: ONE_PIXEL_WEBP,
     width: 1,
     height: 1,
   };
@@ -82,7 +82,7 @@ function selfTest() {
     "admin import batches route is not part of media cutover",
   );
   const fixture = mediaFixture("SELF-TEST");
-  assert(fixture.mime === "image/png" && fixture.base64.length > 20, "fixture should be a PNG upload");
+  assert(fixture.mime === "image/webp" && fixture.base64.length > 20, "fixture should be a WebP upload");
   assert(parseArgs([]).productKey === "", "live media smoke should resolve a real catalog product by default");
   assert(parseArgs(["--product-key", "EXPLICIT"]).productKey === "EXPLICIT", "explicit product key override should still work");
   console.log("Rust admin media cutover smoke self-test passed");

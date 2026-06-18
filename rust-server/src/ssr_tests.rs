@@ -1028,6 +1028,13 @@ fn admin_media_guards_storage_keys_and_upload_metadata() {
         crate::admin_media::storage_key_prefix_for_test("products/OPT-1/file.png"),
         "products/OPT-1"
     );
+    let webp_key = crate::admin_media::product_image_key_for_test(
+        "opt_70190",
+        "rust-media-smoke.webp",
+        "image/webp",
+    );
+    assert!(webp_key.starts_with("products/opt_70190/"));
+    assert!(webp_key.ends_with(".webp"));
 }
 
 #[test]
