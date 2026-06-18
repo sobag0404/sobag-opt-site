@@ -362,7 +362,11 @@ fi
 # customer data.
 printf '%s' "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA" | base64 -d > "$probe_file" 2>/dev/null \
   || printf '%s\n' "sobag media policy smoke" > "$probe_file"
-probe_key="products/opt_policy_smoke/cutover-policy-smoke-$(date -u +%Y%m%dT%H%M%SZ)-$$.webp"
+probe_product_key="${SOBAG_MEDIA_POLICY_PROBE_PRODUCT_KEY:-opt_70190}"
+probe_product_key="$(printf '%s' "$probe_product_key" | tr -c 'A-Za-z0-9_.-' '_')"
+[ -n "$probe_product_key" ] || probe_product_key="opt_70190"
+probe_key="products/${probe_product_key}/cutover-policy-smoke-$(date -u +%Y%m%dT%H%M%SZ)-$$.webp"
+echo "MinIO media policy probe prefix: products/${probe_product_key}"
 
 verify_app_write() {
   rm -f "$verify_log"
