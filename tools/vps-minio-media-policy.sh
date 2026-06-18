@@ -111,7 +111,11 @@ if ! mc admin policy create sobag-minio-admin "$policy_name" "$policy_file" >/de
 fi
 
 if ! mc admin policy attach sobag-minio-admin "$policy_name" --user "$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
-  if ! mc admin policy set sobag-minio-admin "$policy_name" "user=$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
+  if mc admin policy set sobag-minio-admin "$policy_name" "user=$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
+    :
+  elif mc admin accesskey edit sobag-minio-admin "$SOBAG_S3_ACCESS_KEY_ID" --policy "$policy_file" >/dev/null 2>&1; then
+    :
+  else
     echo "Could not attach scoped media policy to configured S3 access key"
     exit 2
   fi
