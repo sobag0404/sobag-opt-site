@@ -160,7 +160,7 @@ if verify_app_write; then
   exit 0
 fi
 
-if grep -Eiq "insufficient|quota|507|disk|storage" "$verify_log"; then
+if grep -Eiq "insufficient|quota|507|disk full|no space|XMinioStorageFull" "$verify_log"; then
   echo "MinIO media write hit storage quota/disk; attempting scoped smoke cleanup and bucket quota clear"
   mc rm --incomplete --recursive --force "sobag-minio-admin/${SOBAG_S3_BUCKET}/products/" >/dev/null 2>&1 || true
   mc rm --recursive --force "sobag-minio-admin/${SOBAG_S3_BUCKET}/products/.cutover-policy-smoke/" >/dev/null 2>&1 || true
@@ -188,6 +188,7 @@ if ! mc admin policy attach sobag-minio-admin "$policy_name" --user "$SOBAG_S3_A
   else
     media_user="sobagmedia$(date -u +%m%d%H%M%S)"
     media_secret="$(openssl rand -hex 32)"
+    media_credential_created=0
     if mc admin user add sobag-minio-admin "$media_user" "$media_secret" >/dev/null 2>&1; then
       if ! mc admin policy attach sobag-minio-admin "$policy_name" --user "$media_user" >/dev/null 2>&1; then
         if ! mc admin policy set sobag-minio-admin "$policy_name" "user=$media_user" >/dev/null 2>&1; then
@@ -195,21 +196,33 @@ if ! mc admin policy attach sobag-minio-admin "$policy_name" --user "$SOBAG_S3_A
           exit 2
         fi
       fi
+      media_credential_created=1
     elif mc admin accesskey create "sobag-minio-admin/${root_user}" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
-      :
+      media_credential_created=1
     elif mc admin accesskey create sobag-minio-admin --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
-      :
+      media_credential_created=1
     elif mc admin user svcacct add sobag-minio-admin "$root_user" --access-key "$media_user" --secret-key "$media_secret" --policy "$policy_file" >/dev/null 2>&1; then
-      :
+      media_credential_created=1
     else
-      echo "Could not create dedicated MinIO media credential"
-      exit 2
+      SOBAG_S3_ACCESS_KEY_ID="$root_user"
+      SOBAG_S3_SECRET_ACCESS_KEY="$root_password"
+      export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
+      if verify_app_write; then
+        set_env_value "$env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
+        set_env_value "$env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
+        echo "MinIO media write verified with server root credential fallback"
+      else
+        echo "Could not create dedicated MinIO media credential"
+        exit 2
+      fi
     fi
-    SOBAG_S3_ACCESS_KEY_ID="$media_user"
-    SOBAG_S3_SECRET_ACCESS_KEY="$media_secret"
-    export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
-    set_env_value "$env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
-    set_env_value "$env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
+    if [ "$media_credential_created" = "1" ]; then
+      SOBAG_S3_ACCESS_KEY_ID="$media_user"
+      SOBAG_S3_SECRET_ACCESS_KEY="$media_secret"
+      export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
+      set_env_value "$env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
+      set_env_value "$env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
+    fi
   fi
 fi
 
