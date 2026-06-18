@@ -94,6 +94,30 @@ jobs:
               safe_rm_rf "$release_dir"
             fi
           }
+          cleanup_cargo_build_artifacts() {
+            for target in \
+              "$rust_target_dir/debug" \
+              "$rust_target_dir/release/build" \
+              "$rust_target_dir/release/deps" \
+              "$rust_target_dir/release/examples" \
+              "$rust_target_dir/release/incremental"
+            do
+              [ -e "$target" ] || continue
+              resolved="$(readlink -f "$target")"
+              case "$resolved" in
+                "$rust_target_dir"/*)
+                  sudo rm -rf --one-file-system -- "$resolved"
+                  ;;
+                *)
+                  echo "Refusing unsafe cargo cleanup target: $resolved"
+                  exit 1
+                  ;;
+              esac
+            done
+            if [ -d "$rust_target_dir/release" ]; then
+              sudo find "$rust_target_dir/release" -maxdepth 1 -type f ! -name sobag-opt-rust -delete
+            fi
+          }
           trap cleanup_failed_release ERR
 
           sudo install -d -o "$USER" -g "$USER" "$app_dir/releases" "$app_dir/shared" "$repo_dir" /var/lib/sobag-opt/store /var/backups/sobag-opt
@@ -105,9 +129,7 @@ jobs:
               safe_rm_rf "$old_release_resolved"
             fi
           done
-          if [ -d "$rust_target_dir/debug" ]; then
-            safe_rm_rf "$rust_target_dir/debug"
-          fi
+          cleanup_cargo_build_artifacts
 
           export GIT_SSH_COMMAND="ssh -i /home/$USER/.ssh/github_repo_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
           if [ ! -d "$repo_dir/.git" ]; then
@@ -226,6 +248,7 @@ jobs:
               restore_previous_rust
               exit 1
             fi
+            cleanup_cargo_build_artifacts
             load_safe_env_file() {
               env_file="$1"
               [ -f "$env_file" ] || return 0
