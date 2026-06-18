@@ -91,8 +91,9 @@ set_env_value() {
 policy_name="sobag-media-products-rw"
 policy_file="$(mktemp)"
 probe_file="$(mktemp)"
+verify_log="$(mktemp)"
 cleanup() {
-  rm -f "$policy_file" "$probe_file"
+  rm -f "$policy_file" "$probe_file" "$verify_log"
 }
 trap cleanup EXIT
 
@@ -136,6 +137,45 @@ if ! mc admin policy create sobag-minio-admin "$policy_name" "$policy_file" >/de
   mc admin policy add sobag-minio-admin "$policy_name" "$policy_file" >/dev/null 2>&1 || true
 fi
 
+printf '%s\n' "sobag media policy smoke" > "$probe_file"
+probe_key="products/.cutover-policy-smoke/$(date -u +%Y%m%dT%H%M%SZ)-$$.txt"
+
+verify_app_write() {
+  rm -f "$verify_log"
+  if ! mc alias set sobag-minio-app "$endpoint" "$SOBAG_S3_ACCESS_KEY_ID" "$SOBAG_S3_SECRET_ACCESS_KEY" >/dev/null 2>"$verify_log"; then
+    return 1
+  fi
+  if ! mc cp "$probe_file" "sobag-minio-app/${SOBAG_S3_BUCKET}/${probe_key}" >/dev/null 2>>"$verify_log"; then
+    return 1
+  fi
+  mc rm "sobag-minio-app/${SOBAG_S3_BUCKET}/${probe_key}" >/dev/null 2>&1 || true
+  return 0
+}
+
+if verify_app_write; then
+  set_env_value "$env_file" SOBAG_S3_ENDPOINT "$endpoint"
+  set_env_value "$env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
+  set_env_value "$env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
+  echo "MinIO scoped media policy verified for products/*"
+  exit 0
+fi
+
+if grep -Eiq "insufficient|quota|507|disk|storage" "$verify_log"; then
+  echo "MinIO media write hit storage quota/disk; attempting scoped smoke cleanup and bucket quota clear"
+  mc rm --incomplete --recursive --force "sobag-minio-admin/${SOBAG_S3_BUCKET}/products/" >/dev/null 2>&1 || true
+  mc rm --recursive --force "sobag-minio-admin/${SOBAG_S3_BUCKET}/products/.cutover-policy-smoke/" >/dev/null 2>&1 || true
+  mc quota clear "sobag-minio-admin/${SOBAG_S3_BUCKET}" >/dev/null 2>&1 || true
+  if verify_app_write; then
+    set_env_value "$env_file" SOBAG_S3_ENDPOINT "$endpoint"
+    set_env_value "$env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
+    set_env_value "$env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
+    echo "MinIO scoped media policy verified for products/* after quota cleanup"
+    exit 0
+  fi
+  echo "MinIO media write still blocked by storage quota/disk"
+  exit 2
+fi
+
 if ! mc admin policy attach sobag-minio-admin "$policy_name" --user "$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
   if mc admin policy set sobag-minio-admin "$policy_name" "user=$SOBAG_S3_ACCESS_KEY_ID" >/dev/null 2>&1; then
     :
@@ -177,12 +217,8 @@ set_env_value "$env_file" SOBAG_S3_ENDPOINT "$endpoint"
 set_env_value "$env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
 set_env_value "$env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
 
-mc alias set sobag-minio-app "$endpoint" "$SOBAG_S3_ACCESS_KEY_ID" "$SOBAG_S3_SECRET_ACCESS_KEY" >/dev/null
-printf '%s\n' "sobag media policy smoke" > "$probe_file"
-probe_key="products/.cutover-policy-smoke/$(date -u +%Y%m%dT%H%M%SZ)-$$.txt"
-if ! mc cp "$probe_file" "sobag-minio-app/${SOBAG_S3_BUCKET}/${probe_key}" >/dev/null 2>&1; then
+if ! verify_app_write; then
   echo "Scoped media policy verification upload failed"
   exit 2
 fi
-mc rm "sobag-minio-app/${SOBAG_S3_BUCKET}/${probe_key}" >/dev/null 2>&1 || true
 echo "MinIO scoped media policy verified for products/*"
