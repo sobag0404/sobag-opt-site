@@ -331,6 +331,7 @@ jobs:
               echo "Rust admin catalog exact route active; backup: $backup"
             }
             switch_admin_catalog_route
+            safe_rm_rf "$rust_target_dir/debug"
             if ! node tools/object-storage-write-smoke.mjs --base-url https://sobag-shop.online; then
               echo "Node object-storage write smoke failed before Rust media route switch; attempting scoped MinIO media policy repair"
               chmod 755 tools/vps-minio-media-policy.sh
