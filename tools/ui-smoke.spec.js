@@ -364,6 +364,17 @@ test("catalog home first load uses server category summary over stale fallback",
     Object.keys(localStorage)
       .filter((key) => key.startsWith("sobag.publicApiCache.v1."))
       .forEach((key) => localStorage.removeItem(key));
+    localStorage.setItem(
+      "sobag.publicApiCache.v1./api/catalog-query?pageSize=1&sort=popular",
+      JSON.stringify({
+        savedAt: Date.now(),
+        data: {
+          facets: { categories: [{ value: "Подушки", count: 48 }, { value: "Наволочки", count: 48 }] },
+          facetOptions: { categories: [{ value: "Подушки", count: 48 }, { value: "Наволочки", count: 48 }] },
+          source: "qa-stale-category-summary",
+        },
+      })
+    );
   });
   await page.route("**/api/catalog", async (route) => {
     await route.fulfill({
@@ -380,6 +391,7 @@ test("catalog home first load uses server category summary over stale fallback",
     });
   });
   await page.route("**/api/catalog-query?**", async (route) => {
+    await page.waitForTimeout(250);
     await route.fulfill({
       status: 200,
       contentType: "application/json; charset=utf-8",
@@ -395,6 +407,9 @@ test("catalog home first load uses server category summary over stale fallback",
   });
 
   await page.goto(`${BASE_URL}/catalog.html?qa=category-summary`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(100);
+  await expect(page.locator("#categoryTiles .category-tile")).toHaveCount(0);
+  await expect(page.locator("#categoryTiles")).not.toContainText("48");
   await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
   const tileText = await page.locator("#categoryTiles").innerText();
   const normalizedTileText = tileText.toLocaleLowerCase("ru-RU");
@@ -402,6 +417,14 @@ test("catalog home first load uses server category summary over stale fallback",
     expect(normalizedTileText).toContain(row.value.toLocaleLowerCase("ru-RU"));
     expect(tileText).toContain(String(row.count));
   }
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
+  const reloadTileText = await page.locator("#categoryTiles").innerText();
+  expect(reloadTileText).toBe(tileText);
+
+  await page.goto(`${BASE_URL}/catalog?qa=category-summary`, { waitUntil: "domcontentloaded" });
+  await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
+  expect(await page.locator("#categoryTiles").innerText()).toBe(tileText);
 });
 
 test("account favorites are per-user and orders can be repeated into cart", async ({ page }) => {

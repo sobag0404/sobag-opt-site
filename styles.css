@@ -4437,6 +4437,13 @@ main {
   border-radius: 0;
 }
 
+.category-tile-skeleton {
+  min-height: 220px;
+  background: linear-gradient(90deg, var(--surface-soft), rgba(148, 163, 184, 0.22), var(--surface-soft));
+  background-size: 220% 100%;
+  animation: skeleton-loading 1.2s ease-in-out infinite;
+}
+
 .category-tile__top {
   display: flex;
   align-items: start;

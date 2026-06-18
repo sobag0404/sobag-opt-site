@@ -759,6 +759,7 @@ async function apiRequest(path, options = {}) {
   const response = await fetch(path, {
     method: options.method || "GET",
     credentials: "same-origin",
+    cache: options.cache || "default",
     headers: options.body ? { "Content-Type": "application/json" } : undefined,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
@@ -769,7 +770,7 @@ async function apiRequest(path, options = {}) {
     error.code = data.error;
     throw error;
   }
-  rememberPublicApiCache(path, options, data);
+  if (options.publicCache !== false) rememberPublicApiCache(path, options, data);
   return data;
 }
 function isBackendUnavailable(error) {
@@ -1247,21 +1248,14 @@ async function refreshCatalogHomeSummary() {
   if (!categoryTiles || shouldLoadAdminCatalog()) return false;
   if (hasActiveCatalogState()) return false;
   const path = "/api/catalog-query?pageSize=1&sort=popular";
-  const cached = getPublicApiCache(path);
-  if (cached && applyCatalogHomeSummary(cached)) {
-    apiRequest(path)
-      .then(applyCatalogHomeSummary)
-      .catch((error) => {
-        if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
-      });
-    return true;
-  }
   state.catalogHomeSummary.status = "loading";
+  renderCatalogHome();
   try {
-    const data = await apiRequest(path);
+    const data = await apiRequest(path, { cache: "no-store", publicCache: false });
     return applyCatalogHomeSummary(data);
   } catch (error) {
     state.catalogHomeSummary.status = "fallback";
+    renderCatalogHome();
     if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
     return false;
   }
@@ -2313,6 +2307,15 @@ function renderCatalogHome() {
     });
   });
   const serverCounts = state.catalogHomeSummary.status === "ready" ? state.catalogHomeSummary.counts : {};
+  if (!hasActiveCatalogState() && !Object.keys(serverCounts).length && state.catalogHomeSummary.status !== "fallback") {
+    categoryTiles.innerHTML = Array.from(
+      { length: 6 },
+      () => `<div class="category-tile-skeleton" aria-hidden="true"><span></span><strong></strong><small></small><b></b></div>`
+    ).join("");
+    renderCatalogHomeSecondarySections(content);
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
   Object.entries(serverCounts).forEach(([category, count]) => {
     if (count > 0) countByCategory[category] = count;
   });
@@ -2339,6 +2342,10 @@ function renderCatalogHome() {
       `
     )
     .join("");
+  renderCatalogHomeSecondarySections(content);
+  if (window.lucide) window.lucide.createIcons();
+}
+function renderCatalogHomeSecondarySections(content) {
   actualTiles.innerHTML = content.actualSlides
     .map(
       (item, index) => `
@@ -2619,7 +2626,6 @@ function updateFilterToggle() {
   const content = getSiteContent();
   const open = document.body.classList.contains("filters-open");
   filterToggle.innerHTML = `<i data-lucide="${open ? "x" : "sliders-horizontal"}"></i> ${buttonLabel(open ? content.filterCloseButton : content.filterOpenButton)}`;
-  if (window.lucide) window.lucide.createIcons();
 }
 function openCatalogCategory(category) {
   if (!catalogListing || document.body.classList.contains("home-page")) {
@@ -3928,6 +3934,7 @@ function boot() {
   cleanPrototypeStorage();
   initTheme();
   initCatalogRoute();
+  if (categoryTiles && !hasActiveCatalogState()) state.catalogHomeSummary.status = "loading";
   loadCart();
   renderCatalogHome();
   renderCatalogShell();

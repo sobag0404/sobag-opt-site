@@ -672,7 +672,7 @@ async fn product_page(
         render_product_fragment_with_routes(&product, &related, routes),
         render_page_foot()
     );
-    Ok((cache_headers(), Html(body)))
+    Ok((no_cache_headers(), Html(body)))
 }
 
 async fn product_fragment(
@@ -4486,6 +4486,15 @@ fn cache_headers() -> HeaderMap {
         "public, max-age=300, stale-while-revalidate=3600"
             .parse()
             .expect("valid cache-control"),
+    );
+    headers
+}
+
+fn no_cache_headers() -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        header::CACHE_CONTROL,
+        "no-cache".parse().expect("valid cache-control"),
     );
     headers
 }
