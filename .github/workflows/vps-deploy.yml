@@ -331,6 +331,10 @@ jobs:
               echo "Rust admin catalog exact route active; backup: $backup"
             }
             switch_admin_catalog_route
+            if ! node tools/object-storage-write-smoke.mjs --base-url https://sobag-shop.online; then
+              echo "Node object-storage write smoke failed before Rust media route switch"
+              exit 1
+            fi
             switch_admin_media_route() {
               nginx_site="/etc/nginx/sites-available/sobag-opt"
               backup="/etc/nginx/sites-available/sobag-opt.pre-rust-admin-media-$(date -u +%Y%m%dT%H%M%SZ)"
