@@ -29,6 +29,7 @@ require_env SOBAG_S3_ACCESS_KEY_ID
 require_env SOBAG_S3_SECRET_ACCESS_KEY
 
 endpoint="${SOBAG_S3_LOCAL_ENDPOINT:-http://127.0.0.1:9000}"
+env_file="${SOBAG_ENV_FILE:-/opt/sobag-opt/shared/.env}"
 
 if ! command -v mc >/dev/null 2>&1; then
   echo "MinIO client mc is not installed; cannot repair media policy"
@@ -61,6 +62,31 @@ if [ -z "$root_user" ] || [ -z "$root_password" ]; then
   echo "MinIO root credentials are not available to deploy user; cannot repair media policy"
   exit 2
 fi
+
+set_env_value() {
+  file="$1"
+  key="$2"
+  value="$3"
+  tmp="$(mktemp)"
+  if [ -f "$file" ]; then
+    awk -v key="$key" -v value="$value" '
+      BEGIN { replaced = 0 }
+      $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
+        print key "=" value
+        replaced = 1
+        next
+      }
+      { print }
+      END {
+        if (!replaced) print key "=" value
+      }
+    ' "$file" > "$tmp"
+  else
+    printf '%s=%s\n' "$key" "$value" > "$tmp"
+  fi
+  install -m 600 "$tmp" "$file"
+  rm -f "$tmp"
+}
 
 policy_name="sobag-media-products-rw"
 policy_file="$(mktemp)"
@@ -116,10 +142,29 @@ if ! mc admin policy attach sobag-minio-admin "$policy_name" --user "$SOBAG_S3_A
   elif mc admin accesskey edit sobag-minio-admin "$SOBAG_S3_ACCESS_KEY_ID" --policy "$policy_file" >/dev/null 2>&1; then
     :
   else
-    echo "Could not attach scoped media policy to configured S3 access key"
-    exit 2
+    media_user="sobag-media-$(date -u +%Y%m%d%H%M%S)"
+    media_secret="$(openssl rand -hex 32)"
+    if ! mc admin user add sobag-minio-admin "$media_user" "$media_secret" >/dev/null 2>&1; then
+      echo "Could not create dedicated MinIO media user"
+      exit 2
+    fi
+    if ! mc admin policy attach sobag-minio-admin "$policy_name" --user "$media_user" >/dev/null 2>&1; then
+      if ! mc admin policy set sobag-minio-admin "$policy_name" "user=$media_user" >/dev/null 2>&1; then
+        echo "Could not attach scoped media policy to dedicated MinIO media user"
+        exit 2
+      fi
+    fi
+    SOBAG_S3_ACCESS_KEY_ID="$media_user"
+    SOBAG_S3_SECRET_ACCESS_KEY="$media_secret"
+    export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
+    set_env_value "$env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
+    set_env_value "$env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
   fi
 fi
+
+set_env_value "$env_file" SOBAG_S3_ENDPOINT "$endpoint"
+set_env_value "$env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
+set_env_value "$env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
 
 mc alias set sobag-minio-app "$endpoint" "$SOBAG_S3_ACCESS_KEY_ID" "$SOBAG_S3_SECRET_ACCESS_KEY" >/dev/null
 printf '%s\n' "sobag media policy smoke" > "$probe_file"

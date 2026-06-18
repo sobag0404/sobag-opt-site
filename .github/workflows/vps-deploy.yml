@@ -338,7 +338,12 @@ jobs:
                 echo "MinIO media policy repair failed"
                 exit 1
               fi
+              load_safe_env_file "$app_dir/shared/.env"
               node tools/object-storage-write-smoke.mjs --base-url https://sobag-shop.online
+              pm2 restart sobag-opt --update-env
+              sudo systemctl restart sobag-opt-rust
+              curl -fsS http://127.0.0.1:3000/api/health
+              curl -fsS http://127.0.0.1:3001/api/health-rust
             fi
             switch_admin_media_route() {
               nginx_site="/etc/nginx/sites-available/sobag-opt"
