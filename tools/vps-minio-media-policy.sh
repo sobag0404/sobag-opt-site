@@ -341,7 +341,9 @@ cat > "$policy_file" <<POLICY_JSON
       "Action": [
         "s3:GetObject",
         "s3:PutObject",
-        "s3:DeleteObject"
+        "s3:DeleteObject",
+        "s3:AbortMultipartUpload",
+        "s3:ListMultipartUploadParts"
       ],
       "Resource": [
         "arn:aws:s3:::${SOBAG_S3_BUCKET}/products/*"
@@ -351,7 +353,8 @@ cat > "$policy_file" <<POLICY_JSON
       "Effect": "Allow",
       "Action": [
         "s3:GetBucketLocation",
-        "s3:ListBucket"
+        "s3:ListBucket",
+        "s3:ListBucketMultipartUploads"
       ],
       "Resource": [
         "arn:aws:s3:::${SOBAG_S3_BUCKET}"
@@ -392,10 +395,22 @@ verify_app_write() {
   return 0
 }
 
+verify_app_write_with_retry() {
+  attempt=1
+  while [ "$attempt" -le 6 ]; do
+    if verify_app_write; then
+      return 0
+    fi
+    sleep 2
+    attempt=$((attempt + 1))
+  done
+  return 1
+}
+
 original_app_access_key_id="$SOBAG_S3_ACCESS_KEY_ID"
 original_app_secret_access_key="$SOBAG_S3_SECRET_ACCESS_KEY"
 
-if verify_app_write; then
+if verify_app_write_with_retry; then
   set_env_value "$app_env_file" SOBAG_S3_ENDPOINT "$endpoint"
   set_env_value "$app_env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
   set_env_value "$app_env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
@@ -408,7 +423,7 @@ if grep -Eiq "quota|507|disk full|no space|XMinioStorageFull" "$verify_log"; the
   mc rm --incomplete --recursive --force "${admin_alias}/${SOBAG_S3_BUCKET}/products/" >/dev/null 2>&1 || true
   mc rm --recursive --force "${admin_alias}/${SOBAG_S3_BUCKET}/products/opt_policy_smoke/" >/dev/null 2>&1 || true
   mc quota clear "${admin_alias}/${SOBAG_S3_BUCKET}" >/dev/null 2>&1 || true
-  if verify_app_write; then
+  if verify_app_write_with_retry; then
     set_env_value "$app_env_file" SOBAG_S3_ENDPOINT "$endpoint"
     set_env_value "$app_env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
     set_env_value "$app_env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
@@ -441,7 +456,7 @@ else
   echo "Existing access key policy edit unavailable"
 fi
 
-if verify_app_write; then
+if verify_app_write_with_retry; then
   echo "MinIO scoped media policy verified for products/*"
   exit 0
 fi
@@ -481,7 +496,7 @@ if [ "$media_credential_created" = "1" ]; then
   SOBAG_S3_ACCESS_KEY_ID="$media_user"
   SOBAG_S3_SECRET_ACCESS_KEY="$media_secret"
   export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
-  if verify_app_write; then
+  if verify_app_write_with_retry; then
     set_env_value "$app_env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
     set_env_value "$app_env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
     echo "MinIO scoped media policy verified with dedicated media credential"
@@ -545,7 +560,7 @@ attempt_alias_policy_repair() {
   else
     echo "MinIO fallback existing access key policy edit unavailable"
   fi
-  if verify_app_write; then
+  if verify_app_write_with_retry; then
     echo "MinIO scoped media policy verified via fallback admin alias"
     exit 0
   fi
@@ -576,7 +591,7 @@ attempt_alias_policy_repair() {
     SOBAG_S3_ACCESS_KEY_ID="$fallback_media_user"
     SOBAG_S3_SECRET_ACCESS_KEY="$fallback_media_secret"
     export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
-    if verify_app_write; then
+    if verify_app_write_with_retry; then
       set_env_value "$app_env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
       set_env_value "$app_env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
       echo "MinIO scoped media policy verified with fallback dedicated media credential"
