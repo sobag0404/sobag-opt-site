@@ -1025,6 +1025,33 @@ fn admin_media_guards_storage_keys_and_upload_metadata() {
         "http://127.0.0.1:9000/sobag-products/products/OPT-1/file.png"
     );
     assert_eq!(
+        crate::admin_media::s3_region_for_test(
+            "derived-local-minio",
+            "http://127.0.0.1:9000",
+            "auto",
+            ""
+        ),
+        "us-east-1"
+    );
+    assert_eq!(
+        crate::admin_media::s3_region_for_test(
+            "SOBAG_S3_LOCAL_ENDPOINT",
+            "http://localhost:9000",
+            "",
+            "eu-central-1"
+        ),
+        "eu-central-1"
+    );
+    assert_eq!(
+        crate::admin_media::s3_region_for_test(
+            "SOBAG_S3_ENDPOINT",
+            "https://storage.example.test",
+            "auto",
+            ""
+        ),
+        "auto"
+    );
+    assert_eq!(
         crate::admin_media::storage_key_prefix_for_test("products/OPT-1/file.png"),
         "products/OPT-1"
     );

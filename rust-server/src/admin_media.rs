@@ -268,24 +268,57 @@ fn s3_config_raw() -> Option<S3Config> {
     {
         return None;
     }
+    let api_endpoint = s3_api_endpoint(&endpoint);
+    let endpoint_source = s3_api_endpoint_source(&endpoint);
     Some(S3Config {
-        endpoint: s3_api_endpoint(&endpoint),
-        endpoint_source: s3_api_endpoint_source(&endpoint),
+        region: s3_region_for_endpoint(
+            &endpoint_source,
+            &api_endpoint,
+            &env_text("SOBAG_S3_REGION"),
+            &env_text("SOBAG_S3_LOCAL_REGION"),
+        ),
+        endpoint: api_endpoint,
+        endpoint_source,
         bucket,
         access_key_id,
         secret_access_key,
         session_token: env_text("SOBAG_S3_SESSION_TOKEN"),
-        region: {
-            let value = env_text("SOBAG_S3_REGION");
-            if value.is_empty() {
-                "auto".to_string()
-            } else {
-                value
-            }
-        },
         public_base_url: env_text("SOBAG_S3_PUBLIC_BASE_URL"),
         force_path_style: env_bool("SOBAG_S3_FORCE_PATH_STYLE", true),
     })
+}
+
+fn s3_region_for_endpoint(
+    endpoint_source: &str,
+    api_endpoint: &str,
+    configured_region: &str,
+    local_region: &str,
+) -> String {
+    let configured = configured_region.trim();
+    if endpoint_uses_local_minio(endpoint_source, api_endpoint)
+        && (configured.is_empty() || configured.eq_ignore_ascii_case("auto"))
+    {
+        let local = local_region.trim();
+        if local.is_empty() {
+            "us-east-1".to_string()
+        } else {
+            local.to_string()
+        }
+    } else if configured.is_empty() {
+        "auto".to_string()
+    } else {
+        configured.to_string()
+    }
+}
+
+fn endpoint_uses_local_minio(endpoint_source: &str, api_endpoint: &str) -> bool {
+    endpoint_source == "derived-local-minio" || endpoint_source == "SOBAG_S3_LOCAL_ENDPOINT" || {
+        Url::parse(api_endpoint)
+            .ok()
+            .and_then(|url| url.host_str().map(|host| host.to_ascii_lowercase()))
+            .map(|host| matches!(host.as_str(), "127.0.0.1" | "localhost" | "::1"))
+            .unwrap_or(false)
+    }
 }
 
 fn s3_api_endpoint(configured_endpoint: &str) -> String {
@@ -702,16 +735,29 @@ fn safe_s3_diagnostics(config: &S3Config, key: Option<&str>) -> String {
         .map(storage_key_prefix)
         .unwrap_or_else(|| "none".to_string());
     format!(
-        "endpointSource={}, endpointHost={}, endpointPath={}, pathStyle={}, region={}, bucketLen={}, token={}, keyPrefix={}",
+        "endpointSource={}, endpointHost={}, endpointPath={}, pathStyle={}, region={}, regionMode={}, bucketLen={}, token={}, keyPrefix={}",
         config.endpoint_source,
         endpoint_host,
         endpoint_path,
         config.force_path_style,
         region,
+        safe_region_mode(&config.region),
         config.bucket.len(),
         token,
         key_prefix
     )
+}
+
+fn safe_region_mode(region: &str) -> String {
+    if region.is_empty() {
+        "empty".to_string()
+    } else if region.eq_ignore_ascii_case("auto") {
+        "auto".to_string()
+    } else if region.eq_ignore_ascii_case("us-east-1") {
+        "us-east-1".to_string()
+    } else {
+        "custom".to_string()
+    }
 }
 
 fn storage_key_prefix(key: &str) -> String {
@@ -1179,6 +1225,21 @@ pub(crate) fn s3_url_for_test(
     build_s3_url(&config, key, &BTreeMap::new())
         .map(|url| url.to_string())
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+pub(crate) fn s3_region_for_test(
+    endpoint_source: &str,
+    api_endpoint: &str,
+    configured_region: &str,
+    local_region: &str,
+) -> String {
+    s3_region_for_endpoint(
+        endpoint_source,
+        api_endpoint,
+        configured_region,
+        local_region,
+    )
 }
 
 #[cfg(test)]
