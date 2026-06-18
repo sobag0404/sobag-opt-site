@@ -345,11 +345,11 @@ fn endpoint_matches_public_base(configured_endpoint: &str, public_base: &str) ->
     let Ok(public_url) = Url::parse(public_base) else {
         return false;
     };
-    endpoint.host_str() == public_url.host_str()
-        && endpoint
-            .path()
-            .trim_end_matches('/')
-            .eq(public_url.path().trim_end_matches('/'))
+    endpoint.host_str() == public_url.host_str() && {
+        let endpoint_path = endpoint.path().trim_end_matches('/');
+        let public_path = public_url.path().trim_end_matches('/');
+        endpoint_path == public_path || endpoint_path.is_empty() || endpoint_path == "/"
+    }
 }
 
 fn env_text(name: &str) -> String {

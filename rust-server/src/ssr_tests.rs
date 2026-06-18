@@ -1007,6 +1007,14 @@ fn admin_media_guards_storage_keys_and_upload_metadata() {
         "https://sobag-shop.online/sobag-products",
         "https://sobag-shop.online/sobag-products"
     ));
+    assert!(crate::admin_media::endpoint_matches_public_base_for_test(
+        "https://sobag-shop.online",
+        "https://sobag-shop.online/sobag-products"
+    ));
+    assert!(!crate::admin_media::endpoint_matches_public_base_for_test(
+        "https://storage.example.test",
+        "https://sobag-shop.online/sobag-products"
+    ));
     assert_eq!(
         crate::admin_media::s3_url_for_test(
             "http://127.0.0.1:9000",
