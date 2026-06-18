@@ -27,6 +27,7 @@ const EMPTY_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495
 #[derive(Clone, Debug)]
 struct S3Config {
     endpoint: String,
+    endpoint_source: String,
     bucket: String,
     access_key_id: String,
     secret_access_key: String,
@@ -268,7 +269,8 @@ fn s3_config_raw() -> Option<S3Config> {
         return None;
     }
     Some(S3Config {
-        endpoint,
+        endpoint: s3_api_endpoint(&endpoint),
+        endpoint_source: s3_api_endpoint_source(&endpoint),
         bucket,
         access_key_id,
         secret_access_key,
@@ -284,6 +286,70 @@ fn s3_config_raw() -> Option<S3Config> {
         public_base_url: env_text("SOBAG_S3_PUBLIC_BASE_URL"),
         force_path_style: env_bool("SOBAG_S3_FORCE_PATH_STYLE", true),
     })
+}
+
+fn s3_api_endpoint(configured_endpoint: &str) -> String {
+    for name in [
+        "SOBAG_S3_INTERNAL_ENDPOINT",
+        "SOBAG_S3_API_ENDPOINT",
+        "AWS_ENDPOINT_URL_S3",
+        "AWS_ENDPOINT_URL",
+    ] {
+        let value = env_text(name);
+        if !value.is_empty() {
+            return value;
+        }
+    }
+    if endpoint_looks_like_public_read_url(configured_endpoint) {
+        let local = env_text("SOBAG_S3_LOCAL_ENDPOINT");
+        if local.is_empty() {
+            return "http://127.0.0.1:9000".to_string();
+        }
+        return local;
+    }
+    configured_endpoint.to_string()
+}
+
+fn s3_api_endpoint_source(configured_endpoint: &str) -> String {
+    for name in [
+        "SOBAG_S3_INTERNAL_ENDPOINT",
+        "SOBAG_S3_API_ENDPOINT",
+        "AWS_ENDPOINT_URL_S3",
+        "AWS_ENDPOINT_URL",
+    ] {
+        if !env_text(name).is_empty() {
+            return name.to_string();
+        }
+    }
+    if endpoint_looks_like_public_read_url(configured_endpoint) {
+        if env_text("SOBAG_S3_LOCAL_ENDPOINT").is_empty() {
+            return "derived-local-minio".to_string();
+        }
+        return "SOBAG_S3_LOCAL_ENDPOINT".to_string();
+    }
+    "SOBAG_S3_ENDPOINT".to_string()
+}
+
+fn endpoint_looks_like_public_read_url(configured_endpoint: &str) -> bool {
+    let public_base = env_text("SOBAG_S3_PUBLIC_BASE_URL");
+    if public_base.is_empty() {
+        return false;
+    }
+    endpoint_matches_public_base(configured_endpoint, &public_base)
+}
+
+fn endpoint_matches_public_base(configured_endpoint: &str, public_base: &str) -> bool {
+    let Ok(endpoint) = Url::parse(configured_endpoint) else {
+        return false;
+    };
+    let Ok(public_url) = Url::parse(public_base) else {
+        return false;
+    };
+    endpoint.host_str() == public_url.host_str()
+        && endpoint
+            .path()
+            .trim_end_matches('/')
+            .eq(public_url.path().trim_end_matches('/'))
 }
 
 fn env_text(name: &str) -> String {
@@ -434,9 +500,16 @@ async fn s3_upload(
     )
     .await?;
     if !response.status().is_success() {
+        let status = response.status().as_u16();
+        let body = response.text().await.unwrap_or_default();
         return Err(AppError::bad_gateway(
             "s3_upload_failed",
-            format!("S3 upload failed with HTTP {}.", response.status().as_u16()),
+            format!(
+                "S3 upload failed with HTTP {}; class={}; {}.",
+                status,
+                classify_s3_error_body(&body),
+                safe_s3_diagnostics(config)
+            ),
         ));
     }
     let etag = response
@@ -472,9 +545,16 @@ async fn s3_delete(config: &S3Config, key: &str) -> AppResult<()> {
     )
     .await?;
     if !response.status().is_success() && response.status().as_u16() != 404 {
+        let status = response.status().as_u16();
+        let body = response.text().await.unwrap_or_default();
         return Err(AppError::bad_gateway(
             "s3_delete_failed",
-            format!("S3 delete failed with HTTP {}.", response.status().as_u16()),
+            format!(
+                "S3 delete failed with HTTP {}; class={}; {}.",
+                status,
+                classify_s3_error_body(&body),
+                safe_s3_diagnostics(config)
+            ),
         ));
     }
     Ok(())
@@ -493,9 +573,16 @@ async fn s3_list_by_product(config: &S3Config, product_key: &str) -> AppResult<V
     query.insert("max-keys".to_string(), "100".to_string());
     let response = s3_fetch(config, Method::GET, "", query, Vec::new(), None).await?;
     if !response.status().is_success() {
+        let status = response.status().as_u16();
+        let body = response.text().await.unwrap_or_default();
         return Err(AppError::bad_gateway(
             "s3_list_failed",
-            format!("S3 list failed with HTTP {}.", response.status().as_u16()),
+            format!(
+                "S3 list failed with HTTP {}; class={}; {}.",
+                status,
+                classify_s3_error_body(&body),
+                safe_s3_diagnostics(config)
+            ),
         ));
     }
     let xml = response
@@ -582,6 +669,48 @@ fn build_s3_url(config: &S3Config, key: &str, query: &BTreeMap<String, String>) 
         url.set_query(Some(&canonical_query(query)));
     }
     Ok(url)
+}
+
+fn safe_s3_diagnostics(config: &S3Config) -> String {
+    let endpoint = Url::parse(&config.endpoint).ok();
+    let endpoint_host = endpoint
+        .as_ref()
+        .map(canonical_host)
+        .unwrap_or_else(|| "invalid-endpoint".to_string());
+    let endpoint_path = endpoint
+        .as_ref()
+        .map(|url| {
+            if url.path().trim().is_empty() || url.path() == "/" {
+                "/".to_string()
+            } else {
+                url.path().to_string()
+            }
+        })
+        .unwrap_or_else(|| "invalid".to_string());
+    let region = if config.region.is_empty() {
+        "empty"
+    } else {
+        "set"
+    };
+    format!(
+        "endpointSource={}, endpointHost={}, endpointPath={}, pathStyle={}, region={}",
+        config.endpoint_source, endpoint_host, endpoint_path, config.force_path_style, region
+    )
+}
+
+fn classify_s3_error_body(body: &str) -> String {
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        return "empty".to_string();
+    }
+    let code = xml_value(trimmed, "Code");
+    if !code.is_empty() {
+        return safe_path_segment(&code, "xml-error");
+    }
+    if trimmed.starts_with('{') {
+        return "json-error".to_string();
+    }
+    "text-error".to_string()
 }
 
 fn sign_s3_request(
@@ -996,5 +1125,33 @@ pub(crate) fn validate_storage_prefix_for_test(prefix: &str) -> bool {
 pub(crate) fn canonical_host_for_test(raw_url: &str) -> String {
     Url::parse(raw_url)
         .map(|url| canonical_host(&url))
+        .unwrap_or_default()
+}
+
+#[cfg(test)]
+pub(crate) fn endpoint_matches_public_base_for_test(endpoint: &str, public_base: &str) -> bool {
+    endpoint_matches_public_base(endpoint, public_base)
+}
+
+#[cfg(test)]
+pub(crate) fn s3_url_for_test(
+    endpoint: &str,
+    bucket: &str,
+    force_path_style: bool,
+    key: &str,
+) -> String {
+    let config = S3Config {
+        endpoint: endpoint.to_string(),
+        endpoint_source: "test".to_string(),
+        bucket: bucket.to_string(),
+        access_key_id: "test-access".to_string(),
+        secret_access_key: "test-secret".to_string(),
+        session_token: String::new(),
+        region: "us-east-1".to_string(),
+        public_base_url: String::new(),
+        force_path_style,
+    };
+    build_s3_url(&config, key, &BTreeMap::new())
+        .map(|url| url.to_string())
         .unwrap_or_default()
 }

@@ -36,6 +36,7 @@ fn renders_catalog_fragment_as_htmx_safe_html() {
     let html = render_listing_fragment("/rust/catalog-fragment", &query, &page);
     assert!(html.contains("hx-get"));
     assert!(html.contains("opt_1"));
+    assert!(html.contains("data-copy-sku=\"opt_1\""));
     assert!(html.contains("Pillow &lt;test&gt;"));
     assert!(!html.contains("<test>"));
 }
@@ -79,6 +80,9 @@ fn renders_product_fragment_with_variants() {
     assert!(html.contains("от 220 ₽"));
     assert!(html.contains("assets/production-hero-1.png"));
     assert!(html.contains("rust-variant-qty"));
+    assert!(html.contains("class=\"rust-copy-sku\""));
+    assert!(html.contains("data-copy-sku=\"opt_1\""));
+    assert!(html.contains("Скопировать артикул"));
 }
 
 #[test]
@@ -95,6 +99,41 @@ fn renders_content_page_from_admin_content_shape() {
     assert!(html.contains("About &lt;Sobag&gt;"));
     assert!(html.contains("Production"));
     assert!(!html.contains("About <Sobag>"));
+}
+
+#[test]
+fn renders_contacts_page_with_maps_and_normalized_addresses() {
+    let content = json!({
+        "contactsLegalAddress": "431815, Республика Мордовия, Атяшевский р-н, село Наборные Сыреси, ул. Крупской, д. 18",
+        "contactsProductionAddress": "г. Курск, ул. Литовская, д. 12"
+    });
+    let html = render_content_page(content_page_spec("contacts").unwrap(), &content);
+    assert!(html.contains("contacts-maps"));
+    assert!(html.contains("<iframe"));
+    assert!(html.contains("305014, Курская область, г. Курск, ул. Литовская, д. 12"));
+    assert!(html.contains("431815, Республика Мордовия, Атяшевский район, с. Наборные Сыреси"));
+    assert!(html.contains("https://yandex.ru/map-widget/v1/"));
+    assert!(html.contains("Открыть на карте"));
+}
+
+#[test]
+fn renders_marketplace_cards_as_external_links() {
+    let html = render_content_page(content_page_spec("marketplaces").unwrap(), &Value::Null);
+    assert!(html.contains("https://www.wildberries.ru/seller/167187"));
+    assert!(html.contains("https://ozon.ru/s/sobag"));
+    assert!(html.contains("https://market.yandex.ru/cc/84GXiW"));
+    assert!(html.contains("target=\"_blank\""));
+    assert!(html.contains("rel=\"noopener noreferrer\""));
+    assert!(html.contains("marketplace-card"));
+}
+
+#[test]
+fn renders_preview_shell_with_compact_account_icon() {
+    let html = render_preview_shell_header(&RUST_ROUTES);
+    assert!(html.contains("rust-shell-account"));
+    assert!(html.contains("aria-label=\"Войти или зарегистрироваться\""));
+    assert!(html.contains("title=\"Войти или зарегистрироваться\""));
+    assert!(!html.contains(">Вход</a>"));
 }
 
 #[test]
@@ -963,6 +1002,19 @@ fn admin_media_guards_storage_keys_and_upload_metadata() {
             "https://storage.example.test/bucket/products/a.png"
         ),
         "storage.example.test"
+    );
+    assert!(crate::admin_media::endpoint_matches_public_base_for_test(
+        "https://sobag-shop.online/sobag-products",
+        "https://sobag-shop.online/sobag-products"
+    ));
+    assert_eq!(
+        crate::admin_media::s3_url_for_test(
+            "http://127.0.0.1:9000",
+            "sobag-products",
+            true,
+            "products/OPT-1/file.png"
+        ),
+        "http://127.0.0.1:9000/sobag-products/products/OPT-1/file.png"
     );
 }
 
