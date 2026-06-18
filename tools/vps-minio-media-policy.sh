@@ -25,7 +25,8 @@ systemd_env_files() {
 
 minio_process_env_value() {
   key="$1"
-  sudo pgrep -f '(^|/|[[:space:]])minio([[:space:]]|$)' 2>/dev/null \
+  pids="$(sudo pgrep -f '(^|/|[[:space:]])minio([[:space:]]|$)' 2>/dev/null || true)"
+  printf '%s\n' "$pids" \
     | while IFS= read -r pid; do
         [ -n "$pid" ] || continue
         sudo tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null \
