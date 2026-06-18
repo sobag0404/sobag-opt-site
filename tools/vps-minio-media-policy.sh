@@ -23,6 +23,22 @@ systemd_env_files() {
     | sed -n -E 's#^(/[^[:space:]]+).*$#\1#p'
 }
 
+container_env_value() {
+  key="$1"
+  for runtime in docker podman; do
+    command -v "$runtime" >/dev/null 2>&1 || continue
+    sudo "$runtime" ps --format '{{.ID}} {{.Names}}' 2>/dev/null \
+      | awk 'tolower($0) ~ /minio/ { print $1 }' \
+      | while IFS= read -r container_id; do
+          [ -n "$container_id" ] || continue
+          sudo "$runtime" inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container_id" 2>/dev/null \
+            | sed -n "s/^${key}=//p" \
+            | head -n 1
+        done \
+      | sed -n '1p'
+  done | sed -n '1p'
+}
+
 env_file_value() {
   file="$1"
   key="$2"
@@ -116,6 +132,24 @@ if [ -z "$root_user_file" ]; then
 fi
 if [ -z "$root_password_file" ]; then
   root_password_file="$(systemd_env_value MINIO_ROOT_PASSWORD_FILE)"
+fi
+if [ -z "$root_user" ]; then
+  root_user="$(container_env_value MINIO_ROOT_USER)"
+fi
+if [ -z "$root_password" ]; then
+  root_password="$(container_env_value MINIO_ROOT_PASSWORD)"
+fi
+if [ -z "$root_user_file" ]; then
+  root_user_file="$(container_env_value MINIO_ROOT_USER_FILE)"
+fi
+if [ -z "$root_password_file" ]; then
+  root_password_file="$(container_env_value MINIO_ROOT_PASSWORD_FILE)"
+fi
+if [ -z "$root_user" ]; then
+  root_user="$(container_env_value MINIO_ACCESS_KEY)"
+fi
+if [ -z "$root_password" ]; then
+  root_password="$(container_env_value MINIO_SECRET_KEY)"
 fi
 if [ -z "$root_user" ] && [ -n "$root_user_file" ]; then
   root_user="$(secret_file_value "$root_user_file")"
