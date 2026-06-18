@@ -332,8 +332,13 @@ jobs:
             }
             switch_admin_catalog_route
             if ! node tools/object-storage-write-smoke.mjs --base-url https://sobag-shop.online; then
-              echo "Node object-storage write smoke failed before Rust media route switch"
-              exit 1
+              echo "Node object-storage write smoke failed before Rust media route switch; attempting scoped MinIO media policy repair"
+              chmod 755 tools/vps-minio-media-policy.sh
+              if ! tools/vps-minio-media-policy.sh; then
+                echo "MinIO media policy repair failed"
+                exit 1
+              fi
+              node tools/object-storage-write-smoke.mjs --base-url https://sobag-shop.online
             fi
             switch_admin_media_route() {
               nginx_site="/etc/nginx/sites-available/sobag-opt"
