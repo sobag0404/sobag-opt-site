@@ -9,21 +9,19 @@ require_env() {
   fi
 }
 
-safe_source_file() {
-  file="$1"
-  [ -f "$file" ] || return 0
-  set -a
-  # shellcheck disable=SC1090
-  . "$file"
-  set +a
-}
-
 systemd_env_value() {
   key="$1"
   sudo systemctl show minio -p Environment --value 2>/dev/null \
     | tr ' ' '\n' \
     | sed -n "s/^${key}=//p" \
     | head -n 1
+}
+
+env_file_value() {
+  file="$1"
+  key="$2"
+  [ -f "$file" ] || return 0
+  sudo sed -n -E "s/^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*$/\2/p" "$file" 2>/dev/null | head -n 1
 }
 
 require_env SOBAG_S3_BUCKET
@@ -42,12 +40,22 @@ if ! curl -fsS "$endpoint/minio/health/live" >/dev/null 2>&1; then
   exit 2
 fi
 
-safe_source_file /etc/default/minio
-safe_source_file /etc/minio/minio.env
-safe_source_file /etc/sysconfig/minio
-
-root_user="${MINIO_ROOT_USER:-$(systemd_env_value MINIO_ROOT_USER)}"
-root_password="${MINIO_ROOT_PASSWORD:-$(systemd_env_value MINIO_ROOT_PASSWORD)}"
+root_user="${MINIO_ROOT_USER:-}"
+root_password="${MINIO_ROOT_PASSWORD:-}"
+for env_file in /etc/default/minio /etc/minio/minio.env /etc/sysconfig/minio; do
+  if [ -z "$root_user" ]; then
+    root_user="$(env_file_value "$env_file" MINIO_ROOT_USER)"
+  fi
+  if [ -z "$root_password" ]; then
+    root_password="$(env_file_value "$env_file" MINIO_ROOT_PASSWORD)"
+  fi
+done
+if [ -z "$root_user" ]; then
+  root_user="$(systemd_env_value MINIO_ROOT_USER)"
+fi
+if [ -z "$root_password" ]; then
+  root_password="$(systemd_env_value MINIO_ROOT_PASSWORD)"
+fi
 
 if [ -z "$root_user" ] || [ -z "$root_password" ]; then
   echo "MinIO root credentials are not available to deploy user; cannot repair media policy"
