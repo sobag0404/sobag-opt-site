@@ -720,6 +720,10 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator("#detailQty")).toHaveValue("0");
   await expect(page.locator(".variant-matrix")).toHaveCount(0);
   await expect(page.locator('.detail-price-download[href="/api/price-list"]')).toBeVisible();
+  await expect(page.locator(".copy-sku-button--detail")).toHaveAttribute("title", "Скопировать артикул");
+  await expect(page.locator(".copy-sku-button--detail")).toHaveAttribute("data-tooltip", "Скопировать артикул");
+  await expect(page.locator("#selectedSku")).toContainText(/^opt_/i);
+  await expect(page.locator(".detail-price strong")).not.toContainText(/^0\s*₽$/);
   await expect(page.locator(".related-products .mini-product-card")).toHaveCount(await page.locator(".related-products .mini-product-card").count());
   await expect(page.locator(".related-products .mini-product-card").first()).toBeVisible();
   const imageGeometry = await page.evaluate(() => {
