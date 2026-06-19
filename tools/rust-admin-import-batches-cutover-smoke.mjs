@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 
+const FINAL_ADMIN_RUST_ROUTES = new Map([
+  ["/api/admin/prices", "/rust/admin/prices"],
+  ["/api/admin/catalog", "/rust/admin/catalog"],
+  ["/api/admin/import-batches", "/rust/admin/import-batches"],
+  ["/api/admin/product-images", "/rust/admin/product-images"],
+]);
+
 function routeTarget(pathname, nodeBase, rustBase) {
-  if (pathname === "/api/admin/import-batches") return `${rustBase}/rust/admin/import-batches`;
+  if (FINAL_ADMIN_RUST_ROUTES.has(pathname)) return `${rustBase}${FINAL_ADMIN_RUST_ROUTES.get(pathname)}`;
   return `${nodeBase}${pathname}`;
 }
 
@@ -18,7 +25,7 @@ function previewFixture(products = []) {
 
 function selfTest() {
   if (routeTarget("/api/admin/import-batches", "node", "rust") !== "rust/rust/admin/import-batches") throw new Error("admin import batches should route to Rust");
-  if (routeTarget("/api/admin/product-images", "node", "rust") !== "node/api/admin/product-images") throw new Error("admin product images should stay Node");
+  if (routeTarget("/api/admin/product-images", "node", "rust") !== "rust/rust/admin/product-images") throw new Error("admin product images should route to Rust after final cutover");
   const preview = previewFixture([{ baseSku: "IMPORT-1", name: "Import product", basePrice: 220 }]);
   if (preview.rows.length !== 1 || preview.products.length !== 1) throw new Error("import preview fixture must preserve rows and products");
   console.log("Rust admin import batches cutover smoke self-test passed");

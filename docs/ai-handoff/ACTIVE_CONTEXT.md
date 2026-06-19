@@ -13,7 +13,7 @@ Last updated: 2026-06-16
 - Репозиторий: `https://github.com/sobag0404/sobag-opt-site`
 - Основная ветка: `main`
 - Production URL: `https://sobag-shop.online` on VPS `77.239.107.164`.
-- Основной стек: static HTML/CSS/JS + Node.js API on VPS; Vercel deployment is disabled and no longer part of the working target.
+- Основной стек: static HTML/CSS/JS + Rust-owned exact API/SSR routes on VPS; Node.js remains only as static/root/cart compatibility fallback and explicit legacy fallback. Vercel deployment is disabled and no longer part of the working target.
 - Deployment state: primary domain is on the VPS with HTTPS; do not deploy or verify Vercel unless the user explicitly re-enables it.
 - Где лежит основной код: `app.js`, `cart.js`, HTML pages in repo root, shared shell in `components/site-shell.js`, VPS API in `server-routes/` via `api-router.js`.
 - Где лежат тесты/проверки: `tools/autofix.mjs`, `tools/ui-smoke.spec.js`, `tools/audit_catalog.py`.
@@ -34,6 +34,7 @@ Last updated: 2026-06-16
 
 ## Latest Done
 - Current pass 2026-06-19: direct VPS MinIO repair unblocked Rust admin media cutover. MinIO data ownership was restored to the MinIO service user on the VPS, media write/stat/delete was verified, the app env was updated on the VPS, and Rust was restarted without exposing secrets. Manual `vps-deploy` run `27816085213` and `production-smoke` run `27816499824` passed. Production exact `/api/admin/product-images` now routes to Rust alongside auth, orders/briefs, admin orders/users/content/PIM/prices/catalog/import-batches, public SSR/content pages, and catalog query/detail APIs. Node remains only as static/root/cart compatibility fallback and explicit legacy fallback.
+- Current pass 2026-06-19 post-cutover backlog: `docs/backend-pricing-reviews-contract.md` records the backend contract for grouped price-list export, admin CSV/Excel-compatible price import, promo rows, and buyer-only review eligibility. Cutover smokes now treat admin prices/catalog/import-batches/product-images as final Rust-owned routes instead of historical staged Node fallbacks.
 - Current pass 2026-06-19: `tools/vps-minio-media-policy.sh` now includes a safe MinIO data-ownership repair guard for future media deploy gates. It only acts on allowlisted MinIO data paths, prints branch/classes only, and does not log secrets.
 - Current pass 2026-06-17: coordinator verified the deploy workflow YAML fixes `0ace8a6`, `c2c1b56`, `637f20d`; `vps-deploy` run `27675967030` and `production-smoke` run `27676234502` passed. Live anonymous checks returned `/api/health` 200, `/api/admin/catalog` 401, `/api/admin/import-batches` 401, `/api/catalog-query?pageSize=1` 200, and `/api/price-list?format=json` 200.
 - Current pass 2026-06-17: implemented Rust admin media parity and deploy gate for exact `/api/admin/product-images` cutover. Rust route supports admin/content GET, JSON base64 image upload, mark-unused, and delete through S3-compatible object storage with storage-key traversal guards. Deploy gate creates `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-media-*`, switches only the exact media route, checks anonymous 401, and runs a temporary upload/list/delete live smoke with cleanup.

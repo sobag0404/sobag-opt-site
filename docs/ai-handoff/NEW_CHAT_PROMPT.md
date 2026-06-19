@@ -10,11 +10,11 @@ Repository:
 Primary production:
 `https://sobag-shop.online/`
 
-Fallback Vercel domain:
-`https://sobag-opt-site.vercel.app/`
+Historical Vercel domain:
+`https://sobag-opt-site.vercel.app/` (historical only; do not deploy or verify Vercel unless the user explicitly re-enables it)
 
-Latest known commit before this handoff update:
-`7788c84 Protect internal saved quote notes`
+Latest known cutover baseline:
+Rust/VPS cutover complete; use `git log -1 --oneline` for the exact current HEAD.
 
 Token-saving startup:
 - Read `docs/ai-handoff/ACTIVE_CONTEXT.md` first.
@@ -50,7 +50,7 @@ Core constraints:
 - Day theme should remain black/white/gray; night theme may use orange.
 - Product import list cells should use `;`, not comma, so sizes like `3,5` are safe.
 - Do not commit raw bulk photo folders or generated import outputs unless explicitly asked.
-- Vercel should have GitHub access; this is expected.
+- Vercel/Next.js are not active deploy/runtime targets.
 - If switching devices again after weekend work, repeat handoff preparation before leaving that device.
 
 Current implemented features:
@@ -75,11 +75,11 @@ Current implemented features:
 - hardened smoke tests for mobile pages and cross-origin map iframe.
 
 Backend/storage state:
-- Vercel API routes exist in `api/`.
-- Upstash Redis / Vercel KV-compatible storage is configured in Vercel.
-- Production health check should return storage ready:
-  `https://sobag-shop.online/api/health`
-- Do not ask the user to paste secrets into chat. Use official Vercel/GitHub CLI or dashboard flows.
+- Production exact API/SSR routes are Rust-owned on the VPS for auth, orders/briefs, admin orders/users/content/PIM/prices/catalog/import-batches/product-images, catalog/search/product pages, content pages, and catalog query/detail.
+- Node remains only as static/root/cart compatibility fallback and explicit legacy fallback.
+- VPS MinIO/S3-compatible storage is the active object storage target; Vercel Blob is historical only.
+- Production health check should return storage ready: `https://sobag-shop.online/api/health`.
+- Do not ask the user to paste secrets into chat. Use GitHub Actions/VPS secret paths only.
 
 Before pushing changes:
 1. Check `git status --short`.
@@ -88,20 +88,16 @@ Before pushing changes:
 4. Use local browser checks for UI changes.
 5. Commit intentionally.
 6. Push to `main`.
-7. Deploy/verify Vercel when site behavior changes.
+7. Deploy/verify VPS GitHub Actions when site behavior changes; do not deploy Vercel.
 8. Check production URL affected by the change.
 9. Update `docs/ai-handoff/ACTIVE_CONTEXT.md` before final responses after project work.
 10. Update the longer handoff files only before device transfer or major milestones.
 
 Current handoff focus:
 - Order/customer CRM polish is implemented and marked done in `docs/roadmap-checklist.md`.
-- For local development, prefer `npm run dev:static` for normal UI work. Use `npm run dev:vercel` only when Vercel Functions/env behavior must be tested, because `vercel dev` can spawn many `@vercel/node` child processes on Windows.
-- Next major stage is Import/PIM 2.0 and photo storage:
-  - import batches;
-  - duplicate/error preview;
-  - created/skipped/updated report;
-  - product statuses;
-  - Blob/S3/R2 image storage path plan.
+- For local development, prefer `npm run dev:static` for normal UI work. Do not use `vercel dev` unless the user explicitly re-enables Vercel work.
+- Current backend contracts are in `docs/backend-pricing-reviews-contract.md`: grouped price-list export, admin CSV/Excel-compatible price import by group/SKU, promo rows, and buyer-only review eligibility.
+- Next major stage is post-cutover functional/security backlog, keeping VPS/Rust gates green and avoiding UI/design unless explicitly requested.
 - On a new device, install Python if possible. `npm run check` can pass without Python, but then Python importer syntax checks are skipped with a warning.
 
 Recent verification to repeat after pulling:

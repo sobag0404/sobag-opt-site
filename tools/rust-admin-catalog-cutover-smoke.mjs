@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 
+const FINAL_ADMIN_RUST_ROUTES = new Map([
+  ["/api/admin/prices", "/rust/admin/prices"],
+  ["/api/admin/catalog", "/rust/admin/catalog"],
+  ["/api/admin/import-batches", "/rust/admin/import-batches"],
+  ["/api/admin/product-images", "/rust/admin/product-images"],
+]);
+
 function routeTarget(pathname, nodeBase, rustBase) {
-  if (pathname === "/api/admin/catalog") return `${rustBase}/rust/admin/catalog`;
+  if (FINAL_ADMIN_RUST_ROUTES.has(pathname)) return `${rustBase}${FINAL_ADMIN_RUST_ROUTES.get(pathname)}`;
   return `${nodeBase}${pathname}`;
 }
 
@@ -25,8 +32,8 @@ function cleanFixtureProduct(product = {}) {
 
 function selfTest() {
   if (routeTarget("/api/admin/catalog", "node", "rust") !== "rust/rust/admin/catalog") throw new Error("admin catalog should route to Rust");
-  if (routeTarget("/api/admin/import-batches", "node", "rust") !== "node/api/admin/import-batches") throw new Error("admin import batches should stay Node");
-  if (routeTarget("/api/admin/product-images", "node", "rust") !== "node/api/admin/product-images") throw new Error("admin product images remain Node until media cutover smoke runs");
+  if (routeTarget("/api/admin/import-batches", "node", "rust") !== "rust/rust/admin/import-batches") throw new Error("admin import batches should route to Rust after final cutover");
+  if (routeTarget("/api/admin/product-images", "node", "rust") !== "rust/rust/admin/product-images") throw new Error("admin product images should route to Rust after final cutover");
   const product = cleanFixtureProduct({ baseSku: "TEST-1", name: "Test", basePrice: 0, category: "Test", variantPrices: { SKU: 250 } });
   if (product.basePrice !== 1) throw new Error("catalog smoke fixture must clamp missing price above zero");
   if (product.variantPrices.SKU !== 250) throw new Error("catalog smoke fixture must preserve variant prices");

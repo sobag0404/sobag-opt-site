@@ -11,7 +11,7 @@ Score: **90/100**.
 
 The VPS/Rust route cutover is production-ready with warnings. Direct VPS MinIO repair restored media writes, manual `vps-deploy` `27816085213` passed, and `production-smoke` `27816499824` passed. The targeted exact routes are now Rust-owned, including auth, orders/briefs, admin orders/users/content/PIM/prices/catalog/import-batches/product-images, public catalog/search/product/pages, content pages, and catalog query/detail APIs.
 
-Remaining warning scope is not a P0/P1 blocker for the completed targeted Rust cutover: Node remains as static/root/cart compatibility fallback and explicit legacy fallback, destructive import business changes still need authenticated dry-run/apply/rollback evidence, and real field CWV remains post-launch monitoring. Synthetic/performance evidence must stay separate from field data.
+Remaining warning scope is not a P0/P1 blocker for the completed targeted Rust cutover: Node remains as static/root/cart compatibility fallback and explicit legacy fallback, promo order-pricing precedence and backend XLSX styling need explicit business rules before changing pricing semantics, destructive import business changes still need authenticated dry-run/apply/rollback evidence, and real field CWV remains post-launch monitoring. Synthetic/performance evidence must stay separate from field data.
 
 ## 2. Current Rust/VPS Evidence
 
@@ -23,6 +23,7 @@ Remaining warning scope is not a P0/P1 blocker for the completed targeted Rust c
 - Admin catalog/import-batches/media exact routes are now Rust-owned after deploy gates. `/api/admin/product-images` passed live upload/list/delete cleanup after the direct MinIO repair.
 - Verified latest gates: manual `vps-deploy` `27816085213` PASS and `production-smoke` `27816499824` PASS.
 - MinIO repair evidence: VPS data ownership restored to the MinIO service user, media write/stat/delete verified, app env updated on VPS, and Rust restarted without exposing secrets. `tools/vps-minio-media-policy.sh` now contains a safe allowlisted ownership repair guard for future media deploy gates.
+- Post-cutover backend contract: `docs/backend-pricing-reviews-contract.md` records grouped public price-list export, admin CSV/Excel-compatible price import by group/SKU, promo price rows, and buyer-only review eligibility.
 
 ## 3. Readiness Score
 
@@ -34,7 +35,7 @@ Remaining warning scope is not a P0/P1 blocker for the completed targeted Rust c
 | Tests | 95 | WARN | Latest VPS deploy and production smoke passed; keep CI/VPS smokes as the release gate. |
 | Documentation | 94 | OK | Runtime map and handoff docs reflect the latest route ownership. |
 | CI/CD | 94 | WARN | GitHub and VPS deploy gates passed; SHA-pinning actions remains optional hardening. |
-| Product Readiness | 90 | WARN | Prices/orders/price export/admin prices are live; real field CWV remains post-launch monitoring. |
+| Product Readiness | 90 | WARN | Prices/orders/price export/admin prices are live; promo order-pricing precedence and real field CWV remain post-launch decisions. |
 | Prompt Engineering | 86 | WARN | Latest-chat is concise and points to current artifacts. |
 
 ## 4. Remaining Findings
@@ -48,7 +49,7 @@ No active P1 blocker remains for the targeted Rust/VPS route cutover. Import-bat
 - ARCH-001: `rust-server/src/main.rs` remains large and should continue to be split only when touching related code.
 - CODE-003: Add a small ESLint configuration later to complement custom checks.
 - SEC-005: Keep destructive deploy cleanup confined to reviewed path-validated scripts.
-- PROMPT-003: New GoAL chats should start from `reports/project-readiness/latest-chat.md` plus current handoff docs.
+- PROMPT-003: New GoAL chats should start from `reports/project-readiness/latest-chat.md`, `docs/backend-pricing-reviews-contract.md`, and current handoff docs.
 
 ### P3
 

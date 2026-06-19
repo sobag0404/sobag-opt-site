@@ -5,6 +5,9 @@ const ONE_PIXEL_WEBP =
   "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA";
 
 function routeTarget(pathname, nodeBase, rustBase) {
+  if (pathname === "/api/admin/prices") return `${rustBase}/rust/admin/prices`;
+  if (pathname === "/api/admin/catalog") return `${rustBase}/rust/admin/catalog`;
+  if (pathname === "/api/admin/import-batches") return `${rustBase}/rust/admin/import-batches`;
   if (pathname === "/api/admin/product-images") return `${rustBase}/rust/admin/product-images`;
   return `${nodeBase}${pathname}`;
 }
@@ -78,8 +81,8 @@ function selfTest() {
   );
   assert(
     routeTarget("/api/admin/import-batches", "node", "rust") ===
-      "node/api/admin/import-batches",
-    "admin import batches route is not part of media cutover",
+      "rust/rust/admin/import-batches",
+    "admin import batches should route to Rust after final cutover",
   );
   const fixture = mediaFixture("SELF-TEST");
   assert(fixture.mime === "image/webp" && fixture.base64.length > 20, "fixture should be a WebP upload");
