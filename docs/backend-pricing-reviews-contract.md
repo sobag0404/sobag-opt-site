@@ -76,5 +76,5 @@ Server-side rules:
 
 Coverage:
 
-- `tools/api-security-smoke.mjs` covers no-order rejection, completed-order success, duplicate rejection, and pending-order rejection.
+- `tools/api-security-smoke.mjs` covers anonymous rejection, no-order rejection, completed-order success, another user's order rejection, duplicate rejection, and pending-order rejection; Rust unit coverage mirrors owned completed-order and duplicate eligibility decisions.
 - `tools/price-groups-smoke.mjs` covers group collapse, promo rows, active/future promo windows, spaced Excel price values, positive price validation, formula rejection, public export, and transactional DB rollback on apply failure.

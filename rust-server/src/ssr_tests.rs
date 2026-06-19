@@ -501,6 +501,36 @@ fn sanitizes_auth_me_account_state_writes() {
 }
 
 #[test]
+fn review_eligibility_requires_user_owned_completed_order() {
+    let user = json!({ "email": "buyer@example.test" });
+    let review = json!({ "productId": "p1", "baseSku": "sku-1" });
+    let mut store = json!({
+        "orders": [
+            {
+                "userEmail": "other@example.test",
+                "status": "done",
+                "items": [{ "productId": "p1", "variant": { "sku": "sku-1" } }]
+            },
+            {
+                "userEmail": "buyer@example.test",
+                "status": "processing",
+                "items": [{ "productId": "p1", "variant": { "sku": "sku-1" } }]
+            }
+        ],
+        "reviews": []
+    });
+    assert!(!has_eligible_review_order(&store, &user, &review));
+
+    store["orders"][1]["status"] = json!("done");
+    assert!(has_eligible_review_order(&store, &user, &review));
+    assert!(!has_duplicate_review(&store, &user, &review));
+
+    store["reviews"] =
+        json!([{ "userEmail": "buyer@example.test", "productId": "p1", "baseSku": "sku-1" }]);
+    assert!(has_duplicate_review(&store, &user, &review));
+}
+
+#[test]
 fn stores_auth_me_account_state_by_user_email() {
     let mut store = default_store_value();
     set_store_nested_items(&mut store, "favorites", "buyer@example.test", json!(["p1"]));

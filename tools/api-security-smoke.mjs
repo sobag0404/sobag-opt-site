@@ -220,6 +220,13 @@ async function securitySmoke() {
         text: "Verified buyer review",
       },
     };
+    const anonymousReview = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      body: reviewBody,
+      allowFailure: true,
+    });
+    assert(anonymousReview.response.status === 401 && anonymousReview.payload.error === "unauthorized", "anonymous review should be rejected");
+
     const noOrderReview = await request(baseUrl, "/api/auth/me", {
       method: "PUT",
       cookie: buyerCookie,
@@ -248,6 +255,29 @@ async function securitySmoke() {
       body: reviewBody,
     });
     assert(allowedReview.payload.user?.reviews?.some((review) => review.text === "Verified buyer review"), "eligible completed order should allow review");
+
+    const otherBuyer = await request(baseUrl, "/api/auth/register", {
+      method: "POST",
+      body: {
+        email: "other-review@example.test",
+        password: "buyer-pass",
+        name: "Other Buyer",
+        phone: "+79990010007",
+        personalDataConsent: true,
+      },
+    });
+    resetRateLimits();
+    const otherUsersOrderReview = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: otherBuyer.cookie,
+      body: reviewBody,
+      allowFailure: true,
+    });
+    assert(
+      otherUsersOrderReview.response.status === 403 && otherUsersOrderReview.payload.error === "REVIEW_ORDER_REQUIRED",
+      "user should not be able to review using another user's completed order"
+    );
+
     const duplicateReview = await request(baseUrl, "/api/auth/me", {
       method: "PUT",
       cookie: buyerCookie,

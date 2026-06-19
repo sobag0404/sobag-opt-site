@@ -24,7 +24,7 @@ Remaining warning scope is not a P0/P1 blocker for the completed targeted Rust c
 - Verified latest gates: manual `vps-deploy` `27816085213` PASS and `production-smoke` `27816499824` PASS.
 - MinIO repair evidence: VPS data ownership restored to the MinIO service user, media write/stat/delete verified, app env updated on VPS, and Rust restarted without exposing secrets. `tools/vps-minio-media-policy.sh` now contains a safe allowlisted ownership repair guard for future media deploy gates.
 - Post-cutover backend contract: `docs/backend-pricing-reviews-contract.md` records grouped public price-list export, admin CSV/Excel-compatible price import by group/SKU, promo price rows, and buyer-only review eligibility.
-- Latest pricing hardening: Node/Rust price import accepts spaced Excel-style numeric prices, rejects invalid promo date windows, exports promo rows only when date-active, and tests transactional DB rollback on apply failure.
+- Latest pricing/review hardening: Node/Rust price import accepts spaced Excel-style numeric prices, rejects invalid promo date windows, exports promo rows only when date-active, and tests transactional DB rollback on apply failure. Buyer review coverage now asserts anonymous/no-order/other-user-order/duplicate/pending rejection and completed-order success.
 
 ## 3. Readiness Score
 
