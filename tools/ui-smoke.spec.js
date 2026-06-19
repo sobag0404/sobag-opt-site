@@ -780,6 +780,16 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator("#downloadCartQuoteButton")).toBeVisible();
   await expect(page.locator("#printCartQuoteButton")).toBeVisible();
   await expect(page.locator(".cart-scale-step")).toHaveCount(4);
+  await page.locator("[data-qty-input]").first().fill("200");
+  await expect(page.locator("#checkoutButton")).toBeEnabled();
+  await page.locator("#checkoutButton").click();
+  await expect(page.locator("#checkoutModal")).toBeVisible();
+  await expect(page.locator('#checkoutForm input[name="name"]')).toBeVisible();
+  await expect(page.locator('#checkoutForm input[name="email"]')).toBeVisible();
+  await expect(page.locator('#checkoutForm input[name="phone"]')).toBeVisible();
+  await expectNoHorizontalOverflow(page, "checkout modal");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#checkoutModal")).not.toHaveClass(/is-visible/);
 });
 
 test("product modal hydrates detail from server detail endpoint", async ({ page }) => {
