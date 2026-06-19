@@ -3762,6 +3762,16 @@ async function importPriceFile(file) {
     onXlsxUnavailable: () => showToast("XLSX библиотека недоступна. Загрузите CSV или повторите позже."),
   });
   if (!rows.length) return;
+  const showServerImportError = (message) => {
+    setBackendPricePreview(
+      {
+        source: "server",
+        errors: [{ row: "", message }],
+        changes: [],
+      },
+      rows
+    );
+  };
   try {
     const response = await fetch("/api/admin/prices", {
       method: "POST",
@@ -3774,24 +3784,13 @@ async function importPriceFile(file) {
       setBackendPricePreview(result, rows);
       return;
     }
-    if (response.status !== 401 && response.status !== 403 && response.status !== 404) {
-      showToast(result.message || "Серверный предпросмотр импорта цен недоступен, подготовлен локальный предпросмотр.");
-    }
+    showServerImportError(result.message || "Серверный предпросмотр импорта цен недоступен. Применение отключено до успешной проверки.");
+    return;
   } catch (error) {
     if (!isBackendUnavailable(error)) console.warn(error);
+    showServerImportError("Серверный предпросмотр импорта цен недоступен. Применение отключено до успешной проверки.");
+    return;
   }
-  const rowBySku = new Map();
-  rows.forEach((row) => {
-    const sku = String(priceImportValue(row, ["Артикул варианта", "variant sku", "sku", "Артикул"]) || "").trim();
-    const price = Number(String(priceImportValue(row, ["Цена варианта", "Новая цена", "price", "Цена"]) || "").replace(",", "."));
-    if (sku && Number.isFinite(price) && price > 0) rowBySku.set(sku.toLocaleUpperCase("ru-RU"), Math.round(price));
-  });
-  const changes = adminPriceRows(products)
-    .filter(({ variant }) => rowBySku.has(variant.sku.toLocaleUpperCase("ru-RU")))
-    .map((row) => buildPriceChange(row, rowBySku.get(row.variant.sku.toLocaleUpperCase("ru-RU")), "import"));
-  setPricePreview(changes);
-  state.pricePreviewMeta = { source: "local-file", rows, errors: [], rowsCount: rows.length };
-  renderAdminPricesPage();
 }
 function findCatalogItemByName(items, name) {
   const prepared = String(name || "").trim().toLocaleLowerCase("ru-RU");

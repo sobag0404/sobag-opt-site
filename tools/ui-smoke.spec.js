@@ -162,6 +162,21 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await expect(page.locator(".admin-price-import-guide")).toContainText("starts_at");
   await expect(page.locator(".admin-price-preview__empty")).toContainText("валидации");
   await expect(page.locator("[data-admin-apply-price-preview]")).toBeDisabled();
+  let priceImportPreviewRequests = 0;
+  await page.route("**/api/admin/prices", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    priceImportPreviewRequests += 1;
+    return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "preview unavailable" }) });
+  });
+  await page.locator("[data-admin-price-import]").setInputFiles({
+    name: "prices.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("sku,price\nopt_1,123\n", "utf8"),
+  });
+  await expect.poll(() => priceImportPreviewRequests).toBe(1);
+  await expect(page.locator(".admin-price-preview__errors")).toBeVisible();
+  await expect(page.locator("[data-admin-apply-price-preview]")).toBeDisabled();
+  await page.unrouteAll({ behavior: "ignoreErrors" });
 });
 
 test("admin import page and custom print calculator render", async ({ page }) => {
