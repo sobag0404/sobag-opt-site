@@ -417,16 +417,16 @@ test("catalog home first load uses server category summary over stale fallback",
       }),
     });
   });
+  let priceListStatus = 200;
+  let priceListRows = [
+    { type: "base", label: "Подушка велюр 40х40", price: 220, productCount: 12, skuCount: 12 },
+    { type: "promo", label: "Акция Подушка велюр 40х40", price: 199, productCount: 12, skuCount: 12, promoStartsAt: "2026-01-01", promoEndsAt: "2026-01-31" },
+  ];
   await page.route("**/api/price-list?format=json", async (route) => {
     await route.fulfill({
-      status: 200,
+      status: priceListStatus,
       contentType: "application/json; charset=utf-8",
-      body: JSON.stringify({
-        rows: [
-          { type: "base", label: "Подушка велюр 40х40", price: 220, productCount: 12, skuCount: 12 },
-          { type: "promo", label: "Акция Подушка велюр 40х40", price: 199, productCount: 12, skuCount: 12, promoStartsAt: "2026-01-01", promoEndsAt: "2026-01-31" },
-        ],
-      }),
+      body: JSON.stringify(priceListStatus === 200 ? { rows: priceListRows } : { error: "qa_price_list_down", message: "QA price list error" }),
     });
   });
 
@@ -452,6 +452,14 @@ test("catalog home first load uses server category summary over stale fallback",
   await page.goto(`${BASE_URL}/catalog?qa=category-summary`, { waitUntil: "domcontentloaded" });
   await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
   expect(await page.locator("#categoryTiles").innerText()).toBe(tileText);
+
+  priceListRows = [];
+  await page.goto(`${BASE_URL}/catalog.html?qa=price-empty`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".price-list-preview__state")).toContainText("нет строк");
+  priceListStatus = 500;
+  await page.goto(`${BASE_URL}/catalog.html?qa=price-error`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".price-list-preview__state")).toContainText("не загрузился");
+  await page.unrouteAll({ behavior: "ignoreErrors" });
 });
 
 test("account favorites are per-user and orders can be repeated into cart", async ({ page }) => {
