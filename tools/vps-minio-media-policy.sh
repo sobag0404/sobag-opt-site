@@ -398,6 +398,26 @@ attach_policy_to_user() {
   return 1
 }
 
+attach_named_policy_to_user() {
+  target_alias="$1"
+  target_policy="$2"
+  target_user="$3"
+  label="$4"
+  if mc admin policy attach "$target_alias" "$target_policy" --user "$target_user" >/dev/null 2>&1; then
+    echo "MinIO named policy attached to $label"
+    return 0
+  fi
+  if mc admin policy attach "$target_alias" "$target_policy" --user="$target_user" >/dev/null 2>&1; then
+    echo "MinIO named policy attached to $label"
+    return 0
+  fi
+  if mc admin policy set "$target_alias" "$target_policy" "user=$target_user" >/dev/null 2>&1; then
+    echo "MinIO named policy set on $label"
+    return 0
+  fi
+  return 1
+}
+
 enable_user_if_supported() {
   target_alias="$1"
   target_user="$2"
@@ -573,6 +593,27 @@ fi
 echo "MinIO admin alias direct write policy repair attempt"
 if ! attach_policy_to_user "$admin_alias" "$root_user" "discovered admin user"; then
   echo "MinIO discovered admin user policy attach unavailable"
+fi
+if attach_named_policy_to_user "$admin_alias" "readwrite" "$root_user" "discovered admin user bootstrap"; then
+  bootstrap_service_user="sobagmediaboot$(date -u +%m%d%H%M%S)"
+  bootstrap_service_secret="$(openssl rand -hex 32)"
+  if mc admin accesskey create "${admin_alias}/" "$root_user" --access-key "$bootstrap_service_user" --secret-key "$bootstrap_service_secret" --policy "$policy_file" >/dev/null 2>&1 \
+    || mc admin user svcacct add "$admin_alias" "$root_user" --access-key "$bootstrap_service_user" --secret-key "$bootstrap_service_secret" --policy "$policy_file" >/dev/null 2>&1; then
+    echo "MinIO scoped media service account created after admin bootstrap"
+    SOBAG_S3_ACCESS_KEY_ID="$bootstrap_service_user"
+    SOBAG_S3_SECRET_ACCESS_KEY="$bootstrap_service_secret"
+    export SOBAG_S3_ACCESS_KEY_ID SOBAG_S3_SECRET_ACCESS_KEY
+    if verify_app_write_with_retry; then
+      set_env_value "$app_env_file" SOBAG_S3_ACCESS_KEY_ID "$SOBAG_S3_ACCESS_KEY_ID"
+      set_env_value "$app_env_file" SOBAG_S3_SECRET_ACCESS_KEY "$SOBAG_S3_SECRET_ACCESS_KEY"
+      echo "MinIO scoped media policy verified with bootstrap service account"
+      exit 0
+    fi
+  else
+    echo "MinIO bootstrap service account creation unavailable"
+  fi
+else
+  echo "MinIO named readwrite bootstrap unavailable"
 fi
 
 if mc cp "$probe_file" "${admin_alias}/${SOBAG_S3_BUCKET}/${probe_key}" >/dev/null 2>"$verify_log"; then
