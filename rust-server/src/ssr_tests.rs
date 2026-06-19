@@ -925,6 +925,19 @@ fn admin_price_import_builds_sku_change_and_rejects_bad_rows() {
     assert_eq!(changes[0]["kind"], "sku_price");
     assert_eq!(changes[0]["newPrice"], 230);
     assert_eq!(changes[0]["oldPrices"][0], 220);
+    let history = price_import_history_entry_for_test(
+        std::slice::from_ref(&record),
+        &[json!({ "sku": "SKU-1", "price": "230" })],
+    );
+    assert_eq!(history["type"], "price_import");
+    assert_eq!(history["status"], "applied");
+    assert_eq!(history["source"], "postgres");
+    assert_eq!(history["actor"], "admin@example.test");
+    assert_eq!(history["changeCount"], 1);
+    assert_eq!(history["skuChangeCount"], 1);
+    assert_eq!(history["affectedSkuCount"], 1);
+    assert!(history.get("rows").is_none());
+    assert!(history.get("csv").is_none());
 
     let invalid = json!({ "group": "=SUM(A1:A2)", "price": "0" });
     let (_, errors) = parse_price_import_rows_for_test(&[record.clone()], &[invalid]);

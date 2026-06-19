@@ -13,13 +13,18 @@ use chrono::{DateTime, NaiveDate, Utc};
 use serde_json::{json, Value};
 use sqlx::{PgPool, Row};
 
-use crate::store::load_store_value as load_file_store_value;
+use crate::store::{
+    load_store_value as load_file_store_value, save_store_value as save_file_store_value,
+};
 use crate::{
     can_edit_content, load_current_user_from_file_store, no_store_headers, row_i64, string_field,
     AppError, AppResult, AppState,
 };
 
 const CATALOG_KEY: &str = "sobag:catalog:v1";
+const STORE_KEY: &str = "sobag:store:v1";
+const MAX_PRICE_IMPORT_HISTORY: usize = 100;
+const MAX_AUDIT_RECORDS: usize = 500;
 
 #[derive(Clone, Debug)]
 pub(crate) struct PriceRecord {
@@ -71,13 +76,15 @@ pub(crate) async fn admin_prices_get(
     {
         return csv_response("sobag-admin-price-groups.csv", &price_list_csv(&rows));
     }
+    let history = load_price_import_history().await?;
     Ok((
         no_store_headers(),
         Json(json!({
             "source": "postgres",
             "updatedAt": Value::Null,
             "groups": groups,
-            "rows": rows
+            "rows": rows,
+            "history": history
         })),
     )
         .into_response())
@@ -134,6 +141,8 @@ pub(crate) async fn admin_prices_post(
         ));
     }
     let applied = apply_price_changes_to_db(&state.pool, &preview.0).await?;
+    let history = price_import_history_entry(&user, &preview.0, &applied, "postgres", "applied");
+    let history_recorded = record_price_import_history(&history).await.is_ok();
     Ok((
         StatusCode::OK,
         no_store_headers(),
@@ -141,7 +150,9 @@ pub(crate) async fn admin_prices_post(
             "source": "postgres",
             "applied": applied,
             "changes": preview.0.len(),
-            "updatedBy": string_field(&user, "email").unwrap_or_default()
+            "updatedBy": string_field(&user, "email").unwrap_or_default(),
+            "history": history,
+            "historyRecorded": history_recorded
         })),
     ))
 }
@@ -225,6 +236,104 @@ async fn load_price_records(pool: &PgPool) -> AppResult<Vec<PriceRecord>> {
         return load_file_price_records().await;
     }
     Ok(records)
+}
+
+async fn load_price_import_history() -> AppResult<Vec<Value>> {
+    let store = load_file_store_value(STORE_KEY)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+        .unwrap_or_else(|| json!({}));
+    Ok(store
+        .get("priceImportHistory")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter(|item| item.is_object())
+                .take(MAX_PRICE_IMPORT_HISTORY)
+                .cloned()
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default())
+}
+
+fn unique_string_count(values: impl Iterator<Item = String>) -> usize {
+    values
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .collect::<BTreeSet<_>>()
+        .len()
+}
+
+fn price_import_history_entry(
+    user: &Value,
+    changes: &[PriceChange],
+    applied: &Value,
+    source: &str,
+    status: &str,
+) -> Value {
+    let now = Utc::now().to_rfc3339();
+    json!({
+        "id": format!("PRICE-{}", Utc::now().timestamp_millis()),
+        "type": "price_import",
+        "status": status,
+        "source": source,
+        "actor": string_field(user, "email").unwrap_or_default(),
+        "rowCount": unique_string_count(changes.iter().map(|change| change.row.to_string())),
+        "changeCount": changes.len(),
+        "groupChangeCount": changes.iter().filter(|change| change.kind == "group_price").count(),
+        "skuChangeCount": changes.iter().filter(|change| change.kind == "sku_price").count(),
+        "promoChangeCount": changes.iter().filter(|change| change.promo_price.unwrap_or(0) > 0).count(),
+        "affectedSkuCount": unique_string_count(changes.iter().flat_map(|change| change.skus.clone())),
+        "affectedProductCount": unique_string_count(changes.iter().flat_map(|change| change.product_ids.clone())),
+        "applied": applied,
+        "createdAt": now
+    })
+}
+
+async fn record_price_import_history(entry: &Value) -> AppResult<()> {
+    let mut store = load_file_store_value(STORE_KEY)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))?
+        .unwrap_or_else(|| json!({}));
+    if !store.is_object() {
+        store = json!({});
+    }
+    let Some(map) = store.as_object_mut() else {
+        return Ok(());
+    };
+
+    let mut history = map
+        .get("priceImportHistory")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    history.insert(0, entry.clone());
+    history.truncate(MAX_PRICE_IMPORT_HISTORY);
+    map.insert("priceImportHistory".to_string(), Value::Array(history));
+
+    let audit = json!({
+        "id": format!("AUD-{}", Utc::now().timestamp_millis()),
+        "type": "price_import_apply",
+        "actor": entry.get("actor").cloned().unwrap_or(Value::Null),
+        "status": entry.get("status").cloned().unwrap_or(Value::Null),
+        "source": entry.get("source").cloned().unwrap_or(Value::Null),
+        "changeCount": entry.get("changeCount").cloned().unwrap_or(Value::Null),
+        "affectedSkuCount": entry.get("affectedSkuCount").cloned().unwrap_or(Value::Null),
+        "createdAt": entry.get("createdAt").cloned().unwrap_or(Value::Null)
+    });
+    let mut audit_items = map
+        .get("audit")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    audit_items.insert(0, audit);
+    audit_items.truncate(MAX_AUDIT_RECORDS);
+    map.insert("audit".to_string(), Value::Array(audit_items));
+
+    save_file_store_value(STORE_KEY, &store)
+        .await
+        .map_err(|error| AppError::internal(error.to_string()))
 }
 
 async fn load_file_price_records() -> AppResult<Vec<PriceRecord>> {
@@ -1174,6 +1283,25 @@ pub(crate) fn parse_price_import_rows_for_test(
 ) -> (Vec<Value>, Vec<Value>) {
     let (changes, errors) = parse_price_import_rows(records, rows);
     (changes_json(&changes), errors)
+}
+
+#[cfg(test)]
+pub(crate) fn price_import_history_entry_for_test(
+    records: &[PriceRecord],
+    rows: &[Value],
+) -> Value {
+    let (changes, errors) = parse_price_import_rows(records, rows);
+    assert!(
+        errors.is_empty(),
+        "fixture price import rows should be valid"
+    );
+    price_import_history_entry(
+        &json!({ "email": "admin@example.test" }),
+        &changes,
+        &json!({ "updatedSkus": 1, "updatedProducts": 1 }),
+        "postgres",
+        "applied",
+    )
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 const { requireUser } = require("../_lib/auth");
 const { getCatalogDbClient } = require("../_lib/catalog-db-client");
 const { loadCatalogProducts } = require("../_lib/catalog-source");
-const { saveCatalog } = require("../_lib/store");
+const { getStore, saveCatalog, saveStore } = require("../_lib/store");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const {
   applyPriceChangesToDb,
@@ -25,6 +25,54 @@ function parseUrl(req) {
 function payload(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value;
+}
+
+function uniqueCount(values = []) {
+  return new Set(values.map((value) => text(value)).filter(Boolean)).size;
+}
+
+function priceImportSummary({ user, changes, applied = null, source = "", status = "applied" }) {
+  const skus = changes.flatMap((change) => change.skus || []);
+  const products = changes.flatMap((change) => change.productIds || []);
+  const promoChanges = changes.filter((change) => Number(change.promoPrice || 0) > 0).length;
+  return {
+    id: `PRICE-${Date.now().toString(36)}`,
+    type: "price_import",
+    status,
+    source: text(source),
+    actor: text(user.email),
+    rowCount: uniqueCount(changes.map((change) => change.row)),
+    changeCount: changes.length,
+    groupChangeCount: changes.filter((change) => change.kind === "group_price").length,
+    skuChangeCount: changes.filter((change) => change.kind === "sku_price").length,
+    promoChangeCount: promoChanges,
+    affectedSkuCount: uniqueCount(skus),
+    affectedProductCount: uniqueCount(products),
+    applied: applied || null,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+async function loadPriceImportHistory() {
+  const store = await getStore();
+  return Array.isArray(store.priceImportHistory) ? store.priceImportHistory.slice(0, 100) : [];
+}
+
+async function recordPriceImportHistory(entry) {
+  const store = await getStore();
+  const audit = {
+    id: `AUD-${Date.now().toString(36)}`,
+    type: "price_import_apply",
+    actor: entry.actor,
+    status: entry.status,
+    source: entry.source,
+    changeCount: entry.changeCount,
+    affectedSkuCount: entry.affectedSkuCount,
+    createdAt: entry.createdAt,
+  };
+  store.priceImportHistory = [entry, ...(Array.isArray(store.priceImportHistory) ? store.priceImportHistory : [])].slice(0, 100);
+  store.audit = [audit, ...(Array.isArray(store.audit) ? store.audit : [])].slice(0, 500);
+  await saveStore(store);
 }
 
 async function loadDbRecords(client) {
@@ -130,7 +178,7 @@ module.exports = async function handler(req, res) {
       const context = await loadPriceContext();
       const rows = priceListRows(context.groups);
       if (text(url.searchParams.get("format")).toLowerCase() === "csv") return sendCsv(res, "sobag-admin-price-groups.csv", priceListCsv(rows));
-      return sendJson(res, 200, { source: context.source, updatedAt: context.updatedAt || null, groups: context.groups, rows });
+      return sendJson(res, 200, { source: context.source, updatedAt: context.updatedAt || null, groups: context.groups, rows, history: await loadPriceImportHistory() });
     }
     if (req.method !== "POST") return methodNotAllowed(res);
 
@@ -146,12 +194,16 @@ module.exports = async function handler(req, res) {
     if (!preview.changes.length) return sendJson(res, 400, { error: "empty_price_import", message: "No price changes to apply." });
     if (context.dbClient) {
       const applied = await applyPriceChangesToDb(context.dbClient, preview.changes);
-      return sendJson(res, 200, { source: "postgres", applied, changes: preview.changes.length, updatedBy: user.email });
+      const entry = priceImportSummary({ user, changes: preview.changes, applied, source: "postgres" });
+      await recordPriceImportHistory(entry);
+      return sendJson(res, 200, { source: "postgres", applied, changes: preview.changes.length, updatedBy: user.email, history: entry });
     }
     const products = context.products;
     const nextProducts = applyPriceChangesToProducts(products, preview.changes);
     const saved = await saveCatalog(nextProducts, user.email, { source: "admin-price-import", updatedAt: new Date().toISOString() });
-    return sendJson(res, 200, { source: context.source, count: nextProducts.length, updatedAt: saved.updatedAt, changes: preview.changes.length });
+    const entry = priceImportSummary({ user, changes: preview.changes, applied: { updatedProducts: nextProducts.length }, source: context.source });
+    await recordPriceImportHistory(entry);
+    return sendJson(res, 200, { source: context.source, count: nextProducts.length, updatedAt: saved.updatedAt, changes: preview.changes.length, history: entry });
   } catch (error) {
     handleError(res, error, req);
   }

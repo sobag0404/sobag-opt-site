@@ -60,6 +60,14 @@ Precedence:
 3. Promo price is stored separately in variant payload and appears as an additional public price-list row when active.
 4. Order pricing continues to use the trusted server catalog price until a separate business rule explicitly approves promo order-pricing precedence.
 
+Import history and audit:
+
+- `GET /api/admin/prices` includes `history`, newest first, limited to the latest 100 safe import summaries.
+- Successful `apply` records `priceImportHistory[]` with actor email, source, status, row/change counts, affected SKU/product counts, promo-change count, and the apply summary.
+- Successful `apply` also appends a compact `audit[]` record with action `price_import_apply`, actor, source/status, change count, affected SKU count, and timestamp.
+- Raw uploaded files, raw CSV text, secrets, cookies, tokens, and private customer data are not stored in the history/audit records.
+- History/audit persistence is best-effort after the transactional price apply; if the audit store is temporarily unavailable, the response exposes `historyRecorded: false` on Rust while preserving the already-successful price transaction.
+
 ## Buyer Review Eligibility
 
 A product review can be created only by an authenticated user who has a confirmed order for the same product/SKU.
@@ -79,12 +87,19 @@ Coverage:
 - `tools/api-security-smoke.mjs` covers anonymous rejection, no-order rejection, completed-order success, another user's order rejection, duplicate rejection, and pending-order rejection; Rust unit coverage mirrors owned completed-order and duplicate eligibility decisions.
 - `tools/price-groups-smoke.mjs` covers group collapse, promo rows, active/future promo windows, spaced Excel price values, positive price validation, formula rejection, public export, and transactional DB rollback on apply failure.
 
+## Backup And Recovery Notes
+
+- Before destructive catalog/price imports, keep the normal VPS release rollback plus a current PostgreSQL/catalog backup from the existing deploy/import runbooks.
+- For price import mistakes, restore by applying a validated reverse import or a reviewed PostgreSQL/catalog backup; do not edit raw store files on production without first copying them aside.
+- `priceImportHistory[]` and `audit[]` are operator evidence only. They should help identify who/when/how many rows changed, but they are not a full data backup.
+- For reviews/orders/account data, prefer read-only inspection and targeted reversal through admin routes; avoid whole-store replacement unless the relevant backup is verified and the site is in a maintenance window.
+
 ## Next Backend Packet
 
 The next backend/security packet should stay server-side and avoid UI redesign work:
 
 - order/account/cart persistence hardening: idempotency, write conflict handling, and no partial account/cart corruption on failed persistence;
-- admin audit log hardening: consistent actor/action/target summaries for price imports, media mutations, order changes, review moderation, and catalog writes without logging secrets or private payloads;
+- admin audit log hardening: extend the price-import pattern to media mutations, order changes, review moderation, catalog writes, and admin user mutations without logging secrets or private payloads;
 - rate-limit review: keep login/register/orders/briefs/admin mutations protected without blocking normal admin workflows;
-- import history: durable preview/apply/reject/rollback records with safe row counts and validation summaries;
-- backup/restore notes: documented no-secret operator steps for file-store/PostgreSQL/MinIO rollback before destructive imports or catalog rewrites.
+- import history follow-up: add preview/reject/rollback lifecycle records if the admin UX needs them; apply history is now recorded server-side;
+- backup/restore hardening: automate no-secret backup evidence for file-store/PostgreSQL/MinIO rollback before destructive imports or catalog rewrites.
