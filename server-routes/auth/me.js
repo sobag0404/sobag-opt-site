@@ -9,6 +9,14 @@ const MAX_SAVED_CARTS = 50;
 const MAX_PROFILE_LIST_ITEMS = 20;
 const MAX_REVIEWS = 5000;
 
+function safeCartKey(value, fallback) {
+  const prepared = String(value || "").trim().slice(0, 160);
+  if (/^[A-Za-z0-9._:-]{1,160}$/.test(prepared)) return prepared;
+  const safeFallback = String(fallback || "").trim().slice(0, 160);
+  if (/^[A-Za-z0-9._:-]{1,160}$/.test(safeFallback)) return safeFallback;
+  return "";
+}
+
 function sanitizeCartLine(entry) {
   const key = Array.isArray(entry) ? entry[0] : entry?.key;
   const line = Array.isArray(entry) ? entry[1] : entry;
@@ -16,28 +24,38 @@ function sanitizeCartLine(entry) {
   const variant = line.variant || {};
   const sku = String(variant.sku || line.variantSku || "").trim();
   if (!sku) return null;
-  return [
-    String(key || line.key || sku),
-    {
-      key: String(line.key || key || sku),
-      productId: String(line.productId || ""),
-      productName: String(line.productName || variant.name || ""),
-      productImage: String(line.productImage || ""),
-      qty: Math.max(1, Math.min(99999, Math.round(Number(line.qty || 1)))),
-      variant: {
-        sku,
-        name: String(variant.name || ""),
-        type: String(variant.type || ""),
-        size: String(variant.size || ""),
-        material: String(variant.material || ""),
-        price: Math.max(0, Number(variant.price || 0)),
-      },
+  const cartKey = safeCartKey(key || line.key, sku);
+  if (!cartKey) return null;
+  const item = {
+    key: cartKey,
+    productId: String(line.productId || ""),
+    productName: String(line.productName || variant.name || ""),
+    productImage: String(line.productImage || ""),
+    qty: Math.max(1, Math.min(99999, Math.round(Number(line.qty || 1)))),
+    variant: {
+      sku,
+      name: String(variant.name || ""),
+      type: String(variant.type || ""),
+      size: String(variant.size || ""),
+      material: String(variant.material || ""),
+      price: Math.max(0, Number(variant.price || 0)),
     },
-  ];
+  };
+  return { key: cartKey, mergeKey: sku.toLowerCase(), item };
 }
 
 function sanitizeCart(items) {
-  return (Array.isArray(items) ? items : []).map(sanitizeCartLine).filter(Boolean).slice(0, MAX_CART_LINES);
+  const merged = new Map();
+  for (const prepared of (Array.isArray(items) ? items : []).map(sanitizeCartLine).filter(Boolean)) {
+    const existing = merged.get(prepared.mergeKey);
+    if (existing) {
+      existing.item.qty = Math.min(99999, existing.item.qty + prepared.item.qty);
+      continue;
+    }
+    merged.set(prepared.mergeKey, prepared);
+    if (merged.size >= MAX_CART_LINES) break;
+  }
+  return [...merged.values()].map((entry) => [entry.key, entry.item]);
 }
 
 function sanitizeFavorites(items) {
@@ -244,6 +262,12 @@ module.exports = async function handler(req, res) {
     if (req.method === "PUT") {
       const data = await readJson(req, { maxBytes: 1024 * 1024 });
       if (Object.prototype.hasOwnProperty.call(data, "cartItems")) {
+        const expectedCartUpdatedAt = String(data.expectedCartUpdatedAt || "").trim();
+        const currentCart = store.carts[user.email] || null;
+        const currentCartUpdatedAt = String(currentCart?.updatedAt || "");
+        if (expectedCartUpdatedAt && currentCartUpdatedAt && expectedCartUpdatedAt !== currentCartUpdatedAt) {
+          return sendJson(res, 409, { error: "cart_conflict", message: "Cart changed on another device.", cartItems: currentCart.items || [], cartUpdatedAt: currentCartUpdatedAt });
+        }
         store.carts[user.email] = {
           items: sanitizeCart(data.cartItems),
           updatedAt: new Date().toISOString(),
@@ -298,6 +322,7 @@ module.exports = async function handler(req, res) {
     sendJson(res, 200, {
       user: { ...publicUser(freshUser), orders, reviews },
       cartItems: store.carts[freshUser.email]?.items || [],
+      cartUpdatedAt: store.carts[freshUser.email]?.updatedAt || null,
       favoriteItems: store.favorites[freshUser.email]?.items || [],
       savedCarts,
     });

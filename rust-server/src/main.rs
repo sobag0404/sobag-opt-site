@@ -1080,6 +1080,21 @@ async fn auth_me_update_preview(
         return Err(AppError::unauthorized("Нужно войти в аккаунт."));
     }
     if has_object_key(&data, "cartItems") {
+        let expected_cart_updated_at =
+            clean_text(data.get("expectedCartUpdatedAt"), 80).unwrap_or_default();
+        let current_cart_updated_at = store_nested_updated_at(&store, "carts", &email)
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+        if !expected_cart_updated_at.is_empty()
+            && !current_cart_updated_at.is_empty()
+            && expected_cart_updated_at != current_cart_updated_at
+        {
+            return Err(AppError::conflict(
+                "cart_conflict",
+                "Cart changed on another device.",
+            ));
+        }
         set_store_nested_items(
             &mut store,
             "carts",
@@ -2050,6 +2065,7 @@ fn auth_me_payload_from_values(store: &Value, session: &Value) -> Value {
     json!({
         "user": user_with_activity,
         "cartItems": store_nested_items(store, "carts", &user_email),
+        "cartUpdatedAt": store_nested_updated_at(store, "carts", &user_email),
         "favoriteItems": store_nested_items(store, "favorites", &user_email),
         "savedCarts": saved_carts_for_user(store, &user_email, can_use_internal_saved_cart_fields(user))
     })
@@ -2701,20 +2717,66 @@ fn sanitize_profile_value(profile: &Value, existing: &Value) -> Value {
 }
 
 fn sanitize_cart_items(items: &Value) -> Value {
-    let lines = items
-        .as_array()
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(sanitize_cart_line_value)
-                .take(MAX_CART_LINES)
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-    Value::Array(lines)
+    let mut order: Vec<String> = Vec::new();
+    let mut merged: HashMap<String, (String, Value)> = HashMap::new();
+    if let Some(items) = items.as_array() {
+        for item in items {
+            let Some((key, merge_key, line)) = sanitize_cart_line_value(item) else {
+                continue;
+            };
+            if let Some((_, existing)) = merged.get_mut(&merge_key) {
+                let current = existing.get("qty").and_then(Value::as_i64).unwrap_or(1);
+                if let Some(map) = existing.as_object_mut() {
+                    map.insert(
+                        "qty".to_string(),
+                        json!(clamp_i64(
+                            current + line.get("qty").and_then(Value::as_i64).unwrap_or(1),
+                            1,
+                            99_999
+                        )),
+                    );
+                }
+                continue;
+            }
+            order.push(merge_key.clone());
+            merged.insert(merge_key, (key, line));
+            if order.len() >= MAX_CART_LINES {
+                break;
+            }
+        }
+    }
+    Value::Array(
+        order
+            .into_iter()
+            .filter_map(|merge_key| {
+                merged
+                    .remove(&merge_key)
+                    .map(|(key, line)| json!([key, line]))
+            })
+            .collect(),
+    )
 }
 
-fn sanitize_cart_line_value(entry: &Value) -> Option<Value> {
+fn safe_cart_key(value: Option<&Value>, fallback: &str) -> Option<String> {
+    let prepared = value_clean_string(value?, 160).unwrap_or_default();
+    if is_safe_cart_key(&prepared) {
+        return Some(prepared);
+    }
+    if is_safe_cart_key(fallback) {
+        return Some(fallback.to_string());
+    }
+    None
+}
+
+fn is_safe_cart_key(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 160
+        && value
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | ':' | '-'))
+}
+
+fn sanitize_cart_line_value(entry: &Value) -> Option<(String, String, Value)> {
     let (key_source, line) = if let Some(pair) = entry.as_array() {
         (
             pair.first().unwrap_or(&Value::Null),
@@ -2733,9 +2795,8 @@ fn sanitize_cart_line_value(entry: &Value) -> Option<Value> {
     if sku.is_empty() {
         return None;
     }
-    let key = value_clean_string(key_source, 160)
-        .or_else(|| clean_text(line.get("key"), 160))
-        .unwrap_or_else(|| sku.clone());
+    let key =
+        safe_cart_key(Some(key_source), &sku).or_else(|| safe_cart_key(line.get("key"), &sku))?;
     let qty = clamp_i64(
         line.get("qty")
             .and_then(Value::as_f64)
@@ -2750,7 +2811,7 @@ fn sanitize_cart_line_value(entry: &Value) -> Option<Value> {
         .unwrap_or(0.0)
         .max(0.0);
     let line_value = json!({
-        "key": clean_text(line.get("key"), 160).unwrap_or_else(|| key.clone()),
+        "key": key.clone(),
         "productId": clean_text(line.get("productId"), 160).unwrap_or_default(),
         "productName": clean_text(line.get("productName"), 220)
             .or_else(|| clean_text(variant.get("name"), 220))
@@ -2766,7 +2827,7 @@ fn sanitize_cart_line_value(entry: &Value) -> Option<Value> {
             "price": price
         }
     });
-    Some(json!([key, line_value]))
+    Some((key, sku.to_ascii_lowercase(), line_value))
 }
 
 fn sanitize_favorite_items(items: &Value) -> Value {
@@ -3857,6 +3918,17 @@ fn store_nested_items(store: &Value, bucket: &str, email: &str) -> Value {
         .filter(|items| items.is_array())
         .cloned()
         .unwrap_or_else(|| json!([]))
+}
+
+fn store_nested_updated_at(store: &Value, bucket: &str, email: &str) -> Value {
+    store
+        .get(bucket)
+        .and_then(Value::as_object)
+        .and_then(|items| items.get(email))
+        .and_then(|record| record.get("updatedAt"))
+        .and_then(Value::as_str)
+        .map(|value| json!(value))
+        .unwrap_or(Value::Null)
 }
 
 fn set_store_nested_items(store: &mut Value, bucket: &str, email: &str, items: Value) {

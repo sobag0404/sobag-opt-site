@@ -431,7 +431,7 @@ fn builds_auth_me_payload_without_private_fields() {
             { "id": "REV-1", "userEmail": "buyer@example.test", "text": "ok" }
         ],
         "carts": {
-            "buyer@example.test": { "items": [{ "key": "sku-1" }] }
+            "buyer@example.test": { "items": [{ "key": "sku-1" }], "updatedAt": "2026-06-11T01:00:00.000Z" }
         },
         "favorites": {
             "buyer@example.test": { "items": ["p1"] }
@@ -466,6 +466,7 @@ fn builds_auth_me_payload_without_private_fields() {
     );
     assert_eq!(payload["user"]["reviews"].as_array().unwrap().len(), 1);
     assert_eq!(payload["cartItems"].as_array().unwrap().len(), 1);
+    assert_eq!(payload["cartUpdatedAt"], "2026-06-11T01:00:00.000Z");
     assert_eq!(payload["favoriteItems"].as_array().unwrap().len(), 1);
     assert!(payload["savedCarts"][0].get("managerComment").is_none());
     assert_eq!(
@@ -490,11 +491,20 @@ fn auth_me_payload_is_anonymous_without_session_user() {
 fn sanitizes_auth_me_account_state_writes() {
     let cart = sanitize_cart_items(&json!([
         ["line-1", { "qty": 100000, "variant": { "sku": "sku-1", "price": -5 } }],
+        ["../../bad", { "qty": 3, "variant": { "sku": "sku-1", "price": 10 } }],
         { "key": "bad", "variant": {} }
     ]));
     assert_eq!(cart.as_array().unwrap().len(), 1);
+    assert_eq!(cart[0][0], "line-1");
     assert_eq!(cart[0][1]["qty"], 99999);
     assert_eq!(cart[0][1]["variant"]["price"], 0.0);
+
+    let duplicate_cart = sanitize_cart_items(&json!([
+        ["line-a", { "qty": 2, "variant": { "sku": "dup-sku", "price": 10 } }],
+        ["line-b", { "qty": 3, "variant": { "sku": "dup-sku", "price": 10 } }]
+    ]));
+    assert_eq!(duplicate_cart.as_array().unwrap().len(), 1);
+    assert_eq!(duplicate_cart[0][1]["qty"], 5);
 
     let favorites = sanitize_favorite_items(&json!(["p1", "p1", "", "p2"]));
     assert_eq!(favorites, json!(["p1", "p2"]));

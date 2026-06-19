@@ -138,6 +138,39 @@ async function securitySmoke() {
       malformedOrderPatch.response.status === 400 && malformedOrderPatch.payload.error === "invalid_order_id",
       "malformed buyer order id should return 400"
     );
+    const cartMerge = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: {
+        cartItems: [
+          ["cart-line-a", { qty: 2, variant: { sku: "cart-merge-sku", price: 10 } }],
+          ["../../unsafe", { qty: 3, variant: { sku: "cart-merge-sku", price: 10 } }],
+        ],
+      },
+    });
+    assert(cartMerge.payload.cartItems?.length === 1, "duplicate cart SKU should merge into one line");
+    assert(cartMerge.payload.cartItems?.[0]?.[1]?.qty === 5, "duplicate cart SKU qty should be summed");
+    assert(cartMerge.payload.cartItems?.[0]?.[1]?.key === "cart-line-a", "unsafe duplicate cart key should not replace first safe key");
+    assert(cartMerge.payload.cartUpdatedAt, "cart response should include cartUpdatedAt for conflict detection");
+    const staleCart = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: {
+        expectedCartUpdatedAt: "2000-01-01T00:00:00.000Z",
+        cartItems: [["cart-line-b", { qty: 1, variant: { sku: "cart-next-sku", price: 10 } }]],
+      },
+      allowFailure: true,
+    });
+    assert(staleCart.response.status === 409 && staleCart.payload.error === "cart_conflict", "stale cart write should return 409");
+    const freshCart = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: {
+        expectedCartUpdatedAt: cartMerge.payload.cartUpdatedAt,
+        cartItems: [["cart-line-b", { qty: 1, variant: { sku: "cart-next-sku", price: 10 } }]],
+      },
+    });
+    assert(freshCart.payload.cartItems?.[0]?.[1]?.variant?.sku === "cart-next-sku", "fresh cart write should be accepted");
 
     await request(baseUrl, "/api/admin/users", {
       method: "POST",

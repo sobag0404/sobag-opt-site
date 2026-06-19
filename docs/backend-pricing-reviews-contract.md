@@ -80,6 +80,13 @@ Coverage:
 - `tools/api-security-smoke.mjs` covers retry reuse through the public API and malformed buyer order ids.
 - Rust unit coverage verifies scoped reuse, cross-scope replay prevention, and malformed order-id rejection.
 
+Account cart writes:
+
+- cart item keys are constrained to a safe ASCII key shape; unsafe client keys fall back to the trusted SKU or are dropped with the line;
+- duplicate cart lines for the same SKU are merged server-side and quantities are capped at `99_999`;
+- account responses include `cartUpdatedAt`;
+- clients may send `expectedCartUpdatedAt` with `cartItems` updates. If the server cart changed on another device, the write is rejected with `409 cart_conflict` instead of silently overwriting the newer cart.
+
 ## Buyer Review Eligibility
 
 A product review can be created only by an authenticated user who has a confirmed order for the same product/SKU.
@@ -111,7 +118,7 @@ Coverage:
 
 The next backend/security packet should stay server-side and avoid UI redesign work:
 
-- order/account/cart persistence hardening follow-up: write conflict handling and no partial account/cart corruption on failed persistence; order idempotency is now implemented;
+- order/account/cart persistence hardening follow-up: cart duplicate merge, safe cart keys, and optional stale-write conflict checks are implemented; remaining work is deeper order-draft recovery UX and store-backed conflict metadata for saved carts/favorites;
 - admin audit log hardening: extend the price-import pattern to media mutations, order changes, review moderation, catalog writes, and admin user mutations without logging secrets or private payloads;
 - rate-limit follow-up: review writes now have a buyer-scoped limiter; next step is store-backed/distributed rate buckets for multi-process/VPS scaling without blocking normal admin workflows;
 - import history follow-up: add preview/reject/rollback lifecycle records if the admin UX needs them; apply history is now recorded server-side;
