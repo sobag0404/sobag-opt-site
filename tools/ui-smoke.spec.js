@@ -788,6 +788,9 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator('#checkoutForm input[name="email"]')).toBeVisible();
   await expect(page.locator('#checkoutForm input[name="phone"]')).toBeVisible();
   await expectNoHorizontalOverflow(page, "checkout modal");
+  await page.locator('#checkoutForm button[type="submit"]').click();
+  await expect(page.locator('#checkoutForm input[name="name"]')).toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#checkoutForm .field-error").first()).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.locator("#checkoutModal")).not.toHaveClass(/is-visible/);
 });
