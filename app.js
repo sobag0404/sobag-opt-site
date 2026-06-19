@@ -3020,7 +3020,7 @@ function reviewFormHtml(product) {
   if (!user) {
     return `
       <div class="review-login-note">
-        <span>Отзывы могут оставлять только зарегистрированные покупатели.</span>
+        <span>Отзывы могут оставлять только зарегистрированные покупатели после заказа.</span>
         <button class="ghost-button" type="button" data-open-account>Войти</button>
       </div>
     `;
@@ -3085,7 +3085,7 @@ function productReviewsHtml(product) {
                 `
               )
               .join("")}</div>`
-          : '<p class="review-empty">Станьте первым покупателем, кто оставит отзыв после регистрации.</p>'
+          : '<p class="review-empty">Отзывы смогут оставить покупатели после заказа товара.</p>'
       }
       ${reviewFormHtml(product)}
     </section>
