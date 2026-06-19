@@ -784,18 +784,42 @@ function selectedAdminPriceRows() {
   const selected = new Set(selectedIds);
   return adminPriceRows(products).filter((row) => selected.has(adminPriceRowId(row.product, row.variant)));
 }
+function pricePreviewCanApply() {
+  const errors = state.pricePreviewMeta?.errors || [];
+  if (!state.pricePreview.length || errors.length) return false;
+  if (state.pricePreview.some((change) => change.backendOnly)) return Boolean(state.pricePreviewMeta?.rows?.length);
+  return true;
+}
+function priceImportGuideHtml() {
+  return `
+    <div class="admin-price-import-guide">
+      <strong>Колонки для импорта</strong>
+      <span><b>Категория/группа</b> или <b>category</b>: ценовая группа, например «Подушка велюр 40х40».</span>
+      <span><b>Артикул</b>, <b>sku</b> или <b>article</b>: точный SKU для изменения одной позиции.</span>
+      <span><b>Цена</b>, <b>price</b>: базовая цена.</span>
+      <span><b>Акция цена</b>, <b>promo_price</b>, <b>promoPrice</b>: акционная цена; <b>promo_label</b> используется как подпись в файле.</span>
+      <span><b>Акция с</b>/<b>Акция до</b>, <b>starts_at</b>/<b>ends_at</b>: даты действия акции.</span>
+    </div>
+  `;
+}
 function pricePreviewRowsHtml() {
   const errors = state.pricePreviewMeta?.errors || [];
   const meta = state.pricePreviewMeta || {};
+  const summary = [
+    meta.rowsCount ? `строк в файле: ${meta.rowsCount}` : "",
+    state.pricePreview.length ? `изменений: ${state.pricePreview.length}` : "",
+    errors.length ? `ошибок: ${errors.length}` : "",
+  ].filter(Boolean);
   if (!state.pricePreview.length && !errors.length) {
     return `
       <div class="admin-price-preview__empty">
         <strong>Предпросмотр пока пуст.</strong>
-        <span>Загрузите CSV/XLSX с колонками «Категория/группа», «Артикул», «Цена», «Акция цена», «Акция с», «Акция до» или подготовьте массовое изменение по фильтру.</span>
+        <span>Загрузите CSV/XLSX или подготовьте массовое изменение по фильтру. Кнопка применения включится после успешной валидации.</span>
       </div>
     `;
   }
   return `
+    ${summary.length ? `<div class="admin-price-validation-summary"><strong>Проверка импорта</strong><span>${escapeHtml(summary.join(" · "))}</span></div>` : ""}
     ${errors.length ? `
       <div class="admin-price-preview__errors" role="alert">
         <strong>Ошибки импорта: ${errors.length}</strong>
@@ -989,7 +1013,7 @@ function adminPricesPageHtml() {
         </label>
         <button class="primary-button" type="submit">Предпросмотр</button>
         <button class="ghost-button" type="button" data-admin-preview-manual-prices>Предпросмотр ручных цен</button>
-        <button class="ghost-button" type="button" data-admin-apply-price-preview>Применить предпросмотр</button>
+        <button class="ghost-button" type="button" data-admin-apply-price-preview ${pricePreviewCanApply() ? "" : "disabled"}>Применить предпросмотр</button>
       </form>
       <div class="admin-product-export">
         <button class="ghost-button" type="button" data-admin-sync-catalog>Сохранить каталог на сервере</button>
@@ -1009,6 +1033,7 @@ function adminPricesPageHtml() {
       </div>
       <section class="admin-price-preview" aria-live="polite">
         <h3>Предпросмотр изменений</h3>
+        ${priceImportGuideHtml()}
         ${pricePreviewRowsHtml()}
       </section>
     </div>

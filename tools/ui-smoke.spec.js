@@ -158,7 +158,10 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await page.waitForFunction(() => document.querySelectorAll(".admin-price-row").length > 0);
   await expect(page.locator(".admin-price-preview h3")).toContainText("Предпросмотр изменений");
   await expect(page.locator('.admin-product-export a[href="/api/admin/prices?template=1"]')).toContainText("Шаблон импорта");
-  await expect(page.locator(".admin-price-preview__empty")).toContainText("Акция цена");
+  await expect(page.locator(".admin-price-import-guide")).toContainText("promo_price");
+  await expect(page.locator(".admin-price-import-guide")).toContainText("starts_at");
+  await expect(page.locator(".admin-price-preview__empty")).toContainText("валидации");
+  await expect(page.locator("[data-admin-apply-price-preview]")).toBeDisabled();
 });
 
 test("admin import page and custom print calculator render", async ({ page }) => {
@@ -306,6 +309,13 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
     await page.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => {});
     if (route.includes("catalog")) await waitForLiveProducts(page);
     if (route.includes("search")) await waitForLiveProducts(page, 0);
+    if (route === "/" || route.includes("catalog")) {
+      await expect(page.locator("#accountButton")).toHaveAttribute("aria-label", /Войти|аккаунт/i);
+      await expect(page.locator("#accountButton")).not.toContainText(/Вход|регистрация/i);
+    }
+    if (route.includes("catalog")) {
+      await expect(page.locator(".catalog-price-button")).toContainText("Прайс");
+    }
     await expectNoHorizontalOverflow(page, route);
   }
 });

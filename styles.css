@@ -2941,6 +2941,32 @@ select[aria-invalid="true"] {
   text-transform: uppercase;
 }
 
+.admin-price-import-guide,
+.admin-price-validation-summary {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+}
+
+.admin-price-import-guide strong,
+.admin-price-validation-summary strong {
+  color: var(--on-dark);
+}
+
+.admin-price-import-guide span,
+.admin-price-validation-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-price-import-guide b {
+  color: var(--body);
+  font-weight: 800;
+}
+
 .admin-price-preview__empty {
   display: grid;
   gap: 4px;
