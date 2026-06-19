@@ -1589,7 +1589,25 @@ async fn order_create_preview(
             .unwrap_or_else(default_store_value)
     };
     let user = context.as_ref().map(|(_, user)| user);
-    let order = build_order_record(&state.pool, &data, user).await?;
+    let idempotency_key = order_idempotency_key(&headers, &data);
+    let idempotency_scope = order_idempotency_scope(user, &data);
+    if let Some(existing) = find_idempotent_order(
+        &store,
+        idempotency_key.as_deref(),
+        idempotency_scope.as_deref(),
+    ) {
+        return Ok((
+            StatusCode::OK,
+            no_store_headers(),
+            Json(json!({ "order": existing, "idempotent": true })),
+        ));
+    }
+    let mut order = build_order_record(&state.pool, &data, user).await?;
+    attach_order_idempotency(
+        &mut order,
+        idempotency_key.as_deref(),
+        idempotency_scope.as_deref(),
+    );
     push_order_record(&mut store, order.clone());
     update_user_profile_from_order(&mut store, &order);
     save_file_store_value(STORE_KEY, &store)
@@ -2081,7 +2099,8 @@ fn admin_orders_payload_from_values(store: &Value) -> Value {
 }
 
 fn apply_admin_order_patch(store: &mut Value, data: &Value, user: &Value) -> AppResult<Value> {
-    let order_id = clean_text(data.get("id"), 120).unwrap_or_default();
+    let order_id = normalize_order_id(clean_text(data.get("id"), 120))
+        .ok_or_else(|| AppError::bad_request("invalid_order_id", "Некорректный номер заказа."))?;
     let status = clean_text(data.get("status"), 40).unwrap_or_default();
     if !status.is_empty() && !valid_order_status(&status) {
         return Err(AppError::bad_request(
@@ -3089,7 +3108,7 @@ fn build_order_record_from_trusted_items(
         return Err(AppError::bad_request("missing_phone", "Укажите телефон."));
     }
     let now = Utc::now();
-    let id = format!("SO-{:06}", now.timestamp_millis().rem_euclid(1_000_000));
+    let id = create_order_id();
     Ok(json!({
         "id": id,
         "date": now.to_rfc3339(),
@@ -3252,7 +3271,8 @@ fn apply_buyer_order_comment_patch(
     data: &Value,
     user: &Value,
 ) -> AppResult<Value> {
-    let order_id = clean_text(data.get("id"), 120).unwrap_or_default();
+    let order_id = normalize_order_id(clean_text(data.get("id"), 120))
+        .ok_or_else(|| AppError::bad_request("invalid_order_id", "Некорректный номер заказа."))?;
     let text = clean_text(data.get("commentText"), 1200).unwrap_or_default();
     if text.is_empty() {
         return Err(AppError::bad_request(
@@ -3904,6 +3924,107 @@ fn public_order_value(order: &Value) -> Value {
         }
     }
     public
+}
+
+fn random_hex(bytes: usize) -> Option<String> {
+    let mut buffer = vec![0_u8; bytes];
+    getrandom::getrandom(&mut buffer).ok()?;
+    Some(hex::encode(buffer))
+}
+
+fn create_order_id() -> String {
+    random_hex(6)
+        .map(|value| format!("SO-{}", value.to_ascii_uppercase()))
+        .unwrap_or_else(|| format!("SO-{}", Utc::now().timestamp_millis().rem_euclid(1_000_000)))
+}
+
+fn normalize_order_id(value: Option<String>) -> Option<String> {
+    let id = value?.trim().to_string();
+    if !(2..=120).contains(&id.len()) {
+        return None;
+    }
+    if !id
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | ':' | '-'))
+    {
+        return None;
+    }
+    Some(id)
+}
+
+fn normalize_idempotency_key(value: &str) -> Option<String> {
+    let key = value.trim();
+    if !(8..=120).contains(&key.len()) {
+        return None;
+    }
+    if !key
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | ':' | '-'))
+    {
+        return None;
+    }
+    Some(key.to_string())
+}
+
+fn order_idempotency_key(headers: &HeaderMap, data: &Value) -> Option<String> {
+    headers
+        .get("idempotency-key")
+        .or_else(|| headers.get("x-idempotency-key"))
+        .and_then(|value| value.to_str().ok())
+        .and_then(normalize_idempotency_key)
+        .or_else(|| {
+            data.get("idempotencyKey")
+                .and_then(Value::as_str)
+                .and_then(normalize_idempotency_key)
+        })
+}
+
+fn order_idempotency_scope(user: Option<&Value>, data: &Value) -> Option<String> {
+    let customer = data.get("customer").unwrap_or(&Value::Null);
+    let email = user
+        .and_then(|user| string_field(user, "email"))
+        .or_else(|| string_field(customer, "email"))
+        .map(|value| normalize_email(&value))
+        .filter(|value| !value.is_empty());
+    if let Some(email) = email {
+        return Some(format!("email:{email}"));
+    }
+    let phone = string_field(customer, "phone")
+        .map(|value| normalize_phone(&value))
+        .filter(|value| !value.is_empty());
+    phone.map(|phone| format!("phone:{phone}"))
+}
+
+fn find_idempotent_order(store: &Value, key: Option<&str>, scope: Option<&str>) -> Option<Value> {
+    let key = key?;
+    let scope = scope?;
+    store
+        .get("orders")
+        .and_then(Value::as_array)?
+        .iter()
+        .find(|order| {
+            order
+                .get("idempotencyKey")
+                .and_then(Value::as_str)
+                .map(|value| value == key)
+                .unwrap_or(false)
+                && order
+                    .get("idempotencyScope")
+                    .and_then(Value::as_str)
+                    .map(|value| value == scope)
+                    .unwrap_or(false)
+        })
+        .map(public_order_value)
+}
+
+fn attach_order_idempotency(order: &mut Value, key: Option<&str>, scope: Option<&str>) {
+    let (Some(key), Some(scope)) = (key, scope) else {
+        return;
+    };
+    if let Some(map) = order.as_object_mut() {
+        map.insert("idempotencyKey".to_string(), json!(key));
+        map.insert("idempotencyScope".to_string(), json!(scope));
+    }
 }
 
 fn user_reviews(store: &Value, email: &str) -> Value {

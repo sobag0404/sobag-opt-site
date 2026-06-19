@@ -128,6 +128,16 @@ async function securitySmoke() {
     const buyerCookie = buyerRegister.cookie;
     const buyerAdmin = await request(baseUrl, "/api/admin/orders", { cookie: buyerCookie, allowFailure: true });
     assert(buyerAdmin.response.status === 403, "buyer must not access admin orders");
+    const malformedOrderPatch = await request(baseUrl, "/api/orders", {
+      method: "PATCH",
+      cookie: buyerCookie,
+      body: { id: "../SO-1", commentText: "Bad order id" },
+      allowFailure: true,
+    });
+    assert(
+      malformedOrderPatch.response.status === 400 && malformedOrderPatch.payload.error === "invalid_order_id",
+      "malformed buyer order id should return 400"
+    );
 
     await request(baseUrl, "/api/admin/users", {
       method: "POST",
@@ -199,6 +209,7 @@ async function securitySmoke() {
     });
     assert(invalidSku.response.status === 400 && invalidSku.payload.error === "invalid_sku", "invalid SKU should be rejected");
 
+    resetRateLimits();
     const valid = await request(baseUrl, "/api/orders", {
       method: "POST",
       body: {
@@ -209,6 +220,29 @@ async function securitySmoke() {
     });
     assert(valid.payload.order?.total === total, "valid order should store server-calculated total");
     assert(valid.payload.order?.items?.[0]?.variant?.price === unitPrice, "valid order should store trusted unit price");
+    resetRateLimits();
+    const idempotencyKey = "api-security-order-retry-1";
+    const idempotentFirst = await request(baseUrl, "/api/orders", {
+      method: "POST",
+      headers: { "idempotency-key": idempotencyKey },
+      body: {
+        total,
+        customer: { name: "Idempotent", phone: "+79990010008", email: "idempotent@example.test" },
+        items: [{ productId: detail.payload.product.id, qty, variant }],
+      },
+    });
+    const idempotentSecond = await request(baseUrl, "/api/orders", {
+      method: "POST",
+      headers: { "idempotency-key": idempotencyKey },
+      body: {
+        total,
+        customer: { name: "Idempotent", phone: "+79990010008", email: "idempotent@example.test" },
+        items: [{ productId: detail.payload.product.id, qty, variant }],
+      },
+    });
+    assert(idempotentSecond.response.status === 200, "idempotent retry should return 200");
+    assert(idempotentSecond.payload.idempotent === true, "idempotent retry should be marked");
+    assert(idempotentSecond.payload.order?.id === idempotentFirst.payload.order?.id, "idempotent retry should reuse existing order");
     resetRateLimits();
 
     const reviewBody = {

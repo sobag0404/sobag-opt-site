@@ -754,6 +754,30 @@ fn order_create_updates_user_profile_like_node() {
 }
 
 #[test]
+fn order_idempotency_reuses_existing_scoped_order() {
+    let user = json!({ "email": "buyer@example.test" });
+    let data = json!({
+        "idempotencyKey": "order-retry-123",
+        "customer": { "email": "buyer@example.test", "phone": "+7 900 000-00-00" }
+    });
+    let key = order_idempotency_key(&HeaderMap::new(), &data).expect("idempotency key");
+    let scope = order_idempotency_scope(Some(&user), &data).expect("idempotency scope");
+    let mut order = json!({
+        "id": "SO-1",
+        "userEmail": "buyer@example.test",
+        "customer": { "email": "buyer@example.test" },
+        "crmThread": [{ "visibility": "internal", "text": "hidden" }]
+    });
+    attach_order_idempotency(&mut order, Some(&key), Some(&scope));
+    let store = json!({ "orders": [order] });
+
+    let existing = find_idempotent_order(&store, Some(&key), Some(&scope)).expect("existing order");
+    assert_eq!(existing["id"], "SO-1");
+    assert_eq!(existing["crmThread"].as_array().unwrap().len(), 0);
+    assert!(find_idempotent_order(&store, Some(&key), Some("email:other@example.test")).is_none());
+}
+
+#[test]
 fn rejects_below_minimum_order_preview_record() {
     let error = build_order_record_from_trusted_items(
         &json!({
@@ -839,6 +863,19 @@ fn buyer_order_patch_rejects_other_customer_order() {
     )
     .expect_err("not found");
     assert_eq!(error.code, "not_found");
+}
+
+#[test]
+fn buyer_order_patch_rejects_malformed_order_id() {
+    let user = json!({ "email": "buyer@example.test", "name": "Buyer" });
+    let mut store = json!({ "orders": [] });
+    let error = apply_buyer_order_comment_patch(
+        &mut store,
+        &json!({ "id": "../SO-1", "commentText": "Need invoice" }),
+        &user,
+    )
+    .expect_err("invalid order id");
+    assert_eq!(error.code, "invalid_order_id");
 }
 
 #[test]

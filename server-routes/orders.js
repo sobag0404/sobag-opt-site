@@ -1,3 +1,4 @@
+const { randomUUID } = require("node:crypto");
 const { checkRateLimit } = require("./_lib/api-security");
 const { currentUser, normalizePhone } = require("./_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("./_lib/http");
@@ -15,6 +16,47 @@ function publicOrder(order) {
   };
 }
 
+function normalizeIdempotencyKey(value) {
+  const key = String(value || "")
+    .trim()
+    .slice(0, 120);
+  if (!key || !/^[A-Za-z0-9._:-]{8,120}$/.test(key)) return "";
+  return key;
+}
+
+function idempotencyKeyFromRequest(req, data) {
+  return normalizeIdempotencyKey(req.headers["idempotency-key"] || req.headers["x-idempotency-key"] || data.idempotencyKey);
+}
+
+function orderIdempotencyScope(user, data) {
+  const customer = data.customer || {};
+  const email = String(user?.email || customer.email || "").trim().toLowerCase();
+  if (email) return `email:${email}`;
+  const phone = normalizePhone(customer.phone || "");
+  if (phone) return `phone:${phone}`;
+  return "";
+}
+
+function findIdempotentOrder(store, key, scope) {
+  if (!key || !scope) return null;
+  return (store.orders || []).find((order) => order?.idempotencyKey === key && order?.idempotencyScope === scope) || null;
+}
+
+function createOrderId(store) {
+  const existing = new Set((store.orders || []).map((order) => String(order?.id || "")));
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const id = `SO-${randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()}`;
+    if (!existing.has(id)) return id;
+  }
+  return `SO-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+}
+
+function normalizeOrderId(value) {
+  const id = String(value || "").trim().slice(0, 120);
+  if (!id || !/^[A-Za-z0-9._:-]{2,120}$/.test(id)) return "";
+  return id;
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "PATCH") {
@@ -23,12 +65,14 @@ module.exports = async function handler(req, res) {
       if (limited) throw limited;
       const { user, store } = await currentUser(req);
       if (!user) return sendJson(res, 401, { error: "unauthorized", message: "Нужно войти в аккаунт." });
+      const orderId = normalizeOrderId(data.id);
+      if (!orderId) return sendJson(res, 400, { error: "invalid_order_id", message: "Некорректный номер заказа." });
       const text = String(data.commentText || "").trim().slice(0, 1200);
       if (!text) return sendJson(res, 400, { error: "empty_comment", message: "Напишите сообщение по заказу." });
       let updated = null;
       store.orders = store.orders.map((order) => {
         const customerEmail = String(order.customer?.email || order.userEmail || "").toLowerCase();
-        if (order.id !== data.id || customerEmail !== String(user.email || "").toLowerCase()) return order;
+        if (order.id !== orderId || customerEmail !== String(user.email || "").toLowerCase()) return order;
         const entry = {
           id: `CRM-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
           at: new Date().toISOString(),
@@ -55,6 +99,11 @@ module.exports = async function handler(req, res) {
     const limited = checkRateLimit(req, { key: "orders:create", limit: 30 });
     if (limited) throw limited;
     const { user, store } = await currentUser(req);
+    const idempotencyKey = idempotencyKeyFromRequest(req, data);
+    const idempotencyScope = orderIdempotencyScope(user, data);
+    const existing = findIdempotentOrder(store, idempotencyKey, idempotencyScope);
+    if (existing) return sendJson(res, 200, { order: publicOrder(existing), idempotent: true });
+
     const pricing = await normalizeOrderPricing(data);
     const customer = data.customer || {};
 
@@ -68,7 +117,7 @@ module.exports = async function handler(req, res) {
     if (!customerPhone) return sendJson(res, 400, { error: "missing_phone", message: "Укажите телефон." });
 
     const record = {
-      id: `SO-${Date.now().toString().slice(-6)}`,
+      id: createOrderId(store),
       date: new Date().toLocaleString("ru-RU"),
       createdAt: new Date().toISOString(),
       status: "new",
@@ -96,6 +145,7 @@ module.exports = async function handler(req, res) {
       clientTotal: pricing.clientTotal,
       promo: String(data.promo || ""),
       source: String(data.source || "site"),
+      ...(idempotencyKey && idempotencyScope ? { idempotencyKey, idempotencyScope } : {}),
     };
 
     store.orders = [record, ...store.orders];

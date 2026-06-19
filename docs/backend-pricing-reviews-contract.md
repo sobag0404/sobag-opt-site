@@ -68,6 +68,18 @@ Import history and audit:
 - Raw uploaded files, raw CSV text, secrets, cookies, tokens, and private customer data are not stored in the history/audit records.
 - History/audit persistence is best-effort after the transactional price apply; if the audit store is temporarily unavailable, the response exposes `historyRecorded: false` on Rust while preserving the already-successful price transaction.
 
+## Order/Account/Cart Persistence
+
+Order creation uses non-sequential `SO-*` identifiers for new orders. Buyer order comment updates validate the submitted order id with a bounded allowlist before checking ownership.
+
+Order creation accepts an optional `Idempotency-Key` or `X-Idempotency-Key` header, or `idempotencyKey` body field, for safe customer retry handling. The server stores only a normalized opaque key and scoped owner marker (`email:*` or `phone:*`). A repeated order create with the same key and same owner scope returns the original order with `idempotent: true` instead of creating a duplicate. Different users or contacts cannot reuse another customer's idempotency key.
+
+Coverage:
+
+- Node and Rust order paths share the same normalized key/scope behavior and malformed order-id rejection.
+- `tools/api-security-smoke.mjs` covers retry reuse through the public API and malformed buyer order ids.
+- Rust unit coverage verifies scoped reuse, cross-scope replay prevention, and malformed order-id rejection.
+
 ## Buyer Review Eligibility
 
 A product review can be created only by an authenticated user who has a confirmed order for the same product/SKU.
@@ -98,7 +110,7 @@ Coverage:
 
 The next backend/security packet should stay server-side and avoid UI redesign work:
 
-- order/account/cart persistence hardening: idempotency, write conflict handling, and no partial account/cart corruption on failed persistence;
+- order/account/cart persistence hardening follow-up: write conflict handling and no partial account/cart corruption on failed persistence; order idempotency is now implemented;
 - admin audit log hardening: extend the price-import pattern to media mutations, order changes, review moderation, catalog writes, and admin user mutations without logging secrets or private payloads;
 - rate-limit review: keep login/register/orders/briefs/admin mutations protected without blocking normal admin workflows;
 - import history follow-up: add preview/reject/rollback lifecycle records if the admin UX needs them; apply history is now recorded server-side;
