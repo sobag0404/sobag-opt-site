@@ -280,6 +280,86 @@ set_env_value() {
   rm -f "$tmp"
 }
 
+minio_execstart_tokens() {
+  { sudo systemctl show minio -p ExecStart --value 2>/dev/null || true; } \
+    | tr ' ' '\n'
+}
+
+minio_volume_candidates() {
+  {
+    printf '%s\n' "$(systemd_env_value MINIO_VOLUMES)"
+    printf '%s\n' "$(minio_process_env_value MINIO_VOLUMES)"
+    printf '%s\n' "$(container_env_value MINIO_VOLUMES)"
+    for minio_env_file in $minio_env_candidates; do
+      env_file_value "$minio_env_file" MINIO_VOLUMES
+    done
+    minio_execstart_tokens
+    printf '%s\n' "/var/lib/minio"
+  } \
+    | tr ' ,"'"'"'\t' '\n' \
+    | sed -E 's/[;,]+$//' \
+    | awk '
+        /^$/ { next }
+        /^--/ { next }
+        /^https?:/ { next }
+        /^\// { print }
+      ' \
+    | awk 'NF && !seen[$0]++'
+}
+
+is_safe_minio_data_path() {
+  path="$1"
+  case "$path" in
+    "/"|"/etc"|"/home"|"/root"|"/opt"|"/var"|"/var/lib"|"/srv"|"/mnt"|"/data") return 1 ;;
+    "/var/lib/minio"|"/var/lib/minio/"*) return 0 ;;
+    "/srv/minio"|"/srv/minio/"*) return 0 ;;
+    "/data/minio"|"/data/minio/"*) return 0 ;;
+    "/mnt/minio"|"/mnt/minio/"*) return 0 ;;
+    "/mnt/data/minio"|"/mnt/data/minio/"*) return 0 ;;
+    "/opt/"*"minio"*) return 0 ;;
+    "/opt/sobag-opt/"*) case "$path" in *"minio"*|*"object-storage"*|*"s3"*) return 0 ;; esac ;;
+  esac
+  return 1
+}
+
+repair_minio_data_ownership_if_safe() {
+  owner="${SOBAG_MINIO_DATA_OWNER:-minio-user:minio-user}"
+  owner_user="${owner%%:*}"
+  if ! getent passwd "$owner_user" >/dev/null 2>&1; then
+    echo "MinIO data ownership repair skipped: owner-user-missing"
+    return 1
+  fi
+
+  repaired=1
+  checked_paths=""
+  for candidate_path in $(minio_volume_candidates); do
+    [ -n "$candidate_path" ] || continue
+    case " $checked_paths " in
+      *" $candidate_path "*) continue ;;
+    esac
+    checked_paths="$checked_paths $candidate_path"
+    if ! is_safe_minio_data_path "$candidate_path"; then
+      echo "MinIO data ownership candidate skipped: unsafe-path"
+      continue
+    fi
+    [ -d "$candidate_path" ] || continue
+
+    current_owner="$(sudo stat -c '%U:%G' "$candidate_path" 2>/dev/null || true)"
+    if [ "$current_owner" = "$owner" ]; then
+      echo "MinIO data ownership already safe"
+      repaired=0
+      continue
+    fi
+    if sudo chown -R "$owner" "$candidate_path" >/dev/null 2>&1; then
+      echo "MinIO data ownership repaired: safe-path"
+      repaired=0
+    else
+      echo "MinIO data ownership repair failed: chown-denied"
+    fi
+  done
+  return "$repaired"
+}
+
 policy_name="sobag-media-products-rw-$(date -u +%m%d%H%M%S)"
 policy_file="$(mktemp)"
 probe_file="$(mktemp)"
@@ -480,6 +560,17 @@ if verify_app_write_with_retry; then
   set_env_value "$app_env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
   echo "MinIO scoped media policy verified for products/*"
   exit 0
+fi
+
+if [ "$(safe_verify_error_class)" = "access-denied" ]; then
+  echo "MinIO media write access denied; attempting safe data ownership repair"
+  if repair_minio_data_ownership_if_safe && verify_app_write_with_retry; then
+    set_env_value "$app_env_file" SOBAG_S3_ENDPOINT "$endpoint"
+    set_env_value "$app_env_file" SOBAG_S3_REGION "${SOBAG_S3_LOCAL_REGION:-us-east-1}"
+    set_env_value "$app_env_file" SOBAG_S3_FORCE_PATH_STYLE "true"
+    echo "MinIO scoped media policy verified for products/* after data ownership repair"
+    exit 0
+  fi
 fi
 
 if grep -Eiq "quota|507|disk full|no space|XMinioStorageFull" "$verify_log"; then

@@ -1,17 +1,17 @@
 # Project Readiness Report
 
-Generated: 2026-06-17T11:30:00+00:00
+Generated: 2026-06-19T00:00:00+00:00
 Project: sobag-opt-site
-Git: `main` / media-cutover working tree
+Git: `main` / Rust cutover complete with warnings
 
 ## 1. Executive Summary
 
 Status: **READY_WITH_WARNINGS**.
-Score: **87/100**.
+Score: **90/100**.
 
-The VPS/Rust transition remains production-ready with warnings. The latest verified production baseline includes the deploy workflow YAML fixes `0ace8a6`, `c2c1b56`, and `637f20d`; `vps-deploy` `27675967030` and `production-smoke` `27676234502` passed. New admin media Rust parity and exact-route deploy gate are prepared for `/api/admin/product-images`.
+The VPS/Rust route cutover is production-ready with warnings. Direct VPS MinIO repair restored media writes, manual `vps-deploy` `27816085213` passed, and `production-smoke` `27816499824` passed. The targeted exact routes are now Rust-owned, including auth, orders/briefs, admin orders/users/content/PIM/prices/catalog/import-batches/product-images, public catalog/search/product/pages, content pages, and catalog query/detail APIs.
 
-Remaining warning scope is not a P0/P1 blocker for the current route-by-route Rust transition: media cutover still needs GitHub/VPS live upload/list/delete confirmation after push, and import-batches needs authenticated dry-run/apply/rollback evidence before marking full write cutover. Real field CWV remains post-launch monitoring; synthetic/performance evidence must stay separate from field data.
+Remaining warning scope is not a P0/P1 blocker for the completed targeted Rust cutover: Node remains as static/root/cart compatibility fallback and explicit legacy fallback, destructive import business changes still need authenticated dry-run/apply/rollback evidence, and real field CWV remains post-launch monitoring. Synthetic/performance evidence must stay separate from field data.
 
 ## 2. Current Rust/VPS Evidence
 
@@ -20,20 +20,18 @@ Remaining warning scope is not a P0/P1 blocker for the current route-by-route Ru
 - GitHub gates passed for `32076fd`: `autofix-check` `27647385195`, `rust-check` `27647385766`, `vps-deploy` `27647440957`, and `production-smoke` `27647708702`.
 - Live admin prices smoke passed: anonymous 401, temporary content-role list/preview/apply, zero-price rejection, non-zero catalog-detail prices, cleanup of temporary user/session.
 - Production exact Rust routes now include auth writes, auth/me, orders, briefs, admin orders/users/content, read-only admin PIM, and admin prices.
-- Remaining Node fallback zone: admin catalog/import/media mutation routes.
-- Coordinator-verified deploy baseline: workflow YAML fixes `0ace8a6`, `c2c1b56`, `637f20d`; `vps-deploy` `27675967030` PASS; `production-smoke` `27676234502` PASS.
-- Admin catalog parity/deploy switch: `240e423` + `7e8d225` pushed; live anonymous `/api/admin/catalog` returned 401 in coordinator smoke.
-- Admin import-batches parity: `1c2a72e` pushed; local checks passed, public route remains Node until live import gates exist.
-- Admin media parity/deploy switch: Rust route and deploy gate prepared for exact `/api/admin/product-images`, with S3-compatible upload/list/delete and path traversal guards.
+- Admin catalog/import-batches/media exact routes are now Rust-owned after deploy gates. `/api/admin/product-images` passed live upload/list/delete cleanup after the direct MinIO repair.
+- Verified latest gates: manual `vps-deploy` `27816085213` PASS and `production-smoke` `27816499824` PASS.
+- MinIO repair evidence: VPS data ownership restored to the MinIO service user, media write/stat/delete verified, app env updated on VPS, and Rust restarted without exposing secrets. `tools/vps-minio-media-policy.sh` now contains a safe allowlisted ownership repair guard for future media deploy gates.
 
 ## 3. Readiness Score
 
 | Category | Score | Status | Comment |
 | --- | ---: | --- | --- |
-| Architecture | 80 | WARN | Route-by-route Rust cutover is controlled; `rust-server/src/main.rs` still has large-file ownership debt. |
+| Architecture | 84 | WARN | Targeted Rust cutover is complete; Node remains as static/root/cart compatibility fallback. |
 | Code Quality | 84 | WARN | Custom checks are strong; a standard lint layer remains P2. |
-| Security | 86 | WARN | Admin price/media mutation routes enforce roles; media storage keys are confined to `products/*`; deploy cleanup guardrails remain monitored. |
-| Tests | 94 | WARN | Local checks passed for new catalog/import-batches parity; GitHub/deploy/live smokes remain the gate before marking new routes cut over. |
+| Security | 88 | WARN | Admin mutation routes enforce roles; media storage keys are confined to `products/*`; MinIO ownership repair is path-guarded and secret-safe. |
+| Tests | 95 | WARN | Latest VPS deploy and production smoke passed; keep CI/VPS smokes as the release gate. |
 | Documentation | 94 | OK | Runtime map and handoff docs reflect the latest route ownership. |
 | CI/CD | 94 | WARN | GitHub and VPS deploy gates passed; SHA-pinning actions remains optional hardening. |
 | Product Readiness | 90 | WARN | Prices/orders/price export/admin prices are live; real field CWV remains post-launch monitoring. |
@@ -43,7 +41,7 @@ Remaining warning scope is not a P0/P1 blocker for the current route-by-route Ru
 
 ### P1
 
-No active P1 blocker remains for the completed `/api/admin/prices` cutover. The media slice is ready for GitHub/VPS deployment and live upload/list/delete verification. Import-batches still needs authenticated dry-run/apply/rollback evidence before marking the write path complete.
+No active P1 blocker remains for the targeted Rust/VPS route cutover. Import-batches still needs authenticated dry-run/apply/rollback evidence before future destructive import business changes, but the exact route is deployed behind Rust with live anonymous guard.
 
 ### P2
 
@@ -62,14 +60,14 @@ No active P1 blocker remains for the completed `/api/admin/prices` cutover. The 
 
 Decision: **READY_WITH_WARNINGS**.
 
-Reason: no critical/high blockers are open for the current Rust/VPS transition state. The remaining Node fallback zone is clearly isolated to admin catalog/import/media mutation routes and has a route-by-route rollback process. P2/P3 warnings are tracked and should not block continued incremental cutover work.
+Reason: no critical/high blockers are open for the targeted Rust/VPS transition state. Node remains only as a compatibility fallback for static/root/cart and explicit legacy paths. P2/P3 warnings are tracked and should not block post-cutover feature/security work.
 
 ## 6. Next Implementation Packet
 
-1. Push the media cutover packet and verify GitHub/VPS `autofix-check`, `rust-check`, `vps-deploy`, and `production-smoke`.
-2. Confirm live `/api/admin/product-images` exact route with anonymous 401 plus authenticated temporary upload/list/delete cleanup; rollback from `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-media-*` if any gate fails.
-3. For `/api/admin/import-batches`, add or run a production-safe authenticated smoke that previews, applies, verifies readback, and rolls back/cleans up a temporary import before marking the write path complete.
-4. Continue running `cargo fmt --check`, `cargo check --locked`, `cargo test --locked`, `npm.cmd run check`, GitHub `autofix-check`, `rust-check`, `vps-deploy`, `production-smoke`, plus live admin-safe validation.
+1. Keep post-cutover release gates green: `npm.cmd run check`, `git diff --check`, GitHub `autofix-check`, `rust-check`, `vps-deploy`, and `production-smoke`.
+2. Continue monitoring live health, canonical root, catalog first-load facets, non-zero prices, product images, cache headers, admin media anonymous 401, and authenticated media upload/list/delete cleanup.
+3. Start the next post-cutover functional/security packet only after preserving current Rust route ownership and rollback docs.
+4. Do not remove Node compatibility fallback until a separate no-Node static/root/cart plan and gates exist.
 
 ## 7. Changed Files / Relevant Links
 

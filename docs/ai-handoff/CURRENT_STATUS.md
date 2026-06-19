@@ -1,12 +1,12 @@
 # Current Status Snapshot
 
-Date: 2026-06-16
+Date: 2026-06-19
 
 Latest production status:
-- Current coordinator-verified deployment baseline after YAML fixes: commits `0ace8a6`, `c2c1b56`, and `637f20d` fixed the VPS deploy workflow; `vps-deploy` run `27675967030` and `production-smoke` run `27676234502` passed. Live anonymous checks returned `/api/health` 200, `/api/admin/catalog` 401, `/api/admin/import-batches` 401, `/api/catalog-query?pageSize=1` 200, and `/api/price-list?format=json` 200.
-- Rust admin media parity is implemented locally and queued for deploy: `/rust/admin/product-images` supports admin/content list, JSON base64 upload, mark-unused, and delete against S3-compatible object storage with storage-key traversal guards and temporary upload/list/delete deploy smoke.
-- Rust admin catalog parity is pushed in `240e423`, and deploy-gate exact-route switching is pushed in `7e8d225`. The workflow creates a timestamped Nginx backup before routing only `/api/admin/catalog` to Rust and verifies anonymous 401. This shell cannot reach GitHub Actions or the live domain, so production route ownership still needs Actions/VPS verification before marking catalog cutover PASS.
-- Rust admin import-batches parity is pushed in `1c2a72e`: Rust now has `/rust/admin/import-batches` for admin/content list, preview, reject, apply, and latest-batch rollback with catalog price guards and local tests. Public `/api/admin/import-batches` remains on Node until a live import dry-run/apply/rollback gate is added and passes.
+- Current verified deployment baseline after direct VPS MinIO repair: manual `vps-deploy` run `27816085213` PASS and `production-smoke` run `27816499824` PASS. The repair fixed local MinIO media writes by restoring MinIO data ownership to the MinIO service user, verifying write/stat/delete, updating the app env on the VPS, and restarting Rust without exposing secrets.
+- Rust admin media route is now cut over: production exact `/api/admin/product-images` routes to Rust after the live temporary upload/list/delete smoke passed. The deploy workflow now keeps a safe MinIO data-ownership repair guard in `tools/vps-minio-media-policy.sh` so future media deploy gates can recover the same ownership class without printing secrets.
+- Rust admin catalog route is cut over: production exact `/api/admin/catalog` routes to Rust after deploy-gate switching and live anonymous 401 smoke.
+- Rust admin import-batches route is cut over: production exact `/api/admin/import-batches` routes to Rust after deploy-gate switching and live anonymous 401 smoke; destructive import write operations still require explicit authenticated dry-run/apply/rollback evidence for future business changes.
 - Rust admin PIM read-only route is now cut over: production exact `/api/admin/pim` routes to Rust after PostgreSQL-backed PIM parity. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-pim-20260616T193119Z`.
 - Rust admin prices route is now cut over: production exact `/api/admin/prices` routes to Rust for price-group/SKU preview and PostgreSQL apply. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-prices-20260616T205931Z`.
 - Rust auth write routes are now cut over: production exact `/api/auth/login`, `/api/auth/register`, and `/api/auth/logout` route to Rust after auth parity hardening. Route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-auth-write-20260616T174643Z`.
@@ -14,7 +14,7 @@ Latest production status:
 - Latest admin-prices runtime-change release: `20260616T205347Z-32076fd`; later documentation-only deploys may advance the VPS release marker without changing runtime behavior.
 - Cache hardening code commit `cefeb12` is deployed on `sobag-shop.online`; later docs-only releases may advance the release marker without changing runtime code. GitHub `autofix-check`, `rust-check`, `vps-deploy`, and `production-smoke` passed for the cache hardening release.
 - Live checks passed: `/api/health` 200 `no-store`, `/api/catalog-query` prices are non-zero with real imported category facets, `/api/price-list?format=json` returns 31 rows with short public cache, `/` is `no-cache`, and versioned JS/CSS URLs are immutable.
-- Production `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`, `/api/auth/me`, `/api/orders`, `/api/briefs`, `/api/admin/pim`, and `/api/admin/prices` route exact paths to Rust; `/api/admin/catalog` has a pushed deploy-gate switch with coordinator-verified anonymous denial; Node remains fallback for non-switched root/cart and admin import/media mutation routes until their write smokes pass.
+- Production Rust exact-route ownership now covers auth, orders/briefs, admin orders/users/content/PIM/prices/catalog/import-batches/product-images, catalog/search/product SSR, public content pages, and catalog query/detail APIs. Node remains only as the static/root/cart compatibility fallback and for any explicitly non-switched legacy paths.
 - Remaining business decision: promo/order-pricing precedence and XLSX red styling require explicit business rules before implementing promo pricing beyond the current public price-list rows.
 
 Transition readiness:
@@ -24,7 +24,7 @@ Transition readiness:
 - Real field CWV is still unavailable and remains post-launch monitoring; synthetic 10k catalog/performance evidence is tracked in `docs/synthetic-cwv-readiness-evidence.md`.
 
 Current deployed VPS release:
-- Runtime code baseline is release `20260616T205347Z-32076fd`; Rust admin price mutation parity was finalized in `32076fd`, Rust admin PIM PostgreSQL fallback in `8907ac2`, auth write parity fix in `743c63e`, deploy-smoke port collision hardening in `9932b03`, and the Rust Redis store code in `129740b`.
+- Runtime code baseline is the latest main deployment accepted by manual `vps-deploy` `27816085213`; production-smoke `27816499824` passed after the MinIO repair. Earlier route baselines remain: admin prices `32076fd`, admin PIM `8907ac2`, auth write `743c63e`, deploy-smoke port collision hardening `9932b03`, and Rust Redis store `129740b`.
 - Rollback release kept on VPS: `/opt/sobag-opt/releases/20260612T123649Z-6c76c30`.
 
 Repository:
