@@ -6990,97 +6990,6 @@ body.theme-night .theme-toggle__track::after {
   font-size: 13px;
 }
 
-.variant-matrix {
-  display: grid;
-  gap: 10px;
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid var(--hairline);
-}
-
-.variant-matrix__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.variant-matrix__head strong,
-.variant-matrix__head span {
-  display: block;
-}
-
-.variant-matrix__head strong {
-  font-size: 14px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.variant-matrix__head span {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.variant-matrix__table {
-  max-height: 280px;
-  overflow: auto;
-  border: 1px solid var(--hairline-strong);
-  background: var(--canvas);
-}
-
-.variant-matrix__row {
-  display: grid;
-  grid-template-columns: minmax(130px, 1.5fr) repeat(3, minmax(74px, 0.8fr)) minmax(76px, 0.7fr) 64px 42px;
-  min-width: 720px;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.variant-matrix__row:last-child {
-  border-bottom: 0;
-}
-
-.variant-matrix__row > * {
-  min-width: 0;
-  padding: 8px;
-  border-right: 1px solid var(--hairline);
-  font-size: 12px;
-}
-
-.variant-matrix__row > *:last-child {
-  border-right: 0;
-}
-
-.variant-matrix__row--head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  color: var(--muted);
-  background: var(--surface-soft);
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.variant-matrix input {
-  width: 100%;
-  min-height: 32px;
-  padding: 0 6px;
-  text-align: center;
-  color: var(--on-dark);
-  background: var(--surface-card);
-  border: 1px solid var(--hairline-strong);
-}
-
-.variant-matrix__row button {
-  display: grid;
-  place-items: center;
-  min-height: 32px;
-  color: var(--canvas);
-  background: var(--on-dark);
-  border: 0;
-  font-weight: 900;
-}
-
 .cart-quote-actions {
   display: grid;
   grid-template-columns: 1fr;
@@ -7503,14 +7412,9 @@ body.theme-night .theme-toggle__track::after {
   }
 
   .catalog-recent__head,
-  .related-products__head,
-  .variant-matrix__head {
+  .related-products__head {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .variant-matrix__table {
-    max-height: 240px;
   }
 
   .saved-cart-card {

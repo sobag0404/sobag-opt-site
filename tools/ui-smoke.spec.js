@@ -1088,6 +1088,7 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   await expect(page.locator("#productModal")).toHaveCount(0);
 
   let authUser = { email: "buyer@example.com", name: "Buyer", role: "buyer" };
+  let buyerOrders = [];
   const review = {
     id: "REV-QA-1",
     productId: reviewedProductId,
@@ -1111,13 +1112,13 @@ test("product reviews require login and can be moderated by admin", async ({ pag
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ user: { ...authUser, reviews: [review], orders: [] }, cartItems: [], favoriteItems: [], savedCarts: [] }),
+        body: JSON.stringify({ user: { ...authUser, reviews: [review], orders: buyerOrders }, cartItems: [], favoriteItems: [], savedCarts: [] }),
       });
     }
     return route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ user: { ...authUser, orders: [], reviews: [] }, cartItems: [], favoriteItems: [], savedCarts: [] }),
+      body: JSON.stringify({ user: { ...authUser, orders: buyerOrders, reviews: [] }, cartItems: [], favoriteItems: [], savedCarts: [] }),
     });
   });
   await page.route("**/api/admin/content**", async (route) => {
@@ -1133,6 +1134,28 @@ test("product reviews require login and can be moderated by admin", async ({ pag
     localStorage.setItem("sobag.currentUser", "buyer@example.com");
     localStorage.setItem("sobag.users", JSON.stringify({ "buyer@example.com": { email: "buyer@example.com", name: "Buyer", role: "buyer" } }));
   });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
+  await page.locator("[data-open-product]").first().click();
+  await expect(page.locator(".review-login-note")).toContainText("после заказа");
+  await expect(page.locator(".review-form")).toHaveCount(0);
+  await page.locator(".modal__close").click();
+  buyerOrders = [
+    {
+      id: "SO-QA-REVIEW-ORDER",
+      status: "done",
+      userEmail: "buyer@example.com",
+      items: [
+        {
+          productId: reviewedProductId,
+          baseSku: reviewedBaseSku.trim(),
+          key: reviewedBaseSku.trim(),
+          variant: { sku: reviewedBaseSku.trim(), name: "QA product", price: 1000 },
+          qty: 1,
+        },
+      ],
+    },
+  ];
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
   await page.locator("[data-open-product]").first().click();

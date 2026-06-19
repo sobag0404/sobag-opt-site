@@ -404,6 +404,16 @@ async function submitProductReview(form) {
     openAccount();
     return;
   }
+  if (userHasSubmittedReview(user, product)) {
+    showToast("Вы уже отправили отзыв на этот товар.");
+    refreshProductModal();
+    return;
+  }
+  if (!userHasEligibleReviewOrder(user, product)) {
+    showToast("Оставить отзыв можно после заказа этого товара.");
+    refreshProductModal();
+    return;
+  }
   const data = Object.fromEntries(new FormData(form).entries());
   const rating = Math.max(1, Math.min(5, Math.round(Number(data.rating || 0))));
   const text = String(data.text || "").trim();

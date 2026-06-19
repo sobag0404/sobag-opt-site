@@ -1373,6 +1373,33 @@ function reviewsForProduct(product, statuses = ["approved"]) {
       (review.productId === product.id || baseSkuKey(review.baseSku) === baseSkuKey(product.baseSku))
   );
 }
+const REVIEW_ELIGIBLE_ORDER_STATUSES = new Set(["shipped", "done"]);
+function reviewEligibleOrderStatus(status) {
+  return REVIEW_ELIGIBLE_ORDER_STATUSES.has(String(status || "").trim().toLowerCase());
+}
+function reviewProductSkuKeys(product) {
+  return new Set([product?.baseSku, ...(product?.variants || []).map((variant) => variant?.sku)].map(baseSkuKey).filter(Boolean));
+}
+function orderItemMatchesReviewProduct(item = {}, product = {}) {
+  const productId = String(product.id || "").trim().toLowerCase();
+  const itemProductId = String(item.productId || "").trim().toLowerCase();
+  if (productId && itemProductId && productId === itemProductId) return true;
+  const skuKeys = reviewProductSkuKeys(product);
+  return [item.baseSku, item.key, item.variant?.sku, item.sku, item.variantSku].some((value) => skuKeys.has(baseSkuKey(value)));
+}
+function userHasEligibleReviewOrder(user, product) {
+  return (user?.orders || []).some(
+    (order) => reviewEligibleOrderStatus(order.status) && (order.items || []).some((item) => orderItemMatchesReviewProduct(item, product))
+  );
+}
+function userHasSubmittedReview(user, product) {
+  const productId = String(product?.id || "").trim().toLowerCase();
+  const skuKeys = reviewProductSkuKeys(product);
+  return normalizeReviews(user?.reviews || []).some((review) => {
+    const reviewProductId = String(review.productId || "").trim().toLowerCase();
+    return (productId && reviewProductId === productId) || skuKeys.has(baseSkuKey(review.baseSku));
+  });
+}
 function reviewStats(product) {
   const reviews = reviewsForProduct(product);
   if (!reviews.length) return { count: 0, average: 0 };
@@ -2973,50 +3000,6 @@ function findVariant(product, selection = state.activeVariant) {
     ) || product.variants[0]
   );
 }
-function variantMatrixHtml(product) {
-  const totals = getCartTotals();
-  return `
-    <div class="variant-matrix">
-      <div class="variant-matrix__head">
-        <div>
-          <strong>Оптовые варианты</strong>
-          <span>Каждая строка = отдельный артикул для прайса и заказа</span>
-        </div>
-        <button class="ghost-button" type="button" data-download-product-price="${escapeHtml(product.id)}">
-          <i data-lucide="download"></i>
-          Прайс
-        </button>
-      </div>
-      <div class="variant-matrix__table" role="table" aria-label="Варианты товара">
-        <div role="row" class="variant-matrix__row variant-matrix__row--head">
-          <span>Артикул</span>
-          <span>Тип</span>
-          <span>Размер</span>
-          <span>Материал</span>
-          <span>Цена</span>
-          <span>Кол-во</span>
-          <span></span>
-        </div>
-        ${product.variants
-          .map((variant) => {
-            const unit = discountedUnitPrice(variant.price, getBasketDiscount(totals.subtotal));
-            return `
-              <div role="row" class="variant-matrix__row">
-                <span title="${escapeHtml(variant.sku)}">${escapeHtml(variant.sku)}</span>
-                <span>${escapeHtml(variant.type)}</span>
-                <span>${escapeHtml(variant.size)}</span>
-                <span>${escapeHtml(variant.material)}</span>
-                <strong>${formatMoney(unit)}</strong>
-                <input type="number" min="0" step="1" value="0" data-matrix-qty="${escapeHtml(variant.sku)}" aria-label="Количество ${escapeHtml(variant.sku)}" />
-                <button type="button" data-add-matrix-variant="${escapeHtml(product.id)}" data-variant-sku="${escapeHtml(variant.sku)}">+</button>
-              </div>
-            `;
-          })
-          .join("")}
-      </div>
-    </div>
-  `;
-}
 function relatedProductsHtml(product) {
   const list = relatedProducts(product, 4);
   if (!list.length) return "";
@@ -3039,6 +3022,20 @@ function reviewFormHtml(product) {
       <div class="review-login-note">
         <span>Отзывы могут оставлять только зарегистрированные покупатели.</span>
         <button class="ghost-button" type="button" data-open-account>Войти</button>
+      </div>
+    `;
+  }
+  if (userHasSubmittedReview(user, product)) {
+    return `
+      <div class="review-login-note">
+        <span>Вы уже отправили отзыв на этот товар.</span>
+      </div>
+    `;
+  }
+  if (!userHasEligibleReviewOrder(user, product)) {
+    return `
+      <div class="review-login-note">
+        <span>Оставить отзыв можно после заказа этого товара.</span>
       </div>
     `;
   }
@@ -3272,23 +3269,6 @@ function addVariantLineToCart(product, variant, qty) {
   });
   renderCart();
   return true;
-}
-function addMatrixVariantToCart(productId, variantSku) {
-  const product = products.find((item) => item.id === productId);
-  const variant = product?.variants.find((item) => item.sku === variantSku);
-  const input = document.querySelector(`[data-matrix-qty="${CSS.escape(variantSku)}"]`);
-  const qty = Math.max(0, Number(input?.value || 0));
-  if (!addVariantLineToCart(product, variant, qty)) return;
-  if (input) input.value = 0;
-  showToast("Вариант добавлен в корзину.");
-}
-function downloadProductPriceCsv(productId) {
-  const product = products.find((item) => item.id === productId);
-  if (!product) return;
-  downloadCsv(`sobag-product-${product.baseSku || product.id}-prices.csv`, [
-    ["Основной артикул", "Артикул варианта", "Наименование", "Тип", "Размер", "Материал", "Цена"],
-    ...product.variants.map((variant) => [product.baseSku, variant.sku, variant.name, variant.type, variant.size, variant.material, variant.price]),
-  ]);
 }
 function addVariantToCart(productId) {
   const product = products.find((item) => item.id === productId);
@@ -4120,14 +4100,6 @@ function boot() {
       return;
     }
     if (button.dataset.addVariant) addVariantToCart(button.dataset.addVariant);
-    if (button.dataset.addMatrixVariant) {
-      addMatrixVariantToCart(button.dataset.addMatrixVariant, button.dataset.variantSku || "");
-      return;
-    }
-    if (button.dataset.downloadProductPrice) {
-      downloadProductPriceCsv(button.dataset.downloadProductPrice);
-      return;
-    }
     if (button.dataset.repeatOrder) {
       repeatOrder(button.dataset.repeatOrder);
       closeModal();
