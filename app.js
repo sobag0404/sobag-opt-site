@@ -194,6 +194,7 @@ const state = {
     errors: [],
     rowsCount: 0,
   },
+  priceImportHistory: loadStoredPriceImportHistory(),
 };
 const productGrid = document.querySelector("#productGrid");
 const productCount = document.querySelector("#productCount");

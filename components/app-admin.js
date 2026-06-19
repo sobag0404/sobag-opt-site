@@ -784,6 +784,42 @@ function selectedAdminPriceRows() {
   const selected = new Set(selectedIds);
   return adminPriceRows(products).filter((row) => selected.has(adminPriceRowId(row.product, row.variant)));
 }
+function loadStoredPriceImportHistory() {
+  try {
+    const history = JSON.parse(localStorage.getItem("sobag.priceImportHistory.v1") || "[]");
+    return Array.isArray(history) ? history.slice(0, 8) : [];
+  } catch {
+    return [];
+  }
+}
+function saveStoredPriceImportHistory() {
+  localStorage.setItem("sobag.priceImportHistory.v1", JSON.stringify(state.priceImportHistory.slice(0, 8)));
+}
+function priceImportStatusLabel(status) {
+  return (
+    {
+      validated: "Проверен",
+      empty: "Без изменений",
+      error: "Ошибка",
+      applied: "Применен",
+      failed: "Не применен",
+    }[status] || "Статус"
+  );
+}
+function recordPriceImportHistory(entry = {}) {
+  const clean = {
+    id: `price-import-${Date.now()}`,
+    at: new Date().toISOString(),
+    status: entry.status || "validated",
+    source: entry.source || "server",
+    rows: Number(entry.rows || 0),
+    changes: Number(entry.changes || 0),
+    errors: Number(entry.errors || 0),
+    applied: Number(entry.applied || 0),
+  };
+  state.priceImportHistory = [clean, ...state.priceImportHistory].slice(0, 8);
+  saveStoredPriceImportHistory();
+}
 function pricePreviewCanApply() {
   const errors = state.pricePreviewMeta?.errors || [];
   if (!state.pricePreview.length || errors.length) return false;
@@ -825,7 +861,10 @@ function pricePreviewRowsHtml() {
         <strong>Ошибки импорта: ${errors.length}</strong>
         ${errors
           .slice(0, 8)
-          .map((error) => `<span>Строка ${escapeHtml(error.row || "")}: ${escapeHtml(error.message || error.error || "Некорректная строка")}</span>`)
+          .map((error) => {
+            const row = error.row ? `Строка ${escapeHtml(error.row)}: ` : "";
+            return `<span>${row}${escapeHtml(error.message || error.error || "Некорректная строка")}</span>`;
+          })
           .join("")}
         ${errors.length > 8 ? `<small>Показаны первые 8 ошибок.</small>` : ""}
       </div>
@@ -846,6 +885,41 @@ function pricePreviewRowsHtml() {
         .join("")}
     </div>
     ${state.pricePreview.length > 160 ? `<p class="admin-section-note">Показаны первые 160 изменений из ${state.pricePreview.length}.</p>` : ""}
+  `;
+}
+function priceImportHistoryHtml() {
+  const history = state.priceImportHistory || [];
+  return `
+    <section class="admin-price-history" aria-label="История импорта цен">
+      <div class="admin-price-history__head">
+        <h3>История импорта</h3>
+        <span>Только сводка: статус, строки, ошибки и источник без данных из файла.</span>
+      </div>
+      ${
+        history.length
+          ? `<div class="admin-price-history__list">
+              ${history
+                .map((entry) => {
+                  const details = [
+                    entry.rows ? `${entry.rows} строк` : "",
+                    entry.changes ? `${entry.changes} изменений` : "",
+                    entry.applied ? `${entry.applied} применено` : "",
+                    entry.errors ? `${entry.errors} ошибок` : "",
+                    entry.source ? `источник: ${entry.source}` : "",
+                  ].filter(Boolean);
+                  return `
+                    <article class="admin-price-history__item admin-price-history__item--${escapeHtml(entry.status || "status")}">
+                      <strong>${escapeHtml(priceImportStatusLabel(entry.status))}</strong>
+                      <span>${escapeHtml(new Date(entry.at || Date.now()).toLocaleString("ru-RU"))}</span>
+                      <small>${escapeHtml(details.join(" · ") || "ожидает проверки")}</small>
+                    </article>
+                  `;
+                })
+                .join("")}
+            </div>`
+          : `<p class="admin-price-history__empty">После серверного предпросмотра или применения здесь появится сводка импорта.</p>`
+      }
+    </section>
   `;
 }
 function setPricePreview(changes) {
@@ -887,13 +961,21 @@ function priceChangeFromBackend(change) {
 }
 function setBackendPricePreview(result = {}, rows = []) {
   const changes = (result.changes || []).map(priceChangeFromBackend).filter((change) => Number.isFinite(change.newPrice) && change.newPrice > 0);
+  const errors = result.errors || [];
   state.pricePreview = changes;
   state.pricePreviewMeta = {
     source: result.source || "server",
     rows,
-    errors: result.errors || [],
+    errors,
     rowsCount: rows.length,
   };
+  recordPriceImportHistory({
+    status: errors.length ? "error" : changes.length ? "validated" : "empty",
+    source: state.pricePreviewMeta.source,
+    rows: rows.length,
+    changes: changes.length,
+    errors: errors.length,
+  });
   renderAdminPricesPage();
   const message = changes.length
     ? `Импорт цен: подготовлено ${changes.length} изменений${state.pricePreviewMeta.errors.length ? `, ошибок: ${state.pricePreviewMeta.errors.length}` : ""}.`
@@ -941,12 +1023,26 @@ async function applyPricePreview() {
         publicCache: false,
         body: { action: "apply", rows: state.pricePreviewMeta?.rows || [] },
       });
+      recordPriceImportHistory({
+        status: "applied",
+        source: result.source || "server",
+        rows: state.pricePreviewMeta?.rows?.length || 0,
+        changes: result.changes || 0,
+        applied: result.applied || result.changes || 0,
+      });
       state.pricePreview = [];
       state.pricePreviewMeta = { source: result.source || "server", rows: [], errors: [], rowsCount: 0 };
       await loadServerProducts();
       renderAdminPricesPage();
       showToast(`Импорт цен применен: ${result.changes || result.applied || 0} изменений.`);
     } catch (error) {
+      recordPriceImportHistory({
+        status: "failed",
+        source: state.pricePreviewMeta?.source || "server",
+        rows: state.pricePreviewMeta?.rows?.length || 0,
+        changes: state.pricePreview.length,
+        errors: 1,
+      });
       showToast(error.message || "Не удалось применить импорт цен на сервере.");
     }
     return;
@@ -1036,6 +1132,7 @@ function adminPricesPageHtml() {
         ${priceImportGuideHtml()}
         ${pricePreviewRowsHtml()}
       </section>
+      ${priceImportHistoryHtml()}
     </div>
     <div class="admin-price-table">
       ${rows.length > visibleRows.length ? `<p class="admin-section-note">Показаны первые ${visibleRows.length} строк из ${rows.length}. Для ручной правки уточните поиск или фильтры; экспорт и массовое изменение работают по всему текущему фильтру.</p>` : ""}

@@ -3038,6 +3038,70 @@ select[aria-invalid="true"] {
   border-bottom: 1px solid var(--hairline);
 }
 
+.admin-price-history {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+
+.admin-price-history__head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.admin-price-history__head h3 {
+  margin: 0;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.admin-price-history__head span,
+.admin-price-history__item small,
+.admin-price-history__item span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-price-history__list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-price-history__item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+}
+
+.admin-price-history__item strong {
+  color: var(--on-dark);
+}
+
+.admin-price-history__empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.admin-price-history__item--error,
+.admin-price-history__item--failed {
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.admin-price-history__item--error strong,
+.admin-price-history__item--failed strong {
+  color: #b91c1c;
+}
+
 .admin-price-table__head {
   color: var(--muted);
   background: var(--surface-soft);
@@ -7956,6 +8020,7 @@ textarea.is-shaking {
   .admin-product-fields,
   .admin-product-variants div,
   .admin-price-tools,
+  .admin-price-history__list,
   .admin-price-preview__table div,
   .admin-price-table__head,
   .admin-price-row {

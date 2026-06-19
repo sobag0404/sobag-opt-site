@@ -175,6 +175,10 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   });
   await expect.poll(() => priceImportPreviewRequests).toBe(1);
   await expect(page.locator(".admin-price-preview__errors")).toBeVisible();
+  await expect(page.locator(".admin-price-history")).toContainText("История импорта");
+  await expect(page.locator(".admin-price-history")).toContainText("Ошибка");
+  await expect(page.locator(".admin-price-history")).toContainText("1 ошибок");
+  await expect(page.locator(".admin-price-history")).not.toContainText("opt_1,123");
   await expect(page.locator("[data-admin-apply-price-preview]")).toBeDisabled();
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });
