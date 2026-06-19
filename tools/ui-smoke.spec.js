@@ -157,6 +157,8 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await page.goto(`${BASE_URL}/admin-prices?q=opt_`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelectorAll(".admin-price-row").length > 0);
   await expect(page.locator(".admin-price-preview h3")).toContainText("Предпросмотр изменений");
+  await expect(page.locator('.admin-product-export a[href="/api/admin/prices?template=1"]')).toContainText("Шаблон импорта");
+  await expect(page.locator(".admin-price-preview__empty")).toContainText("Акция цена");
 });
 
 test("admin import page and custom print calculator render", async ({ page }) => {
@@ -405,6 +407,18 @@ test("catalog home first load uses server category summary over stale fallback",
       }),
     });
   });
+  await page.route("**/api/price-list?format=json", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        rows: [
+          { type: "base", label: "Подушка велюр 40х40", price: 220, productCount: 12, skuCount: 12 },
+          { type: "promo", label: "Акция Подушка велюр 40х40", price: 199, productCount: 12, skuCount: 12, promoStartsAt: "2026-01-01", promoEndsAt: "2026-01-31" },
+        ],
+      }),
+    });
+  });
 
   await page.goto(`${BASE_URL}/catalog.html?qa=category-summary`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(100);
@@ -417,6 +431,9 @@ test("catalog home first load uses server category summary over stale fallback",
     expect(normalizedTileText).toContain(row.value.toLocaleLowerCase("ru-RU"));
     expect(tileText).toContain(String(row.count));
   }
+  await expect(page.locator(".catalog-price-button")).toContainText("Прайс");
+  await expect(page.locator(".price-list-preview__row--promo .price-list-preview__badge")).toContainText("Акция");
+  await expect(page.locator(".price-list-preview")).toContainText("199");
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
   const reloadTileText = await page.locator("#categoryTiles").innerText();

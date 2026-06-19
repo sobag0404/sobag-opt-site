@@ -188,6 +188,12 @@ const state = {
   activeImportBatchId: "",
   importUpdateExisting: false,
   pricePreview: [],
+  pricePreviewMeta: {
+    source: "local",
+    rows: [],
+    errors: [],
+    rowsCount: 0,
+  },
 };
 const productGrid = document.querySelector("#productGrid");
 const productCount = document.querySelector("#productCount");
@@ -202,6 +208,7 @@ const categoryTiles = document.querySelector("#categoryTiles");
 const actualTiles = document.querySelector("#actualTiles");
 const collectionTiles = document.querySelector("#collectionTiles");
 const holidayTiles = document.querySelector("#holidayTiles");
+const priceListPreview = document.querySelector("#priceListPreview");
 const catalogHome = document.querySelector("#catalogHome");
 const catalogListing = document.querySelector("#catalogListing");
 const catalogTools = document.querySelector("#catalogTools");
@@ -2413,6 +2420,67 @@ function renderCatalogHomeSecondarySections(content) {
   if (window.lucide) window.lucide.createIcons();
   catalogHomeHasAnimated = true;
 }
+function priceListDateRange(row = {}) {
+  const dates = [row.promoStartsAt, row.promoEndsAt].filter(Boolean);
+  return dates.length ? dates.join(" — ") : "";
+}
+function priceListPreviewRowHtml(row) {
+  const isPromo = row.type === "promo";
+  const label = String(row.label || row.group || "").replace(/^Акция\s+/i, "");
+  const count = [row.productCount ? `${row.productCount} товаров` : "", row.skuCount ? `${row.skuCount} SKU` : ""].filter(Boolean).join(" · ");
+  const period = priceListDateRange(row);
+  return `
+    <article class="price-list-preview__row${isPromo ? " price-list-preview__row--promo" : ""}">
+      <div>
+        <span class="price-list-preview__badge">${isPromo ? "Акция" : "Категория"}</span>
+        <strong>${escapeHtml(label)}</strong>
+        <small>${escapeHtml([count, period].filter(Boolean).join(" · "))}</small>
+      </div>
+      <b>${formatMoney(row.price)}</b>
+    </article>
+  `;
+}
+function renderPriceListPreview(status = "loading", rows = [], message = "") {
+  if (!priceListPreview) return;
+  if (status === "loading") {
+    priceListPreview.innerHTML = `<div class="price-list-preview__skeleton" aria-hidden="true"><span></span><span></span><span></span></div>`;
+    return;
+  }
+  if (status === "error") {
+    priceListPreview.innerHTML = `
+      <div class="price-list-preview__state">
+        <strong>Прайс сейчас не загрузился.</strong>
+        <span>${escapeHtml(message || "Скачивание остается доступным по кнопке.")}</span>
+      </div>
+    `;
+    return;
+  }
+  if (!rows.length) {
+    priceListPreview.innerHTML = `
+      <div class="price-list-preview__state">
+        <strong>В прайсе пока нет строк.</strong>
+        <span>Добавьте цены в каталоге или загрузите импорт цен в админке.</span>
+      </div>
+    `;
+    return;
+  }
+  priceListPreview.innerHTML = `
+    <div class="price-list-preview__rows">
+      ${rows.slice(0, 8).map(priceListPreviewRowHtml).join("")}
+    </div>
+    ${rows.length > 8 ? `<p class="price-list-preview__more">Еще ${rows.length - 8} строк в скачиваемом прайсе.</p>` : ""}
+  `;
+}
+async function loadPriceListPreview() {
+  if (!priceListPreview) return;
+  renderPriceListPreview("loading");
+  try {
+    const result = await apiRequest("/api/price-list?format=json");
+    renderPriceListPreview("ready", Array.isArray(result.rows) ? result.rows : []);
+  } catch (error) {
+    renderPriceListPreview("error", [], error.message);
+  }
+}
 function renderCatalogShell() {
   if (!catalogHome || !catalogListing || !catalogTools || !catalogTitle) return;
   const isHome = !isSearchPage && !isFavoritesPage && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
@@ -3174,7 +3242,7 @@ function productModalHtml(product) {
             </div>
             <a class="ghost-button detail-price-download" href="/api/price-list" title="Скачать прайс" aria-label="Скачать прайс">
               <i data-lucide="download"></i>
-              Скачать прайс
+              Прайс
             </a>
             <div class="detail-total">
               <span>ИТОГО</span>
@@ -3694,6 +3762,24 @@ async function importPriceFile(file) {
     onXlsxUnavailable: () => showToast("XLSX библиотека недоступна. Загрузите CSV или повторите позже."),
   });
   if (!rows.length) return;
+  try {
+    const response = await fetch("/api/admin/prices", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "preview", rows }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (response.ok || Array.isArray(result.errors)) {
+      setBackendPricePreview(result, rows);
+      return;
+    }
+    if (response.status !== 401 && response.status !== 403 && response.status !== 404) {
+      showToast(result.message || "Серверный предпросмотр импорта цен недоступен, подготовлен локальный предпросмотр.");
+    }
+  } catch (error) {
+    if (!isBackendUnavailable(error)) console.warn(error);
+  }
   const rowBySku = new Map();
   rows.forEach((row) => {
     const sku = String(priceImportValue(row, ["Артикул варианта", "variant sku", "sku", "Артикул"]) || "").trim();
@@ -3704,6 +3790,8 @@ async function importPriceFile(file) {
     .filter(({ variant }) => rowBySku.has(variant.sku.toLocaleUpperCase("ru-RU")))
     .map((row) => buildPriceChange(row, rowBySku.get(row.variant.sku.toLocaleUpperCase("ru-RU")), "import"));
   setPricePreview(changes);
+  state.pricePreviewMeta = { source: "local-file", rows, errors: [], rowsCount: rows.length };
+  renderAdminPricesPage();
 }
 function findCatalogItemByName(items, name) {
   const prepared = String(name || "").trim().toLocaleLowerCase("ru-RU");
@@ -3933,6 +4021,7 @@ function boot() {
   initActualSlider();
   loadServerSiteContent();
   refreshCatalogHomeSummary();
+  loadPriceListPreview();
   loadPublishedProducts();
   loadImportBatches();
   initFormEnhancements();
@@ -4333,7 +4422,7 @@ function boot() {
       return;
     }
     if (button.dataset.adminApplyPricePreview !== undefined) {
-      applyPricePreview();
+      await applyPricePreview();
       return;
     }
     if (button.dataset.adminToggleProduct) {

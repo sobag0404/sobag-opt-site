@@ -785,17 +785,37 @@ function selectedAdminPriceRows() {
   return adminPriceRows(products).filter((row) => selected.has(adminPriceRowId(row.product, row.variant)));
 }
 function pricePreviewRowsHtml() {
-  if (!state.pricePreview.length) return `<p class="admin-price-preview__empty">Предпросмотр пока пуст. Сначала подготовьте изменение цен.</p>`;
+  const errors = state.pricePreviewMeta?.errors || [];
+  const meta = state.pricePreviewMeta || {};
+  if (!state.pricePreview.length && !errors.length) {
+    return `
+      <div class="admin-price-preview__empty">
+        <strong>Предпросмотр пока пуст.</strong>
+        <span>Загрузите CSV/XLSX с колонками «Категория/группа», «Артикул», «Цена», «Акция цена», «Акция с», «Акция до» или подготовьте массовое изменение по фильтру.</span>
+      </div>
+    `;
+  }
   return `
+    ${errors.length ? `
+      <div class="admin-price-preview__errors" role="alert">
+        <strong>Ошибки импорта: ${errors.length}</strong>
+        ${errors
+          .slice(0, 8)
+          .map((error) => `<span>Строка ${escapeHtml(error.row || "")}: ${escapeHtml(error.message || error.error || "Некорректная строка")}</span>`)
+          .join("")}
+        ${errors.length > 8 ? `<small>Показаны первые 8 ошибок.</small>` : ""}
+      </div>
+    ` : ""}
+    ${meta.rowsCount ? `<p class="admin-section-note">Файл: ${meta.rowsCount} строк. Источник предпросмотра: ${escapeHtml(meta.source || "local")}.</p>` : ""}
     <div class="admin-price-preview__table">
       ${state.pricePreview
         .slice(0, 160)
         .map(
           (row) => `
-            <div>
-              <b>${escapeHtml(row.sku)}</b>
-              <span>${escapeHtml(row.name)}</span>
-              <strong>${formatMoney(row.oldPrice)} → ${formatMoney(row.newPrice)}</strong>
+            <div class="${row.isPromo ? "admin-price-preview__promo" : ""}">
+              <b>${escapeHtml(row.sku || row.target || row.baseSku || "")}</b>
+              <span>${row.isPromo ? '<em class="admin-price-badge">Акция</em>' : ""}${escapeHtml(row.name || row.group || row.target || "")}</span>
+              <strong>${row.isPromo ? `Акция ${formatMoney(row.newPrice)}` : `${formatMoney(row.oldPrice)} → ${formatMoney(row.newPrice)}`}</strong>
             </div>
           `
         )
@@ -806,6 +826,7 @@ function pricePreviewRowsHtml() {
 }
 function setPricePreview(changes) {
   state.pricePreview = changes.filter((change) => Number.isFinite(change.newPrice) && change.newPrice > 0 && change.newPrice !== change.oldPrice);
+  state.pricePreviewMeta = { source: "local", rows: [], errors: [], rowsCount: 0 };
   renderAdminPricesPage();
   showToast(state.pricePreview.length ? `Подготовлено изменений цен: ${state.pricePreview.length}.` : "Нет изменений для предпросмотра.");
 }
@@ -823,6 +844,39 @@ function buildPriceChange(row, newPrice, reason = "") {
     newPrice: Math.max(1, Math.round(Number(newPrice || 0))),
     reason,
   };
+}
+function priceChangeFromBackend(change) {
+  const isPromo = String(change.kind || "").endsWith("_promo");
+  return {
+    productId: (change.productIds || [])[0] || "",
+    baseSku: change.group || "",
+    sku: (change.skus || [])[0] || change.target || change.group || "",
+    target: change.target || change.group || "",
+    group: change.group || "",
+    name: change.group || change.target || (change.skus || []).slice(0, 3).join(", "),
+    oldPrice: Number((change.oldPrices || [])[0] || 0),
+    newPrice: Number(isPromo ? change.promoPrice : change.newPrice),
+    reason: change.kind || "import",
+    isPromo,
+    backendOnly: true,
+  };
+}
+function setBackendPricePreview(result = {}, rows = []) {
+  const changes = (result.changes || []).map(priceChangeFromBackend).filter((change) => Number.isFinite(change.newPrice) && change.newPrice > 0);
+  state.pricePreview = changes;
+  state.pricePreviewMeta = {
+    source: result.source || "server",
+    rows,
+    errors: result.errors || [],
+    rowsCount: rows.length,
+  };
+  renderAdminPricesPage();
+  const message = changes.length
+    ? `Импорт цен: подготовлено ${changes.length} изменений${state.pricePreviewMeta.errors.length ? `, ошибок: ${state.pricePreviewMeta.errors.length}` : ""}.`
+    : state.pricePreviewMeta.errors.length
+      ? `Импорт цен: ошибок ${state.pricePreviewMeta.errors.length}.`
+      : "Импорт цен не нашел изменений.";
+  showToast(message);
 }
 function previewBulkPriceChanges(form) {
   const data = Object.fromEntries(new FormData(form).entries());
@@ -851,9 +905,26 @@ function previewManualPriceChanges() {
     .filter(Boolean);
   setPricePreview(changes);
 }
-function applyPricePreview() {
+async function applyPricePreview() {
   if (!state.pricePreview.length) {
     showToast("Нет подготовленных изменений цен.");
+    return;
+  }
+  if (state.pricePreview.some((change) => change.backendOnly)) {
+    try {
+      const result = await apiRequest("/api/admin/prices", {
+        method: "POST",
+        publicCache: false,
+        body: { action: "apply", rows: state.pricePreviewMeta?.rows || [] },
+      });
+      state.pricePreview = [];
+      state.pricePreviewMeta = { source: result.source || "server", rows: [], errors: [], rowsCount: 0 };
+      await loadServerProducts();
+      renderAdminPricesPage();
+      showToast(`Импорт цен применен: ${result.changes || result.applied || 0} изменений.`);
+    } catch (error) {
+      showToast(error.message || "Не удалось применить импорт цен на сервере.");
+    }
     return;
   }
   const byProduct = new Map(products.map((product) => [product.id, product]));
@@ -865,6 +936,7 @@ function applyPricePreview() {
   });
   saveProducts();
   state.pricePreview = [];
+  state.pricePreviewMeta = { source: "local", rows: [], errors: [], rowsCount: 0 };
   renderCatalogHome();
   renderFilters();
   renderProducts();
@@ -924,11 +996,16 @@ function adminPricesPageHtml() {
         <button class="ghost-button" type="button" data-admin-export-price-rows>Экспорт цен</button>
         <button class="ghost-button" type="button" data-admin-export-price-xlsx>Экспорт цен XLSX</button>
         <button class="ghost-button" type="button" data-admin-export-price-products>Экспорт товаров с ценами</button>
+        <a class="ghost-button" href="/api/admin/prices?template=1" target="_blank" rel="noopener">
+          <i data-lucide="download"></i>
+          Шаблон импорта
+        </a>
         <label class="ghost-button admin-price-import">
-          Импорт CSV/XLSX
+          <i data-lucide="upload"></i>
+          Импорт цен CSV/XLSX
           <input type="file" accept=".csv,.xlsx,.xls" data-admin-price-import />
         </label>
-        <span>Если строки не выбраны, действие применяется к текущему фильтру.</span>
+        <span>Импорт принимает строки по категории/группе или артикулу, включая колонки «Акция цена», «Акция с», «Акция до». Если строки не выбраны, массовое действие применяется к текущему фильтру.</span>
       </div>
       <section class="admin-price-preview" aria-live="polite">
         <h3>Предпросмотр изменений</h3>

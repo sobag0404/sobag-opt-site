@@ -2942,8 +2942,46 @@ select[aria-invalid="true"] {
 }
 
 .admin-price-preview__empty {
+  display: grid;
+  gap: 4px;
   margin: 0;
   color: var(--muted);
+}
+
+.admin-price-preview__empty strong {
+  color: var(--on-dark);
+}
+
+.admin-price-preview__errors {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+}
+
+.admin-price-preview__errors span,
+.admin-price-preview__errors small {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-price-badge {
+  display: inline-flex;
+  margin-right: 8px;
+  padding: 2px 7px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-price-preview__table .admin-price-preview__promo {
+  border-color: rgba(220, 38, 38, 0.35);
 }
 
 .admin-price-preview__table,
@@ -4419,6 +4457,127 @@ main {
   text-align: right;
 }
 
+.catalog-price-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 18px;
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+}
+
+.catalog-price-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.catalog-price-panel__head h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.catalog-price-panel__head span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.catalog-price-button {
+  min-width: 128px;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.price-list-preview {
+  min-height: 92px;
+}
+
+.price-list-preview__rows {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.price-list-preview__row {
+  display: grid;
+  gap: 10px;
+  min-height: 116px;
+  padding: 14px;
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+}
+
+.price-list-preview__row--promo {
+  border-color: rgba(220, 38, 38, 0.45);
+}
+
+.price-list-preview__row strong,
+.price-list-preview__row small,
+.price-list-preview__more,
+.price-list-preview__state span {
+  display: block;
+}
+
+.price-list-preview__row strong {
+  margin-top: 8px;
+  line-height: 1.2;
+}
+
+.price-list-preview__row small,
+.price-list-preview__more,
+.price-list-preview__state span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.price-list-preview__row b {
+  align-self: end;
+  font-size: 18px;
+}
+
+.price-list-preview__badge {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  min-height: 22px;
+  padding: 0 8px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.price-list-preview__row--promo .price-list-preview__badge {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.price-list-preview__state {
+  padding: 16px;
+  background: var(--canvas);
+  border: 1px dashed var(--hairline-strong);
+}
+
+.price-list-preview__skeleton {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.price-list-preview__skeleton span {
+  min-height: 92px;
+  background: linear-gradient(90deg, var(--surface-soft), rgba(148, 163, 184, 0.22), var(--surface-soft));
+  background-size: 220% 100%;
+  animation: skeleton-loading 1.2s ease-in-out infinite;
+}
+
 .category-tiles {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4687,6 +4846,16 @@ main {
     text-align: left;
   }
 
+  .catalog-price-panel__head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .price-list-preview__rows,
+  .price-list-preview__skeleton {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .category-tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4743,6 +4912,15 @@ main {
 
   .theme-tile {
     min-height: 54px;
+  }
+
+  .catalog-price-button {
+    width: 100%;
+  }
+
+  .price-list-preview__rows,
+  .price-list-preview__skeleton {
+    grid-template-columns: 1fr;
   }
 
   .product-detail__media > img {
