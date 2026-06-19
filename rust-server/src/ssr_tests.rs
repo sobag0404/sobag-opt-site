@@ -897,8 +897,22 @@ fn admin_price_import_builds_sku_change_and_rejects_bad_rows() {
     assert_eq!(changes[0]["oldPrices"][0], 220);
 
     let invalid = json!({ "group": "=SUM(A1:A2)", "price": "0" });
-    let (_, errors) = parse_price_import_rows_for_test(&[record], &[invalid]);
+    let (_, errors) = parse_price_import_rows_for_test(&[record.clone()], &[invalid]);
     assert_eq!(errors[0]["error"], "formula_input_rejected");
+
+    let spaced = json!({ "sku": "SKU-1", "price": "1 250" });
+    let (changes, errors) = parse_price_import_rows_for_test(&[record.clone()], &[spaced]);
+    assert!(errors.is_empty());
+    assert_eq!(changes[0]["newPrice"], 1250);
+
+    let invalid_period = json!({
+        "sku": "SKU-1",
+        "promoPrice": "199",
+        "promoStart": "2026-02-01",
+        "promoEnd": "2026-01-01"
+    });
+    let (_, errors) = parse_price_import_rows_for_test(&[record], &[invalid_period]);
+    assert_eq!(errors[0]["error"], "invalid_promo_period");
 }
 
 #[test]

@@ -27,7 +27,11 @@ function groupKey(value) {
 }
 
 function roundPrice(value) {
-  const number = Number(String(value ?? "").replace(",", "."));
+  const prepared = String(value ?? "")
+    .trim()
+    .replace(",", ".")
+    .replace(/[^\d.-]/g, "");
+  const number = Number(prepared);
   return Number.isFinite(number) ? Math.round(number) : NaN;
 }
 
@@ -96,6 +100,39 @@ function promoIsActive(promo, now = new Date()) {
   if (Number.isFinite(startMs) && nowMs < startMs) return false;
   if (Number.isFinite(endMs) && nowMs > endMs) return false;
   return true;
+}
+
+function promoBoundMs(value, endOfDay = false) {
+  const prepared = text(value);
+  if (!prepared) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(prepared)) {
+    const suffix = endOfDay ? "T23:59:59.999Z" : "T00:00:00.000Z";
+    const ms = Date.parse(`${prepared}${suffix}`);
+    return Number.isFinite(ms) ? ms : NaN;
+  }
+  const ms = Date.parse(prepared);
+  return Number.isFinite(ms) ? ms : NaN;
+}
+
+function validatePromoPeriod(start, end) {
+  const startText = text(start);
+  const endText = text(end);
+  const startMs = startText ? promoBoundMs(startText, false) : null;
+  const endMs = endText ? promoBoundMs(endText, true) : null;
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+    const error = new Error("Promo period must use ISO date or datetime values.");
+    error.code = "invalid_promo_period";
+    error.statusCode = 400;
+    error.publicMessage = "Promo period must use ISO date or datetime values.";
+    throw error;
+  }
+  if (startMs !== null && endMs !== null && startMs > endMs) {
+    const error = new Error("Promo start must not be after promo end.");
+    error.code = "invalid_promo_period";
+    error.statusCode = 400;
+    error.publicMessage = "Promo start must not be after promo end.";
+    throw error;
+  }
 }
 
 function productVariantRecords(products = []) {
@@ -310,6 +347,9 @@ function parsePriceImportRows(records = [], rows = []) {
       }
       if (text(promoRaw)) {
         const promoPrice = requirePositivePrice(promoRaw, "promoPrice");
+        const promoStartsAt = text(valueByColumn(row, PRICE_GROUP_COLUMNS.promoStart));
+        const promoEndsAt = text(valueByColumn(row, PRICE_GROUP_COLUMNS.promoEnd));
+        validatePromoPeriod(promoStartsAt, promoEndsAt);
         const key = `promo:${targetKey}`;
         if (seen.has(key)) errors.push({ row: rowNumber, error: "duplicate_promo_target", message: "Duplicate promo target in import." });
         else {
@@ -323,8 +363,8 @@ function parsePriceImportRows(records = [], rows = []) {
             productIds: [...new Set(matched.map((item) => text(item.product.id || item.variant.productId)).filter(Boolean))],
             promoPrice,
             promoActive: parseBool(valueByColumn(row, PRICE_GROUP_COLUMNS.promoActive), true),
-            promoStartsAt: text(valueByColumn(row, PRICE_GROUP_COLUMNS.promoStart)),
-            promoEndsAt: text(valueByColumn(row, PRICE_GROUP_COLUMNS.promoEnd)),
+            promoStartsAt,
+            promoEndsAt,
           });
         }
       }

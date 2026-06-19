@@ -103,12 +103,35 @@ async function main() {
   const formula = parsePriceImportRows(records, [{ "Категория/группа": "=cmd", "Цена": "250" }]);
   assert.equal(formula.errors[0]?.error, "formula_input_rejected");
 
+  const spacedPrice = parsePriceImportRows(records, [{ sku: records[0].variant.sku, price: "1 250" }]);
+  assert.equal(spacedPrice.errors.length, 0);
+  assert.equal(spacedPrice.changes[0].newPrice, 1250);
+
+  const invalidPromoPeriod = parsePriceImportRows(records, [{ sku: records[0].variant.sku, promoPrice: "199", promoStart: "2026-02-01", promoEnd: "2026-01-01" }]);
+  assert.equal(invalidPromoPeriod.errors[0]?.error, "invalid_promo_period");
+
+  const futurePromoProducts = applyPriceChangesToProducts(products, [
+    { ...preview.changes[1], promoStartsAt: "2999-01-01", promoEndsAt: "2999-01-31" },
+  ]);
+  assert.equal(collectPriceGroupsFromProducts(futurePromoProducts)[0].promoPrice, null);
+
   const dbClient = fakeDbClient();
   const dbResult = await applyPriceChangesToDb(dbClient, preview.changes);
   assert.equal(dbResult.updatedSkus, 2);
   assert.equal(dbClient.calls[0].sql, "BEGIN");
   assert.equal(dbClient.calls.at(-1).sql, "COMMIT");
   assert.equal(dbClient.calls.some((call) => /UPDATE variants SET price/.test(call.sql)), true);
+
+  const failingDb = {
+    calls: [],
+    async query(sql) {
+      this.calls.push(sql);
+      if (/UPDATE variants SET price/.test(sql)) throw new Error("simulated db failure");
+      return { rows: [] };
+    },
+  };
+  await assert.rejects(() => applyPriceChangesToDb(failingDb, preview.changes), /simulated db failure/);
+  assert.ok(failingDb.calls.includes("ROLLBACK"));
 
   const tempDir = mkdtempSync(join(tmpdir(), "sobag-price-groups-route-"));
   process.env.SOBAG_STORE_PROVIDER = "file";

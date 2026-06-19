@@ -9,6 +9,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use chrono::{DateTime, NaiveDate, Utc};
 use serde_json::{json, Value};
 use sqlx::{PgPool, Row};
 
@@ -463,7 +464,21 @@ fn promo_from_payload_allow_price(value: &Value) -> Option<Promo> {
 }
 
 fn promo_active(promo: &Promo) -> bool {
-    promo.active
+    if !promo.active {
+        return false;
+    }
+    let now_ms = Utc::now().timestamp_millis();
+    if let Some(start_ms) = promo_bound_ms(&promo.starts_at, false) {
+        if now_ms < start_ms {
+            return false;
+        }
+    }
+    if let Some(end_ms) = promo_bound_ms(&promo.ends_at, true) {
+        if now_ms > end_ms {
+            return false;
+        }
+    }
+    true
 }
 
 fn mode_price(counts: &BTreeMap<i64, usize>) -> i64 {
@@ -697,6 +712,16 @@ fn parse_price_import_rows(
         if !promo_raw.is_empty() {
             match require_positive_price_text(&promo_raw, "promoPrice") {
                 Ok(promo_price) => {
+                    let promo_start_raw =
+                        value_by_columns(row, &["РђРєС†РёСЏ СЃ", "promoStart", "saleStart"]);
+                    let promo_end_raw =
+                        value_by_columns(row, &["РђРєС†РёСЏ РґРѕ", "promoEnd", "saleEnd"]);
+                    if let Some(error) =
+                        validate_promo_period(row_number, &promo_start_raw, &promo_end_raw)
+                    {
+                        errors.push(error);
+                        continue;
+                    }
                     let key = format!("promo:{target_key}");
                     if !seen.insert(key) {
                         errors.push(json!({ "row": row_number, "error": "duplicate_promo_target", "message": "Duplicate promo target in import." }));
@@ -1005,14 +1030,69 @@ fn require_positive_price_value(value: i64, field: &str) -> AppResult<i64> {
 fn parse_price(value: &Value) -> i64 {
     match value {
         Value::Number(number) => number.as_f64().unwrap_or(0.0).round() as i64,
-        Value::String(text) => text
-            .trim()
-            .replace(',', ".")
-            .parse::<f64>()
-            .unwrap_or(0.0)
-            .round() as i64,
+        Value::String(text) => {
+            let prepared = text
+                .trim()
+                .replace(',', ".")
+                .chars()
+                .filter(|ch| ch.is_ascii_digit() || matches!(ch, '.' | '-'))
+                .collect::<String>();
+            prepared.parse::<f64>().unwrap_or(0.0).round() as i64
+        }
         _ => 0,
     }
+}
+
+fn validate_promo_period(row: usize, start: &str, end: &str) -> Option<Value> {
+    let start_ms = if start.trim().is_empty() {
+        None
+    } else {
+        match promo_bound_ms(start, false) {
+            Some(value) => Some(value),
+            None => {
+                return Some(
+                    json!({ "row": row, "error": "invalid_promo_period", "message": "Promo start must be an ISO date or datetime." }),
+                )
+            }
+        }
+    };
+    let end_ms = if end.trim().is_empty() {
+        None
+    } else {
+        match promo_bound_ms(end, true) {
+            Some(value) => Some(value),
+            None => {
+                return Some(
+                    json!({ "row": row, "error": "invalid_promo_period", "message": "Promo end must be an ISO date or datetime." }),
+                )
+            }
+        }
+    };
+    if let (Some(start_ms), Some(end_ms)) = (start_ms, end_ms) {
+        if start_ms > end_ms {
+            return Some(
+                json!({ "row": row, "error": "invalid_promo_period", "message": "Promo start must not be after promo end." }),
+            );
+        }
+    }
+    None
+}
+
+fn promo_bound_ms(value: &str, end_of_day: bool) -> Option<i64> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if let Ok(datetime) = DateTime::parse_from_rfc3339(trimmed) {
+        return Some(datetime.timestamp_millis());
+    }
+    let date = NaiveDate::parse_from_str(trimmed, "%Y-%m-%d").ok()?;
+    let datetime = if end_of_day {
+        date.and_hms_opt(23, 59, 59)?
+    } else {
+        date.and_hms_opt(0, 0, 0)?
+    };
+    Some(datetime.and_utc().timestamp_millis())
 }
 
 fn parse_bool(value: &str, fallback: bool) -> bool {

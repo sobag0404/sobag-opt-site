@@ -13,7 +13,7 @@ This document records the post-Rust-cutover backend contract for price-list, pri
 
 `GET /api/price-list` returns CSV by default and JSON with `?format=json`.
 
-Rows are grouped by price category/group, not by every SKU. A group is resolved from explicit `priceGroup`/`priceGroupName` first, then from variant type/material/size, then product name fallback. Each base row contains the group label and current positive price. If an active promo exists for the group, the export includes a second row with an `Акция ` prefix and the promo price.
+Rows are grouped by price category/group, not by every SKU. A group is resolved from explicit `priceGroup`/`priceGroupName` first, then from variant type/material/size, then product name fallback. Each base row contains the group label and current positive price. If an active promo exists for the group and the current date is inside its optional ISO date window, the export includes a second row with an `Акция ` prefix and the promo price.
 
 Required public response guardrails:
 
@@ -45,9 +45,11 @@ Validation rules:
 
 - admin/content session is required;
 - all prices must be positive finite integers;
+- prices may include common Excel spacing such as `1 250`, but still resolve to positive finite integers;
 - unknown group/SKU targets are rejected;
 - duplicate target updates in one import are rejected;
 - spreadsheet formulas are rejected for target and price cells;
+- promo date windows must use ISO date/datetime values and `promoStart` must not be after `promoEnd`;
 - `preview` returns changes/errors without mutating data;
 - `apply` is rejected when preview errors exist and otherwise applies atomically through PostgreSQL transaction in production.
 
@@ -75,4 +77,4 @@ Server-side rules:
 Coverage:
 
 - `tools/api-security-smoke.mjs` covers no-order rejection, completed-order success, duplicate rejection, and pending-order rejection.
-- `tools/price-groups-smoke.mjs` covers group collapse, promo rows, positive price validation, formula rejection, public export, and transactional DB apply shape.
+- `tools/price-groups-smoke.mjs` covers group collapse, promo rows, active/future promo windows, spaced Excel price values, positive price validation, formula rejection, public export, and transactional DB rollback on apply failure.
