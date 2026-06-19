@@ -402,6 +402,23 @@ attach_policy_to_user() {
   return 1
 }
 
+enable_user_if_supported() {
+  target_alias="$1"
+  target_user="$2"
+  label="$3"
+  if mc admin user enable "$target_alias" "$target_user" >/dev/null 2>&1; then
+    echo "MinIO user enabled: $label"
+    return 0
+  fi
+  echo "MinIO user enable unavailable: $label"
+  return 1
+}
+
+alias_targets_endpoint() {
+  target_alias="$1"
+  mc alias list "$target_alias" 2>/dev/null | grep -F "$endpoint" >/dev/null 2>&1
+}
+
 ensure_policy "$admin_alias" || true
 
 # 1x1 WebP probe, matching the media smoke object class closely without storing
@@ -492,6 +509,7 @@ media_user="sobagmedia$(date -u +%m%d%H%M%S)"
 media_secret="$(openssl rand -hex 32)"
 media_credential_created=0
 if mc admin user add "$admin_alias" "$media_user" "$media_secret" >/dev/null 2>&1; then
+  enable_user_if_supported "$admin_alias" "$media_user" "dedicated media user" || true
   if ! attach_policy_to_user "$admin_alias" "$media_user" "dedicated MinIO media user"; then
     echo "Could not attach scoped media policy to dedicated MinIO media user"
     exit 2
@@ -583,6 +601,10 @@ attempt_alias_policy_repair() {
   if ! mc admin info "$candidate_alias" >/dev/null 2>&1; then
     return 1
   fi
+  if ! alias_targets_endpoint "$candidate_alias"; then
+    echo "MinIO admin alias fallback skipped: endpoint-mismatch"
+    return 1
+  fi
   echo "MinIO admin alias fallback source: $source_label"
   ensure_policy "$candidate_alias" || true
 
@@ -607,6 +629,7 @@ attempt_alias_policy_repair() {
   fallback_media_secret="$(openssl rand -hex 32)"
   fallback_media_credential_created=0
   if mc admin user add "$candidate_alias" "$fallback_media_user" "$fallback_media_secret" >/dev/null 2>&1; then
+    enable_user_if_supported "$candidate_alias" "$fallback_media_user" "fallback dedicated media user" || true
     if attach_policy_to_user "$candidate_alias" "$fallback_media_user" "fallback dedicated media user"; then
       echo "MinIO fallback dedicated media user created"
       fallback_media_credential_created=1
