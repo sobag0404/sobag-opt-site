@@ -209,6 +209,38 @@ fn auth_rate_limit_matches_node_style_bucket_guard() {
 }
 
 #[test]
+fn review_rate_limit_uses_buyer_scoped_bucket() {
+    let mut headers = HeaderMap::new();
+    headers.insert("x-real-ip", "203.0.113.11".parse().unwrap());
+    let key = format!(
+        "reviews:create:buyer-{}@example.test",
+        Utc::now().timestamp_nanos_opt().unwrap_or_default()
+    );
+    for _ in 0..REVIEW_CREATE_LIMIT {
+        assert!(auth_rate_limit(
+            &headers,
+            &key,
+            REVIEW_CREATE_LIMIT,
+            REVIEW_CREATE_WINDOW_SECONDS
+        )
+        .is_ok());
+    }
+    assert!(matches!(
+        auth_rate_limit(
+            &headers,
+            &key,
+            REVIEW_CREATE_LIMIT,
+            REVIEW_CREATE_WINDOW_SECONDS
+        ),
+        Err(AppError {
+            status: StatusCode::TOO_MANY_REQUESTS,
+            code: "rate_limited",
+            ..
+        })
+    ));
+}
+
+#[test]
 fn finds_login_user_by_email_or_phone_and_hashes_preview_password() {
     let (password_hash, password_salt) = hash_password_preview("secret123", "buyer@example.test");
     let store = json!({

@@ -1,4 +1,5 @@
 const { currentUser, normalizePhone, publicUser } = require("../_lib/auth");
+const { checkRateLimit } = require("../_lib/api-security");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { saveStore } = require("../_lib/store");
 
@@ -268,6 +269,8 @@ module.exports = async function handler(req, res) {
         };
       }
       if (Object.prototype.hasOwnProperty.call(data, "review")) {
+        const limited = checkRateLimit(req, { key: `reviews:create:${String(user.email || "").toLowerCase()}`, limit: 12 });
+        if (limited) throw limited;
         const review = sanitizeReview(data.review, store.users[user.email] || user);
         if (!review) return sendJson(res, 400, { error: "invalid_review", message: "Поставьте оценку и напишите отзыв от 5 символов." });
         if (!hasEligibleReviewOrder(store, user, review)) {

@@ -92,11 +92,12 @@ Server-side rules:
 - product match is checked by product id, base SKU, item key, or variant SKU;
 - a user cannot use another user's order;
 - duplicate review per user/product or user/base SKU returns `409` with `REVIEW_ALREADY_EXISTS`;
+- review creation is rate-limited per buyer identity/IP to slow abuse without blocking normal account/profile/cart updates;
 - legacy reviews are not deleted automatically and remain subject to admin moderation.
 
 Coverage:
 
-- `tools/api-security-smoke.mjs` covers anonymous rejection, no-order rejection, completed-order success, another user's order rejection, duplicate rejection, and pending-order rejection; Rust unit coverage mirrors owned completed-order and duplicate eligibility decisions.
+- `tools/api-security-smoke.mjs` covers anonymous rejection, no-order rejection, completed-order success, another user's order rejection, duplicate rejection, pending-order rejection, and review write burst `429`; Rust unit coverage mirrors owned completed-order and duplicate eligibility decisions plus the review write bucket.
 - `tools/price-groups-smoke.mjs` covers group collapse, promo rows, active/future promo windows, spaced Excel price values, positive price validation, formula rejection, public export, and transactional DB rollback on apply failure.
 
 ## Backup And Recovery Notes
@@ -112,6 +113,6 @@ The next backend/security packet should stay server-side and avoid UI redesign w
 
 - order/account/cart persistence hardening follow-up: write conflict handling and no partial account/cart corruption on failed persistence; order idempotency is now implemented;
 - admin audit log hardening: extend the price-import pattern to media mutations, order changes, review moderation, catalog writes, and admin user mutations without logging secrets or private payloads;
-- rate-limit review: keep login/register/orders/briefs/admin mutations protected without blocking normal admin workflows;
+- rate-limit follow-up: review writes now have a buyer-scoped limiter; next step is store-backed/distributed rate buckets for multi-process/VPS scaling without blocking normal admin workflows;
 - import history follow-up: add preview/reject/rollback lifecycle records if the admin UX needs them; apply history is now recorded server-side;
 - backup/restore hardening: automate no-secret backup evidence for file-store/PostgreSQL/MinIO rollback before destructive imports or catalog rewrites.

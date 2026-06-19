@@ -68,6 +68,8 @@ const AUTH_REGISTER_LIMIT: u32 = 6;
 const AUTH_REGISTER_WINDOW_SECONDS: u64 = 10 * 60;
 const AUTH_ROUTE_LIMIT: u32 = 120;
 const AUTH_ROUTE_WINDOW_SECONDS: u64 = 60;
+const REVIEW_CREATE_LIMIT: u32 = 12;
+const REVIEW_CREATE_WINDOW_SECONDS: u64 = 60;
 const DEFAULT_PAGE_SIZE: i64 = 48;
 const MAX_PAGE_SIZE: i64 = 120;
 const MAX_CART_LINES: usize = 500;
@@ -1117,6 +1119,12 @@ async fn auth_me_update_preview(
         users.insert(email.clone(), Value::Object(next));
     }
     if has_object_key(&data, "review") {
+        auth_rate_limit(
+            &headers,
+            &format!("reviews:create:{}", normalize_email(&email)),
+            REVIEW_CREATE_LIMIT,
+            REVIEW_CREATE_WINDOW_SECONDS,
+        )?;
         let Some(review) = sanitize_review_value(
             data.get("review").unwrap_or(&Value::Null),
             store

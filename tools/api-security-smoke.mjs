@@ -351,6 +351,34 @@ async function securitySmoke() {
       `pending order should not allow review, got ${pendingReview.response.status} ${JSON.stringify(pendingReview.payload)}`
     );
 
+    const rateBuyer = await request(baseUrl, "/api/auth/register", {
+      method: "POST",
+      body: {
+        email: "review-rate@example.test",
+        password: "buyer-pass",
+        name: "Review Rate Buyer",
+        phone: "+79990010009",
+        personalDataConsent: true,
+      },
+    });
+    resetRateLimits();
+    for (let i = 0; i < 3; i += 1) {
+      const attempt = await request(baseUrl, "/api/auth/me", {
+        method: "PUT",
+        cookie: rateBuyer.cookie,
+        body: reviewBody,
+        allowFailure: true,
+      });
+      assert(attempt.response.status === 403 && attempt.payload.error === "REVIEW_ORDER_REQUIRED", "pre-limit review attempt should keep business error");
+    }
+    const reviewLimited = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: rateBuyer.cookie,
+      body: reviewBody,
+      allowFailure: true,
+    });
+    assert(reviewLimited.response.status === 429 && reviewLimited.payload.error === "rate_limited", "review write burst should return 429");
+
     console.log(`api-security smoke passed: ${baseUrl}`);
   } finally {
     await close(server).catch(() => {});
