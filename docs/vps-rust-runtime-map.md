@@ -5,8 +5,8 @@ Last updated: 2026-06-19
 ## Target State
 
 - Deploy target: VPS only.
-- Current production runtime: `server.mjs` Node process behind Nginx, plus staged Rust service.
-- Rust target: route-by-route ownership through shadow, parity, cutover, and rollback gates.
+- Current production runtime: Nginx exact-route map to `sobag-opt-rust` for the targeted Rust routes, with `server.mjs` retained for static/root/cart compatibility and explicit legacy fallback.
+- Rust target: targeted route ownership through shadow, parity, cutover, and rollback gates is complete; any future no-Node removal needs a separate static/root/cart plan.
 - Storage target: S3-compatible storage such as MinIO/R2 for objects; PostgreSQL for catalog/PIM; file-store bridge remains a VPS transition layer.
 - Next.js runtime absent; remove only the Vercel-era layer after replacement, not by adding Next.js.
 
@@ -28,6 +28,13 @@ Last updated: 2026-06-19
 | `/api/admin/import-batches` | Rust exact route | cut over after deploy-gate and live anonymous guard; future destructive import changes still need authenticated dry-run/apply/rollback evidence | restore pre-cutover Nginx backup |
 | `/api/admin/product-images` | Rust exact route | cut over after MinIO repair and live upload/list/delete cleanup smoke | restore pre-cutover Nginx backup |
 
+## Exact Route Audit
+
+- Rust-owned API routes: `/api/catalog-query`, `/api/catalog-detail`, `/api/auth/me`, `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`, `/api/orders`, `/api/briefs`, `/api/admin/orders`, `/api/admin/users`, `/api/admin/content`, `/api/admin/pim`, `/api/admin/prices`, `/api/admin/catalog`, `/api/admin/import-batches`, `/api/admin/product-images`.
+- Rust-owned public pages/fragments: `/catalog`, `/search`, `/product`, `/catalog-fragment`, `/search-fragment`, `/product-fragment`, `/about`, `/business`, `/marketplaces`, `/contacts`, `/how-to-order`, `/delivery`, `/payment`, `/returns`, `/seller-support`, `/wholesale`.
+- Node/static-owned compatibility paths: `/`, `/index.html` redirect, `/cart`, static assets, static HTML shell files, and explicit non-switched legacy fallback paths.
+- Deprecated runtime/deploy paths: Vercel/Next.js deploy/runtime, Vercel Blob provider aliases, `api/[...path].js`, and duplicate `api/_lib/**` helpers remain out of the active runtime.
+
 ## Vercel-Era Removal State
 
 Removed active artifacts: `vercel.json`, `.vercelignore`, `dev:vercel`, `tools/vercel-daily-deploy-gate.mjs`, and `@vercel/blob`.
@@ -43,7 +50,7 @@ Next.js runtime is not present. Cleanup targets the old Vercel serverless/deploy
 - Current rule: do not reintroduce `api/[...path].js` or duplicate `api/_lib/**` helpers; route/runtime code must import canonical `server-routes/_lib/**`.
 - Removed Vercel-era artifacts must stay absent from active package scripts, dependencies, deploy config, and release audits.
 - Active target: VPS only. Vercel references in old handoff docs are historical unless a current runbook explicitly says otherwise.
-- Safe next step: keep `server.mjs`, `api-router.js`, tools, smokes, and release audits green while moving remaining Node fallback routes to Rust through parity/cutover gates.
+- Safe next step: keep `server.mjs`, `api-router.js`, tools, smokes, and release audits green while using Node only as compatibility fallback; do not remove Node until a separate no-Node static/root/cart plan is written and gated.
 - Static serving guard: `server.mjs` allowlists only public root pages/assets/components/templates and `data/products-live.json`; backend source, docs, workflows, reports, package metadata, Rust/server route source, and encoded traversal through public directories must return 404 from the VPS static server.
 - Browser auth/admin guard: when backend auth is unavailable, client-side login/register fallback now runs only on local development hosts; production hosts fail closed instead of storing new user passwords in localStorage. Production admin pages also require a verified backend session before rendering management UI.
 
@@ -57,9 +64,9 @@ Next.js runtime is not present. Cleanup targets the old Vercel serverless/deploy
 - Auth-write live smoke passed after the exact-route switch: registration/login/logout on production Rust routes set/clear production cookies with `HttpOnly`, `SameSite=Lax`, and `Secure`; invalid credentials, duplicate registration, missing consent, CSRF origin rejection, and the no-order review guard all returned the expected errors without exposing cookies or secrets.
 - Orders/briefs live smoke remains green after auth-write cutover: health/catalog prices stayed valid, a safe Rust-created order and brief persisted through Redis, minimum-total validation stayed active, and production smoke/storage/cache checks stayed green.
 - Production exact `/api/admin/pim` is cut over to Rust for read-only PIM diagnostics/export after adding PostgreSQL-backed fallback when the file-store catalog is absent. Current route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-pim-20260616T193119Z`.
-- Admin PIM live smoke passed after the exact-route switch: anonymous access returned 401, a temporary content-role session read summary/variants/CSV through Rust, 12,943 variants included non-zero prices, invalid views returned 400, and the temporary user/session were removed. Admin catalog/import/media/price mutation routes remain on Node fallback.
+- Admin PIM live smoke passed after the exact-route switch: anonymous access returned 401, a temporary content-role session read summary/variants/CSV through Rust, 12,943 variants included non-zero prices, invalid views returned 400, and the temporary user/session were removed.
 - Production exact `/api/admin/prices` is cut over to Rust for price-group/SKU price preview and PostgreSQL apply. Current route backup: `/etc/nginx/sites-available/sobag-opt.pre-rust-admin-prices-20260616T205931Z`.
-- Admin prices live smoke passed after the exact-route switch: anonymous access returned 401, a temporary content-role session listed 31 price groups, previewed a safe SKU price row, rejected a zero-price row, applied the same non-zero SKU price without changing business value, verified catalog-detail prices stayed non-zero, and removed the temporary user/session. Admin catalog/import/media writes remain on Node fallback.
+- Admin prices live smoke passed after the exact-route switch: anonymous access returned 401, a temporary content-role session listed 31 price groups, previewed a safe SKU price row, rejected a zero-price row, applied the same non-zero SKU price without changing business value, verified catalog-detail prices stayed non-zero, and removed the temporary user/session.
 - Rust admin catalog is cut over: `/api/admin/catalog` routes to `/rust/admin/catalog` through an exact Nginx location and live anonymous guard.
 - Rust admin import-batches is cut over: `/api/admin/import-batches` routes to `/rust/admin/import-batches` through an exact Nginx location and live anonymous guard. Use authenticated dry-run/apply/rollback evidence before future destructive import business changes.
 - Rust admin media is cut over: `/api/admin/product-images` routes to `/rust/admin/product-images`; manual `vps-deploy` `27816085213` and `production-smoke` `27816499824` passed after direct VPS MinIO repair. MinIO media write/stat/delete was verified after data ownership was restored to the MinIO service user, the app env was updated on the VPS, and Rust was restarted.
