@@ -78,3 +78,13 @@ Coverage:
 
 - `tools/api-security-smoke.mjs` covers anonymous rejection, no-order rejection, completed-order success, another user's order rejection, duplicate rejection, and pending-order rejection; Rust unit coverage mirrors owned completed-order and duplicate eligibility decisions.
 - `tools/price-groups-smoke.mjs` covers group collapse, promo rows, active/future promo windows, spaced Excel price values, positive price validation, formula rejection, public export, and transactional DB rollback on apply failure.
+
+## Next Backend Packet
+
+The next backend/security packet should stay server-side and avoid UI redesign work:
+
+- order/account/cart persistence hardening: idempotency, write conflict handling, and no partial account/cart corruption on failed persistence;
+- admin audit log hardening: consistent actor/action/target summaries for price imports, media mutations, order changes, review moderation, and catalog writes without logging secrets or private payloads;
+- rate-limit review: keep login/register/orders/briefs/admin mutations protected without blocking normal admin workflows;
+- import history: durable preview/apply/reject/rollback records with safe row counts and validation summaries;
+- backup/restore notes: documented no-secret operator steps for file-store/PostgreSQL/MinIO rollback before destructive imports or catalog rewrites.
