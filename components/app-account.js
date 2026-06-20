@@ -657,10 +657,32 @@ function syncCartToBackend() {
   window.clearTimeout(cartSyncTimer);
   const items = [...state.cart.entries()];
   cartSyncTimer = window.setTimeout(() => {
-    apiRequest("/api/auth/me", { method: "PUT", body: { cartItems: items } }).catch((error) => {
+    apiRequest("/api/auth/me", { method: "PUT", body: { cartItems: items, expectedCartUpdatedAt: state.cartUpdatedAt || undefined } }).then((result) => {
+      state.cartUpdatedAt = result.cartUpdatedAt || state.cartUpdatedAt;
+    }).catch((error) => {
+      if (handleCartSyncConflict(error)) return;
       if (!isBackendUnavailable(error)) console.warn(error);
     });
   }, 250);
+}
+function handleCartSyncConflict(error) {
+  if (error?.status !== 409 || error?.code !== "cart_conflict") return false;
+  const serverCart = cleanCartEntries(error.data?.cartItems || []);
+  if (!serverCart.length && !Array.isArray(error.data?.cartItems)) {
+    showToast("Корзина изменилась в другом окне. Обновляю данные с сервера.");
+    loadServerPersonalState();
+    return true;
+  }
+  const mergedCart = new Map(serverCart);
+  state.cart.forEach((line, key) => {
+    if (!mergedCart.has(key)) mergedCart.set(key, line);
+  });
+  state.cart = mergedCart;
+  state.cartUpdatedAt = error.data?.cartUpdatedAt || state.cartUpdatedAt;
+  localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
+  showToast("Корзина изменилась в другом окне. Мы обновили ее и сохранили новые позиции.");
+  renderCart();
+  return true;
 }
 function syncFavoritesToBackend() {
   if (!state.currentUser) return;
@@ -691,6 +713,7 @@ async function loadServerPersonalState() {
     const mergedCart = new Map(serverCart);
     localCart.forEach(([key, line]) => mergedCart.set(key, line));
     state.cart = mergedCart;
+    state.cartUpdatedAt = personalData.cartUpdatedAt || state.cartUpdatedAt;
     localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
     const mergedFavorites = [...new Set([...cleanFavoriteIds(personalData.favoriteItems || []), ...state.favorites])];
     state.favorites = new Set(mergedFavorites);

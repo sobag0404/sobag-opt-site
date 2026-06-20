@@ -160,6 +160,7 @@ const state = {
     source: "",
   },
   cart: new Map(),
+  cartUpdatedAt: "",
   favorites: new Set(cleanFavoriteIds(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"))),
   recentProducts: cleanFavoriteIds(JSON.parse(localStorage.getItem(STORAGE.recentProducts) || "[]")),
   currentUser: localStorage.getItem(STORAGE.user) || "",
@@ -777,6 +778,7 @@ async function apiRequest(path, options = {}) {
     const error = new Error(data.message || "Backend недоступен.");
     error.status = response.status;
     error.code = data.error;
+    error.data = data;
     throw error;
   }
   if (options.publicCache !== false) rememberPublicApiCache(path, options, data);

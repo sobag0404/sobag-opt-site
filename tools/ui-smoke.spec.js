@@ -620,6 +620,26 @@ test("account favorites are per-user and orders can be repeated into cart", asyn
   await page.locator('[data-repeat-order="SO-QA-REPEAT"]').click();
   await expect(page).toHaveURL(/\/cart(?:\.html)?$/);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sobag.cart.buyer@example.com") || "[]").length)).toBe(1);
+  let cartConflictHits = 0;
+  await page.route("**/api/auth/me", async (route) => {
+    if (route.request().method() !== "PUT") return route.continue();
+    const body = route.request().postDataJSON();
+    if (!body.cartItems) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ user: { email: "buyer@example.com" } }) });
+    cartConflictHits += 1;
+    if (cartConflictHits === 1) {
+      const serverItems = body.cartItems.map(([key, line]) => [key, { ...line, qty: Number(line.qty || 0) + 1 }]);
+      return route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "cart_conflict", message: "Cart changed on another device.", cartItems: serverItems, cartUpdatedAt: "qa-cart-server-2" }),
+      });
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ cartUpdatedAt: "qa-cart-server-3" }) });
+  });
+  await page.locator("[data-qty-input]").first().fill("41");
+  await expect(page.locator("#toast")).toContainText("Корзина изменилась");
+  await expect(page.locator("[data-qty-input]").first()).toHaveValue("42");
+  await expect.poll(() => cartConflictHits).toBeGreaterThan(0);
 
   await expect(page.locator("#saveCartDraftButton")).toBeVisible();
   page.once("dialog", (dialog) => dialog.accept("QA saved cart"));

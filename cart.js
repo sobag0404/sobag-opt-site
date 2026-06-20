@@ -20,6 +20,7 @@ function getSavedCartsKey() {
 
 const state = {
   cart: new Map(cleanCartEntries(JSON.parse(localStorage.getItem(getCartKey()) || "[]"))),
+  cartUpdatedAt: "",
   promo: "",
 };
 let cartServerReady = !localStorage.getItem(CURRENT_USER_KEY);
@@ -117,6 +118,7 @@ async function apiRequest(path, options = {}) {
     const error = new Error(data.message || "Backend недоступен.");
     error.status = response.status;
     error.code = data.error;
+    error.data = data;
     throw error;
   }
   return data;
@@ -472,10 +474,33 @@ function syncCartToBackend() {
   window.clearTimeout(cartSyncTimer);
   const items = [...state.cart.entries()];
   cartSyncTimer = window.setTimeout(() => {
-    apiRequest("/api/auth/me", { method: "PUT", body: { cartItems: items } }).catch((error) => {
+    apiRequest("/api/auth/me", { method: "PUT", body: { cartItems: items, expectedCartUpdatedAt: state.cartUpdatedAt || undefined } }).then((result) => {
+      state.cartUpdatedAt = result.cartUpdatedAt || state.cartUpdatedAt;
+    }).catch((error) => {
+      if (handleCartSyncConflict(error)) return;
       if (!isBackendUnavailable(error)) console.warn(error);
     });
   }, 250);
+}
+
+function handleCartSyncConflict(error) {
+  if (error?.status !== 409 || error?.code !== "cart_conflict") return false;
+  const serverCart = cleanCartEntries(error.data?.cartItems || []);
+  if (!serverCart.length && !Array.isArray(error.data?.cartItems)) {
+    showToast("Корзина изменилась в другом окне. Обновляю данные с сервера.");
+    loadServerCart();
+    return true;
+  }
+  const merged = new Map(serverCart);
+  state.cart.forEach((line, key) => {
+    if (!merged.has(key)) merged.set(key, line);
+  });
+  state.cart = merged;
+  state.cartUpdatedAt = error.data?.cartUpdatedAt || state.cartUpdatedAt;
+  localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
+  showToast("Корзина изменилась в другом окне. Мы обновили ее и сохранили новые позиции.");
+  renderCart();
+  return true;
 }
 
 function syncSavedCartsToBackend() {
@@ -498,6 +523,7 @@ async function loadServerCart() {
     const merged = new Map(serverCart);
     localCart.forEach(([key, line]) => merged.set(key, line));
     state.cart = merged;
+    state.cartUpdatedAt = data.cartUpdatedAt || state.cartUpdatedAt;
     localStorage.setItem(getCartKey(), JSON.stringify([...state.cart.entries()]));
     const mergedSavedCarts = mergeSavedCarts(data.savedCarts || [], getSavedCarts());
     saveSavedCarts(mergedSavedCarts, { sync: false });
