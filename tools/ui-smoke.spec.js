@@ -326,6 +326,30 @@ async function expectNoHorizontalOverflow(page, label = page.url()) {
   expect(overflow, label).toBeLessThanOrEqual(1);
 }
 
+async function expectMobileHeaderActionsStable(page, label = page.url()) {
+  const geometry = await page.evaluate(() => {
+    const nodes = [
+      document.querySelector("#accountButton"),
+      document.querySelector('[data-nav="favorites.html"]'),
+      document.querySelector("[data-open-cart]"),
+    ].filter(Boolean);
+    const boxes = nodes.map((node) => {
+      const rect = node.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height };
+    });
+    const overlaps = boxes.some((box, index) =>
+      boxes
+        .slice(index + 1)
+        .some((next) => box.left < next.right && box.right > next.left && box.top < next.bottom && box.bottom > next.top)
+    );
+    const smallTargets = boxes.some((box) => box.width < 32 || box.height < 32);
+    return { count: boxes.length, overlaps, smallTargets };
+  });
+  expect(geometry.count, label).toBe(3);
+  expect(geometry.overlaps, label).toBe(false);
+  expect(geometry.smallTargets, label).toBe(false);
+}
+
 test("mobile pages do not create horizontal overflow", async ({ page }) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -357,6 +381,7 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
     if (route === "/" || route.includes("catalog")) {
       await expect(page.locator("#accountButton")).toHaveAttribute("aria-label", /Войти|аккаунт/i);
       await expect(page.locator("#accountButton")).not.toContainText(/Вход|регистрация/i);
+      await expectMobileHeaderActionsStable(page, route);
     }
     if (route.includes("catalog")) {
       await expect(page.locator(".catalog-price-button")).toContainText("Прайс");
