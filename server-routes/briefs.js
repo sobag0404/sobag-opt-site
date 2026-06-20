@@ -1,4 +1,4 @@
-const { checkRateLimit } = require("./_lib/api-security");
+const { checkStoreRateLimit } = require("./_lib/api-security");
 const { currentUser, normalizePhone } = require("./_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("./_lib/http");
 const { saveStore } = require("./_lib/store");
@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
     if (req.method !== "POST") return methodNotAllowed(res);
 
     const data = await readJson(req);
-    const limited = checkRateLimit(req, { key: "briefs:create", limit: 20 });
+    const limited = await checkStoreRateLimit(req, { key: "briefs:create", limit: 20 });
     if (limited) throw limited;
     const { user, store } = await currentUser(req);
     const product = cleanText(data.product, 120);

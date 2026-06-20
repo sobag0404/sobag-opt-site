@@ -747,12 +747,75 @@ fn auth_request_ip(headers: &HeaderMap) -> String {
         .collect()
 }
 
-fn auth_rate_limit(
+async fn auth_rate_limit(
     headers: &HeaderMap,
     key: &str,
     limit: u32,
     window_seconds: u64,
 ) -> AppResult<()> {
+    if std::env::var("SOBAG_RATE_LIMIT_STORE")
+        .unwrap_or_else(|_| "store".to_string())
+        .trim()
+        .eq_ignore_ascii_case("store")
+    {
+        let bucket_key = format!("{key}:{}", auth_request_ip(headers));
+        let store_key = format!(
+            "sobag:rate-limit:v1:rust:{}",
+            URL_SAFE_NO_PAD.encode(bucket_key.as_bytes())
+        );
+        match load_file_store_value(&store_key).await {
+            Ok(current) => {
+                let now = Utc::now().timestamp_millis();
+                let reset_at = now + (window_seconds as i64 * 1000);
+                let record = current.unwrap_or_else(|| json!({ "count": 0, "resetAt": reset_at }));
+                let active = record
+                    .get("resetAt")
+                    .and_then(Value::as_i64)
+                    .map(|value| value > now)
+                    .unwrap_or(false);
+                let next_reset_at = if active {
+                    record
+                        .get("resetAt")
+                        .and_then(Value::as_i64)
+                        .unwrap_or(reset_at)
+                } else {
+                    reset_at
+                };
+                let count = if active {
+                    record.get("count").and_then(Value::as_u64).unwrap_or(0)
+                } else {
+                    0
+                }
+                .saturating_add(1);
+                let ttl = ((next_reset_at - now).max(1000) / 1000) as i64;
+                save_file_store_value_with_ttl(
+                    &store_key,
+                    &json!({ "count": count, "resetAt": next_reset_at }),
+                    ttl,
+                )
+                .await
+                .map_err(|error| AppError::internal(error.to_string()))?;
+                if count <= u64::from(limit) {
+                    return Ok(());
+                }
+                return Err(AppError::rate_limited(
+                    "Too many requests. Try again later.",
+                ));
+            }
+            Err(error)
+                if std::env::var("SOBAG_RATE_LIMIT_FAIL_CLOSED")
+                    .ok()
+                    .as_deref()
+                    == Some("1") =>
+            {
+                return Err(AppError::service_unavailable(
+                    "rate_limit_store_unavailable",
+                    error.to_string(),
+                ));
+            }
+            Err(_) => {}
+        }
+    }
     let now = Instant::now();
     let bucket_key = format!("{key}:{}", auth_request_ip(headers));
     let mut buckets = AUTH_RATE_LIMITS
@@ -878,7 +941,8 @@ async fn auth_login_preview(
         &format!("auth:login:{}", normalize_email(&login)),
         AUTH_LOGIN_LIMIT,
         AUTH_LOGIN_WINDOW_SECONDS,
-    )?;
+    )
+    .await?;
     let password = data.get("password").and_then(Value::as_str).unwrap_or("");
     let Some((email, user)) = find_login_user(&store, &login) else {
         return Err(AppError::unauthorized_code(
@@ -929,7 +993,8 @@ async fn auth_register_preview(
         &format!("auth:register:{email}"),
         AUTH_REGISTER_LIMIT,
         AUTH_REGISTER_WINDOW_SECONDS,
-    )?;
+    )
+    .await?;
     let password = data.get("password").and_then(Value::as_str).unwrap_or("");
     let name = clean_text(data.get("name"), 120).unwrap_or_default();
     let phone = normalize_phone(&clean_text(data.get("phone"), 180).unwrap_or_default());
@@ -1041,7 +1106,8 @@ async fn auth_logout_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<V
         "auth:logout",
         AUTH_ROUTE_LIMIT,
         AUTH_ROUTE_WINDOW_SECONDS,
-    )?;
+    )
+    .await?;
     let cookie_header = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -1139,7 +1205,8 @@ async fn auth_me_update_preview(
             &format!("reviews:create:{}", normalize_email(&email)),
             REVIEW_CREATE_LIMIT,
             REVIEW_CREATE_WINDOW_SECONDS,
-        )?;
+        )
+        .await?;
         let Some(review) = sanitize_review_value(
             data.get("review").unwrap_or(&Value::Null),
             store
@@ -1240,6 +1307,24 @@ async fn admin_users_preview(
     if !can_read_admin_users(&user) {
         return Err(AppError::forbidden("Недостаточно прав."));
     }
+    if params
+        .get("audit")
+        .map(|value| value == "1")
+        .unwrap_or(false)
+    {
+        if !can_manage_admin_users(&user) {
+            return Err(AppError::forbidden("Audit is available to admins only."));
+        }
+        let limit = params
+            .get("limit")
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(100)
+            .clamp(1, 200);
+        return Ok((
+            no_store_headers(),
+            Json(json!({ "audit": admin_audit_summary(&store, limit) })),
+        ));
+    }
     let email = params
         .get("email")
         .map(|value| normalize_email(value))
@@ -1308,7 +1393,17 @@ async fn admin_users_invite_preview(
     }
     next.insert("updatedAt".to_string(), json!(now));
     let user_value = Value::Object(next);
-    users.insert(email, user_value.clone());
+    users.insert(email.clone(), user_value.clone());
+    push_audit_record(
+        &mut store,
+        admin_user_audit_record(
+            "employee_invite",
+            &user,
+            &email,
+            string_field(&existing, "role").unwrap_or_default(),
+            "manager",
+        ),
+    );
     save_file_store_value(STORE_KEY, &store)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
@@ -1348,10 +1443,15 @@ async fn admin_users_role_patch_preview(
         ));
     }
     let mut next = existing.as_object().cloned().unwrap_or_default();
-    next.insert("role".to_string(), json!(role));
+    let previous_role = string_field(&existing, "role").unwrap_or_default();
+    next.insert("role".to_string(), json!(role.clone()));
     next.insert("updatedAt".to_string(), json!(Utc::now().to_rfc3339()));
     let user_value = Value::Object(next);
-    users.insert(email, user_value.clone());
+    users.insert(email.clone(), user_value.clone());
+    push_audit_record(
+        &mut store,
+        admin_user_audit_record("role_update", &user, &email, previous_role, &role),
+    );
     save_file_store_value(STORE_KEY, &store)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
@@ -1394,7 +1494,12 @@ async fn admin_users_delete_preview(
     );
     next.insert("updatedAt".to_string(), json!(Utc::now().to_rfc3339()));
     let user_value = Value::Object(next);
-    users.insert(email, user_value.clone());
+    let previous_role = string_field(&existing, "role").unwrap_or_default();
+    users.insert(email.clone(), user_value.clone());
+    push_audit_record(
+        &mut store,
+        admin_user_audit_record("employee_remove", &user, &email, previous_role, "buyer"),
+    );
     save_file_store_value(STORE_KEY, &store)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
@@ -2403,8 +2508,67 @@ fn admin_users_payload_from_values(store: &Value) -> Value {
     json!({ "users": users })
 }
 
+fn admin_audit_summary(store: &Value, limit: usize) -> Value {
+    let items = store
+        .get("audit")
+        .and_then(Value::as_array)
+        .map(|records| {
+            records
+                .iter()
+                .take(limit.min(200))
+                .map(|record| {
+                    json!({
+                        "id": string_field(record, "id").unwrap_or_default().chars().take(80).collect::<String>(),
+                        "type": string_field(record, "type").unwrap_or_default().chars().take(80).collect::<String>(),
+                        "action": string_field(record, "action").unwrap_or_default().chars().take(80).collect::<String>(),
+                        "actor": string_field(record, "actor").unwrap_or_default().to_lowercase().chars().take(180).collect::<String>(),
+                        "targetEmail": string_field(record, "targetEmail")
+                            .or_else(|| string_field(record, "userEmail"))
+                            .unwrap_or_default()
+                            .to_lowercase()
+                            .chars()
+                            .take(180)
+                            .collect::<String>(),
+                        "orderId": string_field(record, "orderId").unwrap_or_default().chars().take(80).collect::<String>(),
+                        "reviewId": string_field(record, "reviewId").unwrap_or_default().chars().take(80).collect::<String>(),
+                        "status": string_field(record, "status").unwrap_or_default().chars().take(80).collect::<String>(),
+                        "role": string_field(record, "role").unwrap_or_default().chars().take(40).collect::<String>(),
+                        "previousRole": string_field(record, "previousRole").unwrap_or_default().chars().take(40).collect::<String>(),
+                        "createdAt": string_field(record, "createdAt")
+                            .or_else(|| string_field(record, "at"))
+                            .unwrap_or_default()
+                            .chars()
+                            .take(40)
+                            .collect::<String>(),
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    Value::Array(items)
+}
+
 fn valid_admin_assignable_role(role: &str) -> bool {
     matches!(role, "buyer" | "manager" | "content")
+}
+
+fn admin_user_audit_record(
+    action: &str,
+    actor: &Value,
+    target_email: &str,
+    previous_role: String,
+    role: &str,
+) -> Value {
+    json!({
+        "id": format!("AUD-{}", Utc::now().timestamp_millis()),
+        "type": "user_admin_update",
+        "action": action,
+        "actor": string_field(actor, "email").unwrap_or_default(),
+        "targetEmail": normalize_email(target_email),
+        "previousRole": previous_role.chars().take(40).collect::<String>(),
+        "role": role.chars().take(40).collect::<String>(),
+        "createdAt": Utc::now().to_rfc3339()
+    })
 }
 
 fn admin_user_detail_from_values(store: &Value, email: &str) -> AppResult<Value> {

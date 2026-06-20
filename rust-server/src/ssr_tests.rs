@@ -189,17 +189,17 @@ fn auth_cookie_mutation_requires_same_origin_outside_local_dev() {
     assert!(enforce_auth_same_origin_for_cookie_mutation(&headers).is_ok());
 }
 
-#[test]
-fn auth_rate_limit_matches_node_style_bucket_guard() {
+#[tokio::test]
+async fn auth_rate_limit_matches_node_style_bucket_guard() {
     let mut headers = HeaderMap::new();
     headers.insert("x-real-ip", "203.0.113.10".parse().unwrap());
     let key = format!(
         "auth:test:{}",
         Utc::now().timestamp_nanos_opt().unwrap_or_default()
     );
-    assert!(auth_rate_limit(&headers, &key, 1, 60).is_ok());
+    assert!(auth_rate_limit(&headers, &key, 1, 60).await.is_ok());
     assert!(matches!(
-        auth_rate_limit(&headers, &key, 1, 60),
+        auth_rate_limit(&headers, &key, 1, 60).await,
         Err(AppError {
             status: StatusCode::TOO_MANY_REQUESTS,
             code: "rate_limited",
@@ -208,8 +208,8 @@ fn auth_rate_limit_matches_node_style_bucket_guard() {
     ));
 }
 
-#[test]
-fn review_rate_limit_uses_buyer_scoped_bucket() {
+#[tokio::test]
+async fn review_rate_limit_uses_buyer_scoped_bucket() {
     let mut headers = HeaderMap::new();
     headers.insert("x-real-ip", "203.0.113.11".parse().unwrap());
     let key = format!(
@@ -223,6 +223,7 @@ fn review_rate_limit_uses_buyer_scoped_bucket() {
             REVIEW_CREATE_LIMIT,
             REVIEW_CREATE_WINDOW_SECONDS
         )
+        .await
         .is_ok());
     }
     assert!(matches!(
@@ -231,7 +232,8 @@ fn review_rate_limit_uses_buyer_scoped_bucket() {
             &key,
             REVIEW_CREATE_LIMIT,
             REVIEW_CREATE_WINDOW_SECONDS
-        ),
+        )
+        .await,
         Err(AppError {
             status: StatusCode::TOO_MANY_REQUESTS,
             code: "rate_limited",
@@ -672,6 +674,27 @@ fn admin_user_detail_matches_node_contract_without_private_fields() {
     assert!(valid_admin_assignable_role("manager"));
     assert!(valid_admin_assignable_role("content"));
     assert!(!valid_admin_assignable_role("admin"));
+    let audit = admin_user_audit_record(
+        "role_update",
+        &json!({ "email": "admin@example.test", "role": "admin" }),
+        "Buyer@Example.Test",
+        "buyer".to_string(),
+        "manager",
+    );
+    assert_eq!(audit["type"], "user_admin_update");
+    assert_eq!(audit["action"], "role_update");
+    assert_eq!(audit["targetEmail"], "buyer@example.test");
+    assert_eq!(audit["previousRole"], "buyer");
+    assert_eq!(audit["role"], "manager");
+    assert!(audit.get("password").is_none());
+    let summary = admin_audit_summary(
+        &json!({ "audit": [audit, { "type": "order_update", "orderId": "SO-1", "actor": "admin@example.test", "status": "done" }] }),
+        10,
+    );
+    assert_eq!(summary[0]["type"], "user_admin_update");
+    assert_eq!(summary[0]["targetEmail"], "buyer@example.test");
+    assert_eq!(summary[1]["orderId"], "SO-1");
+    assert!(summary[0].get("passwordHash").is_none());
 }
 
 #[test]

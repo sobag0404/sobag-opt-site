@@ -87,6 +87,25 @@ Account cart writes:
 - account responses include `cartUpdatedAt`;
 - clients may send `expectedCartUpdatedAt` with `cartItems` updates. If the server cart changed on another device, the write is rejected with `409 cart_conflict` instead of silently overwriting the newer cart.
 
+## Admin Audit And Rate Limits
+
+Admin audit records are compact operational evidence, not raw payload storage. Current server-side coverage:
+
+- order status/manager/comment changes append `order_update`;
+- review moderation/delete appends `review_update` or `review_delete`;
+- price import apply appends `price_import` / `price_import_apply` history and audit summaries;
+- admin user invite/role/remove appends `user_admin_update` with action, actor, target email, previous role, resulting role, and timestamp;
+- `GET /api/admin/users?audit=1&limit=...` returns a sanitized newest-first audit summary for admins only.
+
+Audit records must not store passwords, password hashes, cookies, tokens, raw import files, raw CSV text, private order notes beyond a type/id summary, or full customer payloads.
+
+Rate-limit contract:
+
+- Node global unsafe-route and route-specific write guards use the shared store-backed limiter by default, with an in-process fallback if the limiter store is temporarily unavailable;
+- setting `SOBAG_RATE_LIMIT_FAIL_CLOSED=1` makes limiter store failures return a safe service error instead of falling back;
+- `SOBAG_RATE_LIMIT_STORE=memory` is reserved for local/debug runs;
+- Rust auth/review write guards use the same store-key family by default and fall back to the existing in-process bucket if the store is unavailable.
+
 ## Buyer Review Eligibility
 
 A product review can be created only by an authenticated user who has a confirmed order for the same product/SKU.
@@ -110,6 +129,7 @@ Coverage:
 ## Backup And Recovery Notes
 
 - Before destructive catalog/price imports, keep the normal VPS release rollback plus a current PostgreSQL/catalog backup from the existing deploy/import runbooks.
+- For file-store evidence, `node tools/file-store-backup.mjs --source <store-dir> --dest <backup-dir> --dry-run` reports what would be copied, and `--restore <backup-dir> --target <store-dir> --dry-run` reports restore scope without modifying production data.
 - For price import mistakes, restore by applying a validated reverse import or a reviewed PostgreSQL/catalog backup; do not edit raw store files on production without first copying them aside.
 - `priceImportHistory[]` and `audit[]` are operator evidence only. They should help identify who/when/how many rows changed, but they are not a full data backup.
 - For reviews/orders/account data, prefer read-only inspection and targeted reversal through admin routes; avoid whole-store replacement unless the relevant backup is verified and the site is in a maintenance window.
@@ -119,7 +139,7 @@ Coverage:
 The next backend/security packet should stay server-side and avoid UI redesign work:
 
 - order/account/cart persistence hardening follow-up: cart duplicate merge, safe cart keys, and optional stale-write conflict checks are implemented; remaining work is deeper order-draft recovery UX and store-backed conflict metadata for saved carts/favorites;
-- admin audit log hardening: extend the price-import pattern to media mutations, order changes, review moderation, catalog writes, and admin user mutations without logging secrets or private payloads;
-- rate-limit follow-up: review writes now have a buyer-scoped limiter; next step is store-backed/distributed rate buckets for multi-process/VPS scaling without blocking normal admin workflows;
+- admin audit log hardening: user/admin, order, review, and price apply summaries are covered; remaining candidates are media/catalog/import preview lifecycle summaries if the admin UX needs them;
+- rate-limit follow-up: unsafe Node writes and Rust auth/review writes now have store-backed buckets with documented memory fallback; remaining work is optional live limiter telemetry and per-admin import/media limits if abuse evidence appears;
 - import history follow-up: add preview/reject/rollback lifecycle records if the admin UX needs them; apply history is now recorded server-side;
 - backup/restore hardening: automate no-secret backup evidence for file-store/PostgreSQL/MinIO rollback before destructive imports or catalog rewrites.

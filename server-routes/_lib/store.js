@@ -270,4 +270,18 @@ async function saveSession(token, payload, ttlSeconds) {
   await getStoreClient().set(`sobag:session:${token}`, payload, { ex: ttlSeconds });
 }
 
-module.exports = { deleteSession, getCatalog, getContent, getImportBatches, getSession, getStore, saveCatalog, saveContent, saveImportBatches, saveSession, saveStore, storeStatus };
+module.exports = {
+  deleteSession,
+  getCatalog,
+  getContent,
+  getImportBatches,
+  getSession,
+  getStore,
+  getStoreClient,
+  saveCatalog,
+  saveContent,
+  saveImportBatches,
+  saveSession,
+  saveStore,
+  storeStatus,
+};

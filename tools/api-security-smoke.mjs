@@ -13,6 +13,7 @@ process.env.SOBAG_RATE_LIMIT_TEST_MAX = "3";
 
 const { createSobagServer } = await import("../server.mjs");
 const { resetRateLimits } = await import("../server-routes/_lib/api-security.js");
+const { getStore } = await import("../server-routes/_lib/store.js");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -177,6 +178,12 @@ async function securitySmoke() {
       cookie: adminCookie,
       body: { email: "manager-security@example.test", name: "Manager Security", phone: "+79990010001" },
     });
+    let currentStore = await getStore();
+    assert(
+      currentStore.audit?.[0]?.type === "user_admin_update" && currentStore.audit?.[0]?.action === "employee_invite",
+      "admin user invite should write a safe audit record"
+    );
+    assert(!("password" in currentStore.audit[0]) && !("passwordHash" in currentStore.audit[0]), "admin user audit must not include credentials");
     const managerLogin = await request(baseUrl, "/api/auth/login", {
       method: "POST",
       body: { email: "manager-security@example.test", password: "admin-pass" },
@@ -200,6 +207,14 @@ async function securitySmoke() {
         cookie: adminCookie,
         body: { email: "manager-login@example.test", role: "manager" },
       });
+      currentStore = await getStore();
+      assert(
+        currentStore.audit?.[0]?.type === "user_admin_update" && currentStore.audit?.[0]?.action === "role_update",
+        "admin role update should write a safe audit record"
+      );
+      const auditSummary = await request(baseUrl, "/api/admin/users?audit=1&limit=10", { cookie: adminCookie });
+      assert(auditSummary.payload.audit?.[0]?.type === "user_admin_update", "admin audit summary should expose recent user audit records");
+      assert(!("passwordHash" in auditSummary.payload.audit[0]), "admin audit summary must not include password hashes");
       return (
         await request(baseUrl, "/api/auth/login", {
           method: "POST",
@@ -209,6 +224,8 @@ async function securitySmoke() {
     })();
     const managerOrders = await request(baseUrl, "/api/admin/orders", { cookie: managerCookie });
     assert(managerOrders.response.status === 200, "manager should read admin orders");
+    const managerAudit = await request(baseUrl, "/api/admin/users?audit=1", { cookie: managerCookie, allowFailure: true });
+    assert(managerAudit.response.status === 403, "manager should not read admin audit summary");
     const managerContent = await request(baseUrl, "/api/admin/content", { cookie: managerCookie, allowFailure: true });
     assert(managerContent.response.status === 403, "manager should not read admin content");
 

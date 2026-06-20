@@ -1,5 +1,5 @@
 const { randomUUID } = require("node:crypto");
-const { checkRateLimit } = require("./_lib/api-security");
+const { checkStoreRateLimit } = require("./_lib/api-security");
 const { currentUser, normalizePhone } = require("./_lib/auth");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("./_lib/http");
 const { MIN_ORDER_TOTAL, normalizeOrderPricing } = require("./_lib/order-pricing");
@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === "PATCH") {
       const data = await readJson(req);
-      const limited = checkRateLimit(req, { key: "orders:comment", limit: 60 });
+      const limited = await checkStoreRateLimit(req, { key: "orders:comment", limit: 60 });
       if (limited) throw limited;
       const { user, store } = await currentUser(req);
       if (!user) return sendJson(res, 401, { error: "unauthorized", message: "Нужно войти в аккаунт." });
@@ -96,7 +96,7 @@ module.exports = async function handler(req, res) {
     if (req.method !== "POST") return methodNotAllowed(res);
 
     const data = await readJson(req);
-    const limited = checkRateLimit(req, { key: "orders:create", limit: 30 });
+    const limited = await checkStoreRateLimit(req, { key: "orders:create", limit: 30 });
     if (limited) throw limited;
     const { user, store } = await currentUser(req);
     const idempotencyKey = idempotencyKeyFromRequest(req, data);

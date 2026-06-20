@@ -1,4 +1,4 @@
-const { checkRateLimit, enforceSameOriginForCookieMutation, isUnsafeMethod } = require("./server-routes/_lib/api-security");
+const { checkStoreRateLimit, enforceSameOriginForCookieMutation, isUnsafeMethod } = require("./server-routes/_lib/api-security");
 const { handleError, methodNotAllowed, sendJson } = require("./server-routes/_lib/http");
 const catalog = require("./server-routes/catalog.js");
 const catalogQuery = require("./server-routes/catalog-query.js");
@@ -60,7 +60,7 @@ async function handleApiRequest(req, res, pathname = requestPath(req)) {
     if (isUnsafeMethod(req.method)) {
       const originError = enforceSameOriginForCookieMutation(req);
       if (originError) throw originError;
-      const rateError = checkRateLimit(req, { key: `route:${routeKey(pathname)}` });
+      const rateError = await checkStoreRateLimit(req, { key: `route:${routeKey(pathname)}` });
       if (rateError) throw rateError;
     }
   } catch (error) {
