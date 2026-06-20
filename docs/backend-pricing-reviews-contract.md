@@ -88,6 +88,8 @@ Account cart writes:
 - duplicate cart lines for the same SKU are merged server-side and quantities are capped at `99_999`;
 - account responses include `cartUpdatedAt`;
 - clients may send `expectedCartUpdatedAt` with `cartItems` updates. If the server cart changed on another device, the write is rejected with `409 cart_conflict` instead of silently overwriting the newer cart.
+- account responses also include `favoritesUpdatedAt` and `savedCartsUpdatedAt`;
+- clients may send `expectedFavoritesUpdatedAt` with `favoriteItems` and `expectedSavedCartsUpdatedAt` with `savedCarts`. Stale writes return `409 favorites_conflict` or `409 saved_carts_conflict` with the current sanitized server payload and timestamp.
 
 ## Admin Audit And Rate Limits
 
@@ -146,7 +148,7 @@ Coverage:
 
 The next backend/security packet should stay server-side and avoid UI redesign work:
 
-- order/account/cart persistence hardening follow-up: cart duplicate merge, safe cart keys, and optional stale-write conflict checks are implemented; remaining work is deeper order-draft recovery UX and store-backed conflict metadata for saved carts/favorites;
+- order/account/cart persistence hardening follow-up: cart duplicate merge, safe cart keys, cart/favorites/saved-cart stale-write conflict checks, and account sync timestamps are implemented; remaining work is deeper order-draft recovery UX;
 - admin audit log hardening: user/admin, order, review, price apply, catalog save, catalog import lifecycle, and media mutation summaries are covered;
 - rate-limit follow-up: unsafe Node writes and Rust auth/review/account/order/brief/admin-user/admin-content writes now have store-backed buckets with documented memory fallback; remaining work is optional live limiter telemetry and per-admin import/media limits if abuse evidence appears;
 - import history follow-up: add preview/reject/rollback lifecycle records if the admin UX needs them; apply history is now recorded server-side;

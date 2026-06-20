@@ -172,6 +172,45 @@ async function securitySmoke() {
       },
     });
     assert(freshCart.payload.cartItems?.[0]?.[1]?.variant?.sku === "cart-next-sku", "fresh cart write should be accepted");
+    resetRateLimits();
+    const favoritesMerge = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: { favoriteItems: ["fav-a", "fav-b", "fav-a"] },
+    });
+    assert(favoritesMerge.payload.favoriteItems?.length === 2, "favorites should be sanitized and returned");
+    assert(favoritesMerge.payload.favoritesUpdatedAt, "favorites response should include favoritesUpdatedAt for conflict detection");
+    const staleFavorites = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: { expectedFavoritesUpdatedAt: "2000-01-01T00:00:00.000Z", favoriteItems: ["fav-c"] },
+      allowFailure: true,
+    });
+    assert(staleFavorites.response.status === 409 && staleFavorites.payload.error === "favorites_conflict", "stale favorites write should return 409");
+    resetRateLimits();
+    const savedCartsMerge = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: {
+        savedCarts: [
+          {
+            id: "saved-security-cart",
+            title: "Security cart",
+            items: [["saved-line", { qty: 2, variant: { sku: "saved-sku", price: 10 } }]],
+            total: 20,
+          },
+        ],
+      },
+    });
+    assert(savedCartsMerge.payload.savedCarts?.length === 1, "saved cart write should be returned");
+    assert(savedCartsMerge.payload.savedCartsUpdatedAt, "saved cart response should include savedCartsUpdatedAt for conflict detection");
+    const staleSavedCarts = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: { expectedSavedCartsUpdatedAt: "2000-01-01T00:00:00.000Z", savedCarts: [] },
+      allowFailure: true,
+    });
+    assert(staleSavedCarts.response.status === 409 && staleSavedCarts.payload.error === "saved_carts_conflict", "stale saved-cart write should return 409");
 
     await request(baseUrl, "/api/admin/users", {
       method: "POST",

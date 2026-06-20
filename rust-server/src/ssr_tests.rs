@@ -436,10 +436,11 @@ fn builds_auth_me_payload_without_private_fields() {
             "buyer@example.test": { "items": [{ "key": "sku-1" }], "updatedAt": "2026-06-11T01:00:00.000Z" }
         },
         "favorites": {
-            "buyer@example.test": { "items": ["p1"] }
+            "buyer@example.test": { "items": ["p1"], "updatedAt": "2026-06-11T02:00:00.000Z" }
         },
         "savedCarts": {
             "buyer@example.test": {
+                "updatedAt": "2026-06-11T03:00:00.000Z",
                 "items": [{
                     "id": "SC-1",
                     "managerComment": "hidden",
@@ -470,7 +471,9 @@ fn builds_auth_me_payload_without_private_fields() {
     assert_eq!(payload["cartItems"].as_array().unwrap().len(), 1);
     assert_eq!(payload["cartUpdatedAt"], "2026-06-11T01:00:00.000Z");
     assert_eq!(payload["favoriteItems"].as_array().unwrap().len(), 1);
+    assert_eq!(payload["favoritesUpdatedAt"], "2026-06-11T02:00:00.000Z");
     assert!(payload["savedCarts"][0].get("managerComment").is_none());
+    assert_eq!(payload["savedCartsUpdatedAt"], "2026-06-11T03:00:00.000Z");
     assert_eq!(
         payload["savedCarts"][0]["commentHistory"]
             .as_array()

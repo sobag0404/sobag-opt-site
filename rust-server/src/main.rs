@@ -122,6 +122,7 @@ pub(crate) struct AppError {
     status: StatusCode,
     code: &'static str,
     message: String,
+    details: Option<Value>,
 }
 
 impl AppError {
@@ -130,6 +131,7 @@ impl AppError {
             status: StatusCode::BAD_REQUEST,
             code,
             message: message.into(),
+            details: None,
         }
     }
 
@@ -138,6 +140,7 @@ impl AppError {
             status: StatusCode::NOT_FOUND,
             code,
             message: message.into(),
+            details: None,
         }
     }
 
@@ -146,6 +149,7 @@ impl AppError {
             status: StatusCode::UNAUTHORIZED,
             code: "unauthorized",
             message: message.into(),
+            details: None,
         }
     }
 
@@ -154,6 +158,7 @@ impl AppError {
             status: StatusCode::UNAUTHORIZED,
             code,
             message: message.into(),
+            details: None,
         }
     }
 
@@ -162,6 +167,7 @@ impl AppError {
             status: StatusCode::FORBIDDEN,
             code: "forbidden",
             message: message.into(),
+            details: None,
         }
     }
 
@@ -170,6 +176,7 @@ impl AppError {
             status: StatusCode::BAD_GATEWAY,
             code,
             message: message.into(),
+            details: None,
         }
     }
 
@@ -178,6 +185,7 @@ impl AppError {
             status: StatusCode::SERVICE_UNAVAILABLE,
             code,
             message: message.into(),
+            details: None,
         }
     }
 
@@ -186,6 +194,7 @@ impl AppError {
             status: StatusCode::FORBIDDEN,
             code,
             message: message.into(),
+            details: None,
         }
     }
 
@@ -194,6 +203,16 @@ impl AppError {
             status: StatusCode::CONFLICT,
             code,
             message: message.into(),
+            details: None,
+        }
+    }
+
+    fn conflict_details(code: &'static str, message: impl Into<String>, details: Value) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            code,
+            message: message.into(),
+            details: Some(details),
         }
     }
 
@@ -202,6 +221,7 @@ impl AppError {
             status: StatusCode::TOO_MANY_REQUESTS,
             code: "rate_limited",
             message: message.into(),
+            details: None,
         }
     }
 
@@ -210,6 +230,7 @@ impl AppError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             code: "rust_internal_error",
             message: message.into(),
+            details: None,
         }
     }
 }
@@ -224,11 +245,15 @@ impl IntoResponse for AppError {
         } else {
             &self.message
         };
-        (
-            self.status,
-            Json(json!({ "error": self.code, "message": message })),
-        )
-            .into_response()
+        let mut payload = json!({ "error": self.code, "message": message });
+        if let (Some(map), Some(details)) = (payload.as_object_mut(), self.details) {
+            if let Some(details_map) = details.as_object() {
+                for (key, value) in details_map {
+                    map.insert(key.clone(), value.clone());
+                }
+            }
+        }
+        (self.status, Json(payload)).into_response()
     }
 }
 
@@ -1178,6 +1203,25 @@ async fn auth_me_update_preview(
         );
     }
     if has_object_key(&data, "favoriteItems") {
+        let expected_favorites_updated_at =
+            clean_text(data.get("expectedFavoritesUpdatedAt"), 80).unwrap_or_default();
+        let current_favorites_updated_at = store_nested_updated_at(&store, "favorites", &email)
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+        if !expected_favorites_updated_at.is_empty()
+            && !current_favorites_updated_at.is_empty()
+            && expected_favorites_updated_at != current_favorites_updated_at
+        {
+            return Err(AppError::conflict_details(
+                "favorites_conflict",
+                "Favorites changed on another device.",
+                json!({
+                    "favoriteItems": store_nested_items(&store, "favorites", &email),
+                    "favoritesUpdatedAt": current_favorites_updated_at,
+                }),
+            ));
+        }
         set_store_nested_items(
             &mut store,
             "favorites",
@@ -1186,6 +1230,25 @@ async fn auth_me_update_preview(
         );
     }
     if has_object_key(&data, "savedCarts") {
+        let expected_saved_carts_updated_at =
+            clean_text(data.get("expectedSavedCartsUpdatedAt"), 80).unwrap_or_default();
+        let current_saved_carts_updated_at = store_nested_updated_at(&store, "savedCarts", &email)
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+        if !expected_saved_carts_updated_at.is_empty()
+            && !current_saved_carts_updated_at.is_empty()
+            && expected_saved_carts_updated_at != current_saved_carts_updated_at
+        {
+            return Err(AppError::conflict_details(
+                "saved_carts_conflict",
+                "Saved carts changed on another device.",
+                json!({
+                    "savedCarts": saved_carts_for_user(&store, &email, can_use_internal_saved_cart_fields(&user)),
+                    "savedCartsUpdatedAt": current_saved_carts_updated_at,
+                }),
+            ));
+        }
         set_store_nested_items(
             &mut store,
             "savedCarts",
@@ -2243,7 +2306,9 @@ fn auth_me_payload_from_values(store: &Value, session: &Value) -> Value {
         "cartItems": store_nested_items(store, "carts", &user_email),
         "cartUpdatedAt": store_nested_updated_at(store, "carts", &user_email),
         "favoriteItems": store_nested_items(store, "favorites", &user_email),
-        "savedCarts": saved_carts_for_user(store, &user_email, can_use_internal_saved_cart_fields(user))
+        "favoritesUpdatedAt": store_nested_updated_at(store, "favorites", &user_email),
+        "savedCarts": saved_carts_for_user(store, &user_email, can_use_internal_saved_cart_fields(user)),
+        "savedCartsUpdatedAt": store_nested_updated_at(store, "savedCarts", &user_email)
     })
 }
 

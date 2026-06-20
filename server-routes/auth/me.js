@@ -274,12 +274,34 @@ module.exports = async function handler(req, res) {
         };
       }
       if (Object.prototype.hasOwnProperty.call(data, "favoriteItems")) {
+        const expectedFavoritesUpdatedAt = String(data.expectedFavoritesUpdatedAt || "").trim();
+        const currentFavorites = store.favorites[user.email] || null;
+        const currentFavoritesUpdatedAt = String(currentFavorites?.updatedAt || "");
+        if (expectedFavoritesUpdatedAt && currentFavoritesUpdatedAt && expectedFavoritesUpdatedAt !== currentFavoritesUpdatedAt) {
+          return sendJson(res, 409, {
+            error: "favorites_conflict",
+            message: "Favorites changed on another device.",
+            favoriteItems: currentFavorites.items || [],
+            favoritesUpdatedAt: currentFavoritesUpdatedAt,
+          });
+        }
         store.favorites[user.email] = {
           items: sanitizeFavorites(data.favoriteItems),
           updatedAt: new Date().toISOString(),
         };
       }
       if (Object.prototype.hasOwnProperty.call(data, "savedCarts")) {
+        const expectedSavedCartsUpdatedAt = String(data.expectedSavedCartsUpdatedAt || "").trim();
+        const currentSavedCarts = store.savedCarts[user.email] || null;
+        const currentSavedCartsUpdatedAt = String(currentSavedCarts?.updatedAt || "");
+        if (expectedSavedCartsUpdatedAt && currentSavedCartsUpdatedAt && expectedSavedCartsUpdatedAt !== currentSavedCartsUpdatedAt) {
+          return sendJson(res, 409, {
+            error: "saved_carts_conflict",
+            message: "Saved carts changed on another device.",
+            savedCarts: sanitizeSavedCarts(currentSavedCarts.items || [], { includeInternal: canUseInternalSavedCartFields(user) }),
+            savedCartsUpdatedAt: currentSavedCartsUpdatedAt,
+          });
+        }
         store.savedCarts[user.email] = {
           items: sanitizeSavedCarts(data.savedCarts, { includeInternal: canUseInternalSavedCartFields(user) }),
           updatedAt: new Date().toISOString(),
@@ -324,7 +346,9 @@ module.exports = async function handler(req, res) {
       cartItems: store.carts[freshUser.email]?.items || [],
       cartUpdatedAt: store.carts[freshUser.email]?.updatedAt || null,
       favoriteItems: store.favorites[freshUser.email]?.items || [],
+      favoritesUpdatedAt: store.favorites[freshUser.email]?.updatedAt || null,
       savedCarts,
+      savedCartsUpdatedAt: store.savedCarts[freshUser.email]?.updatedAt || null,
     });
   } catch (error) {
     handleError(res, error, req);
