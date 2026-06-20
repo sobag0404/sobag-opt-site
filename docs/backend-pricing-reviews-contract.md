@@ -77,7 +77,7 @@ Order creation accepts an optional `Idempotency-Key` or `X-Idempotency-Key` head
 Coverage:
 
 - Node and Rust order paths share the same normalized key/scope behavior and malformed order-id rejection.
-- `tools/api-security-smoke.mjs` covers retry reuse through the public API and malformed buyer order ids.
+- `tools/api-security-smoke.mjs` covers retry reuse through the public API, malformed buyer order ids, own-order history isolation, and cross-account buyer order update rejection.
 - Rust unit coverage verifies scoped reuse, cross-scope replay prevention, and malformed order-id rejection.
 
 Account cart writes:

@@ -350,6 +350,18 @@ async function securitySmoke() {
         personalDataConsent: true,
       },
     });
+    const otherBuyerOrders = await request(baseUrl, "/api/auth/me", { cookie: otherBuyer.cookie });
+    assert(
+      !otherBuyerOrders.payload.user?.orders?.some((order) => order.id === buyerOrder.payload.order.id),
+      "account order history must not expose another buyer's order"
+    );
+    const otherBuyerOrderPatch = await request(baseUrl, "/api/orders", {
+      method: "PATCH",
+      cookie: otherBuyer.cookie,
+      body: { id: buyerOrder.payload.order.id, commentText: "Cross-account update attempt" },
+      allowFailure: true,
+    });
+    assert(otherBuyerOrderPatch.response.status === 404, "buyer must not update another buyer's order");
     resetRateLimits();
     const otherUsersOrderReview = await request(baseUrl, "/api/auth/me", {
       method: "PUT",
