@@ -13,6 +13,7 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use url::Url;
 
+use crate::admin_audit::append_admin_audit;
 use crate::{
     can_edit_content, load_current_user_from_file_store, no_store_headers, AppError, AppResult,
 };
@@ -65,7 +66,7 @@ pub(crate) async fn admin_product_images_post(
     headers: HeaderMap,
     body: Bytes,
 ) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
-    require_media_user(&headers).await?;
+    let user = require_media_user(&headers).await?;
     if body.len() > MAX_JSON_IMAGE_BYTES * 2 {
         return Err(AppError::bad_request(
             "invalid_image_size",
@@ -77,6 +78,17 @@ pub(crate) async fn admin_product_images_post(
     if action == "mark-unused" {
         let image = normalize_image_metadata(data.get("image").unwrap_or(&data))?;
         let marked = mark_unused(&image);
+        append_admin_audit(
+            "media_update",
+            "mark_unused",
+            &user,
+            json!({
+                "entityType": "product_image",
+                "entityId": storage_key_or_url(&marked),
+                "status": "marked_unused"
+            }),
+        )
+        .await?;
         return Ok((
             StatusCode::OK,
             no_store_headers(),
@@ -113,6 +125,20 @@ pub(crate) async fn admin_product_images_post(
         height,
     )
     .await?;
+    append_admin_audit(
+        "media_update",
+        "upload",
+        &user,
+        json!({
+            "entityType": "product_image",
+            "entityId": storage_key_or_url(&image),
+            "productKey": product_key,
+            "status": "uploaded",
+            "mime": text(image.get("mime")),
+            "size": image.get("size").cloned().unwrap_or(Value::Null)
+        }),
+    )
+    .await?;
     Ok((
         StatusCode::OK,
         no_store_headers(),
@@ -125,7 +151,7 @@ pub(crate) async fn admin_product_images_delete(
     uri: Uri,
     body: Bytes,
 ) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
-    require_media_user(&headers).await?;
+    let user = require_media_user(&headers).await?;
     let params = query_params(uri.query().unwrap_or(""));
     let mut data = if body.is_empty() {
         json!({})
@@ -143,6 +169,17 @@ pub(crate) async fn admin_product_images_delete(
     let image = normalize_image_metadata(data.get("image").unwrap_or(&data))?;
     if text(data.get("mode")) == "mark-unused" {
         let marked = mark_unused(&image);
+        append_admin_audit(
+            "media_update",
+            "mark_unused",
+            &user,
+            json!({
+                "entityType": "product_image",
+                "entityId": storage_key_or_url(&marked),
+                "status": "marked_unused"
+            }),
+        )
+        .await?;
         return Ok((
             StatusCode::OK,
             no_store_headers(),
@@ -160,6 +197,17 @@ pub(crate) async fn admin_product_images_delete(
             Value::String(Utc::now().to_rfc3339()),
         );
     }
+    append_admin_audit(
+        "media_update",
+        "delete",
+        &user,
+        json!({
+            "entityType": "product_image",
+            "entityId": storage_key,
+            "status": "deleted"
+        }),
+    )
+    .await?;
     Ok((
         StatusCode::OK,
         no_store_headers(),
@@ -1161,6 +1209,20 @@ fn text(value: Option<&Value>) -> String {
         Some(Value::Number(number)) => number.to_string(),
         Some(Value::Bool(value)) => value.to_string(),
         _ => String::new(),
+    }
+}
+
+fn storage_key_or_url(image: &Value) -> String {
+    let storage_key = text(image.get("storageKey"));
+    if storage_key.is_empty() {
+        let url = text(image.get("url"));
+        if url.is_empty() {
+            "unknown".to_string()
+        } else {
+            url
+        }
+    } else {
+        storage_key
     }
 }
 

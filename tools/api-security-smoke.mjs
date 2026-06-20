@@ -228,6 +228,25 @@ async function securitySmoke() {
     assert(managerAudit.response.status === 403, "manager should not read admin audit summary");
     const managerContent = await request(baseUrl, "/api/admin/content", { cookie: managerCookie, allowFailure: true });
     assert(managerContent.response.status === 403, "manager should not read admin content");
+    const importPreview = await request(baseUrl, "/api/admin/import-batches", {
+      method: "POST",
+      cookie: adminCookie,
+      body: {
+        action: "preview",
+        source: "api-security-smoke",
+        products: [{ baseSku: "AUDIT-IMPORT-1", name: "Audit Import 1", basePrice: 120, categories: ["QA"], types: ["T"], sizes: ["S"], materials: ["M"] }],
+      },
+    });
+    currentStore = await getStore();
+    assert(currentStore.audit?.[0]?.type === "catalog_import" && currentStore.audit?.[0]?.action === "preview", "import preview should write safe audit");
+    assert(!("products" in currentStore.audit[0]) && !("csv" in currentStore.audit[0]), "import audit must not store raw import payload");
+    await request(baseUrl, "/api/admin/import-batches", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { action: "reject", id: importPreview.payload.batch.id },
+    });
+    currentStore = await getStore();
+    assert(currentStore.audit?.[0]?.type === "catalog_import" && currentStore.audit?.[0]?.action === "reject", "import reject should write safe audit");
 
     const query = await request(baseUrl, "/api/catalog-query?pageSize=1");
     const card = query.payload.items?.[0];
@@ -440,6 +459,15 @@ async function securitySmoke() {
       allowFailure: true,
     });
     assert(reviewLimited.response.status === 429 && reviewLimited.payload.error === "rate_limited", "review write burst should return 429");
+    await request(baseUrl, "/api/admin/catalog", {
+      method: "PUT",
+      cookie: adminCookie,
+      body: {
+        products: [{ id: "AUDIT-CATALOG-1", baseSku: "AUDIT-CATALOG-1", name: "Audit Catalog 1", basePrice: 140, categories: ["QA"], types: ["T"], sizes: ["S"], materials: ["M"] }],
+      },
+    });
+    currentStore = await getStore();
+    assert(currentStore.audit?.[0]?.type === "catalog_update" && currentStore.audit?.[0]?.action === "catalog_save", "catalog save should write safe audit");
 
     console.log(`api-security smoke passed: ${baseUrl}`);
   } finally {

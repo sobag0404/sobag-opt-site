@@ -1,4 +1,5 @@
 const { requireUser } = require("../_lib/auth");
+const { appendAdminAudit } = require("../_lib/admin-audit");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { createObjectStorageAdapter, normalizeImageMetadata, objectStorageStatus } = require("../_lib/object-storage");
 
@@ -56,7 +57,7 @@ function parseImageBody(data = {}) {
 
 module.exports = async function handler(req, res) {
   try {
-    await requireUser(req, ["admin", "content"]);
+    const { user } = await requireUser(req, ["admin", "content"]);
     const adapter = createObjectStorageAdapter();
 
     if (req.method === "GET") {
@@ -74,6 +75,11 @@ module.exports = async function handler(req, res) {
       if (action === "mark-unused") {
         const image = normalizeImageMetadata(data.image || data);
         const result = await adapter.deleteOrMarkUnused(image, { mode: "mark-unused" });
+        await appendAdminAudit("media_update", "mark_unused", user, {
+          entityType: "product_image",
+          entityId: result.storageKey || result.url || "unknown",
+          status: "marked_unused",
+        });
         return sendJson(res, 200, { image: result });
       }
 
@@ -89,6 +95,14 @@ module.exports = async function handler(req, res) {
         width: data.width,
         height: data.height,
       });
+      await appendAdminAudit("media_update", "upload", user, {
+        entityType: "product_image",
+        entityId: image.storageKey || image.url || "unknown",
+        productKey,
+        status: "uploaded",
+        mime: image.mime || mime,
+        size: image.size || body.length,
+      });
       return sendJson(res, 200, { image });
     }
 
@@ -102,6 +116,11 @@ module.exports = async function handler(req, res) {
       };
       const image = normalizeImageMetadata(data.image || data);
       const result = await adapter.deleteOrMarkUnused(image, { mode: data.mode === "mark-unused" ? "mark-unused" : "delete" });
+      await appendAdminAudit("media_update", data.mode === "mark-unused" ? "mark_unused" : "delete", user, {
+        entityType: "product_image",
+        entityId: result.storageKey || result.url || "unknown",
+        status: result.status || (data.mode === "mark-unused" ? "marked_unused" : "deleted"),
+      });
       return sendJson(res, 200, { image: result });
     }
 

@@ -94,6 +94,9 @@ Admin audit records are compact operational evidence, not raw payload storage. C
 - order status/manager/comment changes append `order_update`;
 - review moderation/delete appends `review_update` or `review_delete`;
 - price import apply appends `price_import` / `price_import_apply` history and audit summaries;
+- catalog saves append `catalog_update`;
+- catalog import preview/reject/apply/rollback lifecycle appends `catalog_import`;
+- product image upload/delete/mark-unused appends `media_update`;
 - admin user invite/role/remove appends `user_admin_update` with action, actor, target email, previous role, resulting role, and timestamp;
 - `GET /api/admin/users?audit=1&limit=...` returns a sanitized newest-first audit summary for admins only.
 
@@ -139,7 +142,7 @@ Coverage:
 The next backend/security packet should stay server-side and avoid UI redesign work:
 
 - order/account/cart persistence hardening follow-up: cart duplicate merge, safe cart keys, and optional stale-write conflict checks are implemented; remaining work is deeper order-draft recovery UX and store-backed conflict metadata for saved carts/favorites;
-- admin audit log hardening: user/admin, order, review, and price apply summaries are covered; remaining candidates are media/catalog/import preview lifecycle summaries if the admin UX needs them;
+- admin audit log hardening: user/admin, order, review, price apply, catalog save, catalog import lifecycle, and media mutation summaries are covered;
 - rate-limit follow-up: unsafe Node writes and Rust auth/review writes now have store-backed buckets with documented memory fallback; remaining work is optional live limiter telemetry and per-admin import/media limits if abuse evidence appears;
 - import history follow-up: add preview/reject/rollback lifecycle records if the admin UX needs them; apply history is now recorded server-side;
 - backup/restore hardening: automate no-secret backup evidence for file-store/PostgreSQL/MinIO rollback before destructive imports or catalog rewrites.

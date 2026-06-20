@@ -1,4 +1,5 @@
 const { requireUser } = require("../_lib/auth");
+const { appendAdminAudit } = require("../_lib/admin-audit");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { normalizeImageMetadata } = require("../_lib/object-storage");
 const { getCatalog, saveCatalog } = require("../_lib/store");
@@ -79,6 +80,12 @@ module.exports = async function handler(req, res) {
     if (products.length > MAX_PRODUCTS) return sendJson(res, 400, { error: "catalog_too_large", message: "Слишком много товаров в одном сохранении." });
 
     const saved = await saveCatalog(products, user.email, { source: "admin-catalog-save" });
+    await appendAdminAudit("catalog_update", "catalog_save", user, {
+      entityType: "catalog",
+      entityId: "products",
+      productCount: products.length,
+      status: "saved",
+    });
     sendJson(res, 200, { updatedAt: saved.updatedAt, count: products.length });
   } catch (error) {
     handleError(res, error, req);

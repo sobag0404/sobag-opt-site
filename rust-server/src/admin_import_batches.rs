@@ -6,6 +6,7 @@ use chrono::Utc;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+use crate::admin_audit::append_admin_audit;
 use crate::admin_catalog::clean_product;
 use crate::store::{load_store_value, save_store_value};
 use crate::{
@@ -66,6 +67,19 @@ pub(crate) async fn admin_import_batches_post(
             );
             batches.insert(0, batch);
             let saved = save_import_batches(&batches).await?;
+            append_admin_audit(
+                "catalog_import",
+                "preview",
+                &user,
+                json!({
+                    "entityType": "import_batch",
+                    "entityId": text(saved[0].get("id")),
+                    "status": "preview",
+                    "rowCount": input_products.len(),
+                    "counts": saved[0].get("counts").cloned().unwrap_or_else(|| json!({}))
+                }),
+            )
+            .await?;
             Ok((
                 StatusCode::OK,
                 no_store_headers(),
@@ -88,6 +102,18 @@ pub(crate) async fn admin_import_batches_post(
                 map.insert("rejectedBy".to_string(), Value::String(user_email(&user)));
             }
             let saved = save_import_batches(&batches).await?;
+            append_admin_audit(
+                "catalog_import",
+                "reject",
+                &user,
+                json!({
+                    "entityType": "import_batch",
+                    "entityId": id,
+                    "status": "rejected",
+                    "counts": saved[index].get("counts").cloned().unwrap_or_else(|| json!({}))
+                }),
+            )
+            .await?;
             Ok((
                 StatusCode::OK,
                 no_store_headers(),
@@ -124,6 +150,19 @@ pub(crate) async fn admin_import_batches_post(
             }
             save_catalog(&next_products, &user, &batches, &now, "import-batch-apply").await?;
             let saved = save_import_batches(&batches).await?;
+            append_admin_audit(
+                "catalog_import",
+                "apply",
+                &user,
+                json!({
+                    "entityType": "import_batch",
+                    "entityId": id,
+                    "status": "applied",
+                    "productCount": next_products.len(),
+                    "counts": saved[index].get("counts").cloned().unwrap_or_else(|| json!({}))
+                }),
+            )
+            .await?;
             Ok((
                 StatusCode::OK,
                 no_store_headers(),
@@ -160,6 +199,19 @@ pub(crate) async fn admin_import_batches_post(
             }
             save_catalog(&products, &user, &batches, &now, "import-batch-rollback").await?;
             let saved = save_import_batches(&batches).await?;
+            append_admin_audit(
+                "catalog_import",
+                "rollback",
+                &user,
+                json!({
+                    "entityType": "import_batch",
+                    "entityId": id,
+                    "status": "rolled_back",
+                    "productCount": products.len(),
+                    "counts": saved[index].get("counts").cloned().unwrap_or_else(|| json!({}))
+                }),
+            )
+            .await?;
             Ok((
                 StatusCode::OK,
                 no_store_headers(),

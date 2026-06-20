@@ -7,6 +7,7 @@ use axum::{
 use chrono::Utc;
 use serde_json::{json, Map, Value};
 
+use crate::admin_audit::append_admin_audit;
 use crate::store::{load_store_value, save_store_value};
 use crate::{
     can_edit_content, load_current_user_from_file_store, no_store_headers, AppError, AppResult,
@@ -74,6 +75,18 @@ pub(crate) async fn admin_catalog_put(
     save_store_value(CATALOG_KEY, &catalog)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
+    append_admin_audit(
+        "catalog_update",
+        "catalog_save",
+        &user,
+        json!({
+            "entityType": "catalog",
+            "entityId": "products",
+            "productCount": products.len(),
+            "status": "saved"
+        }),
+    )
+    .await?;
     Ok((
         StatusCode::OK,
         no_store_headers(),

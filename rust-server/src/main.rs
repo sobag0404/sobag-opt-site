@@ -22,6 +22,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use tower_http::trace::TraceLayer;
 
+mod admin_audit;
 mod admin_catalog;
 mod admin_import_batches;
 mod admin_media;

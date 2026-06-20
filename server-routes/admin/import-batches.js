@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const staticProducts = require("../../data/products-live.json");
 const { requireUser } = require("../_lib/auth");
+const { appendAdminAudit } = require("../_lib/admin-audit");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { normalizeImageMetadata } = require("../_lib/object-storage");
 const { getCatalog, getImportBatches, saveCatalog, saveImportBatches } = require("../_lib/store");
@@ -274,6 +275,13 @@ module.exports = async function handler(req, res) {
       if (!inputProducts.length) return sendJson(res, 400, { error: "empty_import", message: "Нет товаров для предпросмотра." });
       const batch = makeBatch(inputProducts, currentProducts, user, { source: data.source, updateExisting: data.updateExisting });
       const saved = await saveImportBatches([batch, ...batches]);
+      await appendAdminAudit("catalog_import", "preview", user, {
+        entityType: "import_batch",
+        entityId: batch.id,
+        status: "preview",
+        rowCount: inputProducts.length,
+        counts: batch.counts,
+      });
       return sendJson(res, 200, { batch: batchSummary(saved[0], true) });
     }
 
@@ -285,6 +293,12 @@ module.exports = async function handler(req, res) {
       if (batch.status !== "preview") return sendJson(res, 400, { error: "invalid_batch_status", message: "Отклонить можно только партию в предпросмотре." });
       batches[batchIndex] = { ...batch, status: "rejected", rejectedAt: new Date().toISOString(), rejectedBy: user.email };
       const saved = await saveImportBatches(batches);
+      await appendAdminAudit("catalog_import", "reject", user, {
+        entityType: "import_batch",
+        entityId: batch.id,
+        status: "rejected",
+        counts: batch.counts || {},
+      });
       return sendJson(res, 200, { batch: batchSummary(saved[batchIndex], true) });
     }
 
@@ -298,6 +312,13 @@ module.exports = async function handler(req, res) {
       nextBatches[batchIndex] = { ...batch, status: "applied", appliedAt, appliedBy: user.email, snapshot };
       const savedCatalog = await saveCatalog(nextProducts, user.email, { source: "import-batch-apply", importBatches: nextBatches, updatedAt: appliedAt });
       const saved = await saveImportBatches(nextBatches);
+      await appendAdminAudit("catalog_import", "apply", user, {
+        entityType: "import_batch",
+        entityId: batch.id,
+        status: "applied",
+        productCount: nextProducts.length,
+        counts: batch.counts || {},
+      });
       return sendJson(res, 200, { batch: batchSummary(saved[batchIndex], true), count: nextProducts.length, updatedAt: savedCatalog.updatedAt });
     }
 
@@ -311,6 +332,13 @@ module.exports = async function handler(req, res) {
       nextBatches[batchIndex] = { ...batch, status: "rolled_back", rolledBackAt, rolledBackBy: user.email };
       const savedCatalog = await saveCatalog(batch.snapshot.products, user.email, { source: "import-batch-rollback", importBatches: nextBatches, updatedAt: rolledBackAt });
       const saved = await saveImportBatches(nextBatches);
+      await appendAdminAudit("catalog_import", "rollback", user, {
+        entityType: "import_batch",
+        entityId: batch.id,
+        status: "rolled_back",
+        productCount: batch.snapshot.products.length,
+        counts: batch.counts || {},
+      });
       return sendJson(res, 200, { batch: batchSummary(saved[batchIndex], true), count: batch.snapshot.products.length, updatedAt: savedCatalog.updatedAt });
     }
 
