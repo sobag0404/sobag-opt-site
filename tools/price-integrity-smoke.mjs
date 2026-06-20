@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
 import { createSobagServer } from "../server.mjs";
+
+const require = createRequire(import.meta.url);
+const { trustedOrderPrice } = require("../server-routes/_lib/order-pricing.js");
 
 const tempDir = mkdtempSync(join(tmpdir(), "sobag-price-integrity-"));
 process.env.SOBAG_STORE_PROVIDER = "file";
@@ -31,6 +35,11 @@ function discountedTotal(unitPrice, qty) {
 }
 
 async function main() {
+  assert.equal(
+    trustedOrderPrice({ price: 250, promoPrice: 199, promoActive: true }),
+    250,
+    "order pricing must preserve current base-price precedence until promo business rules are explicit"
+  );
   const { server, baseUrl } = await listen(createSobagServer());
   try {
     const query = await request(baseUrl, "/api/catalog-query?pageSize=6&sort=popular");

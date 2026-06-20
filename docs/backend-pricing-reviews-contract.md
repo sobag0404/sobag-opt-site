@@ -58,7 +58,7 @@ Precedence:
 1. SKU price override from an import row updates matched variants.
 2. Group price updates every SKU in the matched price group.
 3. Promo price is stored separately in variant payload and appears as an additional public price-list row when active.
-4. Order pricing continues to use the trusted server catalog price until a separate business rule explicitly approves promo order-pricing precedence.
+4. Order pricing continues to use the trusted server catalog base price until a separate business rule explicitly approves promo order-pricing precedence. `tools/price-integrity-smoke.mjs` preserves this current behavior.
 
 Import history and audit:
 

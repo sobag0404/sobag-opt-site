@@ -20,6 +20,10 @@ function money(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
 }
 
+function trustedOrderPrice(variant = {}) {
+  return money(variant.price);
+}
+
 function orderError(code, message, statusCode = 400) {
   const error = new Error(message);
   error.code = code;
@@ -88,7 +92,7 @@ async function normalizeOrderPricing(payload = {}) {
     const found = await trustedVariantLookup(variants, submittedSku(line));
     if (!found) throw orderError("invalid_sku", "Order item is unavailable or not published.");
     const qty = lineQty(line.qty || line.quantity);
-    const price = money(found.variant.price);
+    const price = trustedOrderPrice(found.variant);
     if (price <= 0) throw orderError("invalid_sku", "Order item is unavailable or not orderable.");
     const subtotal = money(price * qty);
     const item = {
@@ -130,4 +134,4 @@ async function normalizeOrderPricing(payload = {}) {
   };
 }
 
-module.exports = { MIN_ORDER_TOTAL, normalizeOrderPricing };
+module.exports = { MIN_ORDER_TOTAL, normalizeOrderPricing, trustedOrderPrice };
