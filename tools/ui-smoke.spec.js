@@ -280,6 +280,42 @@ test("account auth modal separates login and registration fields", async ({ page
   await expect(page.locator(".auth-password-hint")).toContainText("не менее 6");
 });
 
+test("admin audit summary fails closed without raw rows", async ({ page }) => {
+  await page.route("**/api/auth/me", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ user: { email: "admin@sobag", name: "Admin", role: "admin" }, cartItems: [], favoriteItems: [], savedCarts: [] }),
+    });
+  });
+  await page.route("**/api/admin/users**", async (route) => {
+    const url = route.request().url();
+    if (url.includes("audit=1")) {
+      return route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "raw secret@example.com audit row unavailable" }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ users: [{ email: "admin@sobag", name: "Admin", role: "admin" }] }),
+    });
+  });
+  await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    localStorage.setItem("sobag.currentUser", "admin@sobag");
+    localStorage.setItem("sobag.users", JSON.stringify({ "admin@sobag": { email: "admin@sobag", name: "Admin", role: "admin" } }));
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator("#accountButton").click();
+  await expect(page.locator(".admin-audit-summary")).toContainText("Аудит админ-действий");
+  await expect(page.locator(".admin-audit-summary")).toContainText("Ждет backend audit endpoint");
+  await expect(page.locator(".admin-audit-summary")).not.toContainText("secret@example.com");
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
 async function waitForLiveProducts(page, minCount = 10) {
   await page.waitForFunction((min) => document.querySelectorAll(".product-card").length > min, minCount);
 }
