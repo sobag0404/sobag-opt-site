@@ -1309,6 +1309,7 @@ test("product reviews require login and can be moderated by admin", async ({ pag
 
   let authUser = { email: "buyer@example.com", name: "Buyer", role: "buyer" };
   let buyerOrders = [];
+  let buyerReviews = [];
   const review = {
     id: "REV-QA-1",
     productId: reviewedProductId,
@@ -1328,17 +1329,18 @@ test("product reviews require login and can be moderated by admin", async ({ pag
       if (body.review) {
         expect(body.review.rating).toBe(3);
         expect(body.review.text).toContain("QA review");
+        buyerReviews = [review];
       }
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ user: { ...authUser, reviews: [review], orders: buyerOrders }, cartItems: [], favoriteItems: [], savedCarts: [] }),
+        body: JSON.stringify({ user: { ...authUser, reviews: buyerReviews, orders: buyerOrders }, cartItems: [], favoriteItems: [], savedCarts: [] }),
       });
     }
     return route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ user: { ...authUser, orders: buyerOrders, reviews: [] }, cartItems: [], favoriteItems: [], savedCarts: [] }),
+      body: JSON.stringify({ user: { ...authUser, orders: buyerOrders, reviews: buyerReviews }, cartItems: [], favoriteItems: [], savedCarts: [] }),
     });
   });
   await page.route("**/api/admin/content**", async (route) => {
@@ -1411,6 +1413,13 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   await page.locator('.review-form textarea[name="text"]').fill("QA review text");
   await page.locator(".review-form").getByRole("button", { name: /Отправить отзыв/i }).click();
   await expect(page.locator("#toast")).toContainText("Отзыв отправлен");
+  await page.locator(".modal__close").click();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForLiveProducts(page);
+  await page.locator("[data-open-product]").first().click();
+  await expect(page.locator(".review-login-note")).toContainText("уже отправили отзыв");
+  await expect(page.locator(".review-form")).toHaveCount(0);
+  await page.locator(".modal__close").click();
 
   authUser = { email: "admin@sobag", name: "Admin", role: "admin" };
   await page.evaluate(() => {
