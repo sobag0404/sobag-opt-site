@@ -1248,6 +1248,33 @@ test("product reviews require login and can be moderated by admin", async ({ pag
       body: JSON.stringify({ reviews: [review] }),
     });
   });
+  await page.route("**/api/admin/users**", async (route) => {
+    const url = route.request().url();
+    if (url.includes("audit=1")) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          audit: [
+            {
+              id: "AUD-QA-REVIEW",
+              type: "review_update",
+              action: "review_update",
+              actor: "admin@sobag",
+              reviewId: "REV-QA-1",
+              status: "approved",
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ users: [{ email: "admin@sobag", name: "Admin", role: "admin" }] }),
+    });
+  });
 
   await page.evaluate(() => {
     localStorage.setItem("sobag.currentUser", "buyer@example.com");
@@ -1291,6 +1318,9 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator("#accountButton").click();
+  await expect(page.locator(".admin-audit-summary")).toContainText("Аудит админ-действий");
+  await expect(page.locator(".admin-audit-summary")).toContainText("Отзыв обновлен");
+  await expect(page.locator(".admin-audit-summary")).toContainText("REV-QA-1");
   await page.locator("[data-open-admin]").click();
   await expect(page.locator("#adminReviewsPanel")).toContainText("QA review text");
   await expect(page.locator('[data-review-status="REV-QA-1"][data-review-status-value="approved"]')).toBeVisible();

@@ -1788,6 +1788,7 @@ function renderAdminImportPage() {
 }
 function userManagementHtml(user) {
   if (user?.role !== "admin") return "";
+  loadAdminAudit();
   const users = getUsers();
   const managers = Object.entries(users).filter(([, item]) => item.role === "manager" || item.employee);
   return `
@@ -1860,6 +1861,94 @@ function userManagementHtml(user) {
             `;
           })
           .join("")}
+      </div>
+    </div>
+    ${adminAuditHtml()}
+  `;
+}
+function normalizeAdminAuditEntry(item = {}) {
+  return {
+    id: String(item.id || "").slice(0, 80),
+    type: String(item.type || "").slice(0, 80),
+    action: String(item.action || "").slice(0, 80),
+    actor: String(item.actor || "").trim().toLowerCase().slice(0, 180),
+    targetEmail: String(item.targetEmail || item.userEmail || "").trim().toLowerCase().slice(0, 180),
+    orderId: String(item.orderId || "").slice(0, 80),
+    reviewId: String(item.reviewId || "").slice(0, 80),
+    status: String(item.status || "").slice(0, 80),
+    role: String(item.role || "").slice(0, 40),
+    previousRole: String(item.previousRole || "").slice(0, 40),
+    createdAt: String(item.createdAt || item.at || "").slice(0, 40),
+  };
+}
+function adminAuditActionLabel(entry) {
+  const value = entry.action || entry.type || "";
+  return (
+    {
+      employee_invite: "Добавлен менеджер",
+      employee_update: "Обновлен сотрудник",
+      employee_remove: "Снят менеджер",
+      role_update: "Изменена роль",
+      review_update: "Отзыв обновлен",
+      review_delete: "Отзыв удален",
+      order_update: "Заказ обновлен",
+      order_message: "Сообщение по заказу",
+      user_admin_update: "Сотрудник",
+    }[value] || value || "Событие"
+  );
+}
+function adminAuditTargetLabel(entry) {
+  return [entry.targetEmail, entry.orderId ? `заказ ${entry.orderId}` : "", entry.reviewId ? `отзыв ${entry.reviewId}` : "", entry.status, entry.role]
+    .filter(Boolean)
+    .join(" · ");
+}
+async function loadAdminAudit() {
+  if (["loading", "loaded", "error"].includes(state.adminAuditStatus)) return;
+  state.adminAuditStatus = "loading";
+  try {
+    const result = await apiRequest("/api/admin/users?audit=1&limit=8");
+    state.adminAudit = Array.isArray(result.audit) ? result.audit.map(normalizeAdminAuditEntry) : [];
+    state.adminAuditStatus = "loaded";
+  } catch (error) {
+    if (!isBackendUnavailable(error) && error.status !== 401 && error.status !== 403 && error.status !== 404) console.warn(error);
+    state.adminAudit = [];
+    state.adminAuditStatus = "error";
+  }
+  rerenderAccountModal();
+}
+function adminAuditHtml() {
+  const statusText =
+    state.adminAuditStatus === "loading"
+      ? "Загружаем безопасную сводку действий."
+      : state.adminAuditStatus === "error"
+        ? "Ждет backend audit endpoint или прав администратора."
+        : "Только сводка: тип действия, исполнитель, объект и дата без приватных строк.";
+  return `
+    <div class="account-section admin-audit-summary">
+      <div class="account-section__head">
+        <div>
+          <h3>Аудит админ-действий</h3>
+          <span>${escapeHtml(statusText)}</span>
+        </div>
+      </div>
+      <div class="admin-price-history__list admin-audit-summary__list">
+        ${
+          state.adminAudit.length
+            ? state.adminAudit
+                .slice(0, 8)
+                .map(
+                  (entry) => `
+                    <article class="admin-price-history__item admin-audit-summary__item">
+                      <strong>${escapeHtml(adminAuditActionLabel(entry))}</strong>
+                      ${adminAuditTargetLabel(entry) ? `<span>${escapeHtml(adminAuditTargetLabel(entry))}</span>` : ""}
+                      ${entry.actor ? `<span>${escapeHtml(entry.actor)}</span>` : ""}
+                      <small>${escapeHtml(entry.createdAt ? new Date(entry.createdAt).toLocaleString("ru-RU") : "Без даты")}</small>
+                    </article>
+                  `
+                )
+                .join("")
+            : `<p class="admin-price-history__empty">${state.adminAuditStatus === "loading" ? "Загрузка..." : "Событий пока нет."}</p>`
+        }
       </div>
     </div>
   `;

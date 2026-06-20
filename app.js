@@ -197,6 +197,8 @@ const state = {
   },
   priceImportHistory: loadStoredPriceImportHistory(),
   priceImportHistoryStatus: "idle",
+  adminAudit: [],
+  adminAuditStatus: "idle",
 };
 const productGrid = document.querySelector("#productGrid");
 const productCount = document.querySelector("#productCount");
