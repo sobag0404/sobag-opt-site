@@ -795,6 +795,42 @@ function loadStoredPriceImportHistory() {
 function saveStoredPriceImportHistory() {
   localStorage.setItem("sobag.priceImportHistory.v1", JSON.stringify(state.priceImportHistory.slice(0, 8)));
 }
+function normalizePriceImportHistoryItem(item = {}) {
+  const source = item.source || item.provider || "server";
+  return {
+    id: item.id || `price-import-${Date.now()}`,
+    at: item.createdAt || item.at || new Date().toISOString(),
+    status: item.status || "validated",
+    source,
+    rows: Number(item.rowCount || item.rows || 0),
+    changes: Number(item.changeCount || item.changes || 0),
+    errors: Number(item.errorCount || item.errors || 0),
+    applied: Number(item.appliedCount || item.applied?.updatedVariants || item.applied?.updatedProducts || item.applied || 0),
+    affectedSkuCount: Number(item.affectedSkuCount || 0),
+    promoChangeCount: Number(item.promoChangeCount || 0),
+  };
+}
+function setPriceImportHistory(items = [], status = "loaded") {
+  const safeHistory = (Array.isArray(items) ? items : []).map(normalizePriceImportHistoryItem).slice(0, 8);
+  state.priceImportHistory = safeHistory.length ? safeHistory : state.priceImportHistory.slice(0, 8);
+  state.priceImportHistoryStatus = status;
+  saveStoredPriceImportHistory();
+}
+async function loadAdminPriceHistory() {
+  if (!document.body.classList.contains("admin-prices-page")) return;
+  if (["loading", "loaded", "error"].includes(state.priceImportHistoryStatus)) return;
+  const user = currentManagerUser();
+  if (!canManageProducts(user) && !requiresServerRole(canManageProducts)) return;
+  state.priceImportHistoryStatus = "loading";
+  try {
+    const result = await apiRequest("/api/admin/prices", { publicCache: false });
+    setPriceImportHistory(result.history || [], "loaded");
+  } catch (error) {
+    if (!isBackendUnavailable(error)) console.warn(error);
+    state.priceImportHistoryStatus = "error";
+  }
+  renderAdminPricesPage();
+}
 function priceImportStatusLabel(status) {
   return (
     {
@@ -807,7 +843,7 @@ function priceImportStatusLabel(status) {
   );
 }
 function recordPriceImportHistory(entry = {}) {
-  const clean = {
+  const clean = normalizePriceImportHistoryItem({
     id: `price-import-${Date.now()}`,
     at: new Date().toISOString(),
     status: entry.status || "validated",
@@ -816,8 +852,9 @@ function recordPriceImportHistory(entry = {}) {
     changes: Number(entry.changes || 0),
     errors: Number(entry.errors || 0),
     applied: Number(entry.applied || 0),
-  };
+  });
   state.priceImportHistory = [clean, ...state.priceImportHistory].slice(0, 8);
+  state.priceImportHistoryStatus = "loaded";
   saveStoredPriceImportHistory();
 }
 function pricePreviewCanApply() {
@@ -889,11 +926,17 @@ function pricePreviewRowsHtml() {
 }
 function priceImportHistoryHtml() {
   const history = state.priceImportHistory || [];
+  const statusNote =
+    state.priceImportHistoryStatus === "loading"
+      ? "Загружаю историю с сервера..."
+      : state.priceImportHistoryStatus === "error"
+        ? "Серверная история сейчас недоступна; показана локальная сводка без данных из файлов."
+        : "Только сводка: статус, строки, ошибки и источник без данных из файла.";
   return `
     <section class="admin-price-history" aria-label="История импорта цен">
       <div class="admin-price-history__head">
         <h3>История импорта</h3>
-        <span>Только сводка: статус, строки, ошибки и источник без данных из файла.</span>
+        <span>${escapeHtml(statusNote)}</span>
       </div>
       ${
         history.length
@@ -905,6 +948,8 @@ function priceImportHistoryHtml() {
                     entry.changes ? `${entry.changes} изменений` : "",
                     entry.applied ? `${entry.applied} применено` : "",
                     entry.errors ? `${entry.errors} ошибок` : "",
+                    entry.affectedSkuCount ? `${entry.affectedSkuCount} SKU` : "",
+                    entry.promoChangeCount ? `${entry.promoChangeCount} акций` : "",
                     entry.source ? `источник: ${entry.source}` : "",
                   ].filter(Boolean);
                   return `
@@ -1175,6 +1220,7 @@ function renderAdminPricesPage() {
   }
   node.innerHTML = adminPricesPageHtml();
   if (window.lucide) window.lucide.createIcons();
+  loadAdminPriceHistory();
 }
 function loadStoredImportBatches() {
   try {

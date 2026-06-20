@@ -154,6 +154,34 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await page.locator("[data-admin-toggle-product]").first().click();
   await expect(page.locator(".admin-product-badge").first()).toContainText("Опубликован");
 
+  let priceImportPreviewRequests = 0;
+  await page.route("**/api/admin/prices", async (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          source: "postgres",
+          rows: [],
+          history: [
+            {
+              id: "PRICE-QA-1",
+              status: "applied",
+              source: "postgres",
+              rowCount: 2,
+              changeCount: 3,
+              affectedSkuCount: 3,
+              promoChangeCount: 1,
+              createdAt: "2026-06-20T10:00:00.000Z",
+            },
+          ],
+        }),
+      });
+    }
+    if (route.request().method() !== "POST") return route.continue();
+    priceImportPreviewRequests += 1;
+    return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "preview unavailable" }) });
+  });
   await page.goto(`${BASE_URL}/admin-prices?q=opt_`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelectorAll(".admin-price-row").length > 0);
   await expect(page.locator(".admin-price-preview h3")).toContainText("Предпросмотр изменений");
@@ -162,12 +190,10 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await expect(page.locator(".admin-price-import-guide")).toContainText("starts_at");
   await expect(page.locator(".admin-price-preview__empty")).toContainText("валидации");
   await expect(page.locator("[data-admin-apply-price-preview]")).toBeDisabled();
-  let priceImportPreviewRequests = 0;
-  await page.route("**/api/admin/prices", async (route) => {
-    if (route.request().method() !== "POST") return route.continue();
-    priceImportPreviewRequests += 1;
-    return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "preview unavailable" }) });
-  });
+  await expect(page.locator(".admin-price-history")).toContainText("История импорта");
+  await expect(page.locator(".admin-price-history")).toContainText("Применен");
+  await expect(page.locator(".admin-price-history")).toContainText("3 изменений");
+  await expect(page.locator(".admin-price-history")).toContainText("1 акций");
   await page.locator("[data-admin-price-import]").setInputFiles({
     name: "prices.csv",
     mimeType: "text/csv",
