@@ -523,6 +523,16 @@ test("catalog home first load uses server category summary over stale fallback",
   await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
   expect(await page.locator("#categoryTiles").innerText()).toBe(tileText);
 
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/catalog.html?qa=category-summary-mobile`, { waitUntil: "domcontentloaded" });
+  await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
+  const mobileTileText = await page.locator("#categoryTiles").innerText();
+  expect(mobileTileText).toBe(tileText);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
+  expect(await page.locator("#categoryTiles").innerText()).toBe(mobileTileText);
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   priceListRows = [];
   await page.goto(`${BASE_URL}/catalog.html?qa=price-empty`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".price-list-preview__state")).toContainText("нет строк");
