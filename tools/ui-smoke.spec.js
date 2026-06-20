@@ -266,6 +266,31 @@ test("business page exposes visible FAQ and FAQ schema", async ({ page }) => {
   expect(schema.mainEntity[0].acceptedAnswer.text).toContain("оптовая заявка");
 });
 
+test("contacts maps and marketplace badges stay visible", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/contacts.html`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".contacts-maps iframe")).toHaveCount(2);
+  await expect(page.locator("[data-contacts-legal-address]")).toContainText("431815");
+  await expect(page.locator("[data-contacts-production-address]")).toContainText("305014");
+  await expect(page.locator(".map-panel")).toHaveCount(2);
+  await expectNoHorizontalOverflow(page, "contacts maps mobile");
+
+  await page.goto(`${BASE_URL}/marketplaces.html`, { waitUntil: "domcontentloaded" });
+  const marketplaceLinks = [
+    ["Wildberries", "https://www.wildberries.ru/seller/167187"],
+    ["Ozon", "https://ozon.ru/s/sobag"],
+    ["Яндекс Маркет", "https://market.yandex.ru/cc/84GXiW"],
+  ];
+  for (const [name, href] of marketplaceLinks) {
+    const link = page.locator(`.marketplace-card[href="${href}"]`);
+    await expect(link).toContainText(name);
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(link).toHaveAttribute("rel", /noopener/);
+    await expect(link).toHaveAttribute("rel", /noreferrer/);
+  }
+  await expectNoHorizontalOverflow(page, "marketplaces mobile");
+});
+
 test("account auth modal separates login and registration fields", async ({ page }) => {
   await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
   await page.locator("#accountButton").click();
