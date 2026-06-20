@@ -350,6 +350,40 @@ async function expectMobileHeaderActionsStable(page, label = page.url()) {
   expect(geometry.smallTargets, label).toBe(false);
 }
 
+async function expectSkuCopyControlsInline(page, label = page.url()) {
+  const geometry = await page.evaluate(() => {
+    const pairs = [
+      [document.querySelector(".product-card__sku-row .product-card__sku"), document.querySelector(".product-card__sku-row .copy-sku-button"), document.querySelector(".product-card__sku-row")],
+      [document.querySelector("#selectedSku"), document.querySelector(".copy-sku-button--detail"), document.querySelector(".sku-line__value")],
+    ].filter(([sku, button, container]) => sku && button && container);
+    return pairs.map(([sku, button, container]) => {
+      const skuRect = sku.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const sameLine = Math.abs((skuRect.top + skuRect.bottom) / 2 - (buttonRect.top + buttonRect.bottom) / 2) <= 12;
+      const inlineGap = Math.max(0, buttonRect.left - skuRect.right);
+      const wrappedGap = Math.max(0, buttonRect.top - skuRect.bottom);
+      return {
+        overflow: container.scrollWidth - container.clientWidth,
+        sameLine,
+        inlineGap,
+        wrappedGap,
+        targetWidth: buttonRect.width,
+        targetHeight: buttonRect.height,
+        insideContainer: buttonRect.left >= containerRect.left - 1 && buttonRect.right <= containerRect.right + 1,
+      };
+    });
+  });
+  expect(geometry.length, label).toBeGreaterThanOrEqual(2);
+  for (const item of geometry) {
+    expect(item.overflow, label).toBeLessThanOrEqual(1);
+    expect(item.insideContainer, label).toBe(true);
+    expect(item.sameLine ? item.inlineGap : item.wrappedGap, label).toBeLessThanOrEqual(8);
+    expect(item.targetWidth, label).toBeGreaterThanOrEqual(22);
+    expect(item.targetHeight, label).toBeGreaterThanOrEqual(19);
+  }
+}
+
 test("mobile pages do not create horizontal overflow", async ({ page }) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -824,6 +858,10 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator(".copy-sku-button--detail")).toHaveAttribute("data-tooltip", "Скопировать артикул");
   await expect(page.locator("#selectedSku")).toContainText(/^opt_/i);
   await expect(page.locator(".detail-price strong")).not.toContainText(/^0\s*₽$/);
+  await expectSkuCopyControlsInline(page, "desktop sku copy");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectSkuCopyControlsInline(page, "mobile sku copy");
+  await page.setViewportSize({ width: 1280, height: 720 });
   await expect(page.locator(".related-products .mini-product-card")).toHaveCount(await page.locator(".related-products .mini-product-card").count());
   await expect(page.locator(".related-products .mini-product-card").first()).toBeVisible();
   const imageGeometry = await page.evaluate(() => {
