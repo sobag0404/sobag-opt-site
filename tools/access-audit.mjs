@@ -88,7 +88,10 @@ function sameSet(a = [], b = []) {
 function includesOwnerCheck(source, ownerMethod) {
   if (!ownerMethod) return true;
   const hasUserGate = /if\s*\(\s*!user\s*\)\s*return\s+sendJson\s*\(\s*res\s*,\s*401/.test(source);
-  const hasOrderOwnership = /customerEmail\s*!==\s*String\s*\(\s*user\.email/.test(source) || /order\.userEmail\s*===\s*freshUser\.email/.test(source);
+  const hasOrderOwnership =
+    /customerEmail\s*!==\s*String\s*\(\s*user\.email/.test(source) ||
+    /ownerEmail\s*!==\s*String\s*\(\s*user\.email/.test(source) ||
+    /order\.userEmail\s*===\s*freshUser\.email/.test(source);
   return hasUserGate && hasOrderOwnership;
 }
 

@@ -71,8 +71,8 @@ module.exports = async function handler(req, res) {
       if (!text) return sendJson(res, 400, { error: "empty_comment", message: "Напишите сообщение по заказу." });
       let updated = null;
       store.orders = store.orders.map((order) => {
-        const customerEmail = String(order.customer?.email || order.userEmail || "").toLowerCase();
-        if (order.id !== orderId || customerEmail !== String(user.email || "").toLowerCase()) return order;
+        const ownerEmail = String(order.userEmail || "").toLowerCase();
+        if (order.id !== orderId || ownerEmail !== String(user.email || "").toLowerCase()) return order;
         const entry = {
           id: `CRM-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
           at: new Date().toISOString(),

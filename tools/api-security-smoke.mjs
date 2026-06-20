@@ -352,6 +352,43 @@ async function securitySmoke() {
       cookie: adminCookie,
       body: { id: buyerOrder.payload.order.id, status: "done" },
     });
+    const aliasOrder = await request(baseUrl, "/api/orders", {
+      method: "POST",
+      cookie: buyerCookie,
+      body: {
+        total,
+        customer: { name: "Buyer Alias", phone: "+79990010000", email: "alias-claim@example.test" },
+        items: [{ productId: detail.payload.product.id, qty, variant }],
+      },
+    });
+    const buyerOwnOrders = await request(baseUrl, "/api/auth/me", { cookie: buyerCookie });
+    assert(
+      buyerOwnOrders.payload.user?.orders?.some((order) => order.id === aliasOrder.payload.order.id),
+      "authenticated buyer should keep ownership even when customer email differs"
+    );
+    const aliasUser = await request(baseUrl, "/api/auth/register", {
+      method: "POST",
+      body: {
+        email: "alias-claim@example.test",
+        password: "buyer-pass",
+        name: "Alias Claim",
+        phone: "+79990010009",
+        personalDataConsent: true,
+      },
+    });
+    const aliasOrders = await request(baseUrl, "/api/auth/me", { cookie: aliasUser.cookie });
+    assert(
+      !aliasOrders.payload.user?.orders?.some((order) => order.id === aliasOrder.payload.order.id),
+      "customer email alone must not grant order ownership"
+    );
+    const aliasPatch = await request(baseUrl, "/api/orders", {
+      method: "PATCH",
+      cookie: aliasUser.cookie,
+      body: { id: aliasOrder.payload.order.id, commentText: "Alias account must not claim this order" },
+      allowFailure: true,
+    });
+    assert(aliasPatch.response.status === 404, "customer-email alias must not update another user's order");
+    resetRateLimits();
     const allowedReview = await request(baseUrl, "/api/auth/me", {
       method: "PUT",
       cookie: buyerCookie,

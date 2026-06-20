@@ -227,7 +227,7 @@ function reviewMatchesOrderItem(review, item = {}) {
 function hasEligibleReviewOrder(store, user, review) {
   const email = normalized(user.email);
   return (store.orders || []).some((order) => {
-    const orderEmail = normalized(order.userEmail || order.customer?.email);
+    const orderEmail = normalized(order.userEmail);
     if (!email || orderEmail !== email) return false;
     if (!REVIEW_ELIGIBLE_ORDER_STATUSES.has(normalized(order.status))) return false;
     return (order.items || []).some((item) => reviewMatchesOrderItem(review, item));
@@ -313,7 +313,7 @@ module.exports = async function handler(req, res) {
     const freshUser = store.users[user.email] || user;
     const email = String(freshUser.email || "").toLowerCase();
     const orders = store.orders
-      .filter((order) => String(order.userEmail || "").toLowerCase() === email || String(order.customer?.email || "").toLowerCase() === email)
+      .filter((order) => String(order.userEmail || "").toLowerCase() === email)
       .map(publicOrder);
     const reviews = (store.reviews || []).filter((review) => review.userEmail === freshUser.email);
     const savedCarts = sanitizeSavedCarts(store.savedCarts[freshUser.email]?.items || [], {

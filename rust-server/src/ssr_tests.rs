@@ -559,6 +559,11 @@ fn review_eligibility_requires_user_owned_completed_order() {
                 "userEmail": "buyer@example.test",
                 "status": "processing",
                 "items": [{ "productId": "p1", "variant": { "sku": "sku-1" } }]
+            },
+            {
+                "customer": { "email": "buyer@example.test" },
+                "status": "done",
+                "items": [{ "productId": "p1", "variant": { "sku": "sku-1" } }]
             }
         ],
         "reviews": []
@@ -924,6 +929,25 @@ fn buyer_order_patch_rejects_other_customer_order() {
     let error = apply_buyer_order_comment_patch(
         &mut store,
         &json!({ "id": "SO-1", "commentText": "Need invoice" }),
+        &user,
+    )
+    .expect_err("not found");
+    assert_eq!(error.code, "not_found");
+}
+
+#[test]
+fn buyer_order_patch_uses_user_email_not_customer_alias() {
+    let user = json!({ "email": "alias@example.test", "name": "Alias" });
+    let mut store = json!({
+        "orders": [{
+            "id": "SO-1",
+            "userEmail": "owner@example.test",
+            "customer": { "email": "alias@example.test" }
+        }]
+    });
+    let error = apply_buyer_order_comment_patch(
+        &mut store,
+        &json!({ "id": "SO-1", "commentText": "Alias claim" }),
         &user,
     )
     .expect_err("not found");

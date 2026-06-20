@@ -1132,6 +1132,7 @@ async fn auth_me_update_preview(
     headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
     let cookie_header = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -1146,6 +1147,13 @@ async fn auth_me_update_preview(
     if email.is_empty() {
         return Err(AppError::unauthorized("Нужно войти в аккаунт."));
     }
+    auth_rate_limit(
+        &headers,
+        &format!("account:update:{}", normalize_email(&email)),
+        AUTH_ROUTE_LIMIT,
+        AUTH_ROUTE_WINDOW_SECONDS,
+    )
+    .await?;
     if has_object_key(&data, "cartItems") {
         let expected_cart_updated_at =
             clean_text(data.get("expectedCartUpdatedAt"), 80).unwrap_or_default();
@@ -1346,6 +1354,14 @@ async fn admin_users_invite_preview(
     headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
+    auth_rate_limit(
+        &headers,
+        "admin:users:write",
+        AUTH_ROUTE_LIMIT,
+        AUTH_ROUTE_WINDOW_SECONDS,
+    )
+    .await?;
     let (mut store, user) = require_admin_user_context(&headers).await?;
     if !can_manage_admin_users(&user) {
         return Err(AppError::forbidden(
@@ -1398,7 +1414,11 @@ async fn admin_users_invite_preview(
     push_audit_record(
         &mut store,
         admin_user_audit_record(
-            "employee_invite",
+            if existing.get("email").is_some() {
+                "employee_update"
+            } else {
+                "employee_invite"
+            },
             &user,
             &email,
             string_field(&existing, "role").unwrap_or_default(),
@@ -1419,6 +1439,14 @@ async fn admin_users_role_patch_preview(
     headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
+    auth_rate_limit(
+        &headers,
+        "admin:users:write",
+        AUTH_ROUTE_LIMIT,
+        AUTH_ROUTE_WINDOW_SECONDS,
+    )
+    .await?;
     let (mut store, user) = require_admin_user_context(&headers).await?;
     if !can_manage_admin_users(&user) {
         return Err(AppError::forbidden(
@@ -1466,6 +1494,14 @@ async fn admin_users_delete_preview(
     headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
+    auth_rate_limit(
+        &headers,
+        "admin:users:write",
+        AUTH_ROUTE_LIMIT,
+        AUTH_ROUTE_WINDOW_SECONDS,
+    )
+    .await?;
     let (mut store, user) = require_admin_user_context(&headers).await?;
     if !can_manage_admin_users(&user) {
         return Err(AppError::forbidden(
@@ -1551,6 +1587,14 @@ async fn admin_content_update_preview(
     headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
+    auth_rate_limit(
+        &headers,
+        "admin:content:write",
+        AUTH_ROUTE_LIMIT,
+        AUTH_ROUTE_WINDOW_SECONDS,
+    )
+    .await?;
     let cookie_header = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -1589,6 +1633,18 @@ async fn admin_content_update_preview(
     save_file_store_value(&content_store_key(), &saved)
         .await
         .map_err(|error| AppError::internal(error.to_string()))?;
+    admin_audit::append_admin_audit(
+        "content_update",
+        "save",
+        &user,
+        json!({
+            "entityType": "content",
+            "entityId": "site-content",
+            "result": "updated",
+            "counts": { "sections": content.as_object().map(|map| map.len()).unwrap_or(0) }
+        }),
+    )
+    .await?;
     Ok((
         no_store_headers(),
         Json(json!({
@@ -1602,6 +1658,14 @@ async fn admin_content_review_patch_preview(
     headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
+    auth_rate_limit(
+        &headers,
+        "admin:content:write",
+        AUTH_ROUTE_LIMIT,
+        AUTH_ROUTE_WINDOW_SECONDS,
+    )
+    .await?;
     let cookie_header = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -1702,6 +1766,8 @@ async fn order_create_preview(
     headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
+    auth_rate_limit(&headers, "orders:create", 30, AUTH_ROUTE_WINDOW_SECONDS).await?;
     let cookie_header = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -1753,6 +1819,8 @@ async fn order_patch_preview(
     headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
+    auth_rate_limit(&headers, "orders:comment", 60, AUTH_ROUTE_WINDOW_SECONDS).await?;
     let cookie_header = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -1774,6 +1842,8 @@ async fn brief_create_preview(
     headers: HeaderMap,
     Json(data): Json<Value>,
 ) -> AppResult<(StatusCode, HeaderMap, Json<Value>)> {
+    enforce_auth_same_origin_for_cookie_mutation(&headers)?;
+    auth_rate_limit(&headers, "briefs:create", 30, AUTH_ROUTE_WINDOW_SECONDS).await?;
     let cookie_header = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -2522,7 +2592,7 @@ fn admin_audit_summary(store: &Value, limit: usize) -> Value {
                         "id": string_field(record, "id").unwrap_or_default().chars().take(80).collect::<String>(),
                         "type": string_field(record, "type").unwrap_or_default().chars().take(80).collect::<String>(),
                         "action": string_field(record, "action").unwrap_or_default().chars().take(80).collect::<String>(),
-                        "actor": string_field(record, "actor").unwrap_or_default().to_lowercase().chars().take(180).collect::<String>(),
+                        "actor": audit_actor_summary(record),
                         "targetEmail": string_field(record, "targetEmail")
                             .or_else(|| string_field(record, "userEmail"))
                             .unwrap_or_default()
@@ -2530,12 +2600,16 @@ fn admin_audit_summary(store: &Value, limit: usize) -> Value {
                             .chars()
                             .take(180)
                             .collect::<String>(),
+                        "entityType": string_field(record, "entityType").unwrap_or_default().chars().take(80).collect::<String>(),
+                        "entityId": string_field(record, "entityId").unwrap_or_default().chars().take(120).collect::<String>(),
                         "orderId": string_field(record, "orderId").unwrap_or_default().chars().take(80).collect::<String>(),
                         "reviewId": string_field(record, "reviewId").unwrap_or_default().chars().take(80).collect::<String>(),
                         "status": string_field(record, "status").unwrap_or_default().chars().take(80).collect::<String>(),
+                        "result": string_field(record, "result").unwrap_or_default().chars().take(80).collect::<String>(),
                         "role": string_field(record, "role").unwrap_or_default().chars().take(40).collect::<String>(),
                         "previousRole": string_field(record, "previousRole").unwrap_or_default().chars().take(40).collect::<String>(),
                         "createdAt": string_field(record, "createdAt")
+                            .or_else(|| string_field(record, "timestamp"))
                             .or_else(|| string_field(record, "at"))
                             .unwrap_or_default()
                             .chars()
@@ -2547,6 +2621,22 @@ fn admin_audit_summary(store: &Value, limit: usize) -> Value {
         })
         .unwrap_or_default();
     Value::Array(items)
+}
+
+fn audit_actor_summary(record: &Value) -> String {
+    let actor = record.get("actor").unwrap_or(&Value::Null);
+    if let Some(text) = string_field(record, "actor") {
+        return text.to_lowercase().chars().take(180).collect();
+    }
+    actor
+        .get("id")
+        .or_else(|| actor.get("email"))
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_lowercase()
+        .chars()
+        .take(180)
+        .collect()
 }
 
 fn valid_admin_assignable_role(role: &str) -> bool {
@@ -3233,15 +3323,8 @@ fn has_eligible_review_order(store: &Value, user: &Value, review: &Value) -> boo
         .and_then(Value::as_array)
         .map(|orders| {
             orders.iter().any(|order| {
-                let order_email = normalize_email(
-                    &string_field(order, "userEmail")
-                        .or_else(|| {
-                            order
-                                .get("customer")
-                                .and_then(|customer| string_field(customer, "email"))
-                        })
-                        .unwrap_or_default(),
-                );
+                let order_email =
+                    normalize_email(&string_field(order, "userEmail").unwrap_or_default());
                 let status = review_key(order.get("status"));
                 if order_email != email || !matches!(status.as_str(), "shipped" | "done") {
                     return false;
@@ -3544,14 +3627,12 @@ fn apply_buyer_order_comment_patch(
         if !is_target {
             continue;
         }
-        let customer_email = order
-            .get("customer")
-            .and_then(|customer| customer.get("email"))
+        let owner_email = order
+            .get("userEmail")
             .and_then(Value::as_str)
-            .or_else(|| order.get("userEmail").and_then(Value::as_str))
             .map(normalize_email)
             .unwrap_or_default();
-        if customer_email != user_email {
+        if owner_email != user_email {
             continue;
         }
         let original = order.clone();
@@ -4132,12 +4213,6 @@ fn user_orders(store: &Value, email: &str) -> Value {
                         .and_then(Value::as_str)
                         .map(|value| value.eq_ignore_ascii_case(&email))
                         .unwrap_or(false)
-                        || order
-                            .get("customer")
-                            .and_then(|customer| customer.get("email"))
-                            .and_then(Value::as_str)
-                            .map(|value| value.eq_ignore_ascii_case(&email))
-                            .unwrap_or(false)
                 })
                 .map(public_order_value)
                 .collect::<Vec<_>>()

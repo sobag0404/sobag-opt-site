@@ -1,4 +1,5 @@
 const { requireUser } = require("../_lib/auth");
+const { auditRecord } = require("../_lib/admin-audit");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { saveStore } = require("../_lib/store");
 
@@ -102,15 +103,14 @@ module.exports = async function handler(req, res) {
     if (!updated) return sendJson(res, 404, { error: "not_found", message: "Заказ не найден." });
 
     store.audit = [
-      {
-        id: `AUD-${Date.now().toString(36)}`,
-        type: "order_update",
-        orderId: updated.id,
-        actor: user.email,
-        status: updated.status,
-        managerEmail: updated.managerEmail || "",
-        createdAt: new Date().toISOString(),
-      },
+      auditRecord("order_update", "patch", user, {
+        entityType: "order",
+        entityId: String(updated.id || "").slice(0, 80),
+        orderId: String(updated.id || "").slice(0, 80),
+        status: String(updated.status || "").slice(0, 40),
+        result: "updated",
+        managerAssigned: Boolean(updated.managerEmail),
+      }),
       ...(store.audit || []),
     ].slice(0, 500);
 

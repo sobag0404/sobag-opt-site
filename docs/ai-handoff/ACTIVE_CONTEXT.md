@@ -1,6 +1,6 @@
 # Active Context
 
-Last updated: 2026-06-16
+Last updated: 2026-06-20
 
 ## Token-Saving Rule
 - Читать этот файл первым.
@@ -33,6 +33,7 @@ Last updated: 2026-06-16
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-20 backend hardening: audit summaries now normalize both legacy string actors and structured actor objects, content saves append `content_update`, account/order ownership uses `userEmail` only instead of contact `customer.email`, and Rust write routes for account update, orders, briefs, admin users, and admin content now use the store-backed rate guard family. Added `tools/backend-evidence-smoke.mjs` for no-secret counts/status evidence across orders, reviews, price groups, import history, and audit logs; AutoFix runs its self-test.
 - Current pass 2026-06-19 backend hardening: admin price import now records safe server-side import history/audit summaries in Node and Rust. `GET /api/admin/prices` includes recent history; successful `apply` stores actor/source/status/count summaries without raw CSV/files/secrets. Rust unit coverage guards the summary shape. Next backend slices: order/account/cart idempotency/conflict handling, shared admin audit helper, store-backed rate limits, and backup evidence automation.
 - Current pass 2026-06-19: direct VPS MinIO repair unblocked Rust admin media cutover. MinIO data ownership was restored to the MinIO service user on the VPS, media write/stat/delete was verified, the app env was updated on the VPS, and Rust was restarted without exposing secrets. Manual `vps-deploy` run `27816085213` and `production-smoke` run `27816499824` passed. Production exact `/api/admin/product-images` now routes to Rust alongside auth, orders/briefs, admin orders/users/content/PIM/prices/catalog/import-batches, public SSR/content pages, and catalog query/detail APIs. Node remains only as static/root/cart compatibility fallback and explicit legacy fallback.
 - Current pass 2026-06-19 post-cutover backlog: `docs/backend-pricing-reviews-contract.md` records the backend contract for grouped price-list export, admin CSV/Excel-compatible price import, promo rows, and buyer-only review eligibility. Node/Rust admin price import now accepts spaced Excel-style numeric prices, rejects invalid promo date windows, treats public promo rows as active only inside their ISO date window, and smoke/tests cover transactional DB rollback on apply failure. Buyer-review tests cover anonymous/no-order/other-user-order/duplicate/pending rejection and completed-order success. Cutover smokes treat admin prices/catalog/import-batches/product-images as final Rust-owned routes instead of historical staged Node fallbacks.

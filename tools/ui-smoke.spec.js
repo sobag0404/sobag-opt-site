@@ -424,6 +424,34 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
   }
 });
 
+test("empty cart and anonymous account states stay safe", async ({ page }) => {
+  await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    localStorage.removeItem("sobag.currentUser");
+    localStorage.removeItem("sobag.cart.guest");
+    localStorage.removeItem("sobag.cart");
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith("sobag.cart."))
+      .forEach((key) => localStorage.removeItem(key));
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator("#cartPageEmpty")).toBeVisible();
+  await expect(page.locator("#checkoutButton")).toBeDisabled();
+  await expect(page.locator("#cartPageMinHint")).toContainText("До минимальной суммы осталось");
+  await page.locator("#saveCartDraftButton").click();
+  await expect(page.locator("#toast")).toContainText("Корзина пока пустая");
+  await expectNoHorizontalOverflow(page, "empty cart");
+
+  await page.goto(`${BASE_URL}/quotes.html`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#savedQuotesPage")).toContainText("Войдите");
+  await expect(page.locator("[data-restore-saved-cart]")).toHaveCount(0);
+
+  await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+  await page.locator("#accountButton").click();
+  await expect(page.locator("#accountModalTitle")).toContainText("Вход");
+  await expect(page.locator("[data-open-admin]")).toHaveCount(0);
+});
+
 test("catalog navigation and favorite toggles do not reload the same document", async ({ page }) => {
   const category = await largestCategory(page);
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });

@@ -1,4 +1,5 @@
 const { requireUser } = require("../_lib/auth");
+const { auditRecord } = require("../_lib/admin-audit");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { getContent, saveContent, saveStore } = require("../_lib/store");
 
@@ -46,14 +47,13 @@ module.exports = async function handler(req, res) {
       }
 
       store.audit = [
-        {
-          id: `AUD-${Date.now().toString(36)}`,
-          type: data.delete ? "review_delete" : "review_update",
-          reviewId,
-          actor: user.email,
-          status: updated?.status || "deleted",
-          createdAt: new Date().toISOString(),
-        },
+        auditRecord(data.delete ? "review_delete" : "review_update", data.delete ? "delete" : "moderate", user, {
+          entityType: "review",
+          entityId: reviewId.slice(0, 120),
+          reviewId: reviewId.slice(0, 120),
+          status: String(updated?.status || "deleted").slice(0, 40),
+          result: data.delete ? "deleted" : "updated",
+        }),
         ...(store.audit || []),
       ].slice(0, 500);
       await saveStore(store);
@@ -69,6 +69,16 @@ module.exports = async function handler(req, res) {
     }
 
     const saved = await saveContent(content, user.email);
+    store.audit = [
+      auditRecord("content_update", "save", user, {
+        entityType: "content",
+        entityId: "site-content",
+        result: "updated",
+        counts: { sections: Object.keys(content).length },
+      }),
+      ...(store.audit || []),
+    ].slice(0, 500);
+    await saveStore(store);
     sendJson(res, 200, { updatedAt: saved.updatedAt, count: Object.keys(content).length });
   } catch (error) {
     handleError(res, error, req);

@@ -24,19 +24,30 @@ function pushUserAudit(store, { action, actor, targetEmail, previousRole, role }
   return record;
 }
 
+function auditActor(record) {
+  const actor = record?.actor;
+  if (actor && typeof actor === "object" && !Array.isArray(actor)) {
+    return String(actor.id || actor.email || "").trim().toLowerCase().slice(0, 180);
+  }
+  return String(actor || "").trim().toLowerCase().slice(0, 180);
+}
+
 function auditSummary(records = [], limit = 100) {
   return (Array.isArray(records) ? records : []).slice(0, limit).map((record) => ({
     id: String(record?.id || "").slice(0, 80),
     type: String(record?.type || "").slice(0, 80),
     action: String(record?.action || "").slice(0, 80),
-    actor: String(record?.actor || "").trim().toLowerCase().slice(0, 180),
+    actor: auditActor(record),
     targetEmail: String(record?.targetEmail || record?.userEmail || "").trim().toLowerCase().slice(0, 180),
+    entityType: String(record?.entityType || "").slice(0, 80),
+    entityId: String(record?.entityId || "").slice(0, 120),
     orderId: String(record?.orderId || "").slice(0, 80),
     reviewId: String(record?.reviewId || "").slice(0, 80),
     status: String(record?.status || "").slice(0, 80),
+    result: String(record?.result || "").slice(0, 80),
     role: String(record?.role || "").slice(0, 40),
     previousRole: String(record?.previousRole || "").slice(0, 40),
-    createdAt: String(record?.createdAt || record?.at || "").slice(0, 40),
+    createdAt: String(record?.createdAt || record?.timestamp || record?.at || "").slice(0, 40),
   }));
 }
 

@@ -74,11 +74,13 @@ Order creation uses non-sequential `SO-*` identifiers for new orders. Buyer orde
 
 Order creation accepts an optional `Idempotency-Key` or `X-Idempotency-Key` header, or `idempotencyKey` body field, for safe customer retry handling. The server stores only a normalized opaque key and scoped owner marker (`email:*` or `phone:*`). A repeated order create with the same key and same owner scope returns the original order with `idempotent: true` instead of creating a duplicate. Different users or contacts cannot reuse another customer's idempotency key.
 
+Account/order ownership is bound to the authenticated account field `userEmail`. Customer contact email is a delivery/contact field only; registering an account with a matching `customer.email` must not grant account-order history, order comment, or review eligibility access to a guest/other-user order. Guest order claim remains a future verified claim-flow task.
+
 Coverage:
 
 - Node and Rust order paths share the same normalized key/scope behavior and malformed order-id rejection.
-- `tools/api-security-smoke.mjs` covers retry reuse through the public API, malformed buyer order ids, own-order history isolation, and cross-account buyer order update rejection.
-- Rust unit coverage verifies scoped reuse, cross-scope replay prevention, and malformed order-id rejection.
+- `tools/api-security-smoke.mjs` covers retry reuse through the public API, malformed buyer order ids, own-order history isolation, cross-account buyer order update rejection, and the customer-email alias case.
+- Rust unit coverage verifies scoped reuse, cross-scope replay prevention, malformed order-id rejection, and the customer-email alias case.
 
 Account cart writes:
 
@@ -95,10 +97,11 @@ Admin audit records are compact operational evidence, not raw payload storage. C
 - review moderation/delete appends `review_update` or `review_delete`;
 - price import apply appends `price_import` / `price_import_apply` history and audit summaries;
 - catalog saves append `catalog_update`;
+- content saves append `content_update`;
 - catalog import preview/reject/apply/rollback lifecycle appends `catalog_import`;
 - product image upload/delete/mark-unused appends `media_update`;
 - admin user invite/role/remove appends `user_admin_update` with action, actor, target email, previous role, resulting role, and timestamp;
-- `GET /api/admin/users?audit=1&limit=...` returns a sanitized newest-first audit summary for admins only.
+- `GET /api/admin/users?audit=1&limit=...` returns a sanitized newest-first audit summary for admins only, normalizing both legacy string actors and structured actor objects while exposing compact entity/result fields.
 
 Audit records must not store passwords, password hashes, cookies, tokens, raw import files, raw CSV text, private order notes beyond a type/id summary, or full customer payloads.
 
@@ -107,7 +110,8 @@ Rate-limit contract:
 - Node global unsafe-route and route-specific write guards use the shared store-backed limiter by default, with an in-process fallback if the limiter store is temporarily unavailable;
 - setting `SOBAG_RATE_LIMIT_FAIL_CLOSED=1` makes limiter store failures return a safe service error instead of falling back;
 - `SOBAG_RATE_LIMIT_STORE=memory` is reserved for local/debug runs;
-- Rust auth/review write guards use the same store-key family by default and fall back to the existing in-process bucket if the store is unavailable.
+- Rust auth/review/account/order/brief/admin-user/admin-content write guards use the same store-key family by default and fall back to the existing in-process bucket if the store is unavailable;
+- admin catalog/import/media/prices routes remain RBAC-protected and deploy-smoke gated; add per-admin live limiter telemetry only if abuse evidence appears.
 
 ## Buyer Review Eligibility
 
@@ -133,6 +137,7 @@ Coverage:
 
 - Before destructive catalog/price imports, keep the normal VPS release rollback plus a current PostgreSQL/catalog backup from the existing deploy/import runbooks.
 - For file-store evidence, `node tools/file-store-backup.mjs --source <store-dir> --dest <backup-dir> --dry-run` reports what would be copied, and `--restore <backup-dir> --target <store-dir> --dry-run` reports restore scope without modifying production data.
+- `node tools/backend-evidence-smoke.mjs --store <store.json>` reports safe counts/status summaries for orders, reviews, price groups, import history, and audit logs without raw payloads or secrets. `--self-test` is part of the local check suite.
 - For price import mistakes, restore by applying a validated reverse import or a reviewed PostgreSQL/catalog backup; do not edit raw store files on production without first copying them aside.
 - `priceImportHistory[]` and `audit[]` are operator evidence only. They should help identify who/when/how many rows changed, but they are not a full data backup.
 - For reviews/orders/account data, prefer read-only inspection and targeted reversal through admin routes; avoid whole-store replacement unless the relevant backup is verified and the site is in a maintenance window.
@@ -143,6 +148,6 @@ The next backend/security packet should stay server-side and avoid UI redesign w
 
 - order/account/cart persistence hardening follow-up: cart duplicate merge, safe cart keys, and optional stale-write conflict checks are implemented; remaining work is deeper order-draft recovery UX and store-backed conflict metadata for saved carts/favorites;
 - admin audit log hardening: user/admin, order, review, price apply, catalog save, catalog import lifecycle, and media mutation summaries are covered;
-- rate-limit follow-up: unsafe Node writes and Rust auth/review writes now have store-backed buckets with documented memory fallback; remaining work is optional live limiter telemetry and per-admin import/media limits if abuse evidence appears;
+- rate-limit follow-up: unsafe Node writes and Rust auth/review/account/order/brief/admin-user/admin-content writes now have store-backed buckets with documented memory fallback; remaining work is optional live limiter telemetry and per-admin import/media limits if abuse evidence appears;
 - import history follow-up: add preview/reject/rollback lifecycle records if the admin UX needs them; apply history is now recorded server-side;
-- backup/restore hardening: automate no-secret backup evidence for file-store/PostgreSQL/MinIO rollback before destructive imports or catalog rewrites.
+- backup/restore hardening: no-secret file-store evidence is automated for current JSON stores; PostgreSQL/MinIO rollback evidence remains a runbook-backed operator step before destructive imports or catalog rewrites.
