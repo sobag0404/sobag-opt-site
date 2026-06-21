@@ -291,6 +291,14 @@ test("contacts maps and marketplace badges stay visible", async ({ page }) => {
   await expectNoHorizontalOverflow(page, "marketplaces mobile");
 });
 
+test("favorites catalog does not expose removed helper copy", async ({ page }) => {
+  await page.goto(`${BASE_URL}/favorites.html`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Каталог продукции", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Сначала раздел, потом товары и фильтры", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".favorites-page #catalogTitle")).toHaveClass(/sr-only/);
+  await expectNoHorizontalOverflow(page, "favorites catalog cleanup");
+});
+
 test("account auth modal separates login and registration fields", async ({ page }) => {
   await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
   await page.locator("#accountButton").click();
