@@ -941,6 +941,20 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   const firstCard = page.locator(".product-card").first();
   const baseSku = await firstCard.locator(".product-card__sku").innerText();
   await expect(baseSku.trim()).toMatch(/^opt_/i);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text) => {
+          window.__sobagCopiedSku = text;
+        },
+      },
+    });
+  });
+  await firstCard.locator(".copy-sku-button").click();
+  await expect
+    .poll(() => page.evaluate(() => String(window.__sobagCopiedSku || "").toLocaleLowerCase("ru-RU")))
+    .toBe(baseSku.trim().toLocaleLowerCase("ru-RU"));
   await firstCard.locator("[data-open-product]").first().click();
 
   await expect(page.locator("#productModal")).toBeVisible();
@@ -978,6 +992,10 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   expect(imageGeometry.thumb).toBeLessThanOrEqual(1);
   const firstSku = await page.locator("#selectedSku").innerText();
   await expect(firstSku.toLocaleLowerCase("ru-RU")).toContain(baseSku.trim().toLocaleLowerCase("ru-RU"));
+  await page.locator(".copy-sku-button--detail").click();
+  await expect
+    .poll(() => page.evaluate(() => String(window.__sobagCopiedSku || "").toLocaleLowerCase("ru-RU")))
+    .toBe(firstSku.trim().toLocaleLowerCase("ru-RU"));
 
   const navolochka = page.locator('[data-variant-key="type"][data-variant-value="Наволочка"]');
   if (await navolochka.count()) {

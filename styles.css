@@ -969,6 +969,7 @@ h3 {
   min-height: 46px;
   margin-bottom: 14px;
   line-height: 1.22;
+  overflow-wrap: anywhere;
 }
 
 .product-card__spec {
@@ -5383,6 +5384,9 @@ main {
 
 .product-card__sku-row .product-card__sku {
   margin-bottom: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .sku-line__value {
