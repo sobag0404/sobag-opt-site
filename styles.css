@@ -1230,6 +1230,16 @@ h3 {
   font-size: 13px;
 }
 
+.cart-page-line__body {
+  min-width: 0;
+}
+
+.cart-page-line__body span,
+.cart-page-line__body p,
+.cart-page-line__body h2 {
+  overflow-wrap: anywhere;
+}
+
 .cart-page-line__body h2 {
   margin: 4px 0 6px;
   font-size: 22px;

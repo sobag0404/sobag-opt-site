@@ -1014,6 +1014,9 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator("#downloadCartQuoteButton")).toBeVisible();
   await expect(page.locator("#printCartQuoteButton")).toBeVisible();
   await expect(page.locator(".cart-scale-step")).toHaveCount(4);
+  await expect(page.locator("[data-qty-input]").first()).toHaveValue("1");
+  await page.locator("[data-qty-plus]").first().click();
+  await expect(page.locator("[data-qty-input]").first()).toHaveValue("2");
   await expect(page.locator("#checkoutButton")).toBeDisabled();
   await expect(page.locator("#cartPageMinHint")).toContainText("До минимальной суммы осталось");
   await page.locator("[data-qty-input]").first().fill("200");
