@@ -1863,6 +1863,7 @@ select[aria-invalid="true"] {
 .product-reviews h3 {
   margin: 0;
   font-size: 20px;
+  overflow-wrap: anywhere;
 }
 
 .product-reviews__head span,
@@ -1871,6 +1872,7 @@ select[aria-invalid="true"] {
 .review-form small,
 .admin-review-card__meta {
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .review-stars,
@@ -1937,8 +1939,12 @@ select[aria-invalid="true"] {
 }
 
 .review-login-note {
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+}
+
+.review-login-note .ghost-button {
+  min-width: 104px;
 }
 
 .admin-reviews-list {
@@ -5594,6 +5600,7 @@ body.theme-night .copy-sku-button:focus-visible {
   color: var(--body);
   font-size: 14px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .marketplace-links {
@@ -6932,6 +6939,7 @@ body.theme-night .modal__close {
 .map-panel h2 {
   margin: 0;
   font-size: 24px;
+  overflow-wrap: anywhere;
 }
 
 .map-search {
@@ -7749,6 +7757,14 @@ body.theme-night .theme-toggle__track::after {
   .map-panel iframe,
   #yandexMapFrame {
     min-height: 320px;
+  }
+
+  .review-login-note {
+    grid-template-columns: 1fr;
+  }
+
+  .review-login-note .ghost-button {
+    width: 100%;
   }
 
   .brand {

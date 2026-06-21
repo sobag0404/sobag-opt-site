@@ -1397,6 +1397,10 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   await page.locator("[data-open-product]").first().click();
   await expect(page.locator(".product-reviews")).toBeVisible();
   await expect(page.locator(".review-login-note")).toContainText("зарегистрированные покупатели");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".review-login-note .ghost-button")).toBeVisible();
+  await expectNoHorizontalOverflow(page, "anonymous review mobile notice");
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.locator(".modal__close").click();
   await expect(page.locator("#productModal")).toHaveCount(0);
 
