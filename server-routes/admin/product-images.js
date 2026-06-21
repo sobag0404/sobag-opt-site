@@ -1,5 +1,6 @@
 const { requireUser } = require("../_lib/auth");
 const { appendAdminAudit } = require("../_lib/admin-audit");
+const { checkStoreRateLimit } = require("../_lib/api-security");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { createObjectStorageAdapter, normalizeImageMetadata, objectStorageStatus } = require("../_lib/object-storage");
 
@@ -58,6 +59,10 @@ function parseImageBody(data = {}) {
 module.exports = async function handler(req, res) {
   try {
     const { user } = await requireUser(req, ["admin", "content"]);
+    if (req.method === "POST" || req.method === "DELETE") {
+      const limited = await checkStoreRateLimit(req, { key: `admin:product-images:write:${String(user.email || "").toLowerCase()}`, limit: 120 });
+      if (limited) throw limited;
+    }
     const adapter = createObjectStorageAdapter();
 
     if (req.method === "GET") {

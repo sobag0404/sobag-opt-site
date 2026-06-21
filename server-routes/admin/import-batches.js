@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const staticProducts = require("../../data/products-live.json");
 const { requireUser } = require("../_lib/auth");
 const { appendAdminAudit } = require("../_lib/admin-audit");
+const { checkStoreRateLimit } = require("../_lib/api-security");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { normalizeImageMetadata } = require("../_lib/object-storage");
 const { getCatalog, getImportBatches, saveCatalog, saveImportBatches } = require("../_lib/store");
@@ -264,6 +265,8 @@ module.exports = async function handler(req, res) {
       return sendJson(res, 200, { batches: batches.map((batch) => batchSummary(batch, true)) });
     }
     if (req.method !== "POST") return methodNotAllowed(res);
+    const limited = await checkStoreRateLimit(req, { key: `admin:import-batches:write:${String(user.email || "").toLowerCase()}`, limit: 40 });
+    if (limited) throw limited;
 
     const data = await readJson(req, { maxBytes: 6 * 1024 * 1024 });
     const action = text(data.action || "preview");

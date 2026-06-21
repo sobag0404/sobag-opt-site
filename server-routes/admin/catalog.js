@@ -1,5 +1,6 @@
 const { requireUser } = require("../_lib/auth");
 const { appendAdminAudit } = require("../_lib/admin-audit");
+const { checkStoreRateLimit } = require("../_lib/api-security");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { normalizeImageMetadata } = require("../_lib/object-storage");
 const { getCatalog, saveCatalog } = require("../_lib/store");
@@ -73,6 +74,8 @@ module.exports = async function handler(req, res) {
       return sendJson(res, 200, catalog || { products: [], updatedAt: null, source: "empty" });
     }
     if (req.method !== "PUT") return methodNotAllowed(res);
+    const limited = await checkStoreRateLimit(req, { key: `admin:catalog:write:${String(user.email || "").toLowerCase()}`, limit: 60 });
+    if (limited) throw limited;
 
     const data = await readJson(req, { maxBytes: 8 * 1024 * 1024 });
     const products = Array.isArray(data.products) ? data.products.map(cleanProduct).filter(Boolean) : [];

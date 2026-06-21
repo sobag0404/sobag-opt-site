@@ -286,6 +286,41 @@ async function securitySmoke() {
     });
     currentStore = await getStore();
     assert(currentStore.audit?.[0]?.type === "catalog_import" && currentStore.audit?.[0]?.action === "reject", "import reject should write safe audit");
+    resetRateLimits();
+    for (let i = 0; i < 3; i += 1) {
+      const attempt = await request(baseUrl, "/api/admin/import-batches", {
+        method: "POST",
+        cookie: adminCookie,
+        body: { action: "preview", products: [] },
+        allowFailure: true,
+      });
+      assert(attempt.response.status === 400 && attempt.payload.error === "empty_import", "pre-limit import attempt should keep validation error");
+    }
+    const importLimited = await request(baseUrl, "/api/admin/import-batches", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { action: "preview", products: [] },
+      allowFailure: true,
+    });
+    assert(importLimited.response.status === 429 && importLimited.payload.error === "rate_limited", "admin import burst should return 429");
+    resetRateLimits();
+    for (let i = 0; i < 3; i += 1) {
+      const attempt = await request(baseUrl, "/api/admin/product-images", {
+        method: "POST",
+        cookie: adminCookie,
+        body: { action: "upload" },
+        allowFailure: true,
+      });
+      assert(attempt.response.status === 400 && attempt.payload.error === "missing_product_key", "pre-limit media attempt should keep validation error");
+    }
+    const mediaLimited = await request(baseUrl, "/api/admin/product-images", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { action: "upload" },
+      allowFailure: true,
+    });
+    assert(mediaLimited.response.status === 429 && mediaLimited.payload.error === "rate_limited", "admin media burst should return 429");
+    resetRateLimits();
 
     const query = await request(baseUrl, "/api/catalog-query?pageSize=1");
     const card = query.payload.items?.[0];

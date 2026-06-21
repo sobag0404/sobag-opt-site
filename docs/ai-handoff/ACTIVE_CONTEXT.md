@@ -9,6 +9,7 @@ Last updated: 2026-06-20
 - Если пользователь просит длинный prompt/handoff для goal/new chat, сохранять подробную версию в GitHub в `docs/ai-handoff/` и давать в чате короткую версию до 4000 символов.
 
 ## Project
+- Latest backend hardening slice: Node compatibility admin catalog/import/media/price write routes now use the shared store-backed rate limiter per admin identity/IP; `tools/api-security-smoke.mjs` covers admin import/media burst `429` checks.
 - Путь к проекту: `C:\Users\SoBag\OneDrive\Документы\New project\sobag-opt-site`
 - Репозиторий: `https://github.com/sobag0404/sobag-opt-site`
 - Основная ветка: `main`

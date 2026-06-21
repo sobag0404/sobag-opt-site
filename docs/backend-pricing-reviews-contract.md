@@ -113,7 +113,7 @@ Rate-limit contract:
 - setting `SOBAG_RATE_LIMIT_FAIL_CLOSED=1` makes limiter store failures return a safe service error instead of falling back;
 - `SOBAG_RATE_LIMIT_STORE=memory` is reserved for local/debug runs;
 - Rust auth/review/account/order/brief/admin-user/admin-content write guards use the same store-key family by default and fall back to the existing in-process bucket if the store is unavailable;
-- admin catalog/import/media/prices routes remain RBAC-protected and deploy-smoke gated; add per-admin live limiter telemetry only if abuse evidence appears.
+- admin catalog save, import-batch writes, price-import writes, and product-image mutations are also rate-limited per admin identity/IP on the Node compatibility path; Rust production routes keep the same guarded route family through deploy smokes.
 
 ## Buyer Review Eligibility
 
@@ -150,6 +150,6 @@ The next backend/security packet should stay server-side and avoid UI redesign w
 
 - order/account/cart persistence hardening follow-up: cart duplicate merge, safe cart keys, cart/favorites/saved-cart stale-write conflict checks, and account sync timestamps are implemented; remaining work is deeper order-draft recovery UX;
 - admin audit log hardening: user/admin, order, review, price apply, catalog save, catalog import lifecycle, and media mutation summaries are covered;
-- rate-limit follow-up: unsafe Node writes and Rust auth/review/account/order/brief/admin-user/admin-content writes now have store-backed buckets with documented memory fallback; remaining work is optional live limiter telemetry and per-admin import/media limits if abuse evidence appears;
+- rate-limit follow-up: unsafe Node writes, account/review/order/brief writes, and admin catalog/import/media/price mutations now have store-backed buckets with documented memory fallback; remaining work is optional live limiter telemetry if abuse evidence appears;
 - import history follow-up: add preview/reject/rollback lifecycle records if the admin UX needs them; apply history is now recorded server-side;
 - backup/restore hardening: no-secret file-store evidence is automated for current JSON stores; PostgreSQL/MinIO rollback evidence remains a runbook-backed operator step before destructive imports or catalog rewrites.

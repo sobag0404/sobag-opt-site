@@ -1,4 +1,5 @@
 const { requireUser } = require("../_lib/auth");
+const { checkStoreRateLimit } = require("../_lib/api-security");
 const { getCatalogDbClient } = require("../_lib/catalog-db-client");
 const { loadCatalogProducts } = require("../_lib/catalog-source");
 const { getStore, saveCatalog, saveStore } = require("../_lib/store");
@@ -181,6 +182,8 @@ module.exports = async function handler(req, res) {
       return sendJson(res, 200, { source: context.source, updatedAt: context.updatedAt || null, groups: context.groups, rows, history: await loadPriceImportHistory() });
     }
     if (req.method !== "POST") return methodNotAllowed(res);
+    const limited = await checkStoreRateLimit(req, { key: `admin:prices:write:${String(user.email || "").toLowerCase()}`, limit: 80 });
+    if (limited) throw limited;
 
     const data = await readJson(req, { maxBytes: 2 * 1024 * 1024 });
     const action = text(data.action || "preview").toLowerCase();
