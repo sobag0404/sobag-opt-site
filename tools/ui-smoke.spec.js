@@ -206,6 +206,9 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await expect(page.locator(".admin-price-history")).toContainText("1 ошибок");
   await expect(page.locator(".admin-price-history")).not.toContainText("opt_1,123");
   await expect(page.locator("[data-admin-apply-price-preview]")).toBeDisabled();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectNoHorizontalOverflow(page, "admin price import mobile");
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });
 

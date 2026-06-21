@@ -3002,6 +3002,7 @@ select[aria-invalid="true"] {
 .admin-price-preview__errors small {
   font-size: 12px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .admin-price-badge {
@@ -3044,6 +3045,12 @@ select[aria-invalid="true"] {
   grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1fr) 180px;
 }
 
+.admin-price-preview__table div > *,
+.admin-price-row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .admin-price-preview__table div:last-child,
 .admin-price-row:last-child {
   border-bottom: 1px solid var(--hairline);
@@ -3059,6 +3066,7 @@ select[aria-invalid="true"] {
 
 .admin-price-history__head {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: baseline;
   justify-content: space-between;
@@ -3073,9 +3081,11 @@ select[aria-invalid="true"] {
 .admin-price-history__head span,
 .admin-price-history__item small,
 .admin-price-history__item span {
+  min-width: 0;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .admin-price-history__list {
