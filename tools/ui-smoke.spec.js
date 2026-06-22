@@ -484,13 +484,15 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
     await page.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => {});
     if (route.includes("catalog")) await waitForLiveProducts(page);
     if (route.includes("search")) await waitForLiveProducts(page, 0);
-    if (route === "/" || route.includes("catalog")) {
+    if (["/", "/favorites.html", "/marketplaces.html", "/contacts.html"].includes(route) || route.includes("catalog")) {
       await expect(page.locator("#accountButton")).toHaveAttribute("aria-label", /Войти|аккаунт/i);
       await expect(page.locator("#accountButton")).not.toContainText(/Вход|регистрация/i);
       await expectMobileHeaderActionsStable(page, route);
     }
     if (route.includes("catalog")) {
       await expect(page.locator(".catalog-price-button")).toContainText("Прайс");
+      await expect(page.getByText("Каталог продукции", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("Сначала раздел, потом товары и фильтры", { exact: true })).toHaveCount(0);
     }
     await expectNoHorizontalOverflow(page, route);
   }
