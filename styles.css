@@ -4768,18 +4768,22 @@ main {
 
 .category-tile strong {
   display: block;
+  min-width: 0;
   margin-bottom: 8px;
   font-size: 22px;
   line-height: 1.12;
+  overflow-wrap: anywhere;
   text-align: left;
 }
 
 .category-tile small {
   display: block;
+  min-width: 0;
   min-height: 42px;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
   text-align: left;
 }
 
@@ -4788,6 +4792,7 @@ main {
   align-items: center;
   justify-content: center;
   width: max-content;
+  max-width: 100%;
   margin-top: 18px;
   min-height: 32px;
   padding: 0 14px;
@@ -4797,6 +4802,8 @@ main {
   font-size: 13px;
   font-weight: 800;
   line-height: 1;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .theme-tiles {

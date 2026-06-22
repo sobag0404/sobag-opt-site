@@ -664,6 +664,16 @@ test("catalog home first load uses server category summary over stale fallback",
   await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
   const mobileTileText = await page.locator("#categoryTiles").innerText();
   expect(mobileTileText).toBe(tileText);
+  const categoryTileGeometry = await page.locator("#categoryTiles .category-tile").evaluateAll((tiles) =>
+    tiles.map((tile) => ({
+      overflow: tile.scrollWidth - tile.clientWidth,
+      strongOverflow: [...tile.querySelectorAll("strong, small, b")].some((node) => node.scrollWidth - node.clientWidth > 1),
+    }))
+  );
+  for (const tile of categoryTileGeometry) {
+    expect(tile.overflow, "mobile category tile overflow").toBeLessThanOrEqual(1);
+    expect(tile.strongOverflow, "mobile category text overflow").toBe(false);
+  }
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
   expect(await page.locator("#categoryTiles").innerText()).toBe(mobileTileText);
