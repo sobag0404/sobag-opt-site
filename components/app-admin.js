@@ -933,10 +933,10 @@ function priceImportHistoryHtml() {
         ? "Серверная история сейчас недоступна; показана локальная сводка без данных из файлов."
         : "Только сводка: статус, строки, ошибки и источник без данных из файла.";
   return `
-    <section class="admin-price-history" aria-label="История импорта цен">
+    <section class="admin-price-history" aria-label="История импорта цен" aria-live="polite">
       <div class="admin-price-history__head">
         <h3>История импорта</h3>
-        <span>${escapeHtml(statusNote)}</span>
+        <span role="status">${escapeHtml(statusNote)}</span>
       </div>
       ${
         history.length
@@ -1161,14 +1161,14 @@ function adminPricesPageHtml() {
         <button class="ghost-button" type="button" data-admin-export-price-rows>Экспорт цен</button>
         <button class="ghost-button" type="button" data-admin-export-price-xlsx>Экспорт цен XLSX</button>
         <button class="ghost-button" type="button" data-admin-export-price-products>Экспорт товаров с ценами</button>
-        <a class="ghost-button" href="/api/admin/prices?template=1" target="_blank" rel="noopener">
+        <a class="ghost-button" href="/api/admin/prices?template=1" target="_blank" rel="noopener" aria-label="Скачать шаблон импорта цен" title="Скачать шаблон импорта цен">
           <i data-lucide="download"></i>
           Шаблон импорта
         </a>
-        <label class="ghost-button admin-price-import">
+        <label class="ghost-button admin-price-import" title="Импортировать цены из CSV или XLSX">
           <i data-lucide="upload"></i>
           Импорт цен CSV/XLSX
-          <input type="file" accept=".csv,.xlsx,.xls" data-admin-price-import />
+          <input type="file" accept=".csv,.xlsx,.xls" data-admin-price-import aria-label="Импортировать цены из CSV или XLSX" />
         </label>
         <span>Импорт принимает строки по категории/группе или артикулу, включая колонки «Акция цена», «Акция с», «Акция до». Если строки не выбраны, массовое действие применяется к текущему фильтру.</span>
       </div>

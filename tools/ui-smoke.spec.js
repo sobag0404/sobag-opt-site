@@ -190,7 +190,11 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await expect(page.locator(".admin-price-import-guide")).toContainText("starts_at");
   await expect(page.locator(".admin-price-preview__empty")).toContainText("валидации");
   await expect(page.locator("[data-admin-apply-price-preview]")).toBeDisabled();
+  await expect(page.locator('.admin-product-export a[href="/api/admin/prices?template=1"]')).toHaveAttribute("aria-label", "Скачать шаблон импорта цен");
+  await expect(page.locator("[data-admin-price-import]")).toHaveAttribute("aria-label", "Импортировать цены из CSV или XLSX");
   await expect(page.locator(".admin-price-history")).toContainText("История импорта");
+  await expect(page.locator(".admin-price-history")).toHaveAttribute("aria-live", "polite");
+  await expect(page.locator(".admin-price-history [role='status']")).toBeVisible();
   await expect(page.locator(".admin-price-history")).toContainText("Применен");
   await expect(page.locator(".admin-price-history")).toContainText("3 изменений");
   await expect(page.locator(".admin-price-history")).toContainText("1 акций");

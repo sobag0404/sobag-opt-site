@@ -2944,6 +2944,11 @@ select[aria-invalid="true"] {
   cursor: pointer;
 }
 
+.admin-price-import:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 .admin-price-preview {
   display: grid;
   gap: 10px;
