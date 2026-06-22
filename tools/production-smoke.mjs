@@ -4,7 +4,16 @@ import { once } from "node:events";
 import { performance } from "node:perf_hooks";
 
 const DEFAULT_BASE_URL = "https://sobag-shop.online";
-const DEFAULT_PATHS = ["/", "/catalog", "/cart", "/api/health"];
+const DEFAULT_PATHS = [
+  "/",
+  "/index.html",
+  "/catalog",
+  "/cart",
+  "/api/health",
+  "/api/catalog-query?pageSize=1",
+  "/api/price-list?format=json",
+  "/api/admin/product-images",
+];
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY_MS = 5000;
@@ -104,6 +113,10 @@ function buildUrl(baseUrl, path) {
 
 function expectedKind(path) {
   if (path === "/api/health") return "health";
+  if (path === "/index.html") return "canonical-redirect";
+  if (path.startsWith("/api/catalog-query")) return "catalog-query";
+  if (path.startsWith("/api/price-list")) return "price-list";
+  if (path === "/api/admin/product-images") return "anonymous-denied";
   if (path.startsWith("/api/")) return "json";
   return "html";
 }
@@ -150,6 +163,28 @@ function assertHealth(path, contentType, body) {
   return payload;
 }
 
+function assertCatalogQuery(path, contentType, body) {
+  const payload = assertJson(path, contentType, body);
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  if (!items.length) throw new Error(`${path}: catalog query must return items`);
+  const firstPrice = Number(items[0]?.price ?? items[0]?.variant?.price ?? items[0]?.minPrice);
+  if (!Number.isFinite(firstPrice) || firstPrice <= 0) {
+    throw new Error(`${path}: first catalog price must be non-zero`);
+  }
+  return payload;
+}
+
+function assertPriceList(path, contentType, body) {
+  const payload = assertJson(path, contentType, body);
+  const rows = Array.isArray(payload.rows) ? payload.rows : Array.isArray(payload.items) ? payload.items : [];
+  if (!rows.length) throw new Error(`${path}: price-list must return rows`);
+  const firstPrice = Number(rows[0]?.price ?? rows[0]?.basePrice ?? rows[0]?.value);
+  if (!Number.isFinite(firstPrice) || firstPrice <= 0) {
+    throw new Error(`${path}: first price-list price must be non-zero`);
+  }
+  return payload;
+}
+
 async function fetchWithTimeout(url, timeoutMs) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(new Error(`Timed out after ${timeoutMs}ms`)), timeoutMs);
@@ -176,16 +211,41 @@ async function checkPath(baseUrl, path, timeoutMs) {
   const contentType = response.headers.get("content-type") || "";
   const body = await response.text();
 
+  const kind = expectedKind(path);
+  if (kind === "anonymous-denied") {
+    if (![401, 403].includes(response.status)) {
+      throw new Error(`${path}: expected anonymous denial, got HTTP ${response.status}`);
+    }
+    return {
+      path,
+      url,
+      ok: true,
+      status: response.status,
+      elapsedMs,
+      contentType,
+      kind,
+      payload: null,
+    };
+  }
+
   if (!response.ok) {
     throw new Error(`${path}: HTTP ${response.status} ${response.statusText || ""}`.trim());
   }
 
-  const kind = expectedKind(path);
   let payload = null;
-  if (kind === "html") {
+  if (kind === "canonical-redirect") {
+    if (!response.redirected || new URL(response.url).pathname !== "/") {
+      throw new Error(`${path}: expected redirect to /`);
+    }
+    assertHtml(path, contentType, body);
+  } else if (kind === "html") {
     assertHtml(path, contentType, body);
   } else if (kind === "health") {
     payload = assertHealth(path, contentType, body);
+  } else if (kind === "catalog-query") {
+    payload = assertCatalogQuery(path, contentType, body);
+  } else if (kind === "price-list") {
+    payload = assertPriceList(path, contentType, body);
   } else {
     payload = assertJson(path, contentType, body);
   }
@@ -280,6 +340,26 @@ async function createSelfTestServer() {
     if (req.url === "/api/health") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ ok: true, storage: "ready", objectStorage: { provider: "s3-compatible", configured: false } }));
+      return;
+    }
+    if (req.url === "/api/catalog-query?pageSize=1") {
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ ok: true, items: [{ id: "p1", price: 100 }] }));
+      return;
+    }
+    if (req.url === "/api/price-list?format=json") {
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ ok: true, rows: [{ name: "Group A", price: 100 }] }));
+      return;
+    }
+    if (req.url === "/api/admin/product-images") {
+      res.writeHead(401, { "content-type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "unauthorized" }));
+      return;
+    }
+    if (req.url === "/index.html") {
+      res.writeHead(301, { location: "/" });
+      res.end("");
       return;
     }
     const pages = new Map([

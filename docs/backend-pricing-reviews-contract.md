@@ -143,6 +143,7 @@ Coverage:
 - For price import mistakes, restore by applying a validated reverse import or a reviewed PostgreSQL/catalog backup; do not edit raw store files on production without first copying them aside.
 - `priceImportHistory[]` and `audit[]` are operator evidence only. They should help identify who/when/how many rows changed, but they are not a full data backup.
 - For reviews/orders/account data, prefer read-only inspection and targeted reversal through admin routes; avoid whole-store replacement unless the relevant backup is verified and the site is in a maintenance window.
+- Production smoke now includes safe public API checks for catalog-query non-zero pricing, public price-list rows, canonical `/index.html -> /`, and anonymous admin media denial in addition to health and HTML shell checks.
 
 ## Next Backend Packet
 
