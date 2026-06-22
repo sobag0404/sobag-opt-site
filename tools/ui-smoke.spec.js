@@ -700,6 +700,19 @@ test("catalog home first load uses server category summary over stale fallback",
     expect(tile.overflow, "mobile category tile overflow").toBeLessThanOrEqual(1);
     expect(tile.strongOverflow, "mobile category text overflow").toBe(false);
   }
+  for (const selector of ["#categoryTiles .category-tile", ".theme-tile", ".actual-tile"]) {
+    const tile = page.locator(selector).first();
+    if ((await tile.count()) === 0) continue;
+    await tile.focus();
+    await expect
+      .poll(() =>
+        tile.evaluate((node) => {
+          const styles = window.getComputedStyle(node);
+          return (styles.outlineStyle !== "none" && Number.parseFloat(styles.outlineWidth) >= 2) || styles.boxShadow !== "none";
+        })
+      )
+      .toBe(true);
+  }
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
   expect(await page.locator("#categoryTiles").innerText()).toBe(mobileTileText);

@@ -4718,6 +4718,14 @@ main {
   border-radius: 0;
 }
 
+.category-tile:focus-visible,
+.theme-tile:focus-visible,
+.actual-tile:focus-visible {
+  outline: 2px solid var(--on-dark);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.12);
+}
+
 .category-tile-skeleton {
   min-height: 220px;
   background: linear-gradient(90deg, var(--surface-soft), rgba(148, 163, 184, 0.22), var(--surface-soft));
