@@ -305,6 +305,7 @@ test("favorites catalog does not expose removed helper copy", async ({ page }) =
 test("account auth modal separates login and registration fields", async ({ page }) => {
   await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
   await page.locator("#accountButton").click();
+  await expect(page.locator("#accountModal .modal__close")).toHaveAttribute("aria-label", "Закрыть личный кабинет");
   await expect(page.locator("#accountModalTitle")).toHaveText("Вход");
   await expect(page.locator('#authForm input[name="login"]')).toBeVisible();
   await expect(page.locator('#authForm input[name="email"]')).toHaveCount(0);

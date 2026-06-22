@@ -2288,7 +2288,7 @@ function accountModalHtml() {
     <div class="modal is-visible" id="accountModal" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
       <div class="modal__backdrop" data-close-modal></div>
       <section class="modal__panel account-panel">
-        <button class="modal__close" type="button" data-close-modal><i data-lucide="x"></i></button>
+        <button class="modal__close" type="button" data-close-modal aria-label="Закрыть личный кабинет" title="Закрыть личный кабинет"><i data-lucide="x"></i></button>
         <div>
           <p class="eyebrow">Account</p>
           <h2 id="accountModalTitle">${user ? "Личный кабинет" : state.authMode === "register" ? "Регистрация" : "Вход"}</h2>
