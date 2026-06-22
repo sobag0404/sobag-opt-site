@@ -39,6 +39,21 @@ function latestTypes(items = [], key = "type") {
   return [...new Set((Array.isArray(items) ? items : []).map((item) => String(item?.[key] || "").slice(0, 80)).filter(Boolean))].slice(0, 12);
 }
 
+function productList(store) {
+  if (Array.isArray(store.products)) return store.products;
+  if (Array.isArray(store.catalog?.products)) return store.catalog.products;
+  if (store.products && typeof store.products === "object") return Object.values(store.products);
+  if (store.catalog?.products && typeof store.catalog.products === "object") return Object.values(store.catalog.products);
+  return [];
+}
+
+function countMediaImages(store) {
+  return productList(store).reduce((total, product) => {
+    const imageBuckets = [product?.images, product?.media, product?.gallery].filter(Array.isArray);
+    return total + imageBuckets.reduce((countTotal, images) => countTotal + images.length, 0);
+  }, 0);
+}
+
 function evidenceSummary(store) {
   const priceGroups = store.priceGroups || store.price_groups || store.pricing?.groups || [];
   const priceImportHistory = store.priceImportHistory || store.price_import_history || [];
@@ -52,6 +67,7 @@ function evidenceSummary(store) {
       priceGroups: count(priceGroups),
       priceImportHistory: count(priceImportHistory),
       audit: count(audit),
+      mediaImages: countMediaImages(store),
     },
     latestAuditTypes: latestTypes(audit, "type"),
     latestImportStatuses: latestTypes(priceImportHistory, "status"),
@@ -88,12 +104,14 @@ async function runSelfTest() {
           priceGroups: [{ label: "Group A", price: 100 }],
           priceImportHistory: [{ status: "applied", rawCsv: "must-not-appear" }],
           audit: [{ type: "price_import_apply" }, { type: "review_update" }],
+          catalog: { products: [{ id: "p1", images: [{ key: "products/opt_1.jpg" }], media: [{ key: "products/opt_1.webp" }] }] },
         },
       })}\n`,
       "utf8",
     );
     const summary = await summarizeStoreFile(storeFile);
     if (summary.counts.orders !== 1 || summary.counts.audit !== 2) throw new Error("evidence self-test count mismatch");
+    if (summary.counts.mediaImages !== 2) throw new Error("evidence self-test media count mismatch");
     if (!summary.latestAuditTypes.includes("review_update")) throw new Error("evidence self-test audit type mismatch");
     return summary;
   } finally {
@@ -109,7 +127,7 @@ async function main() {
   }
   const summary = args.selfTest ? await runSelfTest() : await summarizeStoreFile(args.store);
   console.log(
-    `backend evidence smoke passed: orders=${summary.counts.orders} reviews=${summary.counts.reviews} priceGroups=${summary.counts.priceGroups} imports=${summary.counts.priceImportHistory} audit=${summary.counts.audit}`,
+    `backend evidence smoke passed: orders=${summary.counts.orders} reviews=${summary.counts.reviews} priceGroups=${summary.counts.priceGroups} imports=${summary.counts.priceImportHistory} audit=${summary.counts.audit} mediaImages=${summary.counts.mediaImages}`,
   );
 }
 

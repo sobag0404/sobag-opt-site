@@ -139,7 +139,7 @@ Coverage:
 
 - Before destructive catalog/price imports, keep the normal VPS release rollback plus a current PostgreSQL/catalog backup from the existing deploy/import runbooks.
 - For file-store evidence, `node tools/file-store-backup.mjs --source <store-dir> --dest <backup-dir> --dry-run` reports what would be copied, and `--restore <backup-dir> --target <store-dir> --dry-run` reports restore scope without modifying production data.
-- `node tools/backend-evidence-smoke.mjs --store <store.json>` reports safe counts/status summaries for orders, reviews, price groups, import history, and audit logs without raw payloads or secrets. `--self-test` is part of the local check suite.
+- `node tools/backend-evidence-smoke.mjs --store <store.json>` reports safe counts/status summaries for orders, reviews, price groups, import history, audit logs, and media-image metadata without raw payloads or secrets. `--self-test` is part of the local check suite.
 - For price import mistakes, restore by applying a validated reverse import or a reviewed PostgreSQL/catalog backup; do not edit raw store files on production without first copying them aside.
 - `priceImportHistory[]` and `audit[]` are operator evidence only. They should help identify who/when/how many rows changed, but they are not a full data backup.
 - For reviews/orders/account data, prefer read-only inspection and targeted reversal through admin routes; avoid whole-store replacement unless the relevant backup is verified and the site is in a maintenance window.
@@ -152,4 +152,4 @@ The next backend/security packet should stay server-side and avoid UI redesign w
 - admin audit log hardening: user/admin, order, review, price apply, catalog save, catalog import lifecycle, and media mutation summaries are covered;
 - rate-limit follow-up: unsafe Node writes, account/review/order/brief writes, and admin catalog/import/media/price/content/order/user mutations now have store-backed buckets with documented memory fallback; remaining work is optional live limiter telemetry if abuse evidence appears;
 - import history follow-up: add preview/reject/rollback lifecycle records if the admin UX needs them; apply history is now recorded server-side;
-- backup/restore hardening: no-secret file-store evidence is automated for current JSON stores; PostgreSQL/MinIO rollback evidence remains a runbook-backed operator step before destructive imports or catalog rewrites.
+- backup/restore hardening: no-secret file-store evidence is automated for current JSON stores, including media-image metadata counts; PostgreSQL/MinIO rollback evidence remains a runbook-backed operator step before destructive imports or catalog rewrites.
