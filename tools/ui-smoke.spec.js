@@ -970,6 +970,15 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect
     .poll(() => page.evaluate(() => String(window.__sobagCopiedSku || "").toLocaleLowerCase("ru-RU")))
     .toBe(baseSku.trim().toLocaleLowerCase("ru-RU"));
+  await firstCard.locator(".copy-sku-button").focus();
+  await expect
+    .poll(() =>
+      firstCard.locator(".copy-sku-button").evaluate((button) => {
+        const styles = getComputedStyle(button);
+        return styles.outlineStyle !== "none" && Number.parseFloat(styles.outlineWidth) >= 2;
+      })
+    )
+    .toBe(true);
   await firstCard.locator("[data-open-product]").first().click();
 
   await expect(page.locator("#productModal")).toBeVisible();
@@ -1011,6 +1020,15 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect
     .poll(() => page.evaluate(() => String(window.__sobagCopiedSku || "").toLocaleLowerCase("ru-RU")))
     .toBe(firstSku.trim().toLocaleLowerCase("ru-RU"));
+  await page.locator(".copy-sku-button--detail").focus();
+  await expect
+    .poll(() =>
+      page.locator(".copy-sku-button--detail").evaluate((button) => {
+        const styles = getComputedStyle(button);
+        return styles.outlineStyle !== "none" && Number.parseFloat(styles.outlineWidth) >= 2;
+      })
+    )
+    .toBe(true);
 
   const navolochka = page.locator('[data-variant-key="type"][data-variant-value="Наволочка"]');
   if (await navolochka.count()) {

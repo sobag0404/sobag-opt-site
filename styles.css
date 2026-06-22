@@ -5494,6 +5494,8 @@ main {
 .copy-sku-button:focus-visible {
   color: var(--on-dark);
   background: rgba(17, 17, 17, 0.06);
+  outline: 2px solid var(--on-dark);
+  outline-offset: 2px;
   transform: translateY(-1px);
 }
 
