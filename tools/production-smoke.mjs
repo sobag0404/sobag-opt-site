@@ -7,6 +7,7 @@ const DEFAULT_BASE_URL = "https://sobag-shop.online";
 const DEFAULT_PATHS = [
   "/",
   "/index.html",
+  "/catalog.html",
   "/catalog",
   "/cart",
   "/api/health",
@@ -17,6 +18,7 @@ const DEFAULT_PATHS = [
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY_MS = 5000;
+const CURRENT_APP_JS_VERSION = "20260622-catalog-counts";
 
 function parseArgs(argv) {
   const options = {
@@ -130,6 +132,12 @@ function assertHtml(path, contentType, body) {
   }
   if (!/Sobag/i.test(body)) {
     throw new Error(`${path}: expected Sobag brand marker`);
+  }
+  if (path === "/catalog.html" && !body.includes(`app.js?v=${CURRENT_APP_JS_VERSION}`)) {
+    throw new Error(`${path}: expected current app.js cache-bust version ${CURRENT_APP_JS_VERSION}`);
+  }
+  if (path === "/catalog.html" && body.includes("app.js?v=20260619-price-ui")) {
+    throw new Error(`${path}: stale app.js cache-bust version is still referenced`);
   }
 }
 
@@ -364,6 +372,7 @@ async function createSelfTestServer() {
     }
     const pages = new Map([
       ["/", html("Home")],
+      ["/catalog.html", `<!doctype html><html lang="ru"><head><title>Sobag Opt | Catalog</title></head><body>Sobag Opt Catalog<script defer src="app.js?v=${CURRENT_APP_JS_VERSION}"></script></body></html>`],
       ["/catalog", html("Catalog")],
       ["/cart", html("Cart")],
     ]);

@@ -727,6 +727,51 @@ test("catalog home first load uses server category summary over stale fallback",
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });
 
+test("catalog home never renders page-sized category counts as final totals", async ({ page }) => {
+  const partialProducts = Array.from({ length: 48 }, (_, index) => {
+    const category = index < 24 ? "Подушки" : "Наволочки";
+    return {
+      id: `qa-partial-${index}`,
+      baseSku: `qa-partial-${index}`,
+      name: `QA partial ${index}`,
+      category,
+      categories: [category],
+      image: "assets/production-workshop-1.png",
+      variants: [{ sku: `qa-partial-${index}-v`, name: `QA partial ${index}`, type: "QA", size: "QA", material: "QA", price: 1000 }],
+    };
+  });
+  await page.route("**/api/catalog", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({ source: "server", products: partialProducts }),
+    });
+  });
+  await page.route("**/data/products-live.json", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify([]) });
+  });
+  await page.route("**/api/catalog-query?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        items: [],
+        total: 808,
+        facets: { categories: [{ value: "Подушки", count: 48 }, { value: "Наволочки", count: 48 }], collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        facetOptions: { categories: [{ value: "Подушки", count: 48 }, { value: "Наволочки", count: 48 }], collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        pageInfo: { page: 1, pageSize: 1, offset: 0, total: 808, totalPages: 808, hasMore: true, nextCursor: "MQ" },
+        source: "qa-partial-summary",
+      }),
+    });
+  });
+  await page.goto(`${BASE_URL}/catalog.html?qa=partial-count-guard`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(800);
+  await expect(page.locator("#categoryTiles")).not.toContainText(/48\s+товар/);
+  await expect(page.locator("#categoryTiles .category-tile")).toHaveCount(0);
+  await expect(page.locator("#categoryTiles .category-tile-skeleton")).toHaveCount(6);
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
 test("account favorites are per-user and orders can be repeated into cart", async ({ page }) => {
   const category = await largestCategory(page);
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });

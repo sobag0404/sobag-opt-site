@@ -1245,6 +1245,14 @@ function catalogCategoryCountsFromRows(rows = []) {
 function hasCatalogHomeSummaryCounts() {
   return state.catalogHomeSummary.status === "ready" && Object.keys(state.catalogHomeSummary.counts || {}).length > 0;
 }
+function catalogHomeSummaryLooksPartial(data = {}, counts = {}) {
+  const values = Object.values(counts)
+    .map((count) => Number(count || 0))
+    .filter((count) => count > 0);
+  const maxCount = values.length ? Math.max(...values) : 0;
+  const total = Number(data.total || data.pageInfo?.total || 0) || 0;
+  return total > CATALOG_PAGE_SIZE && values.length > 0 && maxCount <= CATALOG_PAGE_SIZE;
+}
 function fallbackCatalogCategory(name) {
   const existing = catalogContentItem(defaultSiteContent.catalogCategories, name);
   return existing || { name, icon: "tag", description: "Категория из текущего каталога.", image: "" };
@@ -1252,6 +1260,11 @@ function fallbackCatalogCategory(name) {
 function applyCatalogHomeSummary(data = {}) {
   const counts = catalogCategoryCountsFromRows(catalogCategorySummaryRows(data));
   if (!Object.keys(counts).length) return false;
+  if (catalogHomeSummaryLooksPartial(data, counts)) {
+    state.catalogHomeSummary = { status: "fallback", counts: {}, source: "partial-summary" };
+    renderCatalogHome();
+    return false;
+  }
   state.catalogHomeSummary = {
     status: "ready",
     counts,
@@ -2346,7 +2359,8 @@ function renderCatalogHome() {
   const serverCounts = hasCatalogHomeSummaryCounts() ? state.catalogHomeSummary.counts : {};
   const hasServerCounts = Object.keys(serverCounts).length > 0;
   const hasOnlyPartialCatalogPage = products.length > 0 && products.length <= CATALOG_PAGE_SIZE && state.serverCatalog.total > products.length;
-  const shouldWaitForHomeSummary = !hasActiveCatalogState() && !hasServerCounts && (state.catalogHomeSummary.status !== "fallback" || hasOnlyPartialCatalogPage);
+  const hasOnlyPageSizedLocalCatalog = products.length > 0 && products.length <= CATALOG_PAGE_SIZE && state.catalogHomeSummary.status !== "ready";
+  const shouldWaitForHomeSummary = !hasActiveCatalogState() && !hasServerCounts && (state.catalogHomeSummary.status !== "fallback" || hasOnlyPartialCatalogPage || hasOnlyPageSizedLocalCatalog);
   const countByCategory = Object.fromEntries(content.catalogCategories.map((category) => [category.name, 0]));
   if (!shouldWaitForHomeSummary) {
     products.forEach((product) => {
