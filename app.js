@@ -1242,6 +1242,9 @@ function catalogCategoryCountsFromRows(rows = []) {
     return counts;
   }, {});
 }
+function hasCatalogHomeSummaryCounts() {
+  return state.catalogHomeSummary.status === "ready" && Object.keys(state.catalogHomeSummary.counts || {}).length > 0;
+}
 function fallbackCatalogCategory(name) {
   const existing = catalogContentItem(defaultSiteContent.catalogCategories, name);
   return existing || { name, icon: "tag", description: "Категория из текущего каталога.", image: "" };
@@ -2340,14 +2343,19 @@ function clearAllCatalogFilters() {
 function renderCatalogHome() {
   if (!categoryTiles || !actualTiles || !collectionTiles || !holidayTiles) return;
   const content = getSiteContent();
+  const serverCounts = hasCatalogHomeSummaryCounts() ? state.catalogHomeSummary.counts : {};
+  const hasServerCounts = Object.keys(serverCounts).length > 0;
+  const hasOnlyPartialCatalogPage = products.length > 0 && products.length <= CATALOG_PAGE_SIZE && state.serverCatalog.total > products.length;
+  const shouldWaitForHomeSummary = !hasActiveCatalogState() && !hasServerCounts && (state.catalogHomeSummary.status !== "fallback" || hasOnlyPartialCatalogPage);
   const countByCategory = Object.fromEntries(content.catalogCategories.map((category) => [category.name, 0]));
-  products.forEach((product) => {
-    (product.categories || [product.category]).forEach((category) => {
-      countByCategory[category] = (countByCategory[category] || 0) + 1;
+  if (!shouldWaitForHomeSummary) {
+    products.forEach((product) => {
+      (product.categories || [product.category]).forEach((category) => {
+        countByCategory[category] = (countByCategory[category] || 0) + 1;
+      });
     });
-  });
-  const serverCounts = state.catalogHomeSummary.status === "ready" ? state.catalogHomeSummary.counts : {};
-  if (!hasActiveCatalogState() && !Object.keys(serverCounts).length && state.catalogHomeSummary.status !== "fallback") {
+  }
+  if (shouldWaitForHomeSummary) {
     categoryTiles.innerHTML = Array.from(
       { length: 6 },
       () => `<div class="category-tile-skeleton" aria-hidden="true"><span></span><strong></strong><small></small><b></b></div>`
