@@ -26,42 +26,44 @@ const PREVIEW_ROUTES = [
   "/rust/admin/orders",
   "/rust/admin/users",
   "/rust/admin/content",
+  "/rust/admin/catalog",
+  "/rust/admin/pim",
+  "/rust/admin/prices",
+  "/rust/admin/import-batches",
+  "/rust/admin/product-images",
 ];
 
 const SWITCHED_PUBLIC_ROUTES = [
   "/api/auth/me",
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/logout",
   "/api/orders",
   "/api/briefs",
   "/api/admin/orders",
   "/api/admin/users",
   "/api/admin/content",
-];
-
-const DO_NOT_SWITCH_YET = [
-  "/api/auth/login",
-  "/api/auth/register",
-  "/api/auth/logout",
   "/api/admin/catalog",
   "/api/admin/pim",
-  "/api/admin/product-images",
+  "/api/admin/prices",
   "/api/admin/import-batches",
+  "/api/admin/product-images",
 ];
 
 const REQUIRED_MARKERS = [
-  "Node remains authoritative",
+  "Rust cutover complete",
+  "Node remains compatibility fallback",
   "temporary-store tests",
   "route-level rollback",
-  "Do not switch these route groups yet",
   "Internal Rust Preview Routes",
   "Route Group Order",
   "Current Candidate",
-  "Candidate 1 is the full account-state route",
+  "All listed candidate route groups are now switched",
   "GET+PUT",
-  "GET` while leaving `PUT` on Node",
   "Required Gates Per Route Group",
   "Nginx Cutover Shape",
   "rehearse:rust-account-routes",
-  "must reject generic `/api`, wildcard `/api/admin`",
+  "must reject generic `/api` and wildcard `/api/admin`",
   "Post-Cutover Checks",
   "Rollback",
   "Do not add wildcard `/api/admin/` or generic `/api/` proxy to Rust",
@@ -86,7 +88,6 @@ function auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, authWrit
     assertIncludes(rustMain, routeDeclaration(route), RUST_MAIN, errors);
   });
   SWITCHED_PUBLIC_ROUTES.forEach((route) => assertIncludes(runbook, route, RUNBOOK, errors));
-  DO_NOT_SWITCH_YET.forEach((route) => assertIncludes(runbook, route, RUNBOOK, errors));
   [
     "/rust/auth/me",
     "auth-me unsupported method guards",
@@ -180,11 +181,11 @@ function auditCutover({ runbook, rustMain, authSmoke, authCutoverSmoke, authWrit
   if (/location\s+\^~\s+\/api\/admin/.test(runbook)) errors.push("runbook must not route wildcard /api/admin/ to Rust");
   if (/password\s*=|token\s*=|BEGIN RSA/i.test(runbook)) errors.push("runbook must not contain secrets or env values");
   if (errors.length) throw new Error(`Rust account/orders/admin cutover audit failed:\n${errors.join("\n")}`);
-  return { previewRoutes: PREVIEW_ROUTES.length, blockedRoutes: DO_NOT_SWITCH_YET.length };
+  return { previewRoutes: PREVIEW_ROUTES.length, switchedRoutes: SWITCHED_PUBLIC_ROUTES.length };
 }
 
 function selfTest() {
-  const runbook = [...REQUIRED_MARKERS, ...PREVIEW_ROUTES, ...SWITCHED_PUBLIC_ROUTES, ...DO_NOT_SWITCH_YET].join("\n");
+  const runbook = [...REQUIRED_MARKERS, ...PREVIEW_ROUTES, ...SWITCHED_PUBLIC_ROUTES].join("\n");
   const rustMain = PREVIEW_ROUTES.map(routeDeclaration).join("\n");
   const authSmoke = ["/rust/auth/me", "auth-me unsupported method guards", "POST", "DELETE", "/rust/admin/orders", "/rust/admin/users"].join("\n");
   const authCutoverSmoke = ["routeTarget", "/api/auth/me", "/rust/auth/me", "Node fallback reads Rust-auth state", "GET /api/auth/me through Rust", "PUT /api/auth/me through Rust", "non-auth API remains Node fallback"].join("\n");
@@ -199,11 +200,11 @@ function selfTest() {
   if (summary.previewRoutes !== PREVIEW_ROUTES.length) throw new Error("self-test preview route count mismatch");
   let rejected = false;
   try {
-    auditCutover({ runbook: runbook.replace("Node remains authoritative", ""), rustMain, authSmoke, authCutoverSmoke, authWriteCutoverSmoke, orderSmoke, orderCutoverSmoke, adminOrderCutoverSmoke, adminUsersCutoverSmoke, adminContentCutoverSmoke, routeRehearsal });
+    auditCutover({ runbook: runbook.replace("Rust cutover complete", ""), rustMain, authSmoke, authCutoverSmoke, authWriteCutoverSmoke, orderSmoke, orderCutoverSmoke, adminOrderCutoverSmoke, adminUsersCutoverSmoke, adminContentCutoverSmoke, routeRehearsal });
   } catch (error) {
-    rejected = /Node remains authoritative/.test(error.message);
+    rejected = /Rust cutover complete/.test(error.message);
   }
-  if (!rejected) throw new Error("self-test should reject missing authoritative Node marker");
+  if (!rejected) throw new Error("self-test should reject missing Rust cutover marker");
 }
 
 function readRequired(file) {
@@ -232,7 +233,7 @@ function main() {
     routeRehearsal: readRequired(ROUTE_REHEARSAL),
   });
   console.log(
-    `Rust account/orders/admin cutover audit passed: ${summary.previewRoutes} preview routes, ${summary.blockedRoutes} blocked public routes`
+    `Rust account/orders/admin cutover audit passed: ${summary.previewRoutes} internal routes, ${summary.switchedRoutes} switched public routes`
   );
 }
 

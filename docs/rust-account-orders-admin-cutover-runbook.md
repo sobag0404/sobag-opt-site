@@ -1,32 +1,35 @@
 # Rust Account, Orders, Admin Cutover Runbook
 
-Last updated: 2026-06-11
+Last updated: 2026-06-22
 
-Purpose: prepare future route-group cutovers for account, auth, orders, briefs, and admin APIs from Node to Rust without changing production data or removing Node fallback.
+Purpose: preserve the route-group cutover contract for account, auth, orders, briefs, and admin APIs after the Rust production cutover, without removing the remaining static/root/cart compatibility fallback.
 
 ## Current Rule
 
-Node remains authoritative for all public write/account/admin routes until each route group has Rust parity, temporary-store tests, shadow comparison where possible, production smoke, and route-level rollback.
+Rust cutover complete for the targeted exact API routes. Node remains compatibility fallback only for static/root/cart shell paths and explicit legacy fallback; do not add wildcard `/api` or `/api/admin` proxying.
 
 Currently switched to Rust in production:
 
 - `/api/catalog-query`
 - `/api/catalog-detail`
 - `/api/auth/me`
+- `/api/auth/login`
+- `/api/auth/register`
+- `/api/auth/logout`
 - `/api/orders`
 - `/api/briefs`
 - `/api/admin/orders`
 - `/api/admin/users`
 - `/api/admin/content`
-
-Do not switch these route groups yet:
-
-- auth session writes: `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`
-- admin catalog/PIM/media/import: `/api/admin/catalog`, `/api/admin/pim`, `/api/admin/product-images`, `/api/admin/import-batches`
+- `/api/admin/catalog`
+- `/api/admin/pim`
+- `/api/admin/prices`
+- `/api/admin/product-images`
+- `/api/admin/import-batches`
 
 ## Internal Rust Preview Routes
 
-Preview-only Rust routes that may be used for parity work:
+Internal Rust routes that back the exact production `/api/*` cutovers:
 
 - `/rust/auth/me`
 - `/rust/auth/login`
@@ -37,8 +40,13 @@ Preview-only Rust routes that may be used for parity work:
 - `/rust/admin/orders`
 - `/rust/admin/users`
 - `/rust/admin/content`
+- `/rust/admin/catalog`
+- `/rust/admin/pim`
+- `/rust/admin/prices`
+- `/rust/admin/product-images`
+- `/rust/admin/import-batches`
 
-These routes must not be exposed as public `/api/*` routes until the matching cutover gate is green.
+These routes must be exposed only through exact public `/api/*` locations after the matching cutover gate is green.
 
 ## Route Group Order
 
@@ -52,13 +60,13 @@ These routes must not be exposed as public `/api/*` routes until the matching cu
 
 ## Current Candidate
 
-Candidate 1 is the full account-state route `GET` and `PUT /api/auth/me`, and it is switched in production as an exact Nginx route after temporary-store cutover smoke and no-write public validation. Candidate 3, orders/briefs writes, was rolled back to Node fallback on 2026-06-16 after live Rust writes exposed a Redis-vs-file-store gap on the VPS provider. Rust now has Redis/Upstash REST store parity and Redis fixture smokes, but production `/api/orders` and `/api/briefs` must not be re-cut until release smokes pass on VPS and the exact Nginx route switch is re-applied with rollback. Admin order read/update, admin users/employees, and admin content/review moderation remain switched in production as exact `/api/admin/orders`, `/api/admin/users`, and `/api/admin/content`. The next auth candidate is session writes (`/api/auth/login`, `/api/auth/register`, `/api/auth/logout`) only after a separate exact-route cutover smoke and rollback gate.
+All listed candidate route groups are now switched in production through exact Nginx locations after temporary-store tests, Redis/PostgreSQL/MinIO, role/access, route-level rollback, and production-smoke gates. Future work should add parity coverage for new API routes before any route is added to production routing.
 
 Reason: public `/api/auth/me` is one URL for both account reads and account-state writes. A simple exact Nginx route could not safely switch only `GET` while leaving `PUT` on Node. Before it was switched, `tools/rust-auth-me-shadow-smoke.mjs` compared Node `/api/auth/me` and Rust `/rust/auth/me` for anonymous, buyer, manager, content, admin, expired sessions, profile updates, cart/favorite/saved-cart writes, buyer review validation, no password fields, no buyer-hidden internal fields, and unsupported `POST`/`DELETE` staying `405` on both runtimes. Public `/api/auth/me` is now switched only as the full `GET+PUT` exact route with rollback backup.
 
 ## Required Gates Per Route Group
 
-Before any route group switch:
+Before adding or re-cutting any route group:
 
 - `cargo fmt --check`
 - `cargo test --locked`
@@ -98,7 +106,7 @@ npm.cmd run rehearse:rust-account-routes -- --group auth-me
 npm.cmd run rehearse:rust-account-routes -- --group orders-briefs
 ```
 
-The rehearsal prints exact `location = ...` blocks only. For `/api/auth/me`, the rehearsal must label the group as `GET+PUT` because `GET`-only Nginx cutover is unsafe for the current shared URL. It must reject generic `/api`, wildcard `/api/admin`, and admin catalog/import/media/PIM locations until those later route groups are explicitly covered.
+The rehearsal prints exact `location = ...` blocks only. For `/api/auth/me`, the rehearsal must label the group as `GET+PUT` because `GET`-only Nginx cutover is unsafe for the current shared URL. It must reject generic `/api` and wildcard `/api/admin` locations.
 
 Before a public `/api/auth/me` switch, run `tools/rust-auth-me-cutover-smoke.mjs`. It starts temporary Node and Rust runtimes with the same temporary file-store, simulates the exact future routing shape, keeps login/register/logout on Node, routes only `GET+PUT /api/auth/me` to Rust, verifies Node can read the Rust-written account state, and verifies unrelated APIs still fall back to Node.
 
@@ -123,6 +131,11 @@ Allowed exact locations after their gates:
 - `location = /api/admin/orders`
 - `location = /api/admin/users`
 - `location = /api/admin/content`
+- `location = /api/admin/pim`
+- `location = /api/admin/prices`
+- `location = /api/admin/catalog`
+- `location = /api/admin/import-batches`
+- `location = /api/admin/product-images`
 
 Do not add wildcard `/api/admin/` or generic `/api/` proxy to Rust during these stages.
 
