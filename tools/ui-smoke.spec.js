@@ -280,6 +280,18 @@ test("contacts maps and marketplace badges stay visible", async ({ page }) => {
   await expect(page.locator("[data-contacts-legal-address]")).toContainText("431815");
   await expect(page.locator("[data-contacts-production-address]")).toContainText("305014");
   await expect(page.locator(".map-panel")).toHaveCount(2);
+  await expect(page.locator("#yandexMapLink-production")).toBeVisible();
+  await expect(page.locator("#yandexMapLink-legal")).toHaveAttribute("rel", /noreferrer/);
+  await expect(page.locator("#yandexMapLink-production")).toHaveAttribute("aria-label", /филиала/);
+  await page.locator("#yandexMapLink-production").focus();
+  await expect
+    .poll(() =>
+      page.locator("#yandexMapLink-production").evaluate((node) => {
+        const styles = window.getComputedStyle(node);
+        return (styles.outlineStyle !== "none" && Number.parseFloat(styles.outlineWidth) >= 2) || styles.boxShadow !== "none";
+      })
+    )
+    .toBe(true);
   await expectNoHorizontalOverflow(page, "contacts maps mobile");
 
   await page.goto(`${BASE_URL}/marketplaces.html`, { waitUntil: "domcontentloaded" });
@@ -294,6 +306,15 @@ test("contacts maps and marketplace badges stay visible", async ({ page }) => {
     await expect(link).toHaveAttribute("target", "_blank");
     await expect(link).toHaveAttribute("rel", /noopener/);
     await expect(link).toHaveAttribute("rel", /noreferrer/);
+    await link.focus();
+    await expect
+      .poll(() =>
+        link.evaluate((node) => {
+          const styles = window.getComputedStyle(node);
+          return (styles.outlineStyle !== "none" && Number.parseFloat(styles.outlineWidth) >= 2) || styles.boxShadow !== "none";
+        })
+      )
+      .toBe(true);
   }
   await expectNoHorizontalOverflow(page, "marketplaces mobile");
 });
