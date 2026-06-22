@@ -267,6 +267,58 @@ async function securitySmoke() {
     assert(managerAudit.response.status === 403, "manager should not read admin audit summary");
     const managerContent = await request(baseUrl, "/api/admin/content", { cookie: managerCookie, allowFailure: true });
     assert(managerContent.response.status === 403, "manager should not read admin content");
+    resetRateLimits();
+    for (let i = 0; i < 3; i += 1) {
+      const attempt = await request(baseUrl, "/api/admin/content", {
+        method: "PATCH",
+        cookie: adminCookie,
+        body: { reviewId: "" },
+        allowFailure: true,
+      });
+      assert(attempt.response.status === 400 && attempt.payload.error === "invalid_review", "pre-limit content attempt should keep validation error");
+    }
+    const contentLimited = await request(baseUrl, "/api/admin/content", {
+      method: "PATCH",
+      cookie: adminCookie,
+      body: { reviewId: "" },
+      allowFailure: true,
+    });
+    assert(contentLimited.response.status === 429 && contentLimited.payload.error === "rate_limited", "admin content burst should return 429");
+    resetRateLimits();
+    for (let i = 0; i < 3; i += 1) {
+      const attempt = await request(baseUrl, "/api/admin/orders", {
+        method: "PATCH",
+        cookie: adminCookie,
+        body: { id: "missing", status: "bad-status" },
+        allowFailure: true,
+      });
+      assert(attempt.response.status === 400 && attempt.payload.error === "invalid_status", "pre-limit admin order attempt should keep validation error");
+    }
+    const orderLimited = await request(baseUrl, "/api/admin/orders", {
+      method: "PATCH",
+      cookie: adminCookie,
+      body: { id: "missing", status: "bad-status" },
+      allowFailure: true,
+    });
+    assert(orderLimited.response.status === 429 && orderLimited.payload.error === "rate_limited", "admin order burst should return 429");
+    resetRateLimits();
+    for (let i = 0; i < 3; i += 1) {
+      const attempt = await request(baseUrl, "/api/admin/users", {
+        method: "POST",
+        cookie: adminCookie,
+        body: { email: "not-an-email" },
+        allowFailure: true,
+      });
+      assert(attempt.response.status === 400 && attempt.payload.error === "invalid_email", "pre-limit admin user attempt should keep validation error");
+    }
+    const userLimited = await request(baseUrl, "/api/admin/users", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { email: "not-an-email" },
+      allowFailure: true,
+    });
+    assert(userLimited.response.status === 429 && userLimited.payload.error === "rate_limited", "admin user burst should return 429");
+    resetRateLimits();
     const importPreview = await request(baseUrl, "/api/admin/import-batches", {
       method: "POST",
       cookie: adminCookie,

@@ -1,4 +1,5 @@
 const { isValidEmail, normalizeEmail, normalizePhone, publicUser, requireUser } = require("../_lib/auth");
+const { checkStoreRateLimit } = require("../_lib/api-security");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { saveStore } = require("../_lib/store");
 
@@ -86,6 +87,10 @@ module.exports = async function handler(req, res) {
         return sendJson(res, 200, { user: { ...publicUser(found), orders } });
       }
       return sendJson(res, 200, { users: Object.values(store.users).map(publicUser) });
+    }
+    if (["POST", "PATCH", "DELETE"].includes(req.method)) {
+      const limited = await checkStoreRateLimit(req, { key: `admin:users:write:${String(user.email || "").toLowerCase()}`, limit: 80 });
+      if (limited) throw limited;
     }
     if (req.method === "POST") {
       if (user.role !== "admin") return sendJson(res, 403, { error: "forbidden", message: "Сотрудников может добавлять только администратор." });

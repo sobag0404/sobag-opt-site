@@ -1,5 +1,6 @@
 const { requireUser } = require("../_lib/auth");
 const { auditRecord } = require("../_lib/admin-audit");
+const { checkStoreRateLimit } = require("../_lib/api-security");
 const { handleError, methodNotAllowed, readJson, sendJson } = require("../_lib/http");
 const { getContent, saveContent, saveStore } = require("../_lib/store");
 
@@ -18,6 +19,10 @@ module.exports = async function handler(req, res) {
       }
       const content = await getContent();
       return sendJson(res, 200, content || { content: {}, updatedAt: null, source: "empty" });
+    }
+    if (req.method === "PATCH" || req.method === "PUT") {
+      const limited = await checkStoreRateLimit(req, { key: `admin:content:write:${String(user.email || "").toLowerCase()}`, limit: 80 });
+      if (limited) throw limited;
     }
     if (req.method === "PATCH") {
       const data = await readJson(req, { maxBytes: 512 * 1024 });
