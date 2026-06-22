@@ -5,4 +5,5 @@ Next implementation packet:
 4. Pricing/promo preservation now has an explicit guard: order totals continue to use trusted base catalog prices even when promo fields exist. Promo order-pricing precedence remains a business-rule decision.
 5. Backup/evidence and production smoke hardening added media-image metadata evidence plus live-safe smoke checks for canonical `/index.html -> /`, catalog-query non-zero prices, public price-list rows, and anonymous admin media denial. Keep watching live gates after deploy: health, catalog facets, images, cache headers, and admin media upload cleanup. Remaining business decision: backend XLSX styling.
 6. Rust parity cleanup updated the account/orders/admin cutover runbook and audit to the completed exact-route map; no targeted API route remains in the old "do not switch yet" state.
+7. Buyer review protection now has a dedicated AutoFix contract audit for Node/Rust eligibility markers and smoke coverage: anonymous/no-order/other-user/pending/duplicate are denied, completed-order buyer review is allowed, and burst writes return `429`.
 Status: READY_WITH_WARNINGS. Score: 90/100. Report: reports/project-readiness/latest.md.

@@ -100,6 +100,7 @@
     "plan:photos": "node tools/photo-migration-manifest.mjs",
     "audit:vps-release": "node tools/vps-release-audit.mjs",
     "audit:access": "node tools/access-audit.mjs",
+    "audit:reviews": "node tools/review-eligibility-contract-audit.mjs",
     "audit:errors": "node tools/error-log-audit.mjs",
     "audit:project-readiness": "python tools/project_readiness_agent/run.py"
   },
