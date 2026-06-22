@@ -1539,7 +1539,10 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   await waitForLiveProducts(page);
   await page.locator("[data-open-product]").first().click();
   await expect(page.locator(".review-form")).toBeVisible();
+  await expect(page.locator('[data-review-star="5"]')).toHaveAttribute("aria-pressed", "true");
   await page.locator('[data-review-star="3"]').click();
+  await expect(page.locator('[data-review-star="3"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-review-star="4"]')).toHaveAttribute("aria-pressed", "false");
   await page.locator('.review-form textarea[name="text"]').fill("QA review text");
   await page.locator(".review-form").getByRole("button", { name: /Отправить отзыв/i }).click();
   await expect(page.locator("#toast")).toContainText("Отзыв отправлен");

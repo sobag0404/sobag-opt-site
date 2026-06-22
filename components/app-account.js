@@ -452,7 +452,9 @@ function setReviewFormRating(form, rating) {
   const input = form?.querySelector('input[name="rating"]');
   if (input) input.value = prepared;
   form?.querySelectorAll("[data-review-star]").forEach((button) => {
-    button.classList.toggle("is-active", Number(button.dataset.reviewStar || 0) <= prepared);
+    const active = Number(button.dataset.reviewStar || 0) <= prepared;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
   });
 }
 function uniqueTextList(values, limit = 10, itemLimit = 240) {

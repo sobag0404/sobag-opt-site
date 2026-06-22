@@ -3128,7 +3128,7 @@ function reviewFormHtml(product) {
         <span>Ваша оценка</span>
         <div class="review-rating-input" aria-label="Оценка товара">
           ${[1, 2, 3, 4, 5]
-            .map((value) => `<button class="is-active" type="button" data-review-star="${value}" aria-label="${value} из 5">★</button>`)
+            .map((value) => `<button class="is-active" type="button" data-review-star="${value}" aria-pressed="true" aria-label="${value} из 5">★</button>`)
             .join("")}
         </div>
       </div>
