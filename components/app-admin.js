@@ -885,14 +885,14 @@ function pricePreviewRowsHtml() {
   ].filter(Boolean);
   if (!state.pricePreview.length && !errors.length) {
     return `
-      <div class="admin-price-preview__empty">
+      <div class="admin-price-preview__empty" role="status" aria-live="polite">
         <strong>Предпросмотр пока пуст.</strong>
         <span>Загрузите CSV/XLSX или подготовьте массовое изменение по фильтру. Кнопка применения включится после успешной валидации.</span>
       </div>
     `;
   }
   return `
-    ${summary.length ? `<div class="admin-price-validation-summary"><strong>Проверка импорта</strong><span>${escapeHtml(summary.join(" · "))}</span></div>` : ""}
+    ${summary.length ? `<div class="admin-price-validation-summary" role="status" aria-live="polite"><strong>Проверка импорта</strong><span>${escapeHtml(summary.join(" · "))}</span></div>` : ""}
     ${errors.length ? `
       <div class="admin-price-preview__errors" role="alert">
         <strong>Ошибки импорта: ${errors.length}</strong>

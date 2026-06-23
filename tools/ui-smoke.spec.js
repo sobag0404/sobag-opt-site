@@ -209,6 +209,8 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await expect(page.locator('.admin-product-export a[href="/api/admin/prices?template=1"]')).toContainText("Шаблон импорта");
   await expect(page.locator(".admin-price-import-guide")).toContainText("promo_price");
   await expect(page.locator(".admin-price-import-guide")).toContainText("starts_at");
+  await expect(page.locator(".admin-price-preview__empty")).toHaveAttribute("role", "status");
+  await expect(page.locator(".admin-price-preview__empty")).toHaveAttribute("aria-live", "polite");
   await expect(page.locator(".admin-price-preview__empty")).toContainText("валидации");
   await expect(page.locator("[data-admin-apply-price-preview]")).toBeDisabled();
   await expect(page.locator('.admin-product-export a[href="/api/admin/prices?template=1"]')).toHaveAttribute("aria-label", "Скачать шаблон импорта цен");
@@ -221,6 +223,8 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await expect(page.locator(".admin-price-history")).toContainText("1 акций");
   await page.locator("[data-admin-price-select]").first().check();
   await page.locator("[data-admin-price-bulk-form]").evaluate((form) => form.requestSubmit());
+  await expect(page.locator(".admin-price-validation-summary")).toHaveAttribute("role", "status");
+  await expect(page.locator(".admin-price-validation-summary")).toHaveAttribute("aria-live", "polite");
   await expect(page.locator("[data-admin-apply-price-preview]")).toBeEnabled();
   await expect(page.locator("[data-admin-apply-price-preview]")).toHaveAttribute("title", "Применить проверенный предпросмотр цен");
   page.once("dialog", async (dialog) => {
