@@ -2890,7 +2890,7 @@ function productCardHtml(product) {
   return `
         <article class="product-card">
           <div class="product-card__image">
-            <button class="product-card__image-button" type="button" data-open-product="${productId}" aria-label="Открыть ${productName}">
+            <button class="product-card__image-button" type="button" data-open-product="${productId}" aria-label="Открыть ${productName}" title="Открыть ${productName}">
               ${productPictureHtml(product, product.image, product.name, imageAttrs(640, 640))}
             </button>
             <button class="favorite-button${favorite}" type="button" title="${favoritePressed === "true" ? "Убрать из избранного" : "В избранное"}" data-favorite="${productId}" aria-pressed="${favoritePressed}">
@@ -3224,7 +3224,7 @@ function productModalHtml(product) {
                 ${gallery
                   .map(
                     (image, index) => `
-                      <button class="product-gallery__thumb${index === 0 ? " is-active" : ""}" type="button" data-detail-image="${image}" aria-label="Фото ${index + 1}">
+                      <button class="product-gallery__thumb${index === 0 ? " is-active" : ""}" type="button" data-detail-image="${image}" aria-label="Фото ${index + 1}" title="Фото ${index + 1}">
                         ${productPictureHtml(product, image, "", imageAttrs(160, 160))}
                       </button>
                     `

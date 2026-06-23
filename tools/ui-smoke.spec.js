@@ -1114,6 +1114,7 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   const firstCard = page.locator(".product-card").first();
   const baseSku = await firstCard.locator(".product-card__sku").innerText();
   await expect(baseSku.trim()).toMatch(/^opt_/i);
+  await expect(firstCard.locator(".product-card__image-button")).toHaveAttribute("title", /Открыть/);
   const fallbackImageSrc = await firstCard.locator('[data-product-image="true"]').first().evaluate((img) => {
     img.closest("picture")?.querySelectorAll("source").forEach((source) => source.remove());
     delete img.dataset.fallbackApplied;
@@ -1150,6 +1151,7 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await firstCard.locator("[data-open-product]").first().click();
 
   await expect(page.locator("#productModal")).toBeVisible();
+  await expect(page.locator(".product-gallery__thumb").first()).toHaveAttribute("title", "Фото 1");
   await expect(page.locator("#detailQty")).toHaveValue("1");
   await page.locator("#detailQty").fill("100");
   await expect(page.locator("#detailQty")).toHaveValue("100");

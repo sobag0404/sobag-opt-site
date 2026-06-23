@@ -1,4 +1,5 @@
 Next implementation packet:
+0j. UI continuation after `c7ac0e2`: product card media buttons and gallery thumbnails now include matching titles for hover/focus discoverability; app cache-bust updated. Local check + UI smoke + diff-check pass.
 0i. UI continuation after `ee1fdc7`: checkout button now exposes locked/ready aria-disabled state and a title tied to the min-order hint; cart.js cache-bust updated. Local check + UI smoke + diff-check pass.
 0h. UI continuation after `65c1d73`: review login CTA now has explicit label/title, eligible review form and textarea reference moderation help text, and smoke covers anonymous/eligible accessibility. Local check + UI smoke + diff-check pass.
 0g. UI continuation after `c70ae7b`: price-list download/status UX now marks CSV format on catalog/detail download links and announces empty/error price preview states; local check + UI smoke + diff-check pass.
