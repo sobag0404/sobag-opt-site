@@ -129,6 +129,18 @@ async function securitySmoke() {
     const buyerCookie = buyerRegister.cookie;
     const buyerAdmin = await request(baseUrl, "/api/admin/orders", { cookie: buyerCookie, allowFailure: true });
     assert(buyerAdmin.response.status === 403, "buyer must not access admin orders");
+    const anonymousCartWrite = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      body: { cartItems: [["anonymous-line", { qty: 1, variant: { sku: "anonymous-cart-sku", price: 10 } }]] },
+      allowFailure: true,
+    });
+    assert(anonymousCartWrite.response.status === 401, "anonymous account/cart write should be rejected");
+    const anonymousOrderPatch = await request(baseUrl, "/api/orders", {
+      method: "PATCH",
+      body: { id: "SO-ANON", commentText: "anonymous update" },
+      allowFailure: true,
+    });
+    assert(anonymousOrderPatch.response.status === 401, "anonymous buyer order patch should be rejected");
     const malformedOrderPatch = await request(baseUrl, "/api/orders", {
       method: "PATCH",
       cookie: buyerCookie,
@@ -139,6 +151,7 @@ async function securitySmoke() {
       malformedOrderPatch.response.status === 400 && malformedOrderPatch.payload.error === "invalid_order_id",
       "malformed buyer order id should return 400"
     );
+    resetRateLimits();
     const cartMerge = await request(baseUrl, "/api/auth/me", {
       method: "PUT",
       cookie: buyerCookie,
@@ -163,6 +176,7 @@ async function securitySmoke() {
       allowFailure: true,
     });
     assert(staleCart.response.status === 409 && staleCart.payload.error === "cart_conflict", "stale cart write should return 409");
+    resetRateLimits();
     const freshCart = await request(baseUrl, "/api/auth/me", {
       method: "PUT",
       cookie: buyerCookie,
