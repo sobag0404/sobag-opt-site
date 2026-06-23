@@ -703,6 +703,7 @@ function updateYandexMap(address, target = "") {
   if (link) {
     link.hidden = false;
     link.href = `https://yandex.ru/maps/?text=${encoded}`;
+    link.title = `Открыть на карте: ${prepared}`;
   }
 }
 const MARKETPLACE_LINKS = [

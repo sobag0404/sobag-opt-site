@@ -1,4 +1,5 @@
 Next implementation packet:
+0l. UI continuation after `f460f3b`: contacts map links now expose explicit hover/focus titles with the resolved address while preserving safe external map links; app cache-bust updated. Local check + UI smoke + diff-check pass.
 0k. UI continuation after `6ebc90b`: catalog category skeleton/ready container now exposes aria-busy/live/label status so cold-load waits are intentional without showing stale counts; app cache-bust updated. Local check + UI smoke + diff-check pass.
 0j. UI continuation after `c7ac0e2`: product card media buttons and gallery thumbnails now include matching titles for hover/focus discoverability; app cache-bust updated. Local check + UI smoke + diff-check pass.
 0i. UI continuation after `ee1fdc7`: checkout button now exposes locked/ready aria-disabled state and a title tied to the min-order hint; cart.js cache-bust updated. Local check + UI smoke + diff-check pass.

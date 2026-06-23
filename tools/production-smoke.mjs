@@ -26,7 +26,7 @@ const DEFAULT_PATHS = [
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY_MS = 5000;
-const CURRENT_APP_JS_VERSION = "20260623-category-status";
+const CURRENT_APP_JS_VERSION = "20260623-map-title";
 const CURRENT_APP_DATA_VERSION = "20260622-catalog-cache";
 const ANONYMOUS_DENIED_PATHS = new Set([
   "/api/auth/me",

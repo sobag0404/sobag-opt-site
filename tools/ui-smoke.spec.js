@@ -317,6 +317,7 @@ test("contacts maps and marketplace badges stay visible", async ({ page }) => {
   await expect(page.locator(".map-panel")).toHaveCount(2);
   await expect(page.locator("#yandexMapLink-production")).toBeVisible();
   await expect(page.locator("#yandexMapLink-legal")).toHaveAttribute("rel", /noreferrer/);
+  await expect(page.locator("#yandexMapLink-production")).toHaveAttribute("title", /Открыть на карте/);
   await expect(page.locator("#yandexMapLink-production")).toHaveAttribute("aria-label", /филиала/);
   await page.locator("#yandexMapLink-production").focus();
   await expect
