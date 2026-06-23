@@ -29,7 +29,6 @@ const DEFAULT_RETRY_DELAY_MS = 5000;
 const CURRENT_APP_JS_VERSION = "20260623-category-fast";
 const CURRENT_APP_DATA_VERSION = "20260622-catalog-cache";
 const ANONYMOUS_DENIED_PATHS = new Set([
-  "/api/auth/me",
   "/api/admin/catalog",
   "/api/admin/content",
   "/api/admin/import-batches",
@@ -135,6 +134,7 @@ function buildUrl(baseUrl, path) {
 function expectedKind(path) {
   if (path === "/api/health") return "health";
   if (path === "/index.html") return "canonical-redirect";
+  if (path === "/api/auth/me") return "auth-me";
   if (path.startsWith("/api/catalog-query")) return "catalog-query";
   if (path.startsWith("/api/price-list")) return "price-list";
   if (ANONYMOUS_DENIED_PATHS.has(path)) return "anonymous-denied";
@@ -192,6 +192,18 @@ function assertHealth(path, contentType, body) {
   }
   if (payload.storage && payload.storage !== "ready") {
     throw new Error(`${path}: storage must be ready, got ${payload.storage}`);
+  }
+  return payload;
+}
+
+function assertAuthMe(path, contentType, body) {
+  const payload = assertJson(path, contentType, body);
+  const serialized = JSON.stringify(payload);
+  if (/passwordHash|password_hash/i.test(serialized)) {
+    throw new Error(`${path}: auth response must not expose password hashes`);
+  }
+  if (payload.user && typeof payload.user !== "object") {
+    throw new Error(`${path}: user must be an object or null`);
   }
   return payload;
 }
@@ -321,6 +333,8 @@ async function checkPath(baseUrl, path, timeoutMs) {
     assertHtml(path, contentType, body);
   } else if (kind === "health") {
     payload = assertHealth(path, contentType, body);
+  } else if (kind === "auth-me") {
+    payload = assertAuthMe(path, contentType, body);
   } else if (kind === "catalog-query") {
     payload = assertCatalogQuery(path, contentType, body);
   } else if (kind === "price-list") {
@@ -437,6 +451,11 @@ async function createSelfTestServer() {
     if (req.url === "/api/health") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ ok: true, storage: "ready", objectStorage: { provider: "s3-compatible", configured: false } }));
+      return;
+    }
+    if (req.url === "/api/auth/me") {
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ ok: true, user: null }));
       return;
     }
     if (req.url === "/api/catalog-query?pageSize=1") {
