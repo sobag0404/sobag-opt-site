@@ -1,4 +1,5 @@
 Next implementation packet:
+0a. UI continuation after `9693839`: price-list download links now use stable `sobag-price-list.csv`, explicit CSV accessibility text, and a short busy/toast state; local check + UI smoke pass, live/GitHub still blocked from this shell.
 0. UI continuation after `43e8155`: admin price import apply now asks for explicit confirmation before applying previewed local/server changes; local check + UI smoke pass, while live/GitHub checks remain blocked from this shell.
 1. Rust cutover remains complete for the targeted VPS exact routes. Latest pre-slice verified baseline: main `eca1c83`, `autofix-check` `27873133522` PASS, `rust-check` `27873133515` PASS, `vps-deploy` `27873157596` PASS, and `production-smoke` `27873366515` PASS.
 1a. Deploy/cache hardening: catalog HTML now references `app.js?v=20260622-catalog-counts`, production smoke checks `/catalog.html` for that cache-bust value, and the catalog-home summary guard rejects page-sized partial counts such as stale `48 товаров`.

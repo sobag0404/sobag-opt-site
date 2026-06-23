@@ -703,6 +703,14 @@ test("catalog home first load uses server category summary over stale fallback",
       body: JSON.stringify(priceListStatus === 200 ? { rows: priceListRows } : { error: "qa_price_list_down", message: "QA price list error" }),
     });
   });
+  await page.route("**/api/price-list", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/csv; charset=utf-8",
+      headers: { "content-disposition": 'attachment; filename="sobag-price-list.csv"' },
+      body: "Категория;Цена\nПодушка велюр 40x40;220\n",
+    });
+  });
 
   await page.goto(`${BASE_URL}/catalog.html?qa=category-summary`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(100);
@@ -716,6 +724,12 @@ test("catalog home first load uses server category summary over stale fallback",
     expect(tileText).toContain(String(row.count));
   }
   await expect(page.locator(".catalog-price-button")).toContainText("Прайс");
+  await expect(page.locator(".catalog-price-button")).toHaveAttribute("download", "sobag-price-list.csv");
+  await expect(page.locator(".catalog-price-button")).toHaveAttribute("title", "Скачать прайс CSV для Excel");
+  const priceDownload = page.waitForEvent("download");
+  await page.locator(".catalog-price-button").click();
+  expect((await priceDownload).suggestedFilename()).toMatch(/sobag-price-list\.csv/);
+  await expect(page.locator("#toast")).toContainText("Прайс CSV скачивается");
   await expect(page.locator(".price-list-preview__row--promo .price-list-preview__badge")).toContainText("Акция");
   await expect(page.locator(".price-list-preview")).toContainText("199");
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -1115,6 +1129,8 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator("#detailQty")).toHaveValue("0");
   await expect(page.locator(".variant-matrix")).toHaveCount(0);
   await expect(page.locator('.detail-price-download[href="/api/price-list"]')).toBeVisible();
+  await expect(page.locator('.detail-price-download[href="/api/price-list"]')).toHaveAttribute("download", "sobag-price-list.csv");
+  await expect(page.locator('.detail-price-download[href="/api/price-list"]')).toHaveAttribute("aria-label", "Скачать прайс CSV");
   await expect(page.locator(".copy-sku-button--detail")).toHaveAttribute("title", "Скопировать артикул");
   await expect(page.locator(".copy-sku-button--detail")).toHaveAttribute("data-tooltip", "Скопировать артикул");
   await expect(page.locator("#selectedSku")).toContainText(/^opt_/i);

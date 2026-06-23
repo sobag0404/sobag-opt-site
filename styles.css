@@ -199,6 +199,12 @@ a {
   background: var(--on-dark);
 }
 
+.primary-button[aria-busy="true"],
+.ghost-button[aria-busy="true"] {
+  opacity: 0.74;
+  pointer-events: none;
+}
+
 .search {
   position: relative;
   display: flex;

@@ -3281,7 +3281,7 @@ function productModalHtml(product) {
                 <small id="detailDiscount">${basketDiscountHint}</small>
               </div>
             </div>
-            <a class="ghost-button detail-price-download" href="/api/price-list" title="Скачать прайс" aria-label="Скачать прайс">
+            <a class="ghost-button detail-price-download" href="/api/price-list" download="sobag-price-list.csv" data-price-download title="Скачать прайс CSV для Excel" aria-label="Скачать прайс CSV">
               <i data-lucide="download"></i>
               Прайс
             </a>
@@ -4494,6 +4494,11 @@ function boot() {
     const link = event.target.closest?.("a[href]");
     if (!link) return;
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (link.dataset.priceDownload !== undefined) {
+      link.setAttribute("aria-busy", "true");
+      showToast("Прайс CSV скачивается. Если файл не открылся, проверьте загрузки браузера.");
+      window.setTimeout(() => link.removeAttribute("aria-busy"), 1800);
+    }
     if (link.target && link.target !== "_self") return;
     const href = link.getAttribute("href") || "";
     if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.endsWith(".pdf")) return;
