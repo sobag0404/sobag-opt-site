@@ -188,6 +188,24 @@ async function main() {
     });
     assert.equal(applyRoute.response.status, 200);
     assert.equal(applyRoute.payload.history?.type, "price_import");
+    const skuOnlyCsv = `"sku";"price"\n"${targetGroup.skus[0]}";"${targetGroup.price}"\n`;
+    const skuPreviewRoute = await request(baseUrl, "/api/admin/prices", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { action: "preview", csv: skuOnlyCsv },
+    });
+    assert.equal(skuPreviewRoute.response.status, 200);
+    assert.equal(skuPreviewRoute.payload.errors.length, 0);
+    assert.equal(skuPreviewRoute.payload.changes[0]?.skus?.length, 1, "SKU override preview should target exactly one SKU");
+    assert.equal(skuPreviewRoute.payload.changes[0]?.skus?.[0], targetGroup.skus[0]);
+    const promoCsv = `"group";"promoPrice";"promoActive";"promoStart";"promoEnd"\n"${targetGroup.name}";"${targetGroup.price}";"true";"2026-01-01";"2099-01-31"\n`;
+    const promoApplyRoute = await request(baseUrl, "/api/admin/prices", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { action: "apply", csv: promoCsv },
+    });
+    assert.equal(promoApplyRoute.response.status, 200);
+    assert.ok(Number(promoApplyRoute.payload.history?.promoChangeCount || 0) > 0, "active promo import should be counted in history");
     const duplicateCsv = `"SKU";"Цена"\n"${targetGroup.skus[0]}";"${targetGroup.price}"\n"${targetGroup.skus[0]}";"${targetGroup.price}"\n`;
     const duplicateRoute = await request(baseUrl, "/api/admin/prices", {
       method: "POST",
