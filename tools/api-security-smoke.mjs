@@ -538,6 +538,24 @@ async function securitySmoke() {
       body: reviewBody,
     });
     assert(allowedReview.payload.user?.reviews?.some((review) => review.text === "Verified buyer review"), "eligible completed order should allow review");
+    const wrongProductReview = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: buyerCookie,
+      body: {
+        review: {
+          productId: "not-ordered-product",
+          baseSku: "not_ordered_sku",
+          productName: "Not ordered product",
+          rating: 5,
+          text: "Should not pass without matching purchased SKU",
+        },
+      },
+      allowFailure: true,
+    });
+    assert(
+      wrongProductReview.response.status === 403 && wrongProductReview.payload.error === "REVIEW_ORDER_REQUIRED",
+      "completed order should not allow review for a different product/SKU"
+    );
 
     const otherBuyer = await request(baseUrl, "/api/auth/register", {
       method: "POST",
