@@ -11,16 +11,33 @@ const DEFAULT_PATHS = [
   "/catalog",
   "/cart",
   "/api/health",
+  "/api/auth/me",
   "/api/catalog-query?pageSize=1",
   "/api/price-list?format=json",
   "/api/price-list",
+  "/api/admin/catalog",
+  "/api/admin/content",
+  "/api/admin/import-batches",
+  "/api/admin/orders",
+  "/api/admin/prices",
   "/api/admin/product-images",
+  "/api/admin/users",
 ];
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY_MS = 5000;
 const CURRENT_APP_JS_VERSION = "20260623-icon-refresh";
 const CURRENT_APP_DATA_VERSION = "20260622-catalog-cache";
+const ANONYMOUS_DENIED_PATHS = new Set([
+  "/api/auth/me",
+  "/api/admin/catalog",
+  "/api/admin/content",
+  "/api/admin/import-batches",
+  "/api/admin/orders",
+  "/api/admin/prices",
+  "/api/admin/product-images",
+  "/api/admin/users",
+]);
 
 function parseArgs(argv) {
   const options = {
@@ -120,7 +137,7 @@ function expectedKind(path) {
   if (path === "/index.html") return "canonical-redirect";
   if (path.startsWith("/api/catalog-query")) return "catalog-query";
   if (path.startsWith("/api/price-list")) return "price-list";
-  if (path === "/api/admin/product-images") return "anonymous-denied";
+  if (ANONYMOUS_DENIED_PATHS.has(path)) return "anonymous-denied";
   if (path.startsWith("/api/")) return "json";
   return "html";
 }
@@ -407,7 +424,7 @@ async function createSelfTestServer() {
       res.end('\uFEFF"Категория/группа";"Цена"\n"Group A";"100"\n');
       return;
     }
-    if (req.url === "/api/admin/product-images") {
+    if (ANONYMOUS_DENIED_PATHS.has(req.url || "")) {
       res.writeHead(401, { "content-type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ error: "unauthorized" }));
       return;
