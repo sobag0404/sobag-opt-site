@@ -396,6 +396,10 @@ i[data-lucide="shopping-cart"]::before {
   content: "\25A1";
 }
 
+i[data-lucide="shopping-basket"]::before {
+  content: "\25A1";
+}
+
 i[data-lucide="layout-grid"]::before {
   content: "\25A6";
 }
@@ -470,6 +474,19 @@ i[data-lucide="mail"]::before {
 
 i[data-lucide="save"]::before {
   content: "\2713";
+}
+
+i[data-lucide="check"]::before,
+i[data-lucide="user-check"]::before {
+  content: "\2713";
+}
+
+i[data-lucide="printer"]::before {
+  content: "P";
+}
+
+i[data-lucide="file-text"]::before {
+  content: "F";
 }
 
 i[data-lucide="file-lock-2"]::before {

@@ -562,6 +562,10 @@ test("empty cart and anonymous account states stay safe", async ({ page }) => {
   await expect(page.locator('.marketplace-links--footer a[href="https://www.wildberries.ru/seller/167187"]')).toBeVisible();
   await expect(page.locator('.marketplace-links--footer a[href="https://ozon.ru/s/sobag"]')).toBeVisible();
   await expect(page.locator('.marketplace-links--footer a[href="https://market.yandex.ru/cc/84GXiW"]')).toBeVisible();
+  const cartIconFallbacks = await page.evaluate(() =>
+    ["save", "download", "printer", "file-text", "send"].map((name) => getComputedStyle(document.querySelector(`i[data-lucide='${name}']`), "::before").content)
+  );
+  expect(cartIconFallbacks).not.toContain('"•"');
   await expect(page.locator("#cartPageEmpty")).toBeVisible();
   await expect(page.locator("#checkoutButton")).toBeDisabled();
   await expect(page.locator("#cartPageMinHint")).toContainText("До минимальной суммы осталось");
