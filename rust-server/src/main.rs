@@ -585,10 +585,12 @@ async fn catalog_query(
     uri: Uri,
 ) -> AppResult<(HeaderMap, Json<CatalogResponse>)> {
     let query = parse_catalog_query(uri.query().unwrap_or(""));
-    let items = load_cards(&state.pool, &query).await?;
-    let total = load_count(&state.pool, &query).await?;
-    let facets = load_facets(&state.pool, &query, false).await?;
-    let facet_options = load_facets(&state.pool, &query, true).await?;
+    let (items, total, facets, facet_options) = tokio::try_join!(
+        load_cards(&state.pool, &query),
+        load_count(&state.pool, &query),
+        load_facets(&state.pool, &query, false),
+        load_facets(&state.pool, &query, true)
+    )?;
     let next_offset = query.offset + items.len() as i64;
     let page_size = query.page_size;
     let page_info = PageInfo {

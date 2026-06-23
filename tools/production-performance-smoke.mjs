@@ -9,6 +9,8 @@ const DEFAULT_QUERY_MAX_BYTES = 220 * 1024;
 const DEFAULT_DETAIL_MAX_BYTES = 700 * 1024;
 const DEFAULT_STATIC_MAX_BYTES = 520 * 1024;
 const DEFAULT_MAX_MS = 5000;
+const DEFAULT_CATALOG_API_MAX_MS = 3000;
+const DEFAULT_CATALOG_FIRST_LOAD_MAX_MS = 4500;
 
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
@@ -18,6 +20,8 @@ function parseArgs(argv = process.argv.slice(2)) {
     detailMaxBytes: DEFAULT_DETAIL_MAX_BYTES,
     staticMaxBytes: DEFAULT_STATIC_MAX_BYTES,
     maxMs: DEFAULT_MAX_MS,
+    catalogApiMaxMs: DEFAULT_CATALOG_API_MAX_MS,
+    catalogFirstLoadMaxMs: DEFAULT_CATALOG_FIRST_LOAD_MAX_MS,
     json: false,
     selfTest: false,
   };
@@ -30,13 +34,15 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (token === "--detail-max-bytes") args.detailMaxBytes = Number(argv[++index] || args.detailMaxBytes);
     else if (token === "--static-max-bytes") args.staticMaxBytes = Number(argv[++index] || args.staticMaxBytes);
     else if (token === "--max-ms") args.maxMs = Number(argv[++index] || args.maxMs);
+    else if (token === "--catalog-api-max-ms") args.catalogApiMaxMs = Number(argv[++index] || args.catalogApiMaxMs);
+    else if (token === "--catalog-first-load-max-ms") args.catalogFirstLoadMaxMs = Number(argv[++index] || args.catalogFirstLoadMaxMs);
     else if (token === "--json") args.json = true;
     else if (token === "--self-test") args.selfTest = true;
     else if (token === "--help") {
       console.log(`Usage:
   node tools/production-performance-smoke.mjs --base-url https://sobag-shop.online
 
-Read-only smoke for compact catalog API payloads and cache headers.`);
+Read-only smoke for compact catalog API payloads, first-load budgets, and cache headers.`);
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${token}`);
@@ -118,6 +124,12 @@ function assertFast(result, maxMs) {
   assert(result.elapsedMs <= maxMs, `${result.path}: ${result.elapsedMs}ms exceeds ${maxMs}ms`);
 }
 
+function assertFirstLoadFast(name, checks, maxMs) {
+  const elapsedMs = checks.reduce((sum, check) => sum + Number(check.elapsedMs || 0), 0);
+  assert(elapsedMs <= maxMs, `${name}: ${elapsedMs}ms exceeds ${maxMs}ms`);
+  return elapsedMs;
+}
+
 async function runPerformanceSmoke(rawBaseUrl, args) {
   const base = normalizeBaseUrl(rawBaseUrl);
   const checks = [];
@@ -128,6 +140,13 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
   assert(home.contentType.includes("text/html"), `${home.path}: expected text/html`);
   assert((home.cacheControl || "").includes("no-cache") || (home.cacheControl || "").includes("max-age=0"), `${home.path}: HTML shell should revalidate`);
   checks.push({ name: "home-html", path: home.path, bytes: home.bytes, elapsedMs: home.elapsedMs });
+
+  const catalogHtml = await fetchText(base, "/catalog.html", args);
+  assert(catalogHtml.ok, `${catalogHtml.path}: expected 2xx, got ${catalogHtml.status}`);
+  assert(catalogHtml.contentType.includes("text/html"), `${catalogHtml.path}: expected text/html`);
+  assert((catalogHtml.cacheControl || "").includes("no-cache") || (catalogHtml.cacheControl || "").includes("max-age=0"), `${catalogHtml.path}: catalog HTML shell should revalidate`);
+  assertFast(catalogHtml, args.maxMs);
+  checks.push({ name: "catalog-html", path: catalogHtml.path, bytes: catalogHtml.bytes, elapsedMs: catalogHtml.elapsedMs });
 
   const canonical = await fetchText(base, "/index.html", args, { method: "HEAD", redirect: "manual" });
   assert([301, 308].includes(canonical.status), `${canonical.path}: expected canonical redirect, got ${canonical.status}`);
@@ -140,7 +159,7 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
 
   const query = await fetchText(base, "/api/catalog-query?pageSize=48&sort=popular", args);
   const queryPayload = parseJson(query);
-  assertFast(query, args.maxMs);
+  assertFast(query, args.catalogApiMaxMs);
   assertPublicCache(query);
   assert(query.bytes <= args.queryMaxBytes, `${query.path}: ${query.bytes} bytes exceeds ${args.queryMaxBytes}`);
   assert(queryPayload.pageInfo?.pageSize === 48, "catalog-query should use 48-card pages");
@@ -153,9 +172,22 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
   });
   checks.push({ name: "catalog-query", path: query.path, bytes: query.bytes, elapsedMs: query.elapsedMs });
 
+  const summaryQuery = await fetchText(base, "/api/catalog-query?pageSize=1&sort=popular", args);
+  const summaryPayload = parseJson(summaryQuery);
+  assertFast(summaryQuery, args.catalogApiMaxMs);
+  assertPublicCache(summaryQuery);
+  assert(summaryPayload.total > 1, "catalog first-load summary should expose full catalog total");
+  const categoryCounts = Object.values(summaryPayload.facets?.categories || {})
+    .map((count) => Number(count || 0))
+    .filter((count) => count > 0);
+  const maxCategoryCount = categoryCounts.length ? Math.max(...categoryCounts) : 0;
+  assert(maxCategoryCount > summaryPayload.pageInfo?.pageSize, `catalog first-load categories look page-limited (total=${summaryPayload.total}, pageSize=${summaryPayload.pageInfo?.pageSize}, maxCategoryCount=${maxCategoryCount})`);
+  const firstLoadMs = assertFirstLoadFast("catalog first-load budget", [catalogHtml, summaryQuery], args.catalogFirstLoadMaxMs);
+  checks.push({ name: "catalog-first-load", path: "/catalog.html + /api/catalog-query?pageSize=1&sort=popular", bytes: catalogHtml.bytes + summaryQuery.bytes, elapsedMs: firstLoadMs });
+
   const priceList = await fetchText(base, "/api/price-list?format=json", args);
   const priceListPayload = parseJson(priceList);
-  assertFast(priceList, args.maxMs);
+  assertFast(priceList, args.catalogApiMaxMs);
   assertPublicCache(priceList);
   assert(Array.isArray(priceListPayload.rows), "price-list should include rows[]");
   assert(priceListPayload.rows.length > 0, "price-list should expose public price rows");
@@ -228,10 +260,11 @@ async function closeServer(server) {
 
 async function createSelfTestServer() {
   const card = { id: "p1", baseSku: "opt_1", name: "Test", minPrice: 100, maxPrice: 120, variantCount: 2, image: "/x.webp" };
+  const secondCard = { id: "p2", baseSku: "opt_2", name: "Test 2", minPrice: 110, maxPrice: 130, variantCount: 1, image: "/x.webp" };
   const product = { ...card, variants: [{ sku: "opt_1_a", price: 100 }], images: [{ url: "/x.webp" }] };
   const server = createServer((req, res) => {
     const url = new URL(req.url || "/", "http://127.0.0.1");
-    if (url.pathname === "/") {
+    if (url.pathname === "/" || url.pathname === "/catalog.html") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
       res.end("<!doctype html><title>Sobag</title>");
       return;
@@ -247,8 +280,10 @@ async function createSelfTestServer() {
       return;
     }
     if (url.pathname === "/api/catalog-query") {
+      const pageSize = Number(url.searchParams.get("pageSize") || 48) || 48;
+      const items = pageSize <= 1 ? [card] : [card, secondCard];
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
-      res.end(JSON.stringify({ items: [card], total: 1, pageInfo: { pageSize: 48, hasMore: false } }));
+      res.end(JSON.stringify({ items, total: 2, facets: { categories: { Test: 2 } }, pageInfo: { pageSize, hasMore: pageSize < 2 } }));
       return;
     }
     if (url.pathname === "/api/price-list") {
