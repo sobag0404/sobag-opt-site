@@ -34,6 +34,7 @@ Last updated: 2026-06-20
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-23 UI slice after `f08baa3`: cart min-order notice now exposes a polite status region, checkout references it with `aria-describedby`, and quote/save/print/history controls have explicit titles/aria labels. Local check/UI smoke/diff-check passed.
 - Current pass 2026-06-23 UI slice after `0d18fd8`: review eligibility notices now expose `role=status` and polite live regions for anonymous, ineligible, and already-reviewed states; no review form is shown without eligibility. Local check/UI smoke passed.
 - Current pass 2026-06-23 UI slice after `9693839`: price-list download links now declare stable `sobag-price-list.csv`, show a short download toast/busy state, and UI smoke covers catalog/detail download affordance. Local live remains unreachable from this shell.
 - Current pass 2026-06-23 UI slice after `43e8155`: admin price import apply now requires an explicit browser confirmation before local/server preview changes are applied; disabled apply button has title/aria guidance. Local live check remains blocked by remote connection refusal in this shell.

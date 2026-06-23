@@ -579,6 +579,13 @@ test("empty cart and anonymous account states stay safe", async ({ page }) => {
   await expect(page.locator("#cartPageEmpty")).toBeVisible();
   await expect(page.locator("#checkoutButton")).toBeDisabled();
   await expect(page.locator("#cartPageMinHint")).toContainText("До минимальной суммы осталось");
+  await expect(page.locator("#cartPageMinHint")).toHaveAttribute("role", "status");
+  await expect(page.locator("#cartPageMinHint")).toHaveAttribute("aria-live", "polite");
+  await expect(page.locator("#checkoutButton")).toHaveAttribute("aria-describedby", "cartPageMinHint");
+  await expect(page.locator("#saveCartDraftButton")).toHaveAttribute("aria-label", "Сохранить черновик КП");
+  await expect(page.locator("#downloadCartQuoteButton")).toHaveAttribute("title", "Скачать КП в XLSX");
+  await expect(page.locator("#printCartQuoteButton")).toHaveAttribute("aria-label", "Печать коммерческого предложения");
+  await expect(page.locator('a[href="quotes.html"]')).toHaveAttribute("title", "Открыть сохраненные КП");
   await page.locator("#saveCartDraftButton").click();
   await expect(page.locator("#toast")).toContainText("Корзина пока пустая");
   await expectNoHorizontalOverflow(page, "empty cart");

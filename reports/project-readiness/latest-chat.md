@@ -1,4 +1,5 @@
 Next implementation packet:
+0c. UI continuation after `f08baa3`: cart min-order and quote actions now have explicit status/aria/title coverage; local check + UI smoke + diff-check pass.
 0b. UI continuation after `0d18fd8`: review eligibility notices now use polite status regions for anonymous/ineligible/already-reviewed states; local check + UI smoke pass.
 0a. UI continuation after `9693839`: price-list download links now use stable `sobag-price-list.csv`, explicit CSV accessibility text, and a short busy/toast state; local check + UI smoke pass, live/GitHub still blocked from this shell.
 0. UI continuation after `43e8155`: admin price import apply now asks for explicit confirmation before applying previewed local/server changes; local check + UI smoke pass, while live/GitHub checks remain blocked from this shell.
