@@ -124,6 +124,8 @@ let lastFocusedElement = null;
 let catalogHomeHasAnimated = false;
 const CATALOG_PAGE_SIZE = 48;
 const SERVER_CATALOG_PAGE_SIZE = CATALOG_PAGE_SIZE;
+const CATALOG_HOME_SUMMARY_CACHE_KEY = "sobag_catalog_home_summary_v20260623_category_counts";
+const CATALOG_HOME_SUMMARY_CACHE_TTL_MS = 15 * 60 * 1000;
 const focusableSelector =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const state = {
@@ -1257,6 +1259,12 @@ function catalogCategoryCountsFromRows(rows = []) {
 function hasCatalogHomeSummaryCounts() {
   return state.catalogHomeSummary.status === "ready" && Object.keys(state.catalogHomeSummary.counts || {}).length > 0;
 }
+function catalogHomeSummaryCountsLookFull(counts = {}) {
+  const values = Object.values(counts)
+    .map((count) => Number(count || 0))
+    .filter((count) => count > 0);
+  return values.length > 0 && Math.max(...values) > CATALOG_PAGE_SIZE;
+}
 function catalogHomeSummaryLooksPartial(data = {}, counts = {}) {
   const values = Object.values(counts)
     .map((count) => Number(count || 0))
@@ -1264,6 +1272,25 @@ function catalogHomeSummaryLooksPartial(data = {}, counts = {}) {
   const maxCount = values.length ? Math.max(...values) : 0;
   const total = Number(data.total || data.pageInfo?.total || 0) || 0;
   return total > CATALOG_PAGE_SIZE && values.length > 0 && maxCount <= CATALOG_PAGE_SIZE;
+}
+function readCatalogHomeSummaryCache() {
+  try {
+    const payload = JSON.parse(localStorage.getItem(CATALOG_HOME_SUMMARY_CACHE_KEY) || "null");
+    if (!payload || typeof payload !== "object") return null;
+    if (Date.now() - Number(payload.savedAt || 0) > CATALOG_HOME_SUMMARY_CACHE_TTL_MS) return null;
+    const counts = payload.counts && typeof payload.counts === "object" ? payload.counts : {};
+    return catalogHomeSummaryCountsLookFull(counts) ? counts : null;
+  } catch (error) {
+    return null;
+  }
+}
+function writeCatalogHomeSummaryCache(counts = {}) {
+  if (!catalogHomeSummaryCountsLookFull(counts)) return;
+  try {
+    localStorage.setItem(CATALOG_HOME_SUMMARY_CACHE_KEY, JSON.stringify({ counts, savedAt: Date.now() }));
+  } catch (error) {
+    // Best-effort client cache only.
+  }
 }
 function fallbackCatalogCategory(name) {
   const existing = catalogContentItem(defaultSiteContent.catalogCategories, name);
@@ -1282,6 +1309,7 @@ function applyCatalogHomeSummary(data = {}) {
     counts,
     source: String(data.source || "server"),
   };
+  writeCatalogHomeSummaryCache(counts);
   renderCatalogHome();
   return true;
 }
@@ -2389,10 +2417,26 @@ function renderCatalogHome() {
     categoryTiles.setAttribute("aria-busy", "true");
     categoryTiles.setAttribute("aria-live", "polite");
     categoryTiles.setAttribute("aria-label", "Загрузка категорий каталога");
-    categoryTiles.innerHTML = Array.from(
-      { length: 6 },
-      () => `<div class="category-tile-skeleton" aria-hidden="true"><span></span><strong></strong><small></small><b></b></div>`
-    ).join("");
+    categoryTiles.innerHTML = content.catalogCategories
+      .map((category) => {
+        const label = `${category.name}: загружаем количество`;
+        return `
+          <button class="category-tile category-tile--loading" type="button" data-open-category="${escapeHtml(category.name)}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
+            <span class="category-tile__top">
+              <span class="category-tile__icon"><i data-lucide="${escapeHtml(category.icon)}"></i></span>
+              <span class="category-tile__schema" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            </span>
+            <strong>${escapeHtml(category.name)}</strong>
+            <small>${escapeHtml(category.description)}</small>
+            <b>Считаем товары</b>
+          </button>
+        `;
+      })
+      .join("");
     renderCatalogHomeSecondarySections(content);
     refreshLucideIcons();
     return;
@@ -4071,7 +4115,12 @@ function boot() {
   cleanPrototypeStorage();
   initTheme();
   initCatalogRoute();
-  if (categoryTiles && !hasActiveCatalogState()) state.catalogHomeSummary.status = "loading";
+  if (categoryTiles && !hasActiveCatalogState()) {
+    const cachedCatalogHomeCounts = readCatalogHomeSummaryCache();
+    state.catalogHomeSummary = cachedCatalogHomeCounts
+      ? { status: "ready", counts: cachedCatalogHomeCounts, source: "client-cache" }
+      : { status: "loading", counts: {}, source: "" };
+  }
   loadCart();
   renderCatalogHome();
   renderCatalogShell();

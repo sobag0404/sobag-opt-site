@@ -4956,6 +4956,11 @@ main {
   white-space: normal;
 }
 
+.category-tile--loading b {
+  color: var(--text);
+  background: rgba(17, 17, 17, 0.08);
+}
+
 .theme-tiles {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

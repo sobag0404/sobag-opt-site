@@ -733,8 +733,9 @@ test("catalog home first load uses server category summary over stale fallback",
   await page.goto(`${BASE_URL}/catalog.html?qa=category-summary`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(100);
   await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-busy", "true");
-  await expect(page.locator("#categoryTiles .category-tile")).toHaveCount(0);
+  expect(await page.locator("#categoryTiles .category-tile--loading").count()).toBeGreaterThanOrEqual(6);
   await expect(page.locator("#categoryTiles")).not.toContainText("48");
+  await expect(page.locator("#categoryTiles .category-tile--loading").first()).toHaveAttribute("aria-label", /загружаем/);
   await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
   await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-busy", "false");
   await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-label", "Категории каталога");
@@ -849,8 +850,8 @@ test("catalog home never renders page-sized category counts as final totals", as
   await page.goto(`${BASE_URL}/catalog.html?qa=partial-count-guard`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(800);
   await expect(page.locator("#categoryTiles")).not.toContainText(/48\s+товар/);
-  await expect(page.locator("#categoryTiles .category-tile")).toHaveCount(0);
-  await expect(page.locator("#categoryTiles .category-tile-skeleton")).toHaveCount(6);
+  expect(await page.locator("#categoryTiles .category-tile--loading").count()).toBeGreaterThanOrEqual(6);
+  await expect(page.locator("#categoryTiles .category-tile-skeleton")).toHaveCount(0);
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });
 

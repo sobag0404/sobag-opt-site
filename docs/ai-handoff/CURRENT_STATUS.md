@@ -3,6 +3,7 @@
 Date: 2026-06-20
 
 Latest production status:
+- Current P0 UI performance slice 2026-06-23 after `c103f28`: live `/catalog.html` remains unreachable from this shell. Local catalog first-load now renders category tiles immediately with neutral nonnumeric count status while summary API resolves, uses only safe full-count client cache, rejects page-sized `48 товаров`, and bumps app/styles cache-bust to `20260623-category-fast`. Local timing sample: DOM 121ms, first category tiles 446ms, counts ready 458ms, no `48`; `npm.cmd run check`, `npm.cmd run ui:smoke`, and `git diff --check` passed.
 - Current UI slice 2026-06-23 after `3e5acb8`: marketplace external links now keep explicit aria labels/titles in static cards and generated link groups, while preserving `target=_blank` and safe `rel`; smoke covers labels, titles, focus, and mobile overflow. Local check + UI smoke + diff-check passed.
 - Current UI slice 2026-06-23 after `f8f0ac0`: product and catalog images now mark product media with fallback metadata and replace broken image candidates with the production workshop fallback; root HTML cache-busts advanced for the app/product image helper. Local check + UI smoke + diff-check passed.
 - Current UI slice 2026-06-23 after `f08baa3`: cart/checkout controls now announce the min-order notice as a polite status region, connect checkout validation copy with `aria-describedby`, and expose titles/aria labels for save/download/print/history quote actions. Local check + UI smoke + diff-check passed.
