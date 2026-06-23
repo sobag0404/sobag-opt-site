@@ -187,6 +187,18 @@ function assertCatalogQuery(path, contentType, body) {
   if (!Number.isFinite(firstPrice) || firstPrice <= 0) {
     throw new Error(`${path}: first catalog price must be non-zero`);
   }
+  const pageSize = Number(payload.pageInfo?.pageSize || payload.limit || items.length || 0);
+  const total = Number(payload.pageInfo?.total || payload.total || 0);
+  const categories = Array.isArray(payload.facets?.categories)
+    ? payload.facets.categories
+    : Array.isArray(payload.categories)
+      ? payload.categories
+      : [];
+  const categoryCounts = categories.map((category) => Number(category?.count || 0)).filter((count) => count > 0);
+  const maxCategoryCount = categoryCounts.length ? Math.max(...categoryCounts) : 0;
+  if (total > pageSize && categoryCounts.length > 0 && maxCategoryCount <= pageSize) {
+    throw new Error(`${path}: category counts look page-limited, not full-catalog totals`);
+  }
   return payload;
 }
 
@@ -373,7 +385,13 @@ async function createSelfTestServer() {
     }
     if (req.url === "/api/catalog-query?pageSize=1") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: true, items: [{ id: "p1", price: 100 }] }));
+      res.end(JSON.stringify({
+        ok: true,
+        items: [{ id: "p1", price: 100 }],
+        total: 808,
+        pageInfo: { pageSize: 1, total: 808 },
+        facets: { categories: [{ value: "Подушки", count: 517 }] },
+      }));
       return;
     }
     if (req.url === "/api/price-list?format=json") {
