@@ -13,6 +13,7 @@ Current backend contract for price groups:
   - Requires `admin` or `content` role.
   - CSV export: `GET /api/admin/prices?format=csv`.
   - Import template: `GET /api/admin/prices?template=1`.
+  - Backend template/export is CSV-only. XLSX parsing/export is a browser-side admin UI capability through SheetJS; backend receives parsed `rows` or CSV text and does not execute spreadsheet formulas.
 
 - Admin import/apply: `POST /api/admin/prices`
   - Requires `admin` or `content` role.
@@ -28,4 +29,4 @@ Runtime behavior:
 - SKU override remains supported through `variantPrices[sku]` for file/static catalog storage.
 - PostgreSQL runtime updates `variants.price` directly and stores promo metadata in `variants.payload`.
 - Rust catalog/order paths read the same PostgreSQL `variants.price`, so base price updates remain Node/Rust compatible.
-- Promo export is available through the Node public/admin price endpoints; automatic promo order pricing is not enabled until the business rule is explicitly confirmed.
+- Promo export is available through the Rust-owned public/admin price endpoints in production; Node route code remains a compatibility fallback while present. Automatic promo order pricing is not enabled until the business rule is explicitly confirmed.

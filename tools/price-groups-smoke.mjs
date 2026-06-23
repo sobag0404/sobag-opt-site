@@ -198,6 +198,13 @@ async function main() {
     assert.equal(skuPreviewRoute.payload.errors.length, 0);
     assert.equal(skuPreviewRoute.payload.changes[0]?.skus?.length, 1, "SKU override preview should target exactly one SKU");
     assert.equal(skuPreviewRoute.payload.changes[0]?.skus?.[0], targetGroup.skus[0]);
+    const formulaRoute = await request(baseUrl, "/api/admin/prices", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { action: "preview", csv: `"sku";"price"\n"=cmd";"${targetGroup.price}"\n` },
+    });
+    assert.equal(formulaRoute.response.status, 400);
+    assert.equal(formulaRoute.payload.errors.some((error) => error.error === "formula_input_rejected"), true);
     const promoCsv = `"group";"promoPrice";"promoActive";"promoStart";"promoEnd"\n"${targetGroup.name}";"${targetGroup.price}";"true";"2026-01-01";"2099-01-31"\n`;
     const promoApplyRoute = await request(baseUrl, "/api/admin/prices", {
       method: "POST",
