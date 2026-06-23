@@ -1,4 +1,5 @@
 Next implementation packet:
+0e. UI continuation after `3e5acb8`: marketplace cards/generated link groups now keep explicit aria labels/titles for external links; local check + UI smoke + diff-check pass.
 0d. UI continuation after `f8f0ac0`: product media now has explicit broken-image fallback handling and app/product-helper cache-busts; local check + UI smoke + diff-check pass.
 0c. UI continuation after `f08baa3`: cart min-order and quote actions now have explicit status/aria/title coverage; local check + UI smoke + diff-check pass.
 0b. UI continuation after `0d18fd8`: review eligibility notices now use polite status regions for anonymous/ineligible/already-reviewed states; local check + UI smoke pass.

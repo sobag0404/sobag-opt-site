@@ -337,6 +337,8 @@ test("contacts maps and marketplace badges stay visible", async ({ page }) => {
     await expect(link).toHaveAttribute("target", "_blank");
     await expect(link).toHaveAttribute("rel", /noopener/);
     await expect(link).toHaveAttribute("rel", /noreferrer/);
+    await expect(link).toHaveAttribute("aria-label", new RegExp(name));
+    await expect(link).toHaveAttribute("title", new RegExp(name));
     await link.focus();
     await expect
       .poll(() =>

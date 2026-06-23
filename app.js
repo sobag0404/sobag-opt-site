@@ -713,7 +713,7 @@ const MARKETPLACE_LINKS = [
 function marketplaceLinksHtml(className = "") {
   const classes = ["marketplace-links", className].filter(Boolean).join(" ");
   return `<div class="${classes}" aria-label="Sobag на маркетплейсах">${MARKETPLACE_LINKS.map(
-    (item) => `<a href="${item.href}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.label)}</a>`
+    (item) => `<a href="${item.href}" target="_blank" rel="noopener noreferrer" aria-label="Sobag на ${escapeHtml(item.label)}" title="Открыть ${escapeHtml(item.label)}">${escapeHtml(item.label)}</a>`
   ).join("")}</div>`;
 }
 function renderMarketplaceLinks() {
@@ -1120,6 +1120,8 @@ function renderSiteContent() {
       marketplaceCards[index].href = link.href;
       marketplaceCards[index].target = "_blank";
       marketplaceCards[index].rel = "noopener noreferrer";
+      marketplaceCards[index].ariaLabel = `Sobag на ${link.label}`;
+      marketplaceCards[index].title = `Открыть ${link.label}`;
     }
   });
   setText(".custom h2", content.customTitle);
