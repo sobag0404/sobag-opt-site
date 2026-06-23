@@ -50,7 +50,11 @@ async function listen(server) {
 async function request(baseUrl, path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     method: options.method || "GET",
-    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.cookie ? { cookie: options.cookie } : {}),
+      ...(options.origin === false ? {} : { origin: options.origin || baseUrl }),
+    },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   const text = await response.text();
@@ -61,6 +65,11 @@ async function request(baseUrl, path, options = {}) {
     payload = text;
   }
   return { response, payload };
+}
+
+function cookieFrom(response) {
+  const value = response.headers.get("set-cookie") || "";
+  return value ? value.split(";")[0] : "";
 }
 
 function fakeDbClient() {
@@ -137,6 +146,9 @@ async function main() {
   process.env.SOBAG_STORE_PROVIDER = "file";
   process.env.SOBAG_FILE_STORE_DIR = tempDir;
   process.env.SOBAG_CATALOG_SOURCE = "";
+  process.env.SOBAG_ADMIN_EMAIL = "price-admin@example.test";
+  process.env.SOBAG_ADMIN_PASSWORD = "price-admin-pass";
+  process.env.SOBAG_ADMIN_NAME = "Price Admin";
   const { server, baseUrl } = await listen(createSobagServer());
   try {
     const publicList = await request(baseUrl, "/api/price-list?format=json");
@@ -147,6 +159,43 @@ async function main() {
     assert.equal(csv.response.status, 200);
     assert.match(csv.response.headers.get("content-type") || "", /text\/csv/);
     assert.match(csv.response.headers.get("content-disposition") || "", /sobag-price-list\.csv/);
+
+    const adminDenied = await request(baseUrl, "/api/admin/prices", { method: "POST", body: { action: "preview", rows: [] } });
+    assert.equal(adminDenied.response.status, 401);
+    const login = await request(baseUrl, "/api/auth/login", {
+      method: "POST",
+      body: { email: "price-admin@example.test", password: "price-admin-pass" },
+    });
+    const adminCookie = cookieFrom(login.response);
+    assert.ok(adminCookie, "admin price login should set a session cookie");
+    const template = await fetch(`${baseUrl}/api/admin/prices?template=1`, { headers: { cookie: adminCookie } });
+    assert.equal(template.status, 200);
+    assert.match(template.headers.get("content-disposition") || "", /sobag-price-import-template\.csv/);
+    const targetGroup = publicList.payload.groups[0];
+    const safeSamePriceCsv = `"Категория/группа";"Цена"\n"${targetGroup.name}";"${targetGroup.price}"\n`;
+    const previewRoute = await request(baseUrl, "/api/admin/prices", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { action: "preview", csv: safeSamePriceCsv },
+    });
+    assert.equal(previewRoute.response.status, 200);
+    assert.equal(previewRoute.payload.errors.length, 0);
+    assert.ok(previewRoute.payload.changes.length > 0, "admin price preview should report changes");
+    const applyRoute = await request(baseUrl, "/api/admin/prices", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { action: "apply", csv: safeSamePriceCsv },
+    });
+    assert.equal(applyRoute.response.status, 200);
+    assert.equal(applyRoute.payload.history?.type, "price_import");
+    const duplicateCsv = `"SKU";"Цена"\n"${targetGroup.skus[0]}";"${targetGroup.price}"\n"${targetGroup.skus[0]}";"${targetGroup.price}"\n`;
+    const duplicateRoute = await request(baseUrl, "/api/admin/prices", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { action: "preview", csv: duplicateCsv },
+    });
+    assert.equal(duplicateRoute.response.status, 400);
+    assert.equal(duplicateRoute.payload.errors.some((error) => error.error === "duplicate_price_target"), true);
   } finally {
     await new Promise((resolve) => server.close(resolve));
     rmSync(tempDir, { recursive: true, force: true });
