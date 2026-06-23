@@ -1103,6 +1103,16 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   const firstCard = page.locator(".product-card").first();
   const baseSku = await firstCard.locator(".product-card__sku").innerText();
   await expect(baseSku.trim()).toMatch(/^opt_/i);
+  const fallbackImageSrc = await firstCard.locator('[data-product-image="true"]').first().evaluate((img) => {
+    img.closest("picture")?.querySelectorAll("source").forEach((source) => source.remove());
+    delete img.dataset.fallbackApplied;
+    img.classList.remove("is-fallback-image");
+    img.setAttribute("src", "assets/missing-product-image-smoke.png");
+    window.handleProductImageError?.({ target: img });
+    return document.querySelector('.product-card [data-product-image="true"]')?.getAttribute("src") || "";
+  });
+  expect(fallbackImageSrc).toMatch(/assets\/production-workshop-1\.png$/);
+  await expect(firstCard.locator('[data-product-image="true"]').first()).toHaveAttribute("data-fallback-applied", "true");
   await page.evaluate(() => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,

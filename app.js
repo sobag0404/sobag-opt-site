@@ -3299,6 +3299,23 @@ function productModalHtml(product) {
     </div>
   `;
 }
+function handleProductImageError(event) {
+  const img = event.target;
+  if (!(img instanceof HTMLImageElement) || img.dataset.productImage !== "true") return;
+  const fallbackSrc = img.dataset.fallbackSrc || "assets/production-workshop-1.png";
+  if (img.dataset.fallbackApplied === "true" || img.getAttribute("src") === fallbackSrc) return;
+  const ownSrc = new URL(img.getAttribute("src") || "", document.baseURI).href;
+  if (img.closest("picture")?.querySelector("source[data-product-source]") && img.currentSrc && img.currentSrc !== ownSrc) return;
+  img.dataset.fallbackApplied = "true";
+  img.classList.add("is-fallback-image");
+  img.closest("picture")?.querySelectorAll("source").forEach((source) => source.remove());
+  const fallbackImage = img.cloneNode(false);
+  fallbackImage.removeAttribute("srcset");
+  fallbackImage.removeAttribute("sizes");
+  fallbackImage.src = new URL(fallbackSrc, document.baseURI).href;
+  fallbackImage.setAttribute("src", fallbackSrc);
+  img.replaceWith(fallbackImage);
+}
 function variantControls(key, title, options) {
   return `
     <fieldset class="variant-group">
@@ -4090,6 +4107,7 @@ function boot() {
     if (!catalogListing) return;
     applyCatalogUrl(new URL(window.location.href), { sync: false });
   });
+  document.addEventListener("error", handleProductImageError, true);
   document.addEventListener("click", async (event) => {
     if (event.target.dataset.closeModal !== undefined) {
       closeModal();

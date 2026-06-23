@@ -3,6 +3,7 @@
 Date: 2026-06-20
 
 Latest production status:
+- Current UI slice 2026-06-23 after `f8f0ac0`: product and catalog images now mark product media with fallback metadata and replace broken image candidates with the production workshop fallback; root HTML cache-busts advanced for the app/product image helper. Local check + UI smoke + diff-check passed.
 - Current UI slice 2026-06-23 after `f08baa3`: cart/checkout controls now announce the min-order notice as a polite status region, connect checkout validation copy with `aria-describedby`, and expose titles/aria labels for save/download/print/history quote actions. Local check + UI smoke + diff-check passed.
 - Current UI slice 2026-06-23 after `0d18fd8`: review eligibility UI now announces anonymous/ineligible/already-reviewed notices with `role=status` and `aria-live=polite`, while still hiding the write form unless eligibility exists. Local check + UI smoke passed.
 - Current UI slice 2026-06-23 after `9693839`: catalog/detail price-list download UX now uses a stable CSV filename, explicit CSV aria/title text, and a short busy/toast state; UI smoke verifies the download event and filename. Local checks passed; live/GitHub are still network-blocked in this shell.

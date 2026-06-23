@@ -331,7 +331,7 @@ function productImageSourcesHtml(product, url) {
 
 function productPictureHtml(product, url, alt, attrs = "") {
   const src = resolveProductImageUrl(product, url) || "assets/production-workshop-1.png";
-  const img = `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt || "")}" ${attrs} />`;
+  const img = `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt || "")}" data-product-image="true" data-fallback-src="assets/production-workshop-1.png" ${attrs} />`;
   const sources = productImageSourcesHtml(product, src);
   return sources ? `<picture>${sources}${img}</picture>` : img;
 }
