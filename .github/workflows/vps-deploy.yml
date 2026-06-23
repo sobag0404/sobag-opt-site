@@ -67,9 +67,13 @@ jobs:
 
       - name: Activate release
         run: |
-          ssh -i ~/.ssh/vps_deploy_key "$VPS_USER@$VPS_HOST" \
+          timeout --kill-after=30s 22m ssh \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=4 \
+            -i ~/.ssh/vps_deploy_key "$VPS_USER@$VPS_HOST" \
             "DEPLOY_SHA='$DEPLOY_SHA' bash -s" <<'REMOTE'
           set -euo pipefail
+          echo "Deploy phase: activate-release start"
 
           app_dir="/opt/sobag-opt"
           repo_dir="$app_dir/repo"
@@ -121,6 +125,7 @@ jobs:
           trap cleanup_failed_release ERR
 
           sudo install -d -o "$USER" -g "$USER" "$app_dir/releases" "$app_dir/shared" "$repo_dir" /var/lib/sobag-opt/store /var/backups/sobag-opt
+          echo "Deploy phase: release cleanup"
           mapfile -t pre_releases < <(ls -1dt "$app_dir"/releases/* 2>/dev/null || true)
           keep_current="$(readlink -f "$app_dir/current" 2>/dev/null || true)"
           for old_release in "${pre_releases[@]}"; do
@@ -138,6 +143,7 @@ jobs:
           fi
 
           cd "$repo_dir"
+          echo "Deploy phase: git fetch"
           git fetch --prune origin main
           git cat-file -e "$DEPLOY_SHA^{commit}"
 
@@ -145,6 +151,7 @@ jobs:
           git archive --format=tar "$DEPLOY_SHA" | tar -x -C "$release_dir"
 
           cd "$release_dir"
+          echo "Deploy phase: npm install"
           npm ci --omit=dev
           rust_binary="$app_dir/shared/sobag-opt-rust"
           rust_previous="$app_dir/shared/sobag-opt-rust.previous"
@@ -165,13 +172,18 @@ jobs:
             (
               cd rust-server
               export CARGO_TARGET_DIR="$rust_target_dir"
+              echo "Deploy phase: rust fmt"
               cargo fmt --check
+              echo "Deploy phase: rust check"
               cargo check --locked
+              echo "Deploy phase: rust test"
               cargo test --locked
+              echo "Deploy phase: rust build"
               cargo build --release --locked
             )
           fi
 
+          echo "Deploy phase: service restart"
           release_activated=1
           ln -sfn "$release_dir" "$app_dir/current"
           printf '%s\n' "$release" > "$app_dir/current-release.txt"
@@ -280,6 +292,7 @@ jobs:
                 printf '::add-mask::%s\n' "$secret_value"
               fi
             done
+            echo "Deploy phase: rust route smokes"
             if ! {
               node tools/rust-catalog-shadow-smoke.mjs --node-base http://127.0.0.1:3000 --rust-base http://127.0.0.1:3001 &&
               node tools/rust-ssr-smoke.mjs --base http://127.0.0.1:3001 &&
@@ -366,6 +379,7 @@ jobs:
             }
             switch_admin_catalog_route
             safe_rm_rf "$rust_target_dir/debug"
+            echo "Deploy phase: object storage smoke"
             if ! node tools/object-storage-write-smoke.mjs --base-url https://sobag-shop.online; then
               echo "Node object-storage write smoke failed before Rust media route switch; attempting scoped MinIO media policy repair"
               chmod 755 tools/vps-minio-media-policy.sh
@@ -380,6 +394,7 @@ jobs:
               curl -fsS http://127.0.0.1:3000/api/health
               curl -fsS http://127.0.0.1:3001/api/health-rust
             fi
+            echo "Deploy phase: admin media route switch"
             switch_admin_media_route() {
               nginx_site="/etc/nginx/sites-available/sobag-opt"
               backup="/etc/nginx/sites-available/sobag-opt.pre-rust-admin-media-$(date -u +%Y%m%dT%H%M%SZ)"
