@@ -373,6 +373,23 @@ async function securitySmoke() {
     });
     assert(mediaLimited.response.status === 429 && mediaLimited.payload.error === "rate_limited", "admin media burst should return 429");
     resetRateLimits();
+    for (let i = 0; i < 3; i += 1) {
+      const attempt = await request(baseUrl, "/api/admin/prices", {
+        method: "POST",
+        cookie: adminCookie,
+        body: { action: "not-a-price-action", rows: [] },
+        allowFailure: true,
+      });
+      assert(attempt.response.status === 400 && attempt.payload.error === "unknown_action", "pre-limit admin price attempt should keep validation error");
+    }
+    const priceLimited = await request(baseUrl, "/api/admin/prices", {
+      method: "POST",
+      cookie: adminCookie,
+      body: { action: "not-a-price-action", rows: [] },
+      allowFailure: true,
+    });
+    assert(priceLimited.response.status === 429 && priceLimited.payload.error === "rate_limited", "admin price import burst should return 429");
+    resetRateLimits();
 
     const query = await request(baseUrl, "/api/catalog-query?pageSize=1");
     const card = query.payload.items?.[0];
