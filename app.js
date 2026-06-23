@@ -3128,7 +3128,7 @@ function reviewFormHtml(product) {
   const user = getUsers()[state.currentUser];
   if (!user) {
     return `
-      <div class="review-login-note">
+      <div class="review-login-note" role="status" aria-live="polite">
         <span>Отзывы могут оставлять только зарегистрированные покупатели после заказа.</span>
         <button class="ghost-button" type="button" data-open-account>Войти</button>
       </div>
@@ -3136,14 +3136,14 @@ function reviewFormHtml(product) {
   }
   if (userHasSubmittedReview(user, product)) {
     return `
-      <div class="review-login-note">
+      <div class="review-login-note" role="status" aria-live="polite">
         <span>Вы уже отправили отзыв на этот товар.</span>
       </div>
     `;
   }
   if (!userHasEligibleReviewOrder(user, product)) {
     return `
-      <div class="review-login-note">
+      <div class="review-login-note" role="status" aria-live="polite">
         <span>Оставить отзыв можно после заказа этого товара.</span>
       </div>
     `;

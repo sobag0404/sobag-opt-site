@@ -1,4 +1,5 @@
 Next implementation packet:
+0b. UI continuation after `0d18fd8`: review eligibility notices now use polite status regions for anonymous/ineligible/already-reviewed states; local check + UI smoke pass.
 0a. UI continuation after `9693839`: price-list download links now use stable `sobag-price-list.csv`, explicit CSV accessibility text, and a short busy/toast state; local check + UI smoke pass, live/GitHub still blocked from this shell.
 0. UI continuation after `43e8155`: admin price import apply now asks for explicit confirmation before applying previewed local/server changes; local check + UI smoke pass, while live/GitHub checks remain blocked from this shell.
 1. Rust cutover remains complete for the targeted VPS exact routes. Latest pre-slice verified baseline: main `eca1c83`, `autofix-check` `27873133522` PASS, `rust-check` `27873133515` PASS, `vps-deploy` `27873157596` PASS, and `production-smoke` `27873366515` PASS.

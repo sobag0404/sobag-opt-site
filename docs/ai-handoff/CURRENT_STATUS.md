@@ -3,6 +3,7 @@
 Date: 2026-06-20
 
 Latest production status:
+- Current UI slice 2026-06-23 after `0d18fd8`: review eligibility UI now announces anonymous/ineligible/already-reviewed notices with `role=status` and `aria-live=polite`, while still hiding the write form unless eligibility exists. Local check + UI smoke passed.
 - Current UI slice 2026-06-23 after `9693839`: catalog/detail price-list download UX now uses a stable CSV filename, explicit CSV aria/title text, and a short busy/toast state; UI smoke verifies the download event and filename. Local checks passed; live/GitHub are still network-blocked in this shell.
 - Current UI slice 2026-06-23 after `43e8155`: admin bulk price import UI keeps template/upload/preview/history flow and now gates applying a prepared preview behind explicit confirmation. Local `npm.cmd run check`, `npm.cmd run ui:smoke`, and `git diff --check` passed; live/GitHub access is blocked in this shell.
 - Current backend hardening slice: Node compatibility admin catalog saves, import-batch writes, price imports, product-image mutations, content writes, order admin updates, and user admin mutations now use the shared store-backed rate limiter per admin identity/IP, with the existing documented memory fallback. `tools/api-security-smoke.mjs` covers admin content/order/user/import/media burst `429` behavior without production data or secrets.
