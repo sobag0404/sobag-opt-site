@@ -2385,6 +2385,9 @@ function renderCatalogHome() {
     });
   }
   if (shouldWaitForHomeSummary) {
+    categoryTiles.setAttribute("aria-busy", "true");
+    categoryTiles.setAttribute("aria-live", "polite");
+    categoryTiles.setAttribute("aria-label", "Загрузка категорий каталога");
     categoryTiles.innerHTML = Array.from(
       { length: 6 },
       () => `<div class="category-tile-skeleton" aria-hidden="true"><span></span><strong></strong><small></small><b></b></div>`
@@ -2393,6 +2396,9 @@ function renderCatalogHome() {
     refreshLucideIcons();
     return;
   }
+  categoryTiles.setAttribute("aria-busy", "false");
+  categoryTiles.setAttribute("aria-live", "polite");
+  categoryTiles.setAttribute("aria-label", "Категории каталога");
   Object.entries(serverCounts).forEach(([category, count]) => {
     if (count > 0) countByCategory[category] = count;
   });

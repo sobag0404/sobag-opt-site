@@ -729,9 +729,12 @@ test("catalog home first load uses server category summary over stale fallback",
 
   await page.goto(`${BASE_URL}/catalog.html?qa=category-summary`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(100);
+  await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-busy", "true");
   await expect(page.locator("#categoryTiles .category-tile")).toHaveCount(0);
   await expect(page.locator("#categoryTiles")).not.toContainText("48");
   await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
+  await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-label", "Категории каталога");
   const tileText = await page.locator("#categoryTiles").innerText();
   const normalizedTileText = tileText.toLocaleLowerCase("ru-RU");
   for (const row of categoryRows) {
