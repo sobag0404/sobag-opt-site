@@ -13,6 +13,7 @@ const DEFAULT_PATHS = [
   "/api/health",
   "/api/catalog-query?pageSize=1",
   "/api/price-list?format=json",
+  "/api/price-list",
   "/api/admin/product-images",
 ];
 const DEFAULT_TIMEOUT_MS = 10000;
@@ -189,7 +190,20 @@ function assertCatalogQuery(path, contentType, body) {
   return payload;
 }
 
-function assertPriceList(path, contentType, body) {
+function assertPriceList(path, contentType, body, disposition = "") {
+  if (contentType.toLowerCase().includes("text/csv")) {
+    const lines = body.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
+    if (lines.length < 2) throw new Error(`${path}: CSV price-list must include at least one data row`);
+    const cells = lines[1].split(";");
+    const price = Number(String(cells[1] || "").replace(/[^\d.-]/g, ""));
+    if (!Number.isFinite(price) || price <= 0) {
+      throw new Error(`${path}: first CSV price-list price must be non-zero`);
+    }
+    if (!/sobag-price-list\.csv/i.test(disposition)) {
+      throw new Error(`${path}: CSV price-list should send a stable download filename`);
+    }
+    return { rows: lines.length - 1 };
+  }
   const payload = assertJson(path, contentType, body);
   const rows = Array.isArray(payload.rows) ? payload.rows : Array.isArray(payload.items) ? payload.items : [];
   if (!rows.length) throw new Error(`${path}: price-list must return rows`);
@@ -260,7 +274,7 @@ async function checkPath(baseUrl, path, timeoutMs) {
   } else if (kind === "catalog-query") {
     payload = assertCatalogQuery(path, contentType, body);
   } else if (kind === "price-list") {
-    payload = assertPriceList(path, contentType, body);
+    payload = assertPriceList(path, contentType, body, response.headers.get("content-disposition") || "");
   } else {
     payload = assertJson(path, contentType, body);
   }
@@ -365,6 +379,14 @@ async function createSelfTestServer() {
     if (req.url === "/api/price-list?format=json") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ ok: true, rows: [{ name: "Group A", price: 100 }] }));
+      return;
+    }
+    if (req.url === "/api/price-list") {
+      res.writeHead(200, {
+        "content-type": "text/csv; charset=utf-8",
+        "content-disposition": 'attachment; filename="sobag-price-list.csv"',
+      });
+      res.end('\uFEFF"Категория/группа";"Цена"\n"Group A";"100"\n');
       return;
     }
     if (req.url === "/api/admin/product-images") {
