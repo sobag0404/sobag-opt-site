@@ -3,11 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 function parseArgs(argv = process.argv.slice(2)) {
-  const args = { store: "", selfTest: false };
+  const args = { store: "", selfTest: false, strict: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--store") args.store = argv[++index] || "";
     else if (arg === "--self-test") args.selfTest = true;
+    else if (arg === "--strict") args.strict = true;
     else if (arg === "--help") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -19,6 +20,7 @@ function usage() {
 
 Dry-run evidence summary:
   node tools/backend-evidence-smoke.mjs --store /path/to/store.json
+  node tools/backend-evidence-smoke.mjs --store /path/to/store.json --strict
 
 Self-test:
   node tools/backend-evidence-smoke.mjs --self-test`;
@@ -83,6 +85,16 @@ function assertSafeSummary(summary) {
   }
 }
 
+function assertStrictEvidence(summary) {
+  const required = ["orders", "reviews", "priceImportHistory", "audit", "mediaImages"];
+  const missing = required.filter((key) => Number(summary.counts?.[key] || 0) <= 0);
+  if (missing.length) {
+    throw new Error(`evidence summary missing required metadata counts: ${missing.join(", ")}`);
+  }
+  if (!summary.latestAuditTypes.length) throw new Error("evidence summary must include compact audit type evidence");
+  if (!summary.latestImportStatuses.length) throw new Error("evidence summary must include import status evidence");
+}
+
 async function summarizeStoreFile(file) {
   if (!file) throw new Error("--store is required unless --self-test is used");
   const parsed = JSON.parse(await readFile(file, "utf8"));
@@ -110,6 +122,7 @@ async function runSelfTest() {
       "utf8",
     );
     const summary = await summarizeStoreFile(storeFile);
+    assertStrictEvidence(summary);
     if (summary.counts.orders !== 1 || summary.counts.audit !== 2) throw new Error("evidence self-test count mismatch");
     if (summary.counts.mediaImages !== 2) throw new Error("evidence self-test media count mismatch");
     if (!summary.latestAuditTypes.includes("review_update")) throw new Error("evidence self-test audit type mismatch");
@@ -126,6 +139,7 @@ async function main() {
     return;
   }
   const summary = args.selfTest ? await runSelfTest() : await summarizeStoreFile(args.store);
+  if (args.strict) assertStrictEvidence(summary);
   console.log(
     `backend evidence smoke passed: orders=${summary.counts.orders} reviews=${summary.counts.reviews} priceGroups=${summary.counts.priceGroups} imports=${summary.counts.priceImportHistory} audit=${summary.counts.audit} mediaImages=${summary.counts.mediaImages}`,
   );
