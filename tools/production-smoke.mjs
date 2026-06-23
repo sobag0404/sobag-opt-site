@@ -26,7 +26,7 @@ const DEFAULT_PATHS = [
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY_MS = 5000;
-const CURRENT_APP_JS_VERSION = "20260623-modal-a11y";
+const CURRENT_APP_JS_VERSION = "20260623-category-title";
 const CURRENT_APP_DATA_VERSION = "20260622-catalog-cache";
 const ANONYMOUS_DENIED_PATHS = new Set([
   "/api/auth/me",
@@ -214,7 +214,7 @@ function assertCatalogQuery(path, contentType, body) {
   const categoryCounts = categories.map((category) => Number(category?.count || 0)).filter((count) => count > 0);
   const maxCategoryCount = categoryCounts.length ? Math.max(...categoryCounts) : 0;
   if (total > pageSize && categoryCounts.length > 0 && maxCategoryCount <= pageSize) {
-    throw new Error(`${path}: category counts look page-limited, not full-catalog totals`);
+    throw new Error(`${path}: category counts look page-limited, not full-catalog totals (total=${total}, pageSize=${pageSize}, maxCategoryCount=${maxCategoryCount}, categoryCountRows=${categoryCounts.length})`);
   }
   return payload;
 }

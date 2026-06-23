@@ -2408,9 +2408,11 @@ function renderCatalogHome() {
     : content.catalogCategories;
   const visibleCategories = categoryItems.filter((category) => (countByCategory[category.name] || 0) > 0);
   categoryTiles.innerHTML = visibleCategories
-    .map(
-      (category, index) => `
-        <button class="category-tile" type="button" data-open-category="${escapeHtml(category.name)}">
+    .map((category) => {
+      const count = countByCategory[category.name] || 0;
+      const label = `${category.name}: ${count} ${productWord(count)}`;
+      return `
+        <button class="category-tile" type="button" data-open-category="${escapeHtml(category.name)}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
           <span class="category-tile__top">
             <span class="category-tile__icon"><i data-lucide="${escapeHtml(category.icon)}"></i></span>
             <span class="category-tile__schema" aria-hidden="true">
@@ -2421,10 +2423,10 @@ function renderCatalogHome() {
           </span>
           <strong>${escapeHtml(category.name)}</strong>
           <small>${escapeHtml(category.description)}</small>
-          <b>${countByCategory[category.name] || 0} ${productWord(countByCategory[category.name] || 0)}</b>
+          <b>${count} ${productWord(count)}</b>
         </button>
-      `
-    )
+      `;
+    })
     .join("");
   renderCatalogHomeSecondarySections(content);
   refreshLucideIcons();
