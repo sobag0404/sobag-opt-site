@@ -280,6 +280,8 @@ test("admin import page and custom print calculator render", async ({ page }) =>
   await page.locator("#accountButton").click();
   await page.locator("[data-open-admin]").click();
   await expect(page.locator("#adminContentForm")).toBeVisible();
+  await expect(page.locator("#adminModal .modal__close")).toHaveAttribute("aria-label", "Закрыть редактор контента");
+  await expect(page.locator("#adminModal .modal__close")).toHaveAttribute("title", "Закрыть редактор контента");
   await expect(page.locator(".admin-content-toolbar")).toContainText("Сохранить на сервере");
   await expect(page.locator(".admin-content-sidebar")).toContainText("Страницы");
   const adminCatalogPreviewGeometry = await page.evaluate(() => {
@@ -1155,6 +1157,8 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await firstCard.locator("[data-open-product]").first().click();
 
   await expect(page.locator("#productModal")).toBeVisible();
+  await expect(page.locator("#productModal .modal__close")).toHaveAttribute("aria-label", "Закрыть карточку товара");
+  await expect(page.locator("#productModal .modal__close")).toHaveAttribute("title", "Закрыть карточку товара");
   await expect(page.locator(".product-gallery__thumb").first()).toHaveAttribute("title", "Фото 1");
   await expect(page.locator("#detailQty")).toHaveValue("1");
   await page.locator("#detailQty").fill("100");

@@ -2601,7 +2601,7 @@ function adminModalHtml() {
     <div class="modal is-visible" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
       <div class="modal__backdrop" data-close-modal></div>
       <section class="modal__panel admin-panel">
-        <button class="modal__close" type="button" data-close-modal><i data-lucide="x"></i></button>
+        <button class="modal__close" type="button" data-close-modal aria-label="Закрыть редактор контента" title="Закрыть редактор контента"><i data-lucide="x"></i></button>
         <div>
           <p class="eyebrow">Content</p>
           <h2 id="adminModalTitle">Контент сайта</h2>

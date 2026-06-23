@@ -3222,7 +3222,7 @@ function productModalHtml(product) {
     <div class="modal is-visible" id="productModal" role="dialog" aria-modal="true" aria-labelledby="detailProductName">
       <div class="modal__backdrop" data-close-modal></div>
       <section class="modal__panel product-detail">
-        <button class="modal__close" type="button" data-close-modal><i data-lucide="x"></i></button>
+        <button class="modal__close" type="button" data-close-modal aria-label="Закрыть карточку товара" title="Закрыть карточку товара"><i data-lucide="x"></i></button>
         <div class="product-detail__layout">
           <div class="product-detail__main">
             <div class="product-detail__media">
