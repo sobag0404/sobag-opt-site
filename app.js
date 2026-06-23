@@ -3128,11 +3128,12 @@ function relatedProductsHtml(product) {
 }
 function reviewFormHtml(product) {
   const user = getUsers()[state.currentUser];
+  const reviewHelpId = `reviewHelp-${String(product?.id || "product").replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
   if (!user) {
     return `
       <div class="review-login-note" role="status" aria-live="polite">
         <span>Отзывы могут оставлять только зарегистрированные покупатели после заказа.</span>
-        <button class="ghost-button" type="button" data-open-account>Войти</button>
+        <button class="ghost-button" type="button" data-open-account aria-label="Войти, чтобы оставить отзыв" title="Войти, чтобы оставить отзыв">Войти</button>
       </div>
     `;
   }
@@ -3151,7 +3152,7 @@ function reviewFormHtml(product) {
     `;
   }
   return `
-    <form class="review-form" data-review-form="${escapeHtml(product.id)}">
+    <form class="review-form" data-review-form="${escapeHtml(product.id)}" aria-describedby="${escapeHtml(reviewHelpId)}">
       <input type="hidden" name="rating" value="5" />
       <div class="review-form__head">
         <span>Ваша оценка</span>
@@ -3161,9 +3162,9 @@ function reviewFormHtml(product) {
             .join("")}
         </div>
       </div>
-      <textarea name="text" rows="3" maxlength="1000" placeholder="Напишите, что понравилось в товаре, качестве печати или упаковке"></textarea>
+      <textarea name="text" rows="3" maxlength="1000" aria-describedby="${escapeHtml(reviewHelpId)}" placeholder="Напишите, что понравилось в товаре, качестве печати или упаковке"></textarea>
       <button class="primary-button" type="submit">Отправить отзыв</button>
-      <small>Отзыв появится в карточке после модерации.</small>
+      <small id="${escapeHtml(reviewHelpId)}">Отзыв появится в карточке после модерации.</small>
     </form>
   `;
 }

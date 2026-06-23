@@ -1602,6 +1602,8 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   await expect(page.locator(".review-login-note")).toHaveAttribute("aria-live", "polite");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".review-login-note .ghost-button")).toBeVisible();
+  await expect(page.locator(".review-login-note .ghost-button")).toHaveAttribute("title", "Войти, чтобы оставить отзыв");
+  await expect(page.locator(".review-login-note .ghost-button")).toHaveAttribute("aria-label", "Войти, чтобы оставить отзыв");
   await expectNoHorizontalOverflow(page, "anonymous review mobile notice");
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.locator(".modal__close").click();
@@ -1710,6 +1712,8 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   await waitForLiveProducts(page);
   await page.locator("[data-open-product]").first().click();
   await expect(page.locator(".review-form")).toBeVisible();
+  await expect(page.locator(".review-form")).toHaveAttribute("aria-describedby", /^reviewHelp-/);
+  await expect(page.locator('.review-form textarea[name="text"]')).toHaveAttribute("aria-describedby", /^reviewHelp-/);
   await expect(page.locator('[data-review-star="5"]')).toHaveAttribute("aria-pressed", "true");
   await page.locator('[data-review-star="3"]').click();
   await expect(page.locator('[data-review-star="3"]')).toHaveAttribute("aria-pressed", "true");
