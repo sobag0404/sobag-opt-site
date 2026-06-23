@@ -741,13 +741,16 @@ function renderCart() {
   if (nodes.qtyDiscount.previousElementSibling) nodes.qtyDiscount.previousElementSibling.hidden = true;
   nodes.promoDiscount.textContent = `${totals.promoDiscount}%`;
   setTextWithPop(nodes.grandTotal, formatMoney(totals.total));
-  nodes.checkoutButton.disabled = !totals.lines.length || totals.total < MIN_CART_TOTAL;
+  const checkoutLocked = !totals.lines.length || totals.total < MIN_CART_TOTAL;
+  nodes.checkoutButton.disabled = checkoutLocked;
   setButtonText("#checkoutButton", getSiteContent().cartCheckoutButton);
   syncPromoAvailability();
   nodes.minHint.textContent =
     totals.total >= MIN_CART_TOTAL
       ? "Минимальная сумма набрана, можно оформлять заказ."
       : `До минимальной суммы осталось ${formatMoney(Math.max(MIN_CART_TOTAL - totals.total, 0))}.`;
+  nodes.checkoutButton.setAttribute("aria-disabled", checkoutLocked ? "true" : "false");
+  nodes.checkoutButton.title = checkoutLocked ? nodes.minHint.textContent : getSiteContent().cartCheckoutButton;
 
   renderScale(totals.subtotal);
   saveCart();

@@ -584,6 +584,8 @@ test("empty cart and anonymous account states stay safe", async ({ page }) => {
   expect(cartIconFallbacks).not.toContain('"•"');
   await expect(page.locator("#cartPageEmpty")).toBeVisible();
   await expect(page.locator("#checkoutButton")).toBeDisabled();
+  await expect(page.locator("#checkoutButton")).toHaveAttribute("aria-disabled", "true");
+  await expect(page.locator("#checkoutButton")).toHaveAttribute("title", /До минимальной суммы/);
   await expect(page.locator("#cartPageMinHint")).toContainText("До минимальной суммы осталось");
   await expect(page.locator("#cartPageMinHint")).toHaveAttribute("role", "status");
   await expect(page.locator("#cartPageMinHint")).toHaveAttribute("aria-live", "polite");
@@ -1223,6 +1225,7 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator("#cartPageMinHint")).toContainText("До минимальной суммы осталось");
   await page.locator("[data-qty-input]").first().fill("200");
   await expect(page.locator("#checkoutButton")).toBeEnabled();
+  await expect(page.locator("#checkoutButton")).toHaveAttribute("aria-disabled", "false");
   await page.locator("#checkoutButton").click();
   await expect(page.locator("#checkoutModal")).toBeVisible();
   await expect(page.locator("#checkoutModal .modal__close")).toHaveAttribute("aria-label", "Закрыть оформление заказа");

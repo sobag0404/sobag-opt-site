@@ -1,4 +1,5 @@
 Next implementation packet:
+0i. UI continuation after `ee1fdc7`: checkout button now exposes locked/ready aria-disabled state and a title tied to the min-order hint; cart.js cache-bust updated. Local check + UI smoke + diff-check pass.
 0h. UI continuation after `65c1d73`: review login CTA now has explicit label/title, eligible review form and textarea reference moderation help text, and smoke covers anonymous/eligible accessibility. Local check + UI smoke + diff-check pass.
 0g. UI continuation after `c70ae7b`: price-list download/status UX now marks CSV format on catalog/detail download links and announces empty/error price preview states; local check + UI smoke + diff-check pass.
 0f. UI continuation after `801f56a`: admin price preview empty/validation states now announce status politely; local check + UI smoke + diff-check pass. Live check remains blocked from this shell.
