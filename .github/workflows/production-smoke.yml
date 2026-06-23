@@ -63,7 +63,16 @@ jobs:
       - name: Run read-only production performance smoke
         env:
           SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}
-        run: node tools/production-performance-smoke.mjs --timeout 15000 --max-ms 5000 --catalog-api-max-ms 3000 --catalog-first-load-max-ms 4500
+        run: |
+          set +e
+          output="$(node tools/production-performance-smoke.mjs --timeout 15000 --max-ms 5000 --catalog-api-max-ms 3000 --catalog-first-load-max-ms 4500 2>&1)"
+          status="$?"
+          printf '%s\n' "$output"
+          if [ "$status" -ne 0 ]; then
+            reason="$(printf '%s\n' "$output" | tail -n 8 | tr '\n' ' ' | sed 's/[^[:print:]]//g' | cut -c1-900)"
+            echo "::error title=production-performance-smoke failed::$reason"
+            exit "$status"
+          fi
       - name: Run read-only production storage readiness
         env:
           SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}

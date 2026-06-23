@@ -130,6 +130,23 @@ function assertFirstLoadFast(name, checks, maxMs) {
   return elapsedMs;
 }
 
+function facetCounts(bucket) {
+  if (Array.isArray(bucket)) {
+    return bucket
+      .map((item) => Number(item?.count || 0))
+      .filter((count) => count > 0);
+  }
+  if (bucket && typeof bucket === "object") {
+    return Object.values(bucket)
+      .map((value) => {
+        if (value && typeof value === "object") return Number(value.count || 0);
+        return Number(value || 0);
+      })
+      .filter((count) => count > 0);
+  }
+  return [];
+}
+
 async function runPerformanceSmoke(rawBaseUrl, args) {
   const base = normalizeBaseUrl(rawBaseUrl);
   const checks = [];
@@ -177,9 +194,7 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
   assertFast(summaryQuery, args.catalogApiMaxMs);
   assertPublicCache(summaryQuery);
   assert(summaryPayload.total > 1, "catalog first-load summary should expose full catalog total");
-  const categoryCounts = Object.values(summaryPayload.facets?.categories || {})
-    .map((count) => Number(count || 0))
-    .filter((count) => count > 0);
+  const categoryCounts = facetCounts(summaryPayload.facets?.categories);
   const maxCategoryCount = categoryCounts.length ? Math.max(...categoryCounts) : 0;
   assert(maxCategoryCount > summaryPayload.pageInfo?.pageSize, `catalog first-load categories look page-limited (total=${summaryPayload.total}, pageSize=${summaryPayload.pageInfo?.pageSize}, maxCategoryCount=${maxCategoryCount})`);
   const firstLoadMs = assertFirstLoadFast("catalog first-load budget", [catalogHtml, summaryQuery], args.catalogFirstLoadMaxMs);
@@ -283,7 +298,7 @@ async function createSelfTestServer() {
       const pageSize = Number(url.searchParams.get("pageSize") || 48) || 48;
       const items = pageSize <= 1 ? [card] : [card, secondCard];
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
-      res.end(JSON.stringify({ items, total: 2, facets: { categories: { Test: 2 } }, pageInfo: { pageSize, hasMore: pageSize < 2 } }));
+      res.end(JSON.stringify({ items, total: 2, facets: { categories: [{ value: "Test", count: 2 }] }, pageInfo: { pageSize, hasMore: pageSize < 2 } }));
       return;
     }
     if (url.pathname === "/api/price-list") {
