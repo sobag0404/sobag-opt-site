@@ -277,6 +277,27 @@ function renderFooterLinks(selector, value) {
   });
 }
 
+const MARKETPLACE_LINKS = [
+  { label: "Wildberries", href: "https://www.wildberries.ru/seller/167187" },
+  { label: "Ozon", href: "https://ozon.ru/s/sobag" },
+  { label: "Яндекс Маркет", href: "https://market.yandex.ru/cc/84GXiW" },
+];
+
+function marketplaceLinksHtml(className = "") {
+  const classes = ["marketplace-links", className].filter(Boolean).join(" ");
+  return `<div class="${classes}" aria-label="Sobag на маркетплейсах">${MARKETPLACE_LINKS.map(
+    (item) => `<a href="${item.href}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.label)}</a>`
+  ).join("")}</div>`;
+}
+
+function renderFooterMarketplaceLinks() {
+  const footerAddress = document.querySelector("[data-footer-address]");
+  const footerColumn = footerAddress?.parentElement;
+  if (footerColumn && !footerColumn.querySelector(".marketplace-links--footer")) {
+    footerAddress.insertAdjacentHTML("afterend", marketplaceLinksHtml("marketplace-links--footer"));
+  }
+}
+
 function setButtonText(selector, value) {
   document.querySelectorAll(selector).forEach((button) => {
     const icon = button.querySelector("i")?.outerHTML || "";
@@ -291,7 +312,16 @@ function applyTheme(theme) {
     button.setAttribute("aria-pressed", String(isNight));
     button.innerHTML = `<span>${isNight ? "дневная тема" : "ночная тема"}</span><b class="theme-toggle__track" aria-hidden="true"></b>`;
   });
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
+}
+
+function refreshLucideIcons(root = document) {
+  const scope = root?.querySelectorAll ? root : document;
+  scope.querySelectorAll("i[data-lucide]").forEach((icon) => icon.setAttribute("aria-hidden", "true"));
+  if (window.lucide) {
+    window.lucide.createIcons();
+    scope.querySelectorAll("svg.lucide").forEach((icon) => icon.setAttribute("aria-hidden", "true"));
+  }
 }
 
 function toggleTheme() {
@@ -358,6 +388,7 @@ function renderCartContent() {
       phone.textContent = content.footerPhone;
       phone.href = `tel:${String(content.footerPhone).replace(/[^\d+]/g, "")}`;
     });
+    renderFooterMarketplaceLinks();
   }
 }
 

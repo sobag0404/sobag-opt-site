@@ -556,6 +556,12 @@ test("empty cart and anonymous account states stay safe", async ({ page }) => {
       .forEach((key) => localStorage.removeItem(key));
   });
   await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-footer-email]').first()).toHaveText("ip.burago@yandex.ru");
+  await expect(page.locator('[data-footer-phone]').first()).toContainText("+7 901 879-41-62");
+  await expect(page.locator("[data-footer-address]")).toContainText("305014");
+  await expect(page.locator('.marketplace-links--footer a[href="https://www.wildberries.ru/seller/167187"]')).toBeVisible();
+  await expect(page.locator('.marketplace-links--footer a[href="https://ozon.ru/s/sobag"]')).toBeVisible();
+  await expect(page.locator('.marketplace-links--footer a[href="https://market.yandex.ru/cc/84GXiW"]')).toBeVisible();
   await expect(page.locator("#cartPageEmpty")).toBeVisible();
   await expect(page.locator("#checkoutButton")).toBeDisabled();
   await expect(page.locator("#cartPageMinHint")).toContainText("До минимальной суммы осталось");
