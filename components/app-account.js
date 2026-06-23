@@ -639,7 +639,7 @@ function rerenderAccountModal() {
   modal.remove();
   document.body.insertAdjacentHTML("beforeend", accountModalHtml());
   activateModal(document.querySelector("#accountModal"));
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function switchAccountTab(tab) {
   const modal = document.querySelector("#accountModal");

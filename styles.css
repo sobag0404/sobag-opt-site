@@ -362,6 +362,120 @@ a {
   border-radius: 999px;
 }
 
+i[data-lucide] {
+  display: inline-grid;
+  place-items: center;
+  width: 1.2em;
+  height: 1.2em;
+  color: currentColor;
+  font-style: normal;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+i[data-lucide]::before {
+  content: "\2022";
+  display: block;
+  color: currentColor;
+  font-size: 1.05em;
+  font-weight: 900;
+  line-height: 1;
+}
+
+i[data-lucide="user"]::before {
+  content: "U";
+  font-size: 0.88em;
+}
+
+i[data-lucide="heart"]::before {
+  content: "\2661";
+  font-size: 1.15em;
+}
+
+i[data-lucide="shopping-cart"]::before {
+  content: "\25A1";
+}
+
+i[data-lucide="layout-grid"]::before {
+  content: "\25A6";
+}
+
+i[data-lucide="search"]::before {
+  content: "\2315";
+}
+
+i[data-lucide="copy"]::before {
+  content: "\29C9";
+}
+
+i[data-lucide="download"]::before {
+  content: "\2193";
+}
+
+i[data-lucide="upload"]::before {
+  content: "\2191";
+}
+
+i[data-lucide="x"]::before {
+  content: "\00D7";
+}
+
+i[data-lucide="plus"]::before {
+  content: "+";
+}
+
+i[data-lucide="minus"]::before {
+  content: "-";
+}
+
+i[data-lucide="arrow-left"]::before {
+  content: "\2190";
+}
+
+i[data-lucide="sliders-horizontal"]::before {
+  content: "\2630";
+}
+
+i[data-lucide="shield"]::before {
+  content: "S";
+}
+
+i[data-lucide="briefcase-business"]::before {
+  content: "B";
+}
+
+i[data-lucide="send"]::before {
+  content: ">";
+}
+
+i[data-lucide="lock"]::before {
+  content: "L";
+}
+
+i[data-lucide="refresh-cw"]::before {
+  content: "\21BB";
+}
+
+i[data-lucide="external-link"]::before {
+  content: "\2197";
+}
+
+i[data-lucide="phone"]::before {
+  content: "\260E";
+}
+
+i[data-lucide="mail"]::before {
+  content: "@";
+}
+
+i[data-lucide="save"]::before {
+  content: "\2713";
+}
+
+i[data-lucide="file-lock-2"]::before {
+  content: "L";
+}
+
 .icon-button:hover,
 .favorite-button:hover,
 .icon-button:focus-visible,

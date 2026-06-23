@@ -48,6 +48,27 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test("header icon buttons keep visible fallbacks when external icons are unavailable", async ({ page }) => {
+  await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
+  const fallbacks = await page.evaluate(() =>
+    [
+      "#accountButton i[data-lucide='user']",
+      "[data-nav='favorites.html'] i[data-lucide='heart']",
+      "[data-open-cart] i[data-lucide='shopping-cart']",
+      ".catalog-button i[data-lucide='layout-grid']",
+    ].map((selector) => ({
+      selector,
+      content: getComputedStyle(document.querySelector(selector), "::before").content,
+      box: document.querySelector(selector).getBoundingClientRect().toJSON(),
+    }))
+  );
+  for (const fallback of fallbacks) {
+    expect(fallback.content, `${fallback.selector} fallback content`).not.toBe('""');
+    expect(fallback.box.width, `${fallback.selector} fallback width`).toBeGreaterThan(8);
+    expect(fallback.box.height, `${fallback.selector} fallback height`).toBeGreaterThan(8);
+  }
+});
+
 test("manager order pages can open guest customer history", async ({ page }) => {
   const qaSku = await page.evaluate(async () => {
     let response = await fetch("/api/catalog");

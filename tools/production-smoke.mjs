@@ -19,7 +19,7 @@ const DEFAULT_PATHS = [
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY_MS = 5000;
-const CURRENT_APP_JS_VERSION = "20260622-catalog-counts";
+const CURRENT_APP_JS_VERSION = "20260623-icon-refresh";
 const CURRENT_APP_DATA_VERSION = "20260622-catalog-cache";
 
 function parseArgs(argv) {

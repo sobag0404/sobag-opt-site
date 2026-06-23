@@ -691,21 +691,21 @@ function renderManagementPages() {
     if (ordersNode) ordersNode.innerHTML = managementServerAccessHtml();
     if (orderNode) orderNode.innerHTML = managementServerAccessHtml();
     if (customerNode) customerNode.innerHTML = managementServerAccessHtml();
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   if (state.backendSession.checked && state.backendSession.available && !canManageOrders(state.backendSession.user)) {
     if (ordersNode) ordersNode.innerHTML = managementServerAccessHtml();
     if (orderNode) orderNode.innerHTML = managementServerAccessHtml();
     if (customerNode) customerNode.innerHTML = managementServerAccessHtml();
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   if (!canManageOrders(user)) {
     if (ordersNode) ordersNode.innerHTML = managementAccessHtml();
     if (orderNode) orderNode.innerHTML = managementAccessHtml();
     if (customerNode) customerNode.innerHTML = managementAccessHtml();
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   const params = new URLSearchParams(window.location.search);
@@ -715,7 +715,7 @@ function renderManagementPages() {
     const email = String(params.get("email") || "").toLowerCase();
     customerNode.innerHTML = customerDetailHtml(getUsers()[email] || customerFromOrders(email));
   }
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function renderAdminProductsPage() {
   const node = document.querySelector("#adminProductsPage");
@@ -723,16 +723,16 @@ function renderAdminProductsPage() {
   const user = currentManagerUser();
   if (requiresServerRole(canManageProducts)) {
     node.innerHTML = managementServerAccessHtml();
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   if (!canManageProducts(user)) {
     node.innerHTML = managementAccessHtml();
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   node.innerHTML = adminProductsPageHtml();
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function adminPriceRows(sourceProducts = products) {
   return sourceProducts.flatMap((product) => product.variants.map((variant) => ({ product, variant })));
@@ -1210,16 +1210,16 @@ function renderAdminPricesPage() {
   const user = currentManagerUser();
   if (requiresServerRole(canManageProducts)) {
     node.innerHTML = managementServerAccessHtml();
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   if (!canManageProducts(user)) {
     node.innerHTML = managementAccessHtml();
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   node.innerHTML = adminPricesPageHtml();
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
   loadAdminPriceHistory();
 }
 function loadStoredImportBatches() {
@@ -1774,17 +1774,17 @@ function renderAdminImportPage() {
   const user = currentManagerUser();
   if (requiresServerRole(canManageProducts)) {
     node.innerHTML = managementServerAccessHtml();
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   if (!canManageProducts(user)) {
     node.innerHTML = managementAccessHtml();
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   node.innerHTML = adminImportPageHtml();
   renderAdminPreview(state.adminPreview);
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function userManagementHtml(user) {
   if (user?.role !== "admin") return "";
@@ -2231,7 +2231,7 @@ function renderSavedQuotesPage() {
   const node = document.querySelector("#savedQuotesPage");
   if (!node) return;
   node.innerHTML = savedQuotesPageHtml();
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function refreshSavedCartViews() {
   renderSavedQuotesPage();
@@ -2324,7 +2324,7 @@ function accountModalHtml() {
 function openAccount() {
   document.body.insertAdjacentHTML("beforeend", accountModalHtml());
   activateModal(document.querySelector("#accountModal"));
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
   refreshAccountFromBackend();
 }
 function rowValue(row, key) {
@@ -2551,7 +2551,7 @@ function renderAdminReviewsPanel() {
   const node = document.querySelector("#adminReviewsPanel");
   if (!node) return;
   node.innerHTML = adminReviewsPanelHtml();
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 async function loadAdminReviews() {
   const user = getUsers()[state.currentUser];
@@ -2763,7 +2763,7 @@ function openAdmin() {
   document.body.insertAdjacentHTML("beforeend", adminModalHtml());
   activateModal(document.querySelector("#adminModal"));
   renderAdminPreview([]);
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
   loadAdminReviews();
 }
 async function readProductRowsFromFile(file) {

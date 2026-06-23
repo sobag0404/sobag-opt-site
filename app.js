@@ -297,8 +297,17 @@ function applyTheme(theme) {
     themeToggle.setAttribute("aria-pressed", String(isNight));
     themeToggle.innerHTML = `<span>${isNight ? "дневная тема" : "ночная тема"}</span><b class="theme-toggle__track" aria-hidden="true"></b>`;
   }
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
+function refreshLucideIcons(root = document) {
+  const scope = root?.querySelectorAll ? root : document;
+  scope.querySelectorAll("i[data-lucide]").forEach((icon) => icon.setAttribute("aria-hidden", "true"));
+  if (window.lucide) {
+    window.lucide.createIcons();
+    scope.querySelectorAll("svg.lucide").forEach((icon) => icon.setAttribute("aria-hidden", "true"));
+  }
+}
+window.refreshLucideIcons = refreshLucideIcons;
 function initTheme() {
   applyTheme(localStorage.getItem(STORAGE.theme) || "default");
 }
@@ -923,7 +932,7 @@ async function refreshAccountFromBackend() {
   modal.remove();
   document.body.insertAdjacentHTML("beforeend", accountModalHtml());
   activateModal(document.querySelector("#accountModal"));
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function initFormEnhancements(root = document) {
   root.querySelectorAll('input[name="name"]').forEach((field) => field.setAttribute("autocomplete", "name"));
@@ -1172,7 +1181,7 @@ function renderSiteContent() {
     image.src = content.heroImages[index] || defaultSiteContent.heroImages[index];
   });
   renderHeroActualSlides(content);
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function loadProducts() {
   const saved = loadStoredProducts();
@@ -2379,7 +2388,7 @@ function renderCatalogHome() {
       () => `<div class="category-tile-skeleton" aria-hidden="true"><span></span><strong></strong><small></small><b></b></div>`
     ).join("");
     renderCatalogHomeSecondarySections(content);
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   Object.entries(serverCounts).forEach(([category, count]) => {
@@ -2409,7 +2418,7 @@ function renderCatalogHome() {
     )
     .join("");
   renderCatalogHomeSecondarySections(content);
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function renderCatalogHomeSecondarySections(content) {
   actualTiles.innerHTML = content.actualSlides
@@ -2449,7 +2458,7 @@ function renderCatalogHomeSecondarySections(content) {
       `
     )
     .join("");
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
   catalogHomeHasAnimated = true;
 }
 function priceListDateRange(row = {}) {
@@ -2868,7 +2877,7 @@ function renderFilters() {
       `;
     })
     .join("");
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function productCardHtml(product) {
   const favorite = state.favorites.has(product.id) ? " is-active" : "";
@@ -2996,7 +3005,7 @@ function renderProducts() {
     if (catalogLoadMore) catalogLoadMore.innerHTML = "";
     resetProductGridRenderState();
     renderRecentProducts();
-    if (window.lucide) window.lucide.createIcons();
+    refreshLucideIcons();
     return;
   }
   renderProductGridCards(visibleList, serverResult ? `server:${serverResult.key}` : "");
@@ -3015,7 +3024,7 @@ function renderProducts() {
     }
   }
   renderRecentProducts();
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function renderCart() {
   const totals = getCartTotals();
@@ -3075,7 +3084,7 @@ function renderCart() {
     discountHint.textContent = getBasketDiscountHint(totals.subtotal);
   }
   saveCart();
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function renderAccountButton() {
   const button = document.querySelector("#accountButton");
@@ -3090,7 +3099,7 @@ function renderAccountButton() {
     : user?.role === "manager"
     ? '<i data-lucide="briefcase-business"></i>'
     : '<i data-lucide="user"></i>';
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function findVariant(product, selection = state.activeVariant) {
   return (
@@ -3320,7 +3329,7 @@ async function openProduct(productId) {
   document.body.insertAdjacentHTML("beforeend", productModalHtml(product));
   syncProductJsonLd(product);
   activateModal(document.querySelector("#productModal"));
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 function refreshProductModal() {
   const modal = document.querySelector("#productModal");
@@ -4850,6 +4859,6 @@ function boot() {
       return;
     }
   });
-  if (window.lucide) window.lucide.createIcons();
+  refreshLucideIcons();
 }
 boot();
