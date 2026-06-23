@@ -18,6 +18,7 @@ Next implementation packet:
 1h. CSV/XLSX safety: admin price CSV route smoke rejects formula-like SKU input; docs clarify backend is CSV/parsed rows and XLSX parsing stays client-side.
 1i. Review eligibility smoke now rejects completed-order buyers reviewing a different product/SKU; eligibility stays tied to purchased items.
 1j. Account/order smoke now explicitly rejects anonymous account/cart writes and anonymous buyer order PATCH before ownership/conflict tests.
+1k. Production smoke now rejects aggressively cached HTML and requires public cache-control on price-list JSON/CSV.
 2. Current backend hardening slices are ready for commit/deploy: audit summary compatibility now handles legacy string actors and structured actor objects; content saves append safe `content_update`; account/order ownership now uses `userEmail` only, so customer contact email cannot claim account order history, order comments, or review eligibility.
 3. Rate-limit hardening covers Rust account/order/brief/admin-user/admin-content writes and Node compatibility admin catalog/import/media/price/content/order/user mutations through the shared store-backed limiter with documented memory fallback. Account sync hardening returns `favoritesUpdatedAt` / `savedCartsUpdatedAt` and rejects stale favorites/saved-cart writes with sanitized `409` conflict payloads.
 4. Pricing/promo preservation now has an explicit guard: order totals continue to use trusted base catalog prices even when promo fields exist. Promo order-pricing precedence remains a business-rule decision.

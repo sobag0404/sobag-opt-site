@@ -26,7 +26,7 @@ const DEFAULT_PATHS = [
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY_MS = 5000;
-const CURRENT_APP_JS_VERSION = "20260623-price-status";
+const CURRENT_APP_JS_VERSION = "20260623-review-form-a11y";
 const CURRENT_APP_DATA_VERSION = "20260622-catalog-cache";
 const ANONYMOUS_DENIED_PATHS = new Set([
   "/api/auth/me",
@@ -245,6 +245,23 @@ function assertPriceList(path, contentType, body, disposition = "") {
   return payload;
 }
 
+function maxAgeSeconds(cacheControl = "") {
+  const match = String(cacheControl || "").match(/(?:^|,)\s*max-age=(\d+)/i);
+  return match ? Number(match[1]) : 0;
+}
+
+function assertCachePolicy(path, kind, response) {
+  const cacheControl = response.headers.get("cache-control") || "";
+  if (kind === "html" || kind === "canonical-redirect") {
+    if (/immutable/i.test(cacheControl) || maxAgeSeconds(cacheControl) > 300) {
+      throw new Error(`${path}: HTML must not use aggressive cache-control`);
+    }
+  }
+  if (kind === "price-list" && !/public/i.test(cacheControl)) {
+    throw new Error(`${path}: public price-list should use public cache-control`);
+  }
+}
+
 async function fetchWithTimeout(url, timeoutMs) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(new Error(`Timed out after ${timeoutMs}ms`)), timeoutMs);
@@ -291,6 +308,8 @@ async function checkPath(baseUrl, path, timeoutMs) {
   if (!response.ok) {
     throw new Error(`${path}: HTTP ${response.status} ${response.statusText || ""}`.trim());
   }
+
+  assertCachePolicy(path, kind, response);
 
   let payload = null;
   if (kind === "canonical-redirect") {
@@ -414,7 +433,7 @@ async function createSelfTestServer() {
       return;
     }
     if (req.url === "/api/price-list?format=json") {
-      res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
       res.end(JSON.stringify({ ok: true, rows: [{ name: "Group A", price: 100 }] }));
       return;
     }
@@ -422,6 +441,7 @@ async function createSelfTestServer() {
       res.writeHead(200, {
         "content-type": "text/csv; charset=utf-8",
         "content-disposition": 'attachment; filename="sobag-price-list.csv"',
+        "cache-control": "public, max-age=300, stale-while-revalidate=3600",
       });
       res.end('\uFEFF"Категория/группа";"Цена"\n"Group A";"100"\n');
       return;
