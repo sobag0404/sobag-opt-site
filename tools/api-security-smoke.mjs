@@ -612,6 +612,42 @@ async function securitySmoke() {
       `pending order should not allow review, got ${pendingReview.response.status} ${JSON.stringify(pendingReview.payload)}`
     );
 
+    const canceledBuyer = await request(baseUrl, "/api/auth/register", {
+      method: "POST",
+      body: {
+        email: "canceled-review@example.test",
+        password: "buyer-pass",
+        name: "Canceled Buyer",
+        phone: "+79990010008",
+        personalDataConsent: true,
+      },
+    });
+    const canceledOrder = await request(baseUrl, "/api/orders", {
+      method: "POST",
+      cookie: canceledBuyer.cookie,
+      body: {
+        total,
+        customer: { name: "Canceled Buyer", phone: "+79990010008", email: "canceled-review@example.test" },
+        items: [{ productId: detail.payload.product.id, qty, variant }],
+      },
+    });
+    await request(baseUrl, "/api/admin/orders", {
+      method: "PATCH",
+      cookie: adminCookie,
+      body: { id: canceledOrder.payload.order.id, status: "canceled" },
+    });
+    resetRateLimits();
+    const canceledReview = await request(baseUrl, "/api/auth/me", {
+      method: "PUT",
+      cookie: canceledBuyer.cookie,
+      body: reviewBody,
+      allowFailure: true,
+    });
+    assert(
+      canceledReview.response.status === 403 && canceledReview.payload.error === "REVIEW_ORDER_REQUIRED",
+      `canceled order should not allow review, got ${canceledReview.response.status} ${JSON.stringify(canceledReview.payload)}`
+    );
+
     const rateBuyer = await request(baseUrl, "/api/auth/register", {
       method: "POST",
       body: {

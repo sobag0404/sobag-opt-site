@@ -46,6 +46,7 @@ function auditReviewEligibility({ nodeRoute, rustRoute, apiSmoke, contractDoc })
     "user should not be able to review using another user's completed order",
     "duplicate review should be rejected",
     "pending order should not allow review",
+    "canceled order should not allow review",
     "review write burst should return 429",
   ]) {
     assertIncludes(apiSmoke, marker, API_SMOKE, errors);
@@ -84,6 +85,7 @@ function selfTest() {
     "user should not be able to review using another user's completed order",
     "duplicate review should be rejected",
     "pending order should not allow review",
+    "canceled order should not allow review",
     "review write burst should return 429",
   ].join("\n");
   const contractDoc = "confirmed order\nanonymous users cannot review\nduplicate review\ntools/api-security-smoke.mjs";
