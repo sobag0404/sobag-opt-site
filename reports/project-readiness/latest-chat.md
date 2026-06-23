@@ -1,4 +1,5 @@
 Next implementation packet:
+0h. UI continuation after `65c1d73`: review login CTA now has explicit label/title, eligible review form and textarea reference moderation help text, and smoke covers anonymous/eligible accessibility. Local check + UI smoke + diff-check pass.
 0g. UI continuation after `c70ae7b`: price-list download/status UX now marks CSV format on catalog/detail download links and announces empty/error price preview states; local check + UI smoke + diff-check pass.
 0f. UI continuation after `801f56a`: admin price preview empty/validation states now announce status politely; local check + UI smoke + diff-check pass. Live check remains blocked from this shell.
 0e. UI continuation after `3e5acb8`: marketplace cards/generated link groups now keep explicit aria labels/titles for external links; local check + UI smoke + diff-check pass.
@@ -19,6 +20,7 @@ Next implementation packet:
 1i. Review eligibility smoke now rejects completed-order buyers reviewing a different product/SKU; eligibility stays tied to purchased items.
 1j. Account/order smoke now explicitly rejects anonymous account/cart writes and anonymous buyer order PATCH before ownership/conflict tests.
 1k. Production smoke now rejects aggressively cached HTML and requires public cache-control on price-list JSON/CSV.
+1l. Backend evidence smoke now supports strict no-secret packets for post-Rust PostgreSQL/MinIO evidence summaries.
 2. Current backend hardening slices are ready for commit/deploy: audit summary compatibility now handles legacy string actors and structured actor objects; content saves append safe `content_update`; account/order ownership now uses `userEmail` only, so customer contact email cannot claim account order history, order comments, or review eligibility.
 3. Rate-limit hardening covers Rust account/order/brief/admin-user/admin-content writes and Node compatibility admin catalog/import/media/price/content/order/user mutations through the shared store-backed limiter with documented memory fallback. Account sync hardening returns `favoritesUpdatedAt` / `savedCartsUpdatedAt` and rejects stale favorites/saved-cart writes with sanitized `409` conflict payloads.
 4. Pricing/promo preservation now has an explicit guard: order totals continue to use trusted base catalog prices even when promo fields exist. Promo order-pricing precedence remains a business-rule decision.
