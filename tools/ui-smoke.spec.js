@@ -605,11 +605,12 @@ test("catalog home first load uses server category summary over stale fallback",
   ];
   await page.evaluate(() => {
     localStorage.removeItem("sobag.products.v8");
+    localStorage.removeItem("sobag.products.v9");
     Object.keys(localStorage)
-      .filter((key) => key.startsWith("sobag.publicApiCache.v1."))
+      .filter((key) => key.startsWith("sobag.publicApiCache.v1.") || key.startsWith("sobag.publicApiCache.v2."))
       .forEach((key) => localStorage.removeItem(key));
     localStorage.setItem(
-      "sobag.publicApiCache.v1./api/catalog-query?pageSize=1&sort=popular",
+      "sobag.publicApiCache.v2./api/catalog-query?pageSize=1&sort=popular",
       JSON.stringify({
         savedAt: Date.now(),
         data: {
@@ -1402,7 +1403,7 @@ test("catalog query cache renders repeat navigation while API refreshes", async 
 
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent("QA Cache")}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".product-card__sku").first()).toHaveText("QA-CACHE-001");
-  await expect.poll(() => page.evaluate(() => Object.keys(localStorage).some((key) => key.startsWith("sobag.publicApiCache.v1./api/catalog-query?")))).toBe(true);
+  await expect.poll(() => page.evaluate(() => Object.keys(localStorage).some((key) => key.startsWith("sobag.publicApiCache.v2./api/catalog-query?")))).toBe(true);
 
   failApiAfterCache = true;
   await page.reload({ waitUntil: "domcontentloaded" });

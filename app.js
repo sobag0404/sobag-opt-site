@@ -1713,6 +1713,10 @@ function orderHasPrototypeItems(order) {
   return (order?.items || []).some(isPrototypeCartLine);
 }
 function cleanPrototypeStorage() {
+  localStorage.removeItem("sobag.products.v8");
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith("sobag.publicApiCache.v1."))
+    .forEach((key) => localStorage.removeItem(key));
   const storedProducts = loadStoredProducts();
   localStorage.setItem(STORAGE.products, JSON.stringify(storedProducts));
   Object.keys(localStorage)

@@ -642,7 +642,7 @@ const PROTOTYPE_PRODUCT_IDS = new Set([
 const STORAGE = {
   user: "sobag.currentUser",
   users: "sobag.users",
-  products: "sobag.products.v8",
+  products: "sobag.products.v9",
   content: "sobag.siteContent.v1",
   importBatches: "sobag.importBatches.v1",
   theme: "sobag.theme.v1",
@@ -652,7 +652,7 @@ const STORAGE = {
   orders: "sobag.orders.v1",
   recentProducts: "sobag.recentProducts.v1",
 };
-const PUBLIC_API_CACHE_PREFIX = "sobag.publicApiCache.v1.";
+const PUBLIC_API_CACHE_PREFIX = "sobag.publicApiCache.v2.";
 const PUBLIC_API_CACHE_TTL_MS = 30 * 60 * 1000;
 const PUBLIC_API_CACHE_MAX_ENTRIES = 80;
 
