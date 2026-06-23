@@ -3,6 +3,7 @@
 Date: 2026-06-20
 
 Latest production status:
+- Current UI slice 2026-06-23 after `43e8155`: admin bulk price import UI keeps template/upload/preview/history flow and now gates applying a prepared preview behind explicit confirmation. Local `npm.cmd run check`, `npm.cmd run ui:smoke`, and `git diff --check` passed; live/GitHub access is blocked in this shell.
 - Current backend hardening slice: Node compatibility admin catalog saves, import-batch writes, price imports, product-image mutations, content writes, order admin updates, and user admin mutations now use the shared store-backed rate limiter per admin identity/IP, with the existing documented memory fallback. `tools/api-security-smoke.mjs` covers admin content/order/user/import/media burst `429` behavior without production data or secrets.
 - Current backend hardening slice: order pricing explicitly preserves current base-price precedence when promo fields exist; promo prices remain public/export metadata until a separate business rule approves using them in order totals. `tools/price-integrity-smoke.mjs` now guards this behavior.
 - Current backend hardening slice: account sync responses now include `favoritesUpdatedAt` and `savedCartsUpdatedAt`; stale favorites/saved-cart writes can be rejected with `409 favorites_conflict` / `409 saved_carts_conflict` and a sanitized current payload. This extends the prior cart conflict contract without changing UI visuals.

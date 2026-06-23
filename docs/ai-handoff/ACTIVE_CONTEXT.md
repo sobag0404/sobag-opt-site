@@ -34,6 +34,7 @@ Last updated: 2026-06-20
 - Что нельзя делать без разрешения: добавлять секреты, `.env`, токены, пароли, cookies, дампы БД, приватные SSH-ключи; менять production/deploy/cache/user data; делать крупные архитектурные изменения.
 
 ## Latest Done
+- Current pass 2026-06-23 UI slice after `43e8155`: admin price import apply now requires an explicit browser confirmation before local/server preview changes are applied; disabled apply button has title/aria guidance. Local live check remains blocked by remote connection refusal in this shell.
 - Current pass 2026-06-20 backend hardening: order pricing has an explicit base-price precedence guard when promo fields exist. Promo prices remain export/public metadata until a separate business rule approves using them in order totals.
 - Current pass 2026-06-20 backend hardening: account sync now exposes `favoritesUpdatedAt` and `savedCartsUpdatedAt`, and Node/Rust reject stale favorites/saved-cart writes with sanitized `409 favorites_conflict` / `409 saved_carts_conflict` payloads.
 - Current pass 2026-06-20 production smoke hardening: `tools/production-smoke.mjs` now checks canonical `/index.html -> /`, catalog-query non-zero prices, public price-list rows, and anonymous admin media denial alongside health and HTML shell routes.

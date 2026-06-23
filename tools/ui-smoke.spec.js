@@ -219,6 +219,16 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await expect(page.locator(".admin-price-history")).toContainText("Применен");
   await expect(page.locator(".admin-price-history")).toContainText("3 изменений");
   await expect(page.locator(".admin-price-history")).toContainText("1 акций");
+  await page.locator("[data-admin-price-select]").first().check();
+  await page.locator("[data-admin-price-bulk-form]").evaluate((form) => form.requestSubmit());
+  await expect(page.locator("[data-admin-apply-price-preview]")).toBeEnabled();
+  await expect(page.locator("[data-admin-apply-price-preview]")).toHaveAttribute("title", "Применить проверенный предпросмотр цен");
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("Применить");
+    await dialog.dismiss();
+  });
+  await page.locator("[data-admin-apply-price-preview]").click();
+  await expect(page.locator("#toast")).toContainText("отменено");
   await page.locator("[data-admin-price-import]").setInputFiles({
     name: "prices.csv",
     mimeType: "text/csv",

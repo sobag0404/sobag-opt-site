@@ -1061,6 +1061,14 @@ async function applyPricePreview() {
     showToast("Нет подготовленных изменений цен.");
     return;
   }
+  const previewRows = Number(state.pricePreviewMeta?.rows?.length || 0);
+  const confirmed = window.confirm(
+    `Применить ${state.pricePreview.length} изменений цен${previewRows ? ` из ${previewRows} строк импорта` : ""}?`
+  );
+  if (!confirmed) {
+    showToast("Применение предпросмотра отменено.");
+    return;
+  }
   if (state.pricePreview.some((change) => change.backendOnly)) {
     try {
       const result = await apiRequest("/api/admin/prices", {
@@ -1113,6 +1121,7 @@ function adminPricesPageHtml() {
   const params = new URLSearchParams(window.location.search);
   const rows = filteredAdminPriceRows(params);
   const visibleRows = rows.slice(0, 500);
+  const canApplyPreview = pricePreviewCanApply();
   return `
     <div class="admin-prices-toolbar">
       <form class="admin-products-filter" action="admin-prices.html" method="get">
@@ -1154,7 +1163,7 @@ function adminPricesPageHtml() {
         </label>
         <button class="primary-button" type="submit">Предпросмотр</button>
         <button class="ghost-button" type="button" data-admin-preview-manual-prices>Предпросмотр ручных цен</button>
-        <button class="ghost-button" type="button" data-admin-apply-price-preview ${pricePreviewCanApply() ? "" : "disabled"}>Применить предпросмотр</button>
+        <button class="ghost-button" type="button" data-admin-apply-price-preview aria-label="Применить проверенный предпросмотр цен" title="${canApplyPreview ? "Применить проверенный предпросмотр цен" : "Сначала подготовьте предпросмотр без ошибок"}" ${canApplyPreview ? "" : "disabled"}>Применить предпросмотр</button>
       </form>
       <div class="admin-product-export">
         <button class="ghost-button" type="button" data-admin-sync-catalog>Сохранить каталог на сервере</button>
