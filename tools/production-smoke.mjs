@@ -408,6 +408,24 @@ function printRetry(report, retryDelayMs) {
   });
 }
 
+function githubAnnotationEscape(value = "") {
+  return String(value)
+    .replace(/%/g, "%25")
+    .replace(/\r/g, "%0D")
+    .replace(/\n/g, "%0A")
+    .replace(/:/g, "%3A")
+    .replace(/,/g, "%2C");
+}
+
+function printGithubFailureAnnotations(report) {
+  if (!process.env.GITHUB_ACTIONS || report.ok) return;
+  const failed = report.results.filter((result) => !result.ok);
+  failed.slice(0, 6).forEach((result) => {
+    const message = githubAnnotationEscape(`${result.path}: ${result.error}`);
+    console.log(`::error title=Production smoke failed::${message}`);
+  });
+}
+
 async function closeServer(server) {
   server.close();
   await once(server, "close");
@@ -502,7 +520,10 @@ async function main() {
   const report = await runSmokeWithRetries(options, options.json ? null : printRetry);
   if (options.json) console.log(JSON.stringify(report, null, 2));
   else printHuman(report);
-  if (!report.ok) process.exitCode = 1;
+  if (!report.ok) {
+    printGithubFailureAnnotations(report);
+    process.exitCode = 1;
+  }
 }
 
 main().catch((error) => {
