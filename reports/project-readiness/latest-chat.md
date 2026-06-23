@@ -12,6 +12,7 @@ Next implementation packet:
 1d. Production smoke now checks anonymous denial across representative Rust-owned protected routes: `/api/auth/me`, admin catalog/content/import/orders/prices/product-images/users.
 1e. VPS release audit now requires backend evidence smoke and `backup:evidence` scripts so no-secret evidence checks stay in deployable releases.
 1f. Price import smoke now proves SKU-only override preview targets one SKU and promo import apply records promo-change history.
+1g. Production smoke now rejects any zero/invalid price-list row in JSON or CSV responses, not only the first row.
 2. Current backend hardening slices are ready for commit/deploy: audit summary compatibility now handles legacy string actors and structured actor objects; content saves append safe `content_update`; account/order ownership now uses `userEmail` only, so customer contact email cannot claim account order history, order comments, or review eligibility.
 3. Rate-limit hardening covers Rust account/order/brief/admin-user/admin-content writes and Node compatibility admin catalog/import/media/price/content/order/user mutations through the shared store-backed limiter with documented memory fallback. Account sync hardening returns `favoritesUpdatedAt` / `savedCartsUpdatedAt` and rejects stale favorites/saved-cart writes with sanitized `409` conflict payloads.
 4. Pricing/promo preservation now has an explicit guard: order totals continue to use trusted base catalog prices even when promo fields exist. Promo order-pricing precedence remains a business-rule decision.

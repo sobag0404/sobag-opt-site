@@ -223,11 +223,12 @@ function assertPriceList(path, contentType, body, disposition = "") {
   if (contentType.toLowerCase().includes("text/csv")) {
     const lines = body.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
     if (lines.length < 2) throw new Error(`${path}: CSV price-list must include at least one data row`);
-    const cells = lines[1].split(";");
-    const price = Number(String(cells[1] || "").replace(/[^\d.-]/g, ""));
-    if (!Number.isFinite(price) || price <= 0) {
-      throw new Error(`${path}: first CSV price-list price must be non-zero`);
-    }
+    const invalidRow = lines.slice(1).find((line) => {
+      const cells = line.split(";");
+      const price = Number(String(cells[1] || "").replace(/[^\d.-]/g, ""));
+      return !Number.isFinite(price) || price <= 0;
+    });
+    if (invalidRow) throw new Error(`${path}: CSV price-list contains a zero/invalid price row`);
     if (!/sobag-price-list\.csv/i.test(disposition)) {
       throw new Error(`${path}: CSV price-list should send a stable download filename`);
     }
@@ -236,10 +237,11 @@ function assertPriceList(path, contentType, body, disposition = "") {
   const payload = assertJson(path, contentType, body);
   const rows = Array.isArray(payload.rows) ? payload.rows : Array.isArray(payload.items) ? payload.items : [];
   if (!rows.length) throw new Error(`${path}: price-list must return rows`);
-  const firstPrice = Number(rows[0]?.price ?? rows[0]?.basePrice ?? rows[0]?.value);
-  if (!Number.isFinite(firstPrice) || firstPrice <= 0) {
-    throw new Error(`${path}: first price-list price must be non-zero`);
-  }
+  const invalidRow = rows.find((row) => {
+    const price = Number(row?.price ?? row?.basePrice ?? row?.value);
+    return !Number.isFinite(price) || price <= 0;
+  });
+  if (invalidRow) throw new Error(`${path}: price-list contains a zero/invalid price row`);
   return payload;
 }
 
