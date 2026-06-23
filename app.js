@@ -2491,7 +2491,7 @@ function renderPriceListPreview(status = "loading", rows = [], message = "") {
   }
   if (status === "error") {
     priceListPreview.innerHTML = `
-      <div class="price-list-preview__state">
+      <div class="price-list-preview__state" role="status" aria-live="polite">
         <strong>Прайс сейчас не загрузился.</strong>
         <span>${escapeHtml(message || "Скачивание остается доступным по кнопке.")}</span>
       </div>
@@ -2500,7 +2500,7 @@ function renderPriceListPreview(status = "loading", rows = [], message = "") {
   }
   if (!rows.length) {
     priceListPreview.innerHTML = `
-      <div class="price-list-preview__state">
+      <div class="price-list-preview__state" role="status" aria-live="polite">
         <strong>В прайсе пока нет строк.</strong>
         <span>Добавьте цены в каталоге или загрузите импорт цен в админке.</span>
       </div>
@@ -3283,7 +3283,7 @@ function productModalHtml(product) {
                 <small id="detailDiscount">${basketDiscountHint}</small>
               </div>
             </div>
-            <a class="ghost-button detail-price-download" href="/api/price-list" download="sobag-price-list.csv" data-price-download title="Скачать прайс CSV для Excel" aria-label="Скачать прайс CSV">
+            <a class="ghost-button detail-price-download" href="/api/price-list" download="sobag-price-list.csv" data-price-download data-price-format="csv" title="Скачать прайс CSV для Excel" aria-label="Скачать прайс CSV">
               <i data-lucide="download"></i>
               Прайс
             </a>

@@ -738,6 +738,7 @@ test("catalog home first load uses server category summary over stale fallback",
   }
   await expect(page.locator(".catalog-price-button")).toContainText("Прайс");
   await expect(page.locator(".catalog-price-button")).toHaveAttribute("download", "sobag-price-list.csv");
+  await expect(page.locator(".catalog-price-button")).toHaveAttribute("data-price-format", "csv");
   await expect(page.locator(".catalog-price-button")).toHaveAttribute("title", "Скачать прайс CSV для Excel");
   const priceDownload = page.waitForEvent("download");
   await page.locator(".catalog-price-button").click();
@@ -789,9 +790,11 @@ test("catalog home first load uses server category summary over stale fallback",
 
   priceListRows = [];
   await page.goto(`${BASE_URL}/catalog.html?qa=price-empty`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".price-list-preview__state")).toHaveAttribute("role", "status");
   await expect(page.locator(".price-list-preview__state")).toContainText("нет строк");
   priceListStatus = 500;
   await page.goto(`${BASE_URL}/catalog.html?qa=price-error`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".price-list-preview__state")).toHaveAttribute("aria-live", "polite");
   await expect(page.locator(".price-list-preview__state")).toContainText("не загрузился");
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });
@@ -1153,6 +1156,7 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator(".variant-matrix")).toHaveCount(0);
   await expect(page.locator('.detail-price-download[href="/api/price-list"]')).toBeVisible();
   await expect(page.locator('.detail-price-download[href="/api/price-list"]')).toHaveAttribute("download", "sobag-price-list.csv");
+  await expect(page.locator('.detail-price-download[href="/api/price-list"]')).toHaveAttribute("data-price-format", "csv");
   await expect(page.locator('.detail-price-download[href="/api/price-list"]')).toHaveAttribute("aria-label", "Скачать прайс CSV");
   await expect(page.locator(".copy-sku-button--detail")).toHaveAttribute("title", "Скопировать артикул");
   await expect(page.locator(".copy-sku-button--detail")).toHaveAttribute("data-tooltip", "Скопировать артикул");
