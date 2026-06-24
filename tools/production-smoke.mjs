@@ -26,7 +26,7 @@ const DEFAULT_PATHS = [
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY_MS = 5000;
-const CURRENT_APP_JS_VERSION = "20260624-public-cache-v3";
+const CURRENT_APP_JS_VERSION = "20260624-cache-revalidate";
 const CURRENT_APP_DATA_VERSION = "20260624-public-cache-v3";
 const ANONYMOUS_DENIED_PATHS = new Set([
   "/api/admin/catalog",

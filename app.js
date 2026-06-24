@@ -1291,6 +1291,8 @@ function readCatalogHomeSummaryCache() {
   try {
     const payload = JSON.parse(localStorage.getItem(CATALOG_HOME_SUMMARY_CACHE_KEY) || "null");
     if (!payload || typeof payload !== "object") return null;
+    if (payload.scope && payload.scope !== "catalog-home-summary") return null;
+    if (payload.fullSummary === false) return null;
     if (Date.now() - Number(payload.savedAt || 0) > CATALOG_HOME_SUMMARY_CACHE_TTL_MS) return null;
     const counts = payload.counts && typeof payload.counts === "object" ? payload.counts : {};
     return catalogHomeSummaryCountsLookFull(counts) ? counts : null;
@@ -1301,7 +1303,10 @@ function readCatalogHomeSummaryCache() {
 function writeCatalogHomeSummaryCache(counts = {}) {
   if (!catalogHomeSummaryCountsLookFull(counts)) return;
   try {
-    localStorage.setItem(CATALOG_HOME_SUMMARY_CACHE_KEY, JSON.stringify({ counts, savedAt: Date.now() }));
+    localStorage.setItem(
+      CATALOG_HOME_SUMMARY_CACHE_KEY,
+      JSON.stringify({ scope: "catalog-home-summary", fullSummary: true, counts, savedAt: Date.now() })
+    );
   } catch (error) {
     // Best-effort client cache only.
   }
@@ -1331,13 +1336,16 @@ async function refreshCatalogHomeSummary() {
   if (!categoryTiles || shouldLoadAdminCatalog()) return false;
   if (hasActiveCatalogState()) return false;
   const path = "/api/catalog-query?pageSize=1&sort=popular";
-  state.catalogHomeSummary.status = "loading";
-  renderCatalogHome();
+  const hadValidatedCounts = hasCatalogHomeSummaryCounts();
+  if (!hadValidatedCounts) {
+    state.catalogHomeSummary.status = "loading";
+    renderCatalogHome();
+  }
   try {
     const data = await apiRequest(path, { cache: "no-store", publicCache: false });
     return applyCatalogHomeSummary(data);
   } catch (error) {
-    state.catalogHomeSummary.status = "fallback";
+    if (!hadValidatedCounts) state.catalogHomeSummary.status = "fallback";
     renderCatalogHome();
     if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
     return false;

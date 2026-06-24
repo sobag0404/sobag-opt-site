@@ -957,6 +957,54 @@ test("public catalog cache migration keeps private browser state", async ({ page
   expect(storage.favorites).toEqual(["live-1"]);
 });
 
+test("catalog home summary cache stays visible during failed background revalidate", async ({ page }) => {
+  const counts = {
+    "QA Pillows": 517,
+    "QA Covers": 517,
+    "QA Shoe Bags": 170,
+    "QA Luggage Covers": 37,
+    "QA Tags": 19,
+    "QA Flags": 65,
+  };
+  await page.evaluate((cachedCounts) => {
+    localStorage.setItem(
+      "sobag.catalogHomeSummary.v20260624.fullCategoryCounts",
+      JSON.stringify({ scope: "catalog-home-summary", fullSummary: true, savedAt: Date.now(), counts: cachedCounts })
+    );
+    localStorage.setItem("sobag.cart.guest", JSON.stringify([["live-1:SKU-1", { productId: "live-1", qty: 1, variant: { sku: "SKU-1", price: 1000 } }]]));
+    localStorage.setItem("sobag.favorites", JSON.stringify(["live-1"]));
+  }, counts);
+
+  let summaryRequests = 0;
+  await page.route("**/api/catalog", async (route) => {
+    await route.fulfill({ status: 503, contentType: "application/json; charset=utf-8", body: JSON.stringify({ error: "qa_full_catalog_unavailable" }) });
+  });
+  await page.route("**/data/products-live.json", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify([]) });
+  });
+  await page.route("**/api/catalog-query?**", async (route) => {
+    summaryRequests += 1;
+    await page.waitForTimeout(350);
+    await route.fulfill({ status: 503, contentType: "application/json; charset=utf-8", body: JSON.stringify({ error: "qa_summary_revalidate_unavailable" }) });
+  });
+
+  await page.goto(`${BASE_URL}/catalog.html?qa=summary-cache-revalidate`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator("#categoryTiles")).toContainText("517");
+  await expect(page.locator("#categoryTiles")).not.toContainText("48");
+  await expect.poll(() => summaryRequests).toBeGreaterThan(0);
+  await page.waitForTimeout(500);
+  await expect(page.locator("#categoryTiles")).toContainText("517");
+  await expect(page.locator("#categoryTiles .category-tile--loading")).toHaveCount(0);
+  const privateState = await page.evaluate(() => ({
+    cart: JSON.parse(localStorage.getItem("sobag.cart.guest") || "[]"),
+    favorites: JSON.parse(localStorage.getItem("sobag.favorites") || "[]"),
+  }));
+  expect(privateState.cart).toHaveLength(1);
+  expect(privateState.favorites).toEqual(["live-1"]);
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
 test("account favorites are per-user and orders can be repeated into cart", async ({ page }) => {
   const category = await largestCategory(page);
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
