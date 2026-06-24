@@ -219,8 +219,36 @@ function isPublicApiCacheable(path, options = {}) {
   return /^\/api\/catalog-(query|detail)\?/.test(String(path || ""));
 }
 
+function normalizedPublicApiCachePath(path) {
+  try {
+    const url = new URL(String(path || ""), window.location.origin);
+    const params = [...url.searchParams.entries()].sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+      const keyCompare = leftKey.localeCompare(rightKey);
+      return keyCompare || leftValue.localeCompare(rightValue);
+    });
+    const query = new URLSearchParams(params).toString();
+    return query ? `${url.pathname}?${query}` : url.pathname;
+  } catch {
+    return String(path || "");
+  }
+}
+
+function publicApiCacheScope(path) {
+  try {
+    const url = new URL(String(path || ""), window.location.origin);
+    if (url.pathname === "/api/catalog-detail") return "catalog-detail";
+    if (url.pathname !== "/api/catalog-query") return "public";
+    const params = url.searchParams;
+    const hasListingFilter = ["category", "collection", "holiday", "size", "material"].some((key) => params.getAll(key).some((value) => String(value || "").trim())) || Boolean(String(params.get("q") || "").trim());
+    if (!hasListingFilter && !params.has("cursor") && String(params.get("pageSize") || "") === "1") return "catalog-home-summary";
+    return params.has("cursor") ? "catalog-listing-page" : "catalog-listing-initial";
+  } catch {
+    return "public";
+  }
+}
+
 function publicApiCacheKey(path) {
-  return `${PUBLIC_API_CACHE_PREFIX}${path}`;
+  return `${PUBLIC_API_CACHE_PREFIX}${publicApiCacheScope(path)}::${normalizedPublicApiCachePath(path)}`;
 }
 
 function getPublicApiCache(path) {

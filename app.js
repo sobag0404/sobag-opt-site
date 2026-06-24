@@ -124,7 +124,7 @@ let lastFocusedElement = null;
 let catalogHomeHasAnimated = false;
 const CATALOG_PAGE_SIZE = 48;
 const SERVER_CATALOG_PAGE_SIZE = CATALOG_PAGE_SIZE;
-const CATALOG_HOME_SUMMARY_CACHE_KEY = "sobag_catalog_home_summary_v20260623_category_counts";
+const CATALOG_HOME_SUMMARY_CACHE_KEY = "sobag.catalogHomeSummary.v20260624.fullCategoryCounts";
 const CATALOG_HOME_SUMMARY_CACHE_TTL_MS = 15 * 60 * 1000;
 const focusableSelector =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -162,6 +162,7 @@ const state = {
     counts: {},
     source: "",
   },
+  catalogHomeProductCountsTrusted: products.length > CATALOG_PAGE_SIZE,
   cart: new Map(),
   cartUpdatedAt: "",
   favorites: new Set(cleanFavoriteIds(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"))),
@@ -1225,6 +1226,11 @@ function applyLoadedProducts(incomingProducts, options = {}) {
   products = options.mergeWithStored
     ? mergeProducts(products, incomingProducts)
     : incomingProducts.map(normalizeProduct);
+  if (Object.prototype.hasOwnProperty.call(options, "trustedForCatalogHomeCounts")) {
+    state.catalogHomeProductCountsTrusted = Boolean(options.trustedForCatalogHomeCounts);
+  } else if (!options.mergeWithStored) {
+    state.catalogHomeProductCountsTrusted = incomingProducts.length > CATALOG_PAGE_SIZE;
+  }
   addMissingCatalogCategories(products);
   renderSiteContent();
   renderCatalogHome();
@@ -1241,7 +1247,10 @@ async function loadServerProducts() {
     if (!Array.isArray(data.products) || !data.products.length) return false;
     state.productReviews = normalizeReviews(data.reviews);
     const saved = loadStoredProducts();
-    const loaded = applyLoadedProducts(data.products, { mergeWithStored: data.source !== "server" && Boolean(saved?.length) });
+    const loaded = applyLoadedProducts(data.products, {
+      mergeWithStored: data.source !== "server" && Boolean(saved?.length),
+      trustedForCatalogHomeCounts: data.source === "server" && data.products.length > CATALOG_PAGE_SIZE,
+    });
     if (loaded && data.source === "server") localStorage.setItem(STORAGE.products, JSON.stringify(cleanProductsForStorage()));
     return loaded;
   } catch (error) {
@@ -1391,7 +1400,7 @@ async function loadAdminCatalogProducts() {
   try {
     const data = await apiRequest("/api/admin/catalog");
     if (!Array.isArray(data.products) || !data.products.length) return false;
-    const loaded = applyLoadedProducts(data.products);
+    const loaded = applyLoadedProducts(data.products, { trustedForCatalogHomeCounts: data.products.length > CATALOG_PAGE_SIZE });
     if (loaded) localStorage.setItem(STORAGE.products, JSON.stringify(cleanProductsForStorage()));
     return loaded;
   } catch (error) {
@@ -1416,7 +1425,10 @@ async function loadPublishedProducts() {
     const liveProducts = await response.json();
     const saved = loadStoredProducts();
     state.productReviews = [];
-    applyLoadedProducts(liveProducts, { mergeWithStored: Boolean(saved?.length) });
+    applyLoadedProducts(liveProducts, {
+      mergeWithStored: Boolean(saved?.length),
+      trustedForCatalogHomeCounts: liveProducts.length > CATALOG_PAGE_SIZE,
+    });
   } catch {
     // The static catalog file is optional in local prototype mode.
   }
@@ -1762,11 +1774,25 @@ function cleanFavoriteIds(ids) {
 function orderHasPrototypeItems(order) {
   return (order?.items || []).some(isPrototypeCartLine);
 }
+function purgeLegacyPublicCatalogCaches() {
+  try {
+    Object.keys(localStorage)
+      .filter(
+        (key) =>
+          key === "sobag.products.v8" ||
+          key === "sobag.products.v9" ||
+          (key.startsWith("sobag.publicApiCache.") && !key.startsWith(PUBLIC_API_CACHE_PREFIX)) ||
+          (key.startsWith(PUBLIC_API_CACHE_PREFIX) && !key.includes("::")) ||
+          key.startsWith("sobag_catalog_home_summary_") ||
+          (key.startsWith("sobag.catalogHomeSummary.") && key !== CATALOG_HOME_SUMMARY_CACHE_KEY)
+      )
+      .forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // Public cache migration must never affect private cart/profile state.
+  }
+}
 function cleanPrototypeStorage() {
-  localStorage.removeItem("sobag.products.v8");
-  Object.keys(localStorage)
-    .filter((key) => key.startsWith("sobag.publicApiCache.v1."))
-    .forEach((key) => localStorage.removeItem(key));
+  purgeLegacyPublicCatalogCaches();
   const storedProducts = loadStoredProducts();
   localStorage.setItem(STORAGE.products, JSON.stringify(storedProducts));
   Object.keys(localStorage)
@@ -2421,8 +2447,8 @@ function renderCatalogHome() {
   const serverCounts = hasCatalogHomeSummaryCounts() ? state.catalogHomeSummary.counts : {};
   const hasServerCounts = Object.keys(serverCounts).length > 0;
   const hasOnlyPartialCatalogPage = products.length > 0 && products.length <= CATALOG_PAGE_SIZE && state.serverCatalog.total > products.length;
-  const hasOnlyPageSizedLocalCatalog = products.length > 0 && products.length <= CATALOG_PAGE_SIZE && state.catalogHomeSummary.status !== "ready";
-  const shouldWaitForHomeSummary = !hasActiveCatalogState() && !hasServerCounts && (state.catalogHomeSummary.status !== "fallback" || hasOnlyPartialCatalogPage || hasOnlyPageSizedLocalCatalog);
+  const canUseLocalCategoryCounts = state.catalogHomeProductCountsTrusted && !hasOnlyPartialCatalogPage;
+  const shouldWaitForHomeSummary = !hasActiveCatalogState() && !hasServerCounts && !canUseLocalCategoryCounts;
   const countByCategory = Object.fromEntries(content.catalogCategories.map((category) => [category.name, 0]));
   if (!shouldWaitForHomeSummary) {
     products.forEach((product) => {

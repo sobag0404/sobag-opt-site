@@ -642,7 +642,7 @@ const PROTOTYPE_PRODUCT_IDS = new Set([
 const STORAGE = {
   user: "sobag.currentUser",
   users: "sobag.users",
-  products: "sobag.products.v9",
+  products: "sobag.products.v10",
   content: "sobag.siteContent.v1",
   importBatches: "sobag.importBatches.v1",
   theme: "sobag.theme.v1",

@@ -665,8 +665,9 @@ test("catalog home first load uses server category summary over stale fallback",
   await page.evaluate(() => {
     localStorage.removeItem("sobag.products.v8");
     localStorage.removeItem("sobag.products.v9");
+    localStorage.removeItem("sobag.products.v10");
     Object.keys(localStorage)
-      .filter((key) => key.startsWith("sobag.publicApiCache.v1.") || key.startsWith("sobag.publicApiCache.v2."))
+      .filter((key) => key.startsWith("sobag.publicApiCache."))
       .forEach((key) => localStorage.removeItem(key));
     localStorage.setItem(
       "sobag.publicApiCache.v2./api/catalog-query?pageSize=1&sort=popular",
@@ -877,6 +878,7 @@ test("catalog home SPA navigation does not reuse page-sized listing counts", asy
   await page.evaluate(() => {
     localStorage.removeItem("sobag.products.v8");
     localStorage.removeItem("sobag.products.v9");
+    localStorage.removeItem("sobag.products.v10");
     Object.keys(localStorage)
       .filter((key) => key.startsWith("sobag.publicApiCache.") || key.startsWith("sobag_catalog_home_summary_"))
       .forEach((key) => localStorage.removeItem(key));
@@ -931,6 +933,28 @@ test("catalog home SPA navigation does not reuse page-sized listing counts", asy
   await expect.poll(() => page.locator("#categoryTiles").innerText()).toContain("517");
   await expect(page.locator("#categoryTiles")).not.toContainText(/48\s+товар/i);
   await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
+test("public catalog cache migration keeps private browser state", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("sobag.publicApiCache.v2./api/catalog-query?pageSize=48&category=stale", JSON.stringify({ savedAt: Date.now(), data: { items: [] } }));
+    localStorage.setItem("sobag_catalog_home_summary_v20260623_category_counts", JSON.stringify({ savedAt: Date.now(), counts: { QA: 48 } }));
+    localStorage.setItem("sobag.cart.guest", JSON.stringify([["live-1:SKU-1", { productId: "live-1", qty: 2, variant: { sku: "SKU-1", price: 1000 } }]]));
+    localStorage.setItem("sobag.favorites", JSON.stringify(["live-1"]));
+    localStorage.setItem("sobag.currentUser", "");
+  });
+
+  await page.goto(`${BASE_URL}/catalog.html?qa=cache-migration-private-state`, { waitUntil: "domcontentloaded" });
+  const storage = await page.evaluate(() => ({
+    hasOldPublicCache: Object.keys(localStorage).some((key) => key.startsWith("sobag.publicApiCache.v2.")),
+    hasOldSummaryCache: Object.keys(localStorage).some((key) => key.startsWith("sobag_catalog_home_summary_")),
+    cart: JSON.parse(localStorage.getItem("sobag.cart.guest") || "[]"),
+    favorites: JSON.parse(localStorage.getItem("sobag.favorites") || "[]"),
+  }));
+  expect(storage.hasOldPublicCache).toBe(false);
+  expect(storage.hasOldSummaryCache).toBe(false);
+  expect(storage.cart).toHaveLength(1);
+  expect(storage.favorites).toEqual(["live-1"]);
 });
 
 test("account favorites are per-user and orders can be repeated into cart", async ({ page }) => {
@@ -1599,7 +1623,7 @@ test("catalog query cache renders repeat navigation while API refreshes", async 
 
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent("QA Cache")}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".product-card__sku").first()).toHaveText("QA-CACHE-001");
-  await expect.poll(() => page.evaluate(() => Object.keys(localStorage).some((key) => key.startsWith("sobag.publicApiCache.v2./api/catalog-query?")))).toBe(true);
+  await expect.poll(() => page.evaluate(() => Object.keys(localStorage).some((key) => key.startsWith("sobag.publicApiCache.v2.catalog-listing-initial::/api/catalog-query?")))).toBe(true);
 
   failApiAfterCache = true;
   await page.reload({ waitUntil: "domcontentloaded" });
