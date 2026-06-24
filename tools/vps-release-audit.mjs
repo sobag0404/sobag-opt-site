@@ -17,6 +17,7 @@ const REQUIRED_FILES = [
   "tools/file-store-backup.mjs",
   "tools/backend-evidence-smoke.mjs",
   "tools/production-smoke.mjs",
+  "tools/cache-warmup-manifest.mjs",
   "tools/cache-warmup-smoke.mjs",
   "tools/rust-catalog-shadow-smoke.mjs",
   "tools/rust-ssr-smoke.mjs",

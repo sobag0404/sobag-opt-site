@@ -14,6 +14,7 @@ function auditCacheArchitecture(files = {}) {
   const server = files.server ?? read("server.mjs");
   const productionSmoke = files.productionSmoke ?? read("tools/production-smoke.mjs");
   const performanceSmoke = files.performanceSmoke ?? read("tools/production-performance-smoke.mjs");
+  const warmupManifest = files.warmupManifest ?? read("tools/cache-warmup-manifest.mjs");
   const warmupSmoke = files.warmupSmoke ?? read("tools/cache-warmup-smoke.mjs");
   const vpsDeploy = files.vpsDeploy ?? read(".github/workflows/vps-deploy.yml");
   const productionWorkflow = files.productionWorkflow ?? read(".github/workflows/production-smoke.yml");
@@ -39,9 +40,13 @@ function auditCacheArchitecture(files = {}) {
   assert(productionSmoke.includes("HTML must not use aggressive cache-control"), "production smoke must reject aggressive HTML cache");
   assert(performanceSmoke.includes("catalog first-load categories look page-limited"), "performance smoke must catch first-load partial category counts");
   assert(performanceSmoke.includes("catalog-first-load"), "performance smoke must report first-load budget");
-  assert(warmupSmoke.includes("/api/catalog-query?pageSize=1&sort=popular"), "cache warmup must include catalog summary query");
-  assert(warmupSmoke.includes("/api/catalog-query?pageSize=48&sort=popular&category="), "cache warmup must include representative category query");
-  assert(warmupSmoke.includes("PRIVATE_PATHS") && warmupSmoke.includes("no-store"), "cache warmup must verify private no-store paths");
+  assert(warmupManifest.includes("/business.html") && warmupManifest.includes("/contacts.html"), "cache warmup manifest must include representative static content pages");
+  assert(warmupManifest.includes("PRIVATE_CACHE_PROBE_PATHS") && warmupManifest.includes("/api/admin/prices"), "cache warmup manifest must include private/admin no-store probes");
+  assert(warmupManifest.includes("/api/catalog-query?pageSize=1&sort=popular"), "cache warmup must include catalog summary query");
+  assert(warmupManifest.includes("/api/catalog-query?pageSize=48&sort=popular&category="), "cache warmup must include representative category query");
+  assert(warmupSmoke.includes("/api/catalog-detail?baseSku="), "cache warmup must discover a representative catalog detail API");
+  assert(warmupSmoke.includes("discoverVersionedAssetPaths") && warmupSmoke.includes("versioned static asset must be immutable"), "cache warmup must discover and verify versioned JS/CSS assets");
+  assert(warmupSmoke.includes("PRIVATE_CACHE_PROBE_PATHS") && warmupSmoke.includes("no-store"), "cache warmup must verify private no-store paths");
   assert(vpsDeploy.includes("node tools/cache-warmup-smoke.mjs --base-url https://sobag-shop.online"), "VPS deploy must run cache warmup after release activation");
   assert(productionWorkflow.includes("node tools/cache-warmup-smoke.mjs"), "production workflow must run cache warmup verification");
   assert(packageJson.includes("\"smoke:cache-warmup\""), "package scripts must expose cache warmup smoke");
@@ -58,7 +63,8 @@ function runSelfTest() {
       server: "return \"no-cache\"; max-age=31536000, immutable",
       productionSmoke: "expected current app.js cache-bust version",
       performanceSmoke: "catalog-first-load",
-      warmupSmoke: "/api/catalog-query?pageSize=1&sort=popular\n/api/catalog-query?pageSize=48&sort=popular&category=\nPRIVATE_PATHS\nno-store",
+      warmupManifest: "/business.html\n/contacts.html\nPRIVATE_CACHE_PROBE_PATHS\n/api/admin/prices\n/api/catalog-query?pageSize=1&sort=popular\n/api/catalog-query?pageSize=48&sort=popular&category=",
+      warmupSmoke: "/api/catalog-detail?baseSku=\ndiscoverVersionedAssetPaths\nversioned static asset must be immutable\nPRIVATE_CACHE_PROBE_PATHS\nno-store",
       vpsDeploy: "node tools/cache-warmup-smoke.mjs --base-url https://sobag-shop.online",
       productionWorkflow: "node tools/cache-warmup-smoke.mjs",
       packageJson: "\"smoke:cache-warmup\"",

@@ -2,27 +2,15 @@
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { performance } from "node:perf_hooks";
+import {
+  CACHE_WARMUP_LIMITS,
+  PRIVATE_CACHE_PROBE_PATHS,
+  PUBLIC_CACHE_WARMUP_PATHS,
+} from "./cache-warmup-manifest.mjs";
 
 const DEFAULT_BASE_URL = "https://sobag-shop.online";
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_MS = 5000;
-const DEFAULT_WARMUP_PATHS = [
-  "/",
-  "/catalog.html",
-  "/catalog?category=%D0%9F%D0%BE%D0%B4%D1%83%D1%88%D0%BA%D0%B8",
-  "/api/catalog-query?pageSize=1&sort=popular",
-  "/api/catalog-query?pageSize=48&sort=popular",
-  "/api/catalog-query?pageSize=48&sort=popular&category=%D0%9F%D0%BE%D0%B4%D1%83%D1%88%D0%BA%D0%B8",
-  "/api/price-list?format=json",
-  "/app.js",
-  "/styles.css",
-];
-const PRIVATE_PATHS = [
-  "/api/auth/me",
-  "/api/orders",
-  "/api/admin/catalog",
-  "/api/admin/product-images",
-];
 
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
@@ -53,7 +41,9 @@ Read-only cache warmup and cache-policy verification for public paths.`);
       throw new Error(`Unknown argument: ${token}`);
     }
   }
-  args.paths = (args.paths.length ? args.paths : DEFAULT_WARMUP_PATHS).map((path) => (path.startsWith("/") ? path : `/${path}`));
+  args.paths = args.paths.length
+    ? args.paths.map((path) => ({ path: path.startsWith("/") ? path : `/${path}`, kind: "custom", label: "cli" }))
+    : PUBLIC_CACHE_WARMUP_PATHS;
   return args;
 }
 
@@ -71,6 +61,47 @@ function normalizeBaseUrl(raw) {
 function maxAgeSeconds(cacheControl = "") {
   const match = String(cacheControl || "").match(/(?:^|,)\s*max-age=(\d+)/i);
   return match ? Number(match[1]) : 0;
+}
+
+function isVersionedStaticPath(path) {
+  const url = new URL(path, "https://sobag-shop.online");
+  return /\.(?:js|css)$/i.test(url.pathname) && url.searchParams.has("v");
+}
+
+function normalizeSameOriginPath(raw, base) {
+  const url = new URL(raw, `${base}/`);
+  const baseUrl = new URL(base);
+  if (url.origin !== baseUrl.origin) return null;
+  return `${url.pathname}${url.search}`;
+}
+
+function discoverVersionedAssetPaths(html, base) {
+  const paths = [];
+  const pattern = /\b(?:src|href)=["']([^"']+\.(?:js|css)(?:\?[^"']*)?)["']/giu;
+  let match;
+  while ((match = pattern.exec(html))) {
+    const normalized = normalizeSameOriginPath(match[1], base);
+    if (normalized && isVersionedStaticPath(normalized)) paths.push(normalized);
+  }
+  return paths;
+}
+
+function discoverCatalogDetailPaths(result) {
+  if (!result.path.startsWith("/api/catalog-query")) return [];
+  try {
+    const payload = JSON.parse(result.body);
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const details = [];
+    for (const item of items) {
+      const baseSku = item?.baseSku || item?.base_sku || item?.sku || item?.id;
+      if (!baseSku) continue;
+      details.push(`/api/catalog-detail?baseSku=${encodeURIComponent(baseSku)}`);
+      if (details.length >= CACHE_WARMUP_LIMITS.maxDiscoveredCatalogDetails) break;
+    }
+    return details;
+  } catch {
+    return [];
+  }
 }
 
 async function fetchWarm(base, path, args, options = {}) {
@@ -113,7 +144,7 @@ function assertPublicPath(result) {
     assert(!/immutable/i.test(cache) && maxAgeSeconds(cache) <= 300, `${result.path}: HTML must not be immutable or long-cache`);
     return;
   }
-  if (result.path.startsWith("/api/catalog-query") || result.path.startsWith("/api/price-list")) {
+  if (result.path.startsWith("/api/catalog-query") || result.path.startsWith("/api/catalog-detail") || result.path.startsWith("/api/price-list")) {
     assert(/public/i.test(cache) && /max-age=300/i.test(cache), `${result.path}: public API must use short public cache`);
     assert(result.contentType.includes("application/json"), `${result.path}: expected JSON content-type`);
     return;
@@ -121,6 +152,9 @@ function assertPublicPath(result) {
   if (/\.(?:js|css)(?:\?|$)/.test(result.path)) {
     assert(/public/i.test(cache), `${result.path}: static asset should use public cache`);
     assert(!/no-store/i.test(cache), `${result.path}: static asset must not be no-store`);
+    if (isVersionedStaticPath(result.path)) {
+      assert(/immutable/i.test(cache) && maxAgeSeconds(cache) >= 31536000, `${result.path}: versioned static asset must be immutable long-cache`);
+    }
   }
 }
 
@@ -132,16 +166,42 @@ function assertPrivatePath(result) {
 async function runWarmup(rawBaseUrl, args) {
   const base = normalizeBaseUrl(rawBaseUrl);
   const publicResults = [];
-  for (const path of args.paths) {
-    const result = await fetchWarm(base, path, args);
+  const queue = [...args.paths];
+  const seen = new Set(queue.map((entry) => entry.path));
+  let discoveredVersionedAssets = 0;
+
+  function enqueue(path, kind, label) {
+    if (seen.has(path)) return;
+    seen.add(path);
+    queue.push({ path, kind, label });
+  }
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const entry = queue[index];
+    const result = await fetchWarm(base, entry.path, args);
+    result.kind = entry.kind;
+    result.label = entry.label;
     result.maxMs = args.maxMs;
     assertPublicPath(result);
     publicResults.push(result);
+
+    if (result.contentType.includes("text/html")) {
+      for (const assetPath of discoverVersionedAssetPaths(result.body, base)) {
+        if (discoveredVersionedAssets >= CACHE_WARMUP_LIMITS.maxDiscoveredVersionedAssets) break;
+        if (!seen.has(assetPath)) discoveredVersionedAssets += 1;
+        enqueue(assetPath, "versioned-static", "discovered-versioned-asset");
+      }
+    }
+
+    for (const detailPath of discoverCatalogDetailPaths(result)) {
+      enqueue(detailPath, "public-api", "discovered-catalog-detail");
+    }
   }
 
   const privateResults = [];
-  for (const path of PRIVATE_PATHS) {
-    const result = await fetchWarm(base, path, args, { method: path === "/api/orders" ? "GET" : "GET" });
+  for (const entry of PRIVATE_CACHE_PROBE_PATHS) {
+    const result = await fetchWarm(base, entry.path, args, { method: "GET" });
+    result.label = entry.label;
     assertPrivatePath(result);
     privateResults.push(result);
   }
@@ -166,9 +226,9 @@ async function closeServer(server) {
 async function createSelfTestServer() {
   const server = createServer((req, res) => {
     const url = new URL(req.url || "/", "http://127.0.0.1");
-    if (url.pathname === "/" || url.pathname === "/catalog.html" || url.pathname === "/catalog") {
+    if (url.pathname === "/" || url.pathname === "/catalog.html" || url.pathname === "/catalog" || /\.(?:html)$/i.test(url.pathname)) {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
-      res.end("<!doctype html><title>Sobag</title>");
+      res.end('<!doctype html><title>Sobag</title><script src="/app.js?v=self-test"></script><link rel="stylesheet" href="/styles.css?v=self-test">');
       return;
     }
     if (url.pathname === "/api/catalog-query") {
@@ -181,12 +241,21 @@ async function createSelfTestServer() {
       res.end(JSON.stringify({ rows: [{ group: "Test", price: 100 }] }));
       return;
     }
+    if (url.pathname === "/api/catalog-detail") {
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
+      res.end(JSON.stringify({ product: { baseSku: url.searchParams.get("baseSku") || "OPT-1", minPrice: 100 } }));
+      return;
+    }
     if (url.pathname === "/app.js" || url.pathname === "/styles.css") {
-      res.writeHead(200, { "content-type": url.pathname.endsWith(".css") ? "text/css" : "application/javascript", "cache-control": "public, max-age=3600, stale-while-revalidate=86400" });
+      const isVersioned = url.searchParams.has("v");
+      res.writeHead(200, {
+        "content-type": url.pathname.endsWith(".css") ? "text/css" : "application/javascript",
+        "cache-control": isVersioned ? "public, max-age=31536000, immutable" : "public, max-age=3600, stale-while-revalidate=86400",
+      });
       res.end("body{}");
       return;
     }
-    if (PRIVATE_PATHS.includes(url.pathname)) {
+    if (PRIVATE_CACHE_PROBE_PATHS.some((entry) => entry.path === url.pathname)) {
       res.writeHead(url.pathname.includes("/admin/") ? 401 : 200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
       res.end(JSON.stringify({ ok: true }));
       return;
