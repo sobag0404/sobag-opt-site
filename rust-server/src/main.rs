@@ -512,7 +512,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/rust/auth/logout", post(auth_logout_preview))
         .route(
             "/rust/orders",
-            post(order_create_preview).patch(order_patch_preview),
+            get(orders_method_not_allowed)
+                .post(order_create_preview)
+                .patch(order_patch_preview),
         )
         .route("/rust/briefs", post(brief_create_preview))
         .route(
@@ -578,6 +580,15 @@ async fn health(State(state): State<Arc<AppState>>) -> AppResult<Json<Value>> {
     Ok(Json(
         json!({ "ok": true, "runtime": "rust", "catalogDb": { "enabled": true, "configured": true } }),
     ))
+}
+
+async fn orders_method_not_allowed() -> (StatusCode, HeaderMap) {
+    let mut headers = no_store_headers();
+    headers.insert(
+        header::ALLOW,
+        "POST, PATCH".parse().expect("valid allow header"),
+    );
+    (StatusCode::METHOD_NOT_ALLOWED, headers)
 }
 
 async fn catalog_query(
