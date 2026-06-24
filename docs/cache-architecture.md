@@ -15,7 +15,7 @@ Status: target model and migration notes for the VPS/Rust production runtime.
 
 - Node static server `server.mjs`: sets HTML `no-cache`, versioned JS/CSS immutable, assets/data bounded public cache, API fallbacks `no-store`.
 - Node compatibility routes: catalog/price public routes use short public cache; admin/auth/order routes use `no-store` through route helpers.
-- Rust routes: public catalog/query/detail use short public cache; auth/admin/order style routes use `no-store` helpers.
+- Rust routes: public catalog/query/detail JSON and HTML fragments use short public cache; Rust full HTML shells for catalog/search/product/content pages use `no-cache`; auth/admin/order style routes use `no-store` helpers.
 - Browser localStorage:
   - public API cache keys use an explicit `sobag.publicApiCache.vN.*` prefix with a request-shape scope before the normalized endpoint/query;
   - catalog-home summary cache uses the `sobag.catalogHomeSummary.*` family;

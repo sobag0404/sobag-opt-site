@@ -33,6 +33,7 @@ function auditCacheArchitecture(files = {}) {
   assert(server.includes("return \"no-cache\""), "server should keep HTML no-cache behavior");
   assert(server.includes("max-age=31536000, immutable"), "server should keep immutable versioned asset cache");
   assert(rustMain.includes("public, max-age=300, stale-while-revalidate=3600"), "Rust public catalog cache should stay short public cache");
+  assert(rustMain.includes("render_listing_page") && rustMain.includes("Ok((no_cache_headers(), Html(body)))"), "Rust full HTML shells should keep no-cache behavior");
   assert(rustMain.includes("no-store"), "Rust private/admin routes should keep no-store helper");
 
   assert(productionSmoke.includes("category counts look page-limited"), "production smoke must catch page-limited catalog counts");

@@ -746,7 +746,7 @@ async fn render_content_page_response(
         render_content_page_with_routes(spec, &content, routes),
         render_page_foot()
     );
-    Ok((cache_headers(), Html(body)))
+    Ok((no_cache_headers(), Html(body)))
 }
 
 async fn auth_me_preview(headers: HeaderMap) -> AppResult<(HeaderMap, Json<Value>)> {
@@ -1960,7 +1960,7 @@ async fn render_listing_page(
         render_listing_fragment_with_routes(fragment_path, routes, &query, &page),
         render_page_foot()
     );
-    Ok((cache_headers(), Html(body)))
+    Ok((no_cache_headers(), Html(body)))
 }
 
 struct RenderRoutes {
