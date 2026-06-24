@@ -469,6 +469,9 @@ jobs:
             safe_rm_rf "$rust_target_dir/debug"
           fi
 
+          echo "Deploy phase: public cache warmup"
+          node tools/cache-warmup-smoke.mjs --base-url https://sobag-shop.online --timeout 15000 --max-ms 5000
+
           mapfile -t releases < <(ls -1dt "$app_dir"/releases/* 2>/dev/null || true)
           keep_current="$(readlink -f "$app_dir/current")"
           for old_release in "${releases[@]}"; do

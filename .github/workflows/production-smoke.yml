@@ -77,3 +77,7 @@ jobs:
         env:
           SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}
         run: node tools/production-storage-readiness.mjs --timeout 15000
+      - name: Run read-only public cache warmup verification
+        env:
+          SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}
+        run: node tools/cache-warmup-smoke.mjs --timeout 15000 --max-ms 5000

@@ -10,6 +10,7 @@ const REQUIRED_PHRASES = [
   "node tools/canonical-url-smoke.mjs",
   "node tools/production-performance-smoke.mjs",
   "node tools/production-storage-readiness.mjs",
+  "node tools/cache-warmup-smoke.mjs",
   "SOBAG_PRODUCTION_BASE_URL",
   "workflow_run",
   "vps-deploy",
