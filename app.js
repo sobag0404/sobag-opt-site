@@ -142,6 +142,7 @@ const state = {
   selectedHoliday: "",
   search: "",
   sort: "popular",
+  forceCatalogListing: false,
   visibleLimit: CATALOG_PAGE_SIZE,
   serverCatalog: {
     status: "idle",
@@ -384,6 +385,7 @@ function syncCatalogRoute(options = {}) {
   if (state.selectedCollection) params.set("collection", state.selectedCollection);
   if (state.selectedHoliday) params.set("holiday", state.selectedHoliday);
   if (state.search.trim()) params.set("q", state.search.trim());
+  if (state.forceCatalogListing && !params.toString()) params.set("view", "list");
   const nextUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
   if (nextUrl === `${window.location.pathname}${window.location.search}`) return;
   const method = options.mode === "push" ? "pushState" : "replaceState";
@@ -403,6 +405,7 @@ function applyCatalogUrl(targetUrl, options = {}) {
   state.selectedCollection = params.get("collection") || "";
   state.selectedHoliday = params.get("holiday") || "";
   state.search = params.get("q") || "";
+  state.forceCatalogListing = params.get("view") === "list";
   if (searchInput) searchInput.value = state.search;
   Object.values(state.filters).forEach((bucket) => bucket.clear());
   resetVisibleProducts();
@@ -418,6 +421,7 @@ function hasActiveCatalogState() {
     state.selectedCategory ||
       state.selectedCollection ||
       state.selectedHoliday ||
+      state.forceCatalogListing ||
       state.search.trim() ||
       Object.values(state.filters).some((bucket) => bucket.size)
   );
@@ -2249,12 +2253,7 @@ function renderActiveFilterChips() {
   if (!activeFilterChips) return;
   const items = activeFilterItems();
   activeFilterChips.classList.toggle("is-hidden", !items.length);
-  activeFilterChips.innerHTML = [
-    `<button class="active-filter-chips__reset" type="button" data-clear-all-filters>
-      <i data-lucide="rotate-ccw"></i>
-      <span>Снять все фильтры</span>
-    </button>`,
-    ...items
+  activeFilterChips.innerHTML = items
     .map(
       (item) => `
         <button type="button" data-clear-filter="${escapeHtml(item.key)}" data-clear-value="${escapeHtml(item.value || "")}">
@@ -2262,8 +2261,8 @@ function renderActiveFilterChips() {
           <i data-lucide="x"></i>
         </button>
       `
-    ),
-  ].join("");
+    )
+    .join("");
 }
 function catalogContentItem(items = [], name = "") {
   const prepared = String(name || "").trim().toLocaleLowerCase("ru-RU");
@@ -2384,11 +2383,12 @@ function clearCatalogFilter(key, value = "") {
   renderFilters();
   renderProducts();
 }
-function clearAllCatalogFilters() {
+function clearAllCatalogFilters(options = {}) {
   state.selectedCategory = "";
   state.selectedCollection = "";
   state.selectedHoliday = "";
   state.search = "";
+  state.forceCatalogListing = Boolean(options.keepListing);
   if (searchInput) searchInput.value = "";
   Object.values(state.filters).forEach((bucket) => bucket.clear());
   resetVisibleProducts();
@@ -2396,6 +2396,16 @@ function clearAllCatalogFilters() {
   renderCatalogShell();
   renderFilters();
   renderProducts();
+}
+function applyCatalogFilters() {
+  state.forceCatalogListing = hasActiveCatalogState();
+  resetVisibleProducts();
+  syncCatalogRoute();
+  renderCatalogShell();
+  renderFilters();
+  renderProducts();
+  document.body.classList.remove("filters-open");
+  updateFilterToggle();
 }
 function renderCatalogHome() {
   if (!categoryTiles || !actualTiles || !collectionTiles || !holidayTiles) return;
@@ -2579,7 +2589,7 @@ async function loadPriceListPreview() {
 }
 function renderCatalogShell() {
   if (!catalogHome || !catalogListing || !catalogTools || !catalogTitle) return;
-  const isHome = !isSearchPage && !isFavoritesPage && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
+  const isHome = !isSearchPage && !isFavoritesPage && !state.forceCatalogListing && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
   document.body.classList.toggle("catalog-listing-active", document.body.classList.contains("catalog-page") && !isHome);
   catalogHome.classList.toggle("is-hidden", !isHome);
   catalogListing.classList.toggle("is-hidden", isHome);
@@ -2612,6 +2622,7 @@ function renderCatalogShell() {
   if (state.selectedCollection) titleParts.push(state.selectedCollection);
   if (state.selectedHoliday) titleParts.push(state.selectedHoliday);
   if (!titleParts.length && state.search.trim()) titleParts.push("Результаты поиска");
+  if (!titleParts.length) titleParts.push(getSiteContent().catalogTitleDefault);
   setCatalogPageTitle(titleParts.join(" · "));
   filterToggle?.classList.remove("is-hidden");
   updateFilterToggle();
@@ -2826,6 +2837,7 @@ function openCatalogCategory(category) {
   state.selectedCategory = category;
   state.selectedCollection = "";
   state.selectedHoliday = "";
+  state.forceCatalogListing = false;
   state.filters.category.clear();
   resetVisibleProducts();
   syncCatalogRoute({ mode: "push" });
@@ -2842,6 +2854,7 @@ function openCatalogCollection(collection) {
   state.selectedCategory = "";
   state.selectedCollection = collection;
   state.selectedHoliday = "";
+  state.forceCatalogListing = false;
   state.filters.collection.clear();
   resetVisibleProducts();
   syncCatalogRoute({ mode: "push" });
@@ -2858,6 +2871,7 @@ function openCatalogHoliday(holiday) {
   state.selectedCategory = "";
   state.selectedCollection = "";
   state.selectedHoliday = holiday;
+  state.forceCatalogListing = false;
   state.filters.holiday.clear();
   resetVisibleProducts();
   syncCatalogRoute({ mode: "push" });
@@ -2890,6 +2904,7 @@ function backToCatalogHome() {
   state.selectedCollection = "";
   state.selectedHoliday = "";
   state.search = "";
+  state.forceCatalogListing = false;
   if (searchInput) searchInput.value = "";
   Object.values(state.filters).forEach((bucket) => bucket.clear());
   resetVisibleProducts();
@@ -2932,6 +2947,19 @@ function renderFilters() {
       `;
     })
     .join("");
+  filterGroups.insertAdjacentHTML(
+    "beforeend",
+    `<div class="filters__actions" data-filter-actions>
+      <button class="primary-button filters__apply" type="button" data-apply-filters>
+        <i data-lucide="check"></i>
+        <span>Применить фильтр</span>
+      </button>
+      <button class="ghost-button filters__reset" type="button" data-reset-filters>
+        <i data-lucide="rotate-ccw"></i>
+        <span>Сбросить фильтр</span>
+      </button>
+    </div>`
+  );
   refreshLucideIcons();
 }
 function productCardHtml(product) {
@@ -4248,6 +4276,14 @@ function boot() {
     }
     if (button.dataset.clearAllFilters !== undefined) {
       clearAllCatalogFilters();
+      return;
+    }
+    if (button.dataset.applyFilters !== undefined) {
+      applyCatalogFilters();
+      return;
+    }
+    if (button.dataset.resetFilters !== undefined) {
+      clearAllCatalogFilters({ keepListing: true });
       return;
     }
     if (button.dataset.searchQuery) {

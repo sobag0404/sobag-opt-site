@@ -1117,6 +1117,24 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await waitForLiveProducts(page);
   await expect(page.locator('[data-filter-group="category"]')).toHaveCount(0);
   await expect(page.locator('#activeFilterChips [data-clear-filter="selectedCategory"]')).toHaveCount(1);
+  await expect(page.locator('#activeFilterChips [data-clear-all-filters]')).toHaveCount(0);
+  await expect(page.locator('[data-filter-actions]')).toBeVisible();
+  await expect(page.locator('[data-apply-filters]')).toContainText("Применить фильтр");
+  await expect(page.locator('[data-reset-filters]')).toContainText("Сбросить фильтр");
+  const loadCountBeforeReset = await page.evaluate(() => localStorage.getItem("__sobagQaDocumentLoads"));
+  const firstSizeFilter = page.locator('[data-filter="size"]').first();
+  if ((await firstSizeFilter.count()) > 0) {
+    await firstSizeFilter.check();
+    await page.locator("[data-apply-filters]").click();
+    await expect(page.locator("#catalogListing")).toBeVisible();
+    await expect(page.locator('#activeFilterChips [data-clear-filter="size"]')).toHaveCount(1);
+  }
+  await page.locator("[data-reset-filters]").click();
+  await expect(page.locator("#catalogListing")).toBeVisible();
+  await expect(page.locator("#catalogHome")).toBeHidden();
+  await expect(page).toHaveURL(/view=list/);
+  await expect(page.locator("#activeFilterChips")).toHaveClass(/is-hidden/);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("__sobagQaDocumentLoads"))).toBe(loadCountBeforeReset);
   await expect(page.locator("[data-show-more-products]")).toBeVisible();
   await expect(page.locator(".product-card")).toHaveCount(await page.locator(".product-card").count());
 
