@@ -78,6 +78,7 @@ test("browser public cache worker warms only public resources", async ({ page })
   expect(workerSource).toContain('"/api/auth"');
   expect(workerSource).toContain('"/api/orders"');
   expect(workerSource).toContain('"/api/admin"');
+  expect(workerSource).toContain("SOBAG_IMAGE_CACHE_MAX_ENTRIES");
 
   await page.evaluate(async () => {
     if ("serviceWorker" in navigator) {

@@ -3,6 +3,7 @@ const SOBAG_PUBLIC_CACHE = `sobag-public-${SOBAG_SW_VERSION}`;
 const SOBAG_API_MAX_AGE_MS = 10 * 60 * 1000;
 const SOBAG_HTML_TIMEOUT_MS = 1200;
 const SOBAG_API_TIMEOUT_MS = 900;
+const SOBAG_IMAGE_CACHE_MAX_ENTRIES = 72;
 
 const PRIVATE_PREFIXES = [
   "/api/auth",
@@ -53,6 +54,10 @@ function isPublicStatic(url) {
   );
 }
 
+function isImageUrl(url) {
+  return /\.(?:avif|gif|jpe?g|png|webp|svg|ico)(?:\?|$)/i.test(url.pathname);
+}
+
 function requestLooksPrivate(request, url) {
   if (request.method !== "GET") return true;
   if (!url || isPrivatePath(url.pathname)) return true;
@@ -101,6 +106,26 @@ async function putCache(request, response) {
   if (!cacheableResponse(response)) return;
   const cache = await caches.open(SOBAG_PUBLIC_CACHE);
   await cache.put(request, withCacheTimestamp(response.clone()));
+  const url = sameOriginUrl(request);
+  if (url && isImageUrl(url)) await trimImageCache(cache);
+}
+
+async function trimImageCache(cache) {
+  const imageRequests = (await cache.keys()).filter((request) => {
+    const url = sameOriginUrl(request);
+    return url && isImageUrl(url);
+  });
+  if (imageRequests.length <= SOBAG_IMAGE_CACHE_MAX_ENTRIES) return;
+  const rows = await Promise.all(
+    imageRequests.map(async (request) => {
+      const response = await cache.match(request);
+      return { request, stamp: cachedAt(response) || 0 };
+    })
+  );
+  rows
+    .sort((left, right) => right.stamp - left.stamp)
+    .slice(SOBAG_IMAGE_CACHE_MAX_ENTRIES)
+    .forEach((row) => cache.delete(row.request));
 }
 
 async function networkFirst(request, timeoutMs, options = {}) {
