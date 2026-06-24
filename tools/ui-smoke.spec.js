@@ -8,6 +8,7 @@ test.setTimeout(60000);
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
+      window.__sobagDisableServiceWorker = true;
       const key = "__sobagQaDocumentLoads";
       localStorage.setItem(key, String(Number(localStorage.getItem(key) || "0") + 1));
     } catch {
@@ -67,6 +68,94 @@ test("header icon buttons keep visible fallbacks when external icons are unavail
     expect(fallback.box.width, `${fallback.selector} fallback width`).toBeGreaterThan(8);
     expect(fallback.box.height, `${fallback.selector} fallback height`).toBeGreaterThan(8);
   }
+});
+
+test("browser public cache worker warms only public resources", async ({ page }) => {
+  const workerSource = fs.readFileSync(path.join(process.cwd(), "sw.js"), "utf8");
+  expect(workerSource).toContain('"/api/catalog-query"');
+  expect(workerSource).toContain('"/api/catalog-detail"');
+  expect(workerSource).toContain('"/api/price-list"');
+  expect(workerSource).toContain('"/api/auth"');
+  expect(workerSource).toContain('"/api/orders"');
+  expect(workerSource).toContain('"/api/admin"');
+
+  await page.evaluate(async () => {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((key) => key.startsWith("sobag-public-")).map((key) => caches.delete(key)));
+    }
+  });
+
+  await page.goto(`${BASE_URL}/catalog.html?qa=sw-public-cache`, { waitUntil: "load" });
+  const support = await page.evaluate(() => Boolean("serviceWorker" in navigator && "caches" in window));
+  test.skip(!support, "Service worker Cache API is unavailable in this browser");
+
+  await expect
+    .poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).some((registration) => Boolean(registration.active))))
+    .toBe(true);
+
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        await navigator.serviceWorker.ready;
+        const keys = (await caches.keys()).filter((key) => key.startsWith("sobag-public-"));
+        const entries = [];
+        for (const key of keys) {
+          const cache = await caches.open(key);
+          for (const request of await cache.keys()) {
+            const url = new URL(request.url);
+            entries.push(`${url.pathname}${url.search}`);
+          }
+        }
+        return entries.includes("/catalog.html") && entries.some((entry) => /^\/styles\.css\?/.test(entry)) && entries.some((entry) => /^\/components\/site-shell\.js\?v=20260624-browser-cache/.test(entry));
+      })
+    )
+    .toBe(true);
+
+  const publicEntries = await page.evaluate(async () => {
+    const keys = (await caches.keys()).filter((key) => key.startsWith("sobag-public-"));
+    const entries = [];
+    for (const key of keys) {
+      const cache = await caches.open(key);
+      for (const request of await cache.keys()) {
+        const url = new URL(request.url);
+        entries.push(`${url.pathname}${url.search}`);
+      }
+    }
+    return entries;
+  });
+  expect(publicEntries).toContainEqual(expect.stringMatching(/^\/styles\.css\?/));
+  expect(publicEntries).toContainEqual(expect.stringMatching(/^\/components\/site-shell\.js\?v=20260624-browser-cache/));
+
+  await page.evaluate(async () => {
+    await fetch("/api/auth/me").catch(() => null);
+    await fetch("/api/orders").catch(() => null);
+    await fetch("/api/admin/catalog").catch(() => null);
+  });
+  const privateEntries = await page.evaluate(async () => {
+    const keys = (await caches.keys()).filter((key) => key.startsWith("sobag-public-"));
+    const entries = [];
+    for (const key of keys) {
+      const cache = await caches.open(key);
+      for (const request of await cache.keys()) {
+        const url = new URL(request.url);
+        if (url.pathname.startsWith("/api/auth") || url.pathname.startsWith("/api/orders") || url.pathname.startsWith("/api/admin")) entries.push(`${url.pathname}${url.search}`);
+      }
+    }
+    return entries;
+  });
+  expect(privateEntries).toEqual([]);
+
+  await page.evaluate(async () => {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key.startsWith("sobag-public-")).map((key) => caches.delete(key)));
+  });
 });
 
 test("manager order pages can open guest customer history", async ({ page }) => {

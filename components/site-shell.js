@@ -100,5 +100,88 @@
   }
 
   renderSiteShell();
+
+  const SW_VERSION = "20260624-browser-cache";
+  const PREFETCH_PAGES = [
+    "/",
+    "/catalog.html",
+    "/delivery.html",
+    "/payment.html",
+    "/contacts.html",
+    "/marketplaces.html",
+    "/business.html",
+    "/how-to-order.html",
+    "/wholesale.html",
+    "/favorites.html",
+    "/cart.html",
+  ];
+  const PREFETCH_ASSETS = [
+    "/styles.css?v=20260624-customer-flow",
+    "/app.js?v=20260624-product-image-sizes",
+    "/cart.js?v=20260624-customer-flow",
+    "/components/site-shell.js?v=20260624-browser-cache",
+    "/components/app-utils.js?v=20260615-modular-utils",
+    "/components/app-data.js?v=20260624-public-cache-v3",
+    "/components/app-content-utils.js?v=20260624-public-cache-v3",
+    "/components/app-product-utils.js?v=20260624-product-image-sizes",
+  ];
+  const PREFETCH_PUBLIC_API = [
+    "/api/catalog-query?pageSize=1&sort=popular",
+    "/api/catalog-query?pageSize=48&sort=popular",
+    "/api/price-list?format=json",
+  ];
+
+  function shouldSkipPublicPrefetch() {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    return Boolean(connection?.saveData || /2g/i.test(connection?.effectiveType || ""));
+  }
+
+  function idle(callback) {
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(callback, { timeout: 2500 });
+      return;
+    }
+    window.setTimeout(callback, 900);
+  }
+
+  function visiblePublicImages() {
+    return [...document.images]
+      .map((image) => image.currentSrc || image.src || "")
+      .filter((src) => {
+        if (!src) return false;
+        try {
+          const url = new URL(src, window.location.href);
+          return url.origin === window.location.origin && /\.(webp|png|jpe?g|avif|svg)$/i.test(url.pathname);
+        } catch {
+          return false;
+        }
+      })
+      .slice(0, 6);
+  }
+
+  function publicPrefetchUrls() {
+    return [...PREFETCH_PAGES, ...PREFETCH_ASSETS, ...PREFETCH_PUBLIC_API, ...visiblePublicImages()];
+  }
+
+  function registerPublicCacheWorker() {
+    if (!("serviceWorker" in navigator) || location.protocol === "file:" || location.pathname.startsWith("/admin-")) return;
+    if (window.__sobagDisableServiceWorker === true && !/sw-public-cache/.test(location.search)) return;
+    window.addEventListener("load", () => {
+      idle(async () => {
+        try {
+          const registration = await navigator.serviceWorker.register(`/sw.js?v=${SW_VERSION}`, { scope: "/" });
+          if (registration.waiting) registration.waiting.postMessage({ type: "SKIP_WAITING" });
+          if (shouldSkipPublicPrefetch()) return;
+          const worker = registration.active || registration.waiting || registration.installing;
+          const ready = await navigator.serviceWorker.ready;
+          (ready.active || worker)?.postMessage({ type: "SOBAG_PREFETCH_PUBLIC", urls: publicPrefetchUrls() });
+        } catch {
+          // Service workers are an optional public-cache speed layer.
+        }
+      });
+    });
+  }
+
+  registerPublicCacheWorker();
   window.SobagSiteShell = { render: renderSiteShell };
 })();
