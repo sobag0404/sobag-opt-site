@@ -1292,6 +1292,11 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   const baseSku = await firstCard.locator(".product-card__sku").innerText();
   await expect(baseSku.trim()).toMatch(/^opt_/i);
   await expect(firstCard.locator(".product-card__image-button")).toHaveAttribute("title", /Открыть/);
+  const firstScreenImages = page.locator('.product-card [data-product-image="true"]');
+  await expect(firstScreenImages.nth(0)).toHaveAttribute("loading", "eager");
+  await expect(firstScreenImages.nth(0)).toHaveAttribute("fetchpriority", "high");
+  await expect(firstScreenImages.nth(3)).toHaveAttribute("loading", "eager");
+  await expect(firstScreenImages.nth(4)).toHaveAttribute("loading", "lazy");
   const fallbackImageSrc = await firstCard.locator('[data-product-image="true"]').first().evaluate((img) => {
     img.closest("picture")?.querySelectorAll("source").forEach((source) => source.remove());
     delete img.dataset.fallbackApplied;

@@ -8268,10 +8268,15 @@ textarea.is-shaking {
 
   .header__inner {
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand actions"
+      "catalog catalog"
+      "search search";
     gap: 10px;
   }
 
   .brand {
+    grid-area: brand;
     min-width: 0;
   }
 
@@ -8281,12 +8286,20 @@ textarea.is-shaking {
 
   .catalog-button,
   .search {
-    grid-column: 1 / -1;
     width: 100%;
     min-width: 0;
   }
 
+  .catalog-button {
+    grid-area: catalog;
+  }
+
+  .search {
+    grid-area: search;
+  }
+
   .header__actions {
+    grid-area: actions;
     justify-content: end;
     min-width: 0;
   }

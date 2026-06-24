@@ -3005,7 +3005,10 @@ function renderFilters() {
   );
   refreshLucideIcons();
 }
-function productCardHtml(product) {
+function productCardImageAttrs(index = 0) {
+  return index < 4 ? imageAttrs(640, 640, "eager", "high") : imageAttrs(640, 640);
+}
+function productCardHtml(product, index = 0) {
   const favorite = state.favorites.has(product.id) ? " is-active" : "";
   const favoritePressed = state.favorites.has(product.id) ? "true" : "false";
   const productId = escapeHtml(product.id);
@@ -3015,7 +3018,7 @@ function productCardHtml(product) {
         <article class="product-card">
           <div class="product-card__image">
             <button class="product-card__image-button" type="button" data-open-product="${productId}" aria-label="Открыть ${productName}" title="Открыть ${productName}">
-              ${productPictureHtml(product, product.image, product.name, imageAttrs(640, 640))}
+              ${productPictureHtml(product, product.image, product.name, productCardImageAttrs(index))}
             </button>
             <button class="favorite-button${favorite}" type="button" title="${favoritePressed === "true" ? "Убрать из избранного" : "В избранное"}" data-favorite="${productId}" aria-pressed="${favoritePressed}">
               <i data-lucide="heart"></i>
@@ -3078,7 +3081,7 @@ function renderProductGridCards(visibleList, renderKey = "") {
     renderedCount < visibleList.length &&
     productGrid.children.length === renderedCount;
   if (canAppend) {
-    productGrid.insertAdjacentHTML("beforeend", visibleList.slice(renderedCount).map(productCardHtml).join(""));
+    productGrid.insertAdjacentHTML("beforeend", visibleList.slice(renderedCount).map((product, index) => productCardHtml(product, renderedCount + index)).join(""));
   } else {
     productGrid.innerHTML = visibleList.map(productCardHtml).join("");
   }
