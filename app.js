@@ -413,6 +413,7 @@ function applyCatalogUrl(targetUrl, options = {}) {
   renderCatalogShell();
   renderFilters();
   renderProducts();
+  ensureCatalogHomeSummary();
   smoothScrollToHash(targetUrl.hash || "#catalog");
   return true;
 }
@@ -1332,6 +1333,11 @@ async function refreshCatalogHomeSummary() {
     if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
     return false;
   }
+}
+function ensureCatalogHomeSummary() {
+  if (!categoryTiles || shouldLoadAdminCatalog() || hasActiveCatalogState() || hasCatalogHomeSummaryCounts()) return;
+  if (state.catalogHomeSummary.status === "loading") return;
+  refreshCatalogHomeSummary();
 }
 function replaceLoadedProduct(product) {
   const normalized = normalizeProduct(product);
@@ -2382,6 +2388,7 @@ function clearCatalogFilter(key, value = "") {
   renderCatalogShell();
   renderFilters();
   renderProducts();
+  ensureCatalogHomeSummary();
 }
 function clearAllCatalogFilters(options = {}) {
   state.selectedCategory = "";
@@ -2396,6 +2403,7 @@ function clearAllCatalogFilters(options = {}) {
   renderCatalogShell();
   renderFilters();
   renderProducts();
+  ensureCatalogHomeSummary();
 }
 function applyCatalogFilters() {
   state.forceCatalogListing = hasActiveCatalogState();
@@ -2912,6 +2920,7 @@ function backToCatalogHome() {
   renderCatalogShell();
   renderFilters();
   renderProducts();
+  ensureCatalogHomeSummary();
 }
 function renderFilters() {
   if (!filterGroups) return;

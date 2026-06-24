@@ -855,6 +855,84 @@ test("catalog home never renders page-sized category counts as final totals", as
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });
 
+test("catalog home SPA navigation does not reuse page-sized listing counts", async ({ page }) => {
+  const categoryRows = [
+    { value: "Подушки", count: 517 },
+    { value: "Наволочки", count: 517 },
+    { value: "Мешки для обуви", count: 170 },
+    { value: "Чехлы на чемодан", count: 37 },
+    { value: "Ремувки", count: 19 },
+    { value: "Флаги", count: 65 },
+  ];
+  const partialItems = Array.from({ length: 48 }, (_, index) => ({
+    id: `qa-spa-${index}`,
+    baseSku: `qa-spa-${index}`,
+    name: `QA Подушка ${index}`,
+    category: "Подушки",
+    categories: ["Подушки"],
+    image: "assets/production-workshop-1.png",
+    minPrice: 1000,
+    variants: [{ sku: `qa-spa-${index}-v`, name: `QA Подушка ${index}`, type: "QA", size: "QA", material: "QA", price: 1000 }],
+  }));
+  await page.evaluate(() => {
+    localStorage.removeItem("sobag.products.v8");
+    localStorage.removeItem("sobag.products.v9");
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith("sobag.publicApiCache.") || key.startsWith("sobag_catalog_home_summary_"))
+      .forEach((key) => localStorage.removeItem(key));
+  });
+  await page.route("**/api/catalog", async (route) => {
+    await route.fulfill({ status: 503, contentType: "application/json; charset=utf-8", body: JSON.stringify({ error: "qa_catalog_unavailable" }) });
+  });
+  await page.route("**/data/products-live.json", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify([]) });
+  });
+  let summaryRequests = 0;
+  await page.route("**/api/catalog-query?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("category")) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json; charset=utf-8",
+        body: JSON.stringify({
+          items: partialItems,
+          total: 517,
+          facets: { categories: [{ value: "Подушки", count: 48 }, { value: "Наволочки", count: 48 }], collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+          facetOptions: { categories: [{ value: "Подушки", count: 48 }, { value: "Наволочки", count: 48 }], collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+          pageInfo: { page: 1, pageSize: 48, offset: 0, total: 517, totalPages: 11, hasMore: true, nextCursor: "48" },
+          source: "qa-category-page",
+        }),
+      });
+    }
+    summaryRequests += 1;
+    await page.waitForTimeout(350);
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        items: [],
+        total: 808,
+        facets: { categories: categoryRows, collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        facetOptions: { categories: categoryRows, collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        pageInfo: { page: 1, pageSize: 1, offset: 0, total: 808, totalPages: 808, hasMore: true, nextCursor: "1" },
+        source: "qa-home-summary",
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent("Подушки")}`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".product-card")).toHaveCount(48);
+  await page.locator('[data-nav="catalog.html"]').click();
+  await page.waitForTimeout(120);
+  await expect(page.locator("#catalogHome")).toBeVisible();
+  await expect(page.locator("#categoryTiles")).not.toContainText(/48\s+товар/i);
+  expect(await page.locator("#categoryTiles .category-tile--loading").count()).toBeGreaterThanOrEqual(6);
+  await expect.poll(() => summaryRequests).toBeGreaterThan(0);
+  await expect.poll(() => page.locator("#categoryTiles").innerText()).toContain("517");
+  await expect(page.locator("#categoryTiles")).not.toContainText(/48\s+товар/i);
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
 test("account favorites are per-user and orders can be repeated into cart", async ({ page }) => {
   const category = await largestCategory(page);
   await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
