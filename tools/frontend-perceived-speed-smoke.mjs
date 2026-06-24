@@ -148,6 +148,42 @@ async function measureStaticPage(browser) {
   return { route: "static-delivery", viewport: "mobile", firstVisibleMs: visibleMs, ...metrics };
 }
 
+async function assertResponsiveProductImageSizes(browser) {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.goto(`${BASE_URL}/catalog.html?qa=speed-image-sizes`, { waitUntil: "domcontentloaded" });
+  const sizes = await page.evaluate(() => {
+    const utils = window.SobagProductUtils;
+    const product = {
+      image: "/media/products/test/cover.jpg",
+      images: [
+        {
+          url: "/media/products/test/cover.jpg",
+          variants: [
+            { url: "/media/products/test/cover-320.webp", width: 320, format: "webp" },
+            { url: "/media/products/test/cover-640.webp", width: 640, format: "webp" },
+            { url: "/media/products/test/cover-960.avif", width: 960, format: "avif" },
+          ],
+        },
+      ],
+    };
+    const extract = (html) => {
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = html;
+      return wrapper.querySelector("source")?.getAttribute("sizes") || "";
+    };
+    return {
+      card: extract(utils.productPictureHtml(product, product.image, "card", "", utils.PRODUCT_CARD_IMAGE_SIZES)),
+      detail: extract(utils.productPictureHtml(product, product.image, "detail", "", utils.PRODUCT_DETAIL_IMAGE_SIZES)),
+      thumb: extract(utils.productPictureHtml(product, product.image, "thumb", "", utils.PRODUCT_THUMB_IMAGE_SIZES)),
+    };
+  });
+  assert(sizes.card.includes("260px"), "product card responsive sources should use card-sized candidates");
+  assert(sizes.detail.includes("520px"), "detail image responsive sources should use detail-sized candidates");
+  assert(sizes.thumb === "80px", "thumbnail responsive sources should use compact candidates");
+  await page.close();
+  return { route: "responsive-product-image-sizes", viewport: "mobile", ...sizes };
+}
+
 async function main() {
   const server = process.env.SOBAG_FRONTEND_BASE_URL
     ? null
@@ -162,6 +198,7 @@ async function main() {
     }
     results.push(...(await measureRepeatAndSpa(browser)));
     results.push(await measureStaticPage(browser));
+    results.push(await assertResponsiveProductImageSizes(browser));
     await browser.close();
     console.log("Frontend perceived speed smoke passed");
     console.log(JSON.stringify(results, null, 2));

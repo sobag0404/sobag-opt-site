@@ -105,7 +105,9 @@ const {
   normalizeProductImageUrls,
   productImageMetadataUrl,
   productImageMetadataForUrl,
-  PRODUCT_IMAGE_SIZES,
+  PRODUCT_CARD_IMAGE_SIZES,
+  PRODUCT_DETAIL_IMAGE_SIZES,
+  PRODUCT_THUMB_IMAGE_SIZES,
   productImageVariantCandidates,
   srcsetFromImageVariants,
   productImageVariantSrcsetForFormat,
@@ -2399,7 +2401,7 @@ function setCatalogPageTitle(value) {
 function miniProductCard(product) {
   return `
     <button class="mini-product-card" type="button" data-open-product="${escapeHtml(product.id)}">
-      ${productPictureHtml(product, product.image, product.name, imageAttrs(160, 160))}
+      ${productPictureHtml(product, product.image, product.name, imageAttrs(160, 160), PRODUCT_THUMB_IMAGE_SIZES)}
       <span>${escapeHtml(product.baseSku)}</span>
       <strong>${escapeHtml(product.name)}</strong>
       <b>от ${formatMoney(product.minPrice)}</b>
@@ -3058,7 +3060,7 @@ function productCardHtml(product, index = 0) {
         <article class="product-card">
           <div class="product-card__image">
             <button class="product-card__image-button" type="button" data-open-product="${productId}" aria-label="Открыть ${productName}" title="Открыть ${productName}">
-              ${productPictureHtml(product, product.image, product.name, productCardImageAttrs(index))}
+              ${productPictureHtml(product, product.image, product.name, productCardImageAttrs(index), PRODUCT_CARD_IMAGE_SIZES)}
             </button>
             <button class="favorite-button${favorite}" type="button" title="${favoritePressed === "true" ? "Убрать из избранного" : "В избранное"}" data-favorite="${productId}" aria-pressed="${favoritePressed}">
               <i data-lucide="heart"></i>
@@ -3399,13 +3401,13 @@ function productModalHtml(product) {
         <div class="product-detail__layout">
           <div class="product-detail__main">
             <div class="product-detail__media">
-              ${productPictureHtml(product, gallery[0], product.name, `id="detailMainImage" ${imageAttrs(900, 900, "eager", "high")}`)}
+              ${productPictureHtml(product, gallery[0], product.name, `id="detailMainImage" ${imageAttrs(900, 900, "eager", "high")}`, PRODUCT_DETAIL_IMAGE_SIZES)}
               <div class="product-gallery" aria-label="Фотографии товара">
                 ${gallery
                   .map(
                     (image, index) => `
                       <button class="product-gallery__thumb${index === 0 ? " is-active" : ""}" type="button" data-detail-image="${image}" aria-label="Фото ${index + 1}" title="Фото ${index + 1}">
-                        ${productPictureHtml(product, image, "", imageAttrs(160, 160))}
+                        ${productPictureHtml(product, image, "", imageAttrs(160, 160), PRODUCT_THUMB_IMAGE_SIZES)}
                       </button>
                     `
                   )

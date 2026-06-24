@@ -277,6 +277,9 @@ function productImageMetadataForUrl(product, url) {
 }
 
 const PRODUCT_IMAGE_SIZES = "(max-width: 720px) 92vw, 640px";
+const PRODUCT_CARD_IMAGE_SIZES = "(max-width: 520px) calc(50vw - 28px), (max-width: 900px) 30vw, (max-width: 1366px) 22vw, 260px";
+const PRODUCT_DETAIL_IMAGE_SIZES = "(max-width: 900px) 92vw, 520px";
+const PRODUCT_THUMB_IMAGE_SIZES = "80px";
 
 function productImageVariantCandidates(product, url) {
   const image = productImageMetadataForUrl(product, url);
@@ -320,19 +323,19 @@ function productImageVariantSourceData(product, url) {
     .filter((source) => source.srcset);
 }
 
-function productImageSourcesHtml(product, url) {
+function productImageSourcesHtml(product, url, sizes = PRODUCT_IMAGE_SIZES) {
   return productImageVariantSourceData(product, url)
     .map(
       (source) =>
-        `<source data-product-source="${source.format}" type="${source.type}" srcset="${escapeHtml(source.srcset)}" sizes="${PRODUCT_IMAGE_SIZES}" />`
+        `<source data-product-source="${source.format}" type="${source.type}" srcset="${escapeHtml(source.srcset)}" sizes="${escapeHtml(sizes || PRODUCT_IMAGE_SIZES)}" />`
     )
     .join("");
 }
 
-function productPictureHtml(product, url, alt, attrs = "") {
+function productPictureHtml(product, url, alt, attrs = "", sizes = PRODUCT_IMAGE_SIZES) {
   const src = resolveProductImageUrl(product, url) || "assets/production-workshop-1.png";
   const img = `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt || "")}" data-product-image="true" data-fallback-src="assets/production-workshop-1.png" ${attrs} />`;
-  const sources = productImageSourcesHtml(product, src);
+  const sources = productImageSourcesHtml(product, src, sizes);
   return sources ? `<picture>${sources}${img}</picture>` : img;
 }
 
@@ -431,6 +434,9 @@ function normalizeProduct(product) {
     productImageMetadataUrl,
     productImageMetadataForUrl,
     PRODUCT_IMAGE_SIZES,
+    PRODUCT_CARD_IMAGE_SIZES,
+    PRODUCT_DETAIL_IMAGE_SIZES,
+    PRODUCT_THUMB_IMAGE_SIZES,
     productImageVariantCandidates,
     srcsetFromImageVariants,
     productImageVariantSrcsetForFormat,

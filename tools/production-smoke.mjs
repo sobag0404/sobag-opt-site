@@ -26,8 +26,9 @@ const DEFAULT_PATHS = [
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY_MS = 5000;
-const CURRENT_APP_JS_VERSION = "20260624-cache-revalidate";
+const CURRENT_APP_JS_VERSION = "20260624-product-image-sizes";
 const CURRENT_APP_DATA_VERSION = "20260624-public-cache-v3";
+const CURRENT_PRODUCT_UTILS_VERSION = "20260624-product-image-sizes";
 const ANONYMOUS_DENIED_PATHS = new Set([
   "/api/admin/catalog",
   "/api/admin/content",
@@ -155,6 +156,9 @@ function assertHtml(path, contentType, body) {
   if (path === "/catalog.html" && !body.includes(`app.js?v=${CURRENT_APP_JS_VERSION}`)) {
     throw new Error(`${path}: expected current app.js cache-bust version ${CURRENT_APP_JS_VERSION}`);
   }
+  if (path === "/catalog.html" && !body.includes(`components/app-product-utils.js?v=${CURRENT_PRODUCT_UTILS_VERSION}`)) {
+    throw new Error(`${path}: expected current product image utility cache-bust version ${CURRENT_PRODUCT_UTILS_VERSION}`);
+  }
   if (path === "/catalog.html" && !body.includes(`components/app-data.js?v=${CURRENT_APP_DATA_VERSION}`)) {
     throw new Error(`${path}: expected current app-data.js cache-bust version ${CURRENT_APP_DATA_VERSION}`);
   }
@@ -163,6 +167,9 @@ function assertHtml(path, contentType, body) {
   }
   if (path === "/catalog.html" && body.includes("components/app-data.js?v=20260615-app-data")) {
     throw new Error(`${path}: stale app-data.js cache-bust version is still referenced`);
+  }
+  if (path === "/catalog.html" && body.includes("components/app-product-utils.js?v=20260623-image-fallback")) {
+    throw new Error(`${path}: stale product image utility cache-bust version is still referenced`);
   }
 }
 
@@ -495,7 +502,7 @@ async function createSelfTestServer() {
     }
     const pages = new Map([
       ["/", html("Home")],
-      ["/catalog.html", `<!doctype html><html lang="ru"><head><title>Sobag Opt | Catalog</title></head><body>Sobag Opt Catalog<script defer src="components/app-data.js?v=${CURRENT_APP_DATA_VERSION}"></script><script defer src="app.js?v=${CURRENT_APP_JS_VERSION}"></script></body></html>`],
+      ["/catalog.html", `<!doctype html><html lang="ru"><head><title>Sobag Opt | Catalog</title></head><body>Sobag Opt Catalog<script defer src="components/app-data.js?v=${CURRENT_APP_DATA_VERSION}"></script><script defer src="components/app-product-utils.js?v=${CURRENT_PRODUCT_UTILS_VERSION}"></script><script defer src="app.js?v=${CURRENT_APP_JS_VERSION}"></script></body></html>`],
       ["/catalog", html("Catalog")],
       ["/cart", html("Cart")],
     ]);
