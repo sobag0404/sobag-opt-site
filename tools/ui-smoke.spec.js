@@ -775,13 +775,23 @@ test("catalog home first load uses server category summary over stale fallback",
   expect(mobileTileText).toBe(tileText);
   const categoryTileGeometry = await page.locator("#categoryTiles .category-tile").evaluateAll((tiles) =>
     tiles.map((tile) => ({
+      height: tile.getBoundingClientRect().height,
       overflow: tile.scrollWidth - tile.clientWidth,
       strongOverflow: [...tile.querySelectorAll("strong, small, b")].some((node) => node.scrollWidth - node.clientWidth > 1),
+      countVisible: (() => {
+        const badge = tile.querySelector("b");
+        if (!badge) return false;
+        const tileRect = tile.getBoundingClientRect();
+        const badgeRect = badge.getBoundingClientRect();
+        return badgeRect.bottom <= tileRect.bottom + 1 && badgeRect.right <= tileRect.right + 1;
+      })(),
     }))
   );
   for (const tile of categoryTileGeometry) {
+    expect(tile.height, "mobile category tile should stay compact").toBeLessThanOrEqual(280);
     expect(tile.overflow, "mobile category tile overflow").toBeLessThanOrEqual(1);
     expect(tile.strongOverflow, "mobile category text overflow").toBe(false);
+    expect(tile.countVisible, "mobile category count badge visible").toBe(true);
   }
   for (const selector of ["#categoryTiles .category-tile", ".theme-tile", ".actual-tile"]) {
     const tile = page.locator(selector).first();
@@ -1294,6 +1304,16 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   const baseSku = await firstCard.locator(".product-card__sku").innerText();
   await expect(baseSku.trim()).toMatch(/^opt_/i);
   await expect(firstCard.locator(".product-card__image-button")).toHaveAttribute("title", /Открыть/);
+  const cardControlGeometry = await firstCard.evaluate((card) => {
+    const button = card.querySelector(".product-card__price-button");
+    const bottom = card.querySelector(".product-card__bottom");
+    return {
+      buttonOverflow: button ? button.scrollWidth - button.clientWidth : 0,
+      bottomHeight: bottom?.getBoundingClientRect().height || 0,
+    };
+  });
+  expect(cardControlGeometry.buttonOverflow, "product card price button overflow").toBeLessThanOrEqual(1);
+  expect(cardControlGeometry.bottomHeight, "product card CTA row height").toBeGreaterThanOrEqual(40);
   const firstScreenImages = page.locator('.product-card [data-product-image="true"]');
   await expect(firstScreenImages.nth(0)).toHaveAttribute("loading", "eager");
   await expect(firstScreenImages.nth(0)).toHaveAttribute("fetchpriority", "high");
