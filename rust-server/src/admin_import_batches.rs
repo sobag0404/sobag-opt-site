@@ -1,3 +1,5 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use axum::{
     http::{header, HeaderMap, StatusCode},
     Json,
@@ -339,18 +341,30 @@ fn make_batch(
     source: String,
     update_existing: bool,
 ) -> Value {
-    let existing_skus = current_products
+    let existing_by_sku = current_products
         .iter()
-        .map(|product| base_sku_key(product.get("baseSku")))
-        .collect::<std::collections::BTreeSet<String>>();
-    let mut seen = std::collections::BTreeSet::new();
+        .filter_map(|product| {
+            clean_product(product).map(|clean| (base_sku_key(clean.get("baseSku")), clean))
+        })
+        .collect::<BTreeMap<String, Value>>();
+    let existing_skus = existing_by_sku
+        .keys()
+        .cloned()
+        .collect::<BTreeSet<String>>();
+    let existing_variant_skus = existing_by_sku
+        .values()
+        .flat_map(variant_skus)
+        .map(|sku| sku.to_ascii_uppercase())
+        .collect::<BTreeSet<String>>();
+    let mut seen = BTreeSet::new();
+    let mut seen_variant_skus = BTreeSet::new();
     let mut rows = Vec::new();
     let mut products = Vec::new();
     let mut counts = json!({ "created": 0, "skipped": 0, "updated": 0, "errors": 0 });
 
     for (index, raw) in raw_products.iter().take(MAX_BATCH_PRODUCTS).enumerate() {
         let row = index + 1;
-        let Some(product) = clean_product(raw) else {
+        let Some(mut product) = clean_product(raw) else {
             inc_count(&mut counts, "errors");
             rows.push(row_status(row, raw, "error", "error", "invalid_product"));
             continue;
@@ -379,6 +393,49 @@ fn make_batch(
             ));
             continue;
         }
+        let existing_product = existing_by_sku.get(&sku);
+        if exists && update_existing {
+            if let Some(existing) = existing_product {
+                preserve_update_fields(raw, &mut product, existing);
+            }
+        }
+        let own_variant_skus = existing_product
+            .map(|product| {
+                variant_skus(product)
+                    .into_iter()
+                    .map(|sku| sku.to_ascii_uppercase())
+                    .collect::<BTreeSet<String>>()
+            })
+            .unwrap_or_default();
+        let product_variant_skus = variant_skus(&product)
+            .into_iter()
+            .map(|sku| sku.to_ascii_uppercase())
+            .collect::<BTreeSet<String>>();
+        let collisions = product_variant_skus
+            .iter()
+            .filter(|variant_sku| {
+                (existing_variant_skus.contains(*variant_sku)
+                    && !own_variant_skus.contains(*variant_sku))
+                    || seen_variant_skus.contains(*variant_sku)
+            })
+            .take(5)
+            .cloned()
+            .collect::<Vec<String>>();
+        if !collisions.is_empty() {
+            inc_count(&mut counts, "skipped");
+            let mut row_value = row_status(
+                row,
+                &product,
+                "variant_duplicate_skipped",
+                "skipped",
+                "variant_sku_collision",
+            );
+            if let Some(map) = row_value.as_object_mut() {
+                map.insert("warnings".to_string(), json!(collisions.join(", ")));
+            }
+            rows.push(row_value);
+            continue;
+        }
         let action = if exists { "updated" } else { "created" };
         inc_count(&mut counts, action);
         rows.push(json!({
@@ -391,6 +448,9 @@ fn make_batch(
             "variantCount": variant_skus(&product).len()
         }));
         products.push(json!({ "action": action, "product": product }));
+        product_variant_skus.into_iter().for_each(|variant_sku| {
+            seen_variant_skus.insert(variant_sku);
+        });
     }
     if raw_products.len() > MAX_BATCH_PRODUCTS {
         inc_count(&mut counts, "errors");
@@ -415,6 +475,39 @@ fn make_batch(
         "rows": rows,
         "products": products
     })
+}
+
+fn has_raw_value(source: &Value, key: &str) -> bool {
+    match source.get(key) {
+        Some(Value::Array(items)) => !items.is_empty(),
+        Some(Value::Object(map)) => !map.is_empty(),
+        Some(Value::String(value)) => !value.trim().is_empty(),
+        Some(Value::Null) | None => false,
+        Some(_) => true,
+    }
+}
+
+fn preserve_update_fields(raw: &Value, product: &mut Value, existing: &Value) {
+    if let Some(map) = product.as_object_mut() {
+        if let Some(id) = existing.get("id") {
+            map.insert("id".to_string(), id.clone());
+        }
+        if !has_raw_value(raw, "status") {
+            if let Some(status) = existing.get("status") {
+                map.insert("status".to_string(), status.clone());
+            }
+            if let Some(hidden) = existing.get("hidden") {
+                map.insert("hidden".to_string(), hidden.clone());
+            }
+        }
+        for key in ["image", "gallery", "images", "variantPrices"] {
+            if !has_raw_value(raw, key) {
+                if let Some(value) = existing.get(key) {
+                    map.insert(key.to_string(), value.clone());
+                }
+            }
+        }
+    }
 }
 
 fn apply_batch_products(current_products: &[Value], batch: &Value) -> Vec<Value> {
@@ -581,5 +674,19 @@ pub(crate) fn make_batch_for_test(raw_products: &[Value], current_products: &[Va
         &json!({ "email": "admin@example.test" }),
         "test".to_string(),
         false,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn make_update_batch_for_test(
+    raw_products: &[Value],
+    current_products: &[Value],
+) -> Value {
+    make_batch(
+        raw_products,
+        current_products,
+        &json!({ "email": "admin@example.test" }),
+        "test".to_string(),
+        true,
     )
 }

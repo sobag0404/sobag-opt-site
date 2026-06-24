@@ -1144,6 +1144,44 @@ fn admin_import_batch_preview_skips_existing_without_update() {
 }
 
 #[test]
+fn admin_import_batch_update_preserves_omitted_operational_fields() {
+    let current = vec![json!({
+        "id": "stable-product-id",
+        "baseSku": "EXIST-2",
+        "name": "Existing product",
+        "status": "hidden",
+        "hidden": true,
+        "basePrice": 200,
+        "image": "https://cdn.example.test/existing.webp",
+        "gallery": ["https://cdn.example.test/gallery.webp"],
+        "images": [{ "storageKey": "products/EXIST-2/existing.webp", "mime": "image/webp" }],
+        "variantPrices": { "EXIST-2_A_40_VEL": 230 },
+        "types": ["A"],
+        "sizes": ["40"],
+        "materials": ["Vel"]
+    })];
+    let raw = vec![json!({
+        "baseSku": "EXIST-2",
+        "name": "Updated name",
+        "basePrice": 260,
+        "types": ["A"],
+        "sizes": ["40"],
+        "materials": ["Vel"]
+    })];
+    let batch = crate::admin_import_batches::make_update_batch_for_test(&raw, &current);
+    assert_eq!(batch["counts"]["updated"], 1);
+    let product = &batch["products"][0]["product"];
+    assert_eq!(product["id"], "stable-product-id");
+    assert_eq!(product["status"], "hidden");
+    assert_eq!(product["hidden"], true);
+    assert_eq!(product["image"], "https://cdn.example.test/existing.webp");
+    assert_eq!(product["gallery"].as_array().unwrap().len(), 1);
+    assert_eq!(product["images"].as_array().unwrap().len(), 1);
+    assert_eq!(product["variantPrices"]["EXIST-2_A_40_VEL"], 230);
+    assert_eq!(product["basePrice"], 260);
+}
+
+#[test]
 fn admin_media_guards_storage_keys_and_upload_metadata() {
     let key =
         crate::admin_media::product_image_key_for_test("../OPT 1", "../../evil.php", "image/png");

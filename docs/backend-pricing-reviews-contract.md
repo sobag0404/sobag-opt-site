@@ -137,6 +137,7 @@ Coverage:
 
 ## Backup And Recovery Notes
 
+- Rust admin catalog import `updateExisting` is designed as a partial update path: when an import row omits operational fields, the preview/apply contract preserves existing product identity, visibility/status, primary/gallery/media image metadata, and SKU override price metadata instead of defaulting or clearing them. Variant SKU collisions are rejected during preview before catalog mutation.
 - Before destructive catalog/price imports, keep the normal VPS release rollback plus a current PostgreSQL/catalog backup from the existing deploy/import runbooks.
 - For file-store evidence, `node tools/file-store-backup.mjs --source <store-dir> --dest <backup-dir> --dry-run` reports what would be copied, and `--restore <backup-dir> --target <store-dir> --dry-run` reports restore scope without modifying production data.
 - `node tools/backend-evidence-smoke.mjs --store <store.json>` reports safe counts/status summaries for orders, reviews, price groups, import history, audit logs, and media-image metadata without raw payloads or secrets. For post-Rust PostgreSQL/MinIO evidence packets, use `--packet <no-secret-evidence-packet.json> --strict`; the packet should contain provider class, backup path class/timestamp, row/object counts, compact audit types, and import statuses only. `--self-test` is part of the local check suite.

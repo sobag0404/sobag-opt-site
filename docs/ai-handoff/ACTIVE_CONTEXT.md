@@ -9,6 +9,7 @@ Last updated: 2026-06-20
 - Если пользователь просит длинный prompt/handoff для goal/new chat, сохранять подробную версию в GitHub в `docs/ai-handoff/` и давать в чате короткую версию до 4000 символов.
 
 ## Project
+- Latest backend hardening slice: Rust admin import-batch `updateExisting` preview preserves existing ids, visibility/status, images/gallery, and SKU override price metadata when import rows omit those fields; local checks passed (`npm.cmd run check`, Rust targeted test/check, import-batch cutover self-test).
 - Latest backend hardening slice: Node compatibility admin catalog/import/media/price/content/order/user write routes now use the shared store-backed rate limiter per admin identity/IP; `tools/api-security-smoke.mjs` covers admin content/order/user/import/media burst `429` checks.
 - Путь к проекту: `C:\Users\SoBag\OneDrive\Документы\New project\sobag-opt-site`
 - Репозиторий: `https://github.com/sobag0404/sobag-opt-site`
