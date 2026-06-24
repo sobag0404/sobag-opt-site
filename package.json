@@ -31,6 +31,7 @@
     "smoke:canonical-url": "node tools/canonical-url-smoke.mjs",
     "smoke:prod:performance": "node tools/production-performance-smoke.mjs",
     "smoke:cache-headers": "node tools/production-performance-smoke.mjs",
+    "audit:cache-architecture": "node tools/cache-architecture-audit.mjs",
     "smoke:prod:storage": "node tools/production-storage-readiness.mjs",
     "smoke:rust:shadow": "node tools/rust-catalog-shadow-smoke.mjs",
     "smoke:rust:ssr": "node tools/rust-ssr-smoke.mjs",
