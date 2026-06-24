@@ -1,7 +1,7 @@
 const { getCatalogDbClient } = require("./_lib/catalog-db-client");
 const { loadCatalogProducts } = require("./_lib/catalog-source");
 const { handleError, methodNotAllowed, sendJson } = require("./_lib/http");
-const { collectPriceGroups, collectPriceGroupsFromProducts, priceListCsv, priceListRows } = require("./_lib/price-groups");
+const { collectPriceGroups, collectPriceGroupsFromProducts, priceListCsv, priceListRows, publicPriceGroup } = require("./_lib/price-groups");
 
 function parseUrl(req) {
   return new URL(req.url || "/api/price-list", `http://${req.headers.host || "localhost"}`);
@@ -73,13 +73,15 @@ module.exports = async function handler(req, res) {
   try {
     const url = parseUrl(req);
     const format = text(url.searchParams.get("format") || "csv").toLowerCase();
+    const includeSkus = url.searchParams.get("includeSkus") === "1";
     const result = await loadPriceGroups();
-    const rows = priceListRows(result.groups);
+    const rows = priceListRows(result.groups, { includeSkus });
+    const groups = includeSkus ? result.groups : result.groups.map(publicPriceGroup);
     if (format === "json") {
       return sendJson(
         res,
         200,
-        { ...result, rows },
+        { ...result, groups, rows },
         { "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" }
       );
     }
@@ -87,7 +89,7 @@ module.exports = async function handler(req, res) {
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", 'attachment; filename="sobag-price-list.csv"');
     res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
-    res.end(priceListCsv(rows));
+    res.end(priceListCsv(rows, { includeSkus }));
   } catch (error) {
     handleError(res, error, req);
   }

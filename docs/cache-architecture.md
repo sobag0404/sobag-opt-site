@@ -8,7 +8,7 @@ Status: target model and migration notes for the VPS/Rust production runtime.
 - Versioned JS/CSS (`app.js?v=...`, `styles.css?v=...`, component scripts with `?v=`): `public, max-age=31536000, immutable`.
 - Non-versioned JS/CSS: bounded public cache with validators (`ETag` / `Last-Modified`) so browser revalidation works.
 - Images/assets: public cache. Immutable only when URL/versioning makes the asset content-addressed or release-versioned; otherwise use bounded TTL.
-- Public catalog/product/price APIs (`/api/catalog-query`, `/api/catalog-detail`, `/api/price-list`): short public cache (`max-age=300, stale-while-revalidate=3600`) because they contain public data and are safe to revalidate frequently.
+- Public catalog/product/price APIs (`/api/catalog-query`, `/api/catalog-detail`, `/api/price-list`): short public cache (`max-age=300, stale-while-revalidate=3600`) because they contain public data and are safe to revalidate frequently. Public price-list JSON/CSV stays grouped and compact by default; full SKU lists are only exposed via explicit `includeSkus=1` for diagnostics/admin-style checks.
 - Private or user-specific APIs (`/api/auth/me`, cart/favorites/profile/order history, `/api/orders`, admin routes): `no-store`; any browser persistence is per-user local state, never shared public cache.
 
 ## Current layers

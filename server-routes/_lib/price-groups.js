@@ -201,7 +201,22 @@ function collectPriceGroupsFromProducts(products, options = {}) {
   return collectPriceGroups(productVariantRecords(products), options);
 }
 
-function priceListRows(groups = []) {
+function publicPriceGroup(group = {}) {
+  return {
+    key: group.key,
+    name: group.name,
+    price: group.price,
+    skuCount: group.skuCount,
+    productCount: group.productCount,
+    inconsistent: group.inconsistent,
+    promoPrice: group.promoPrice,
+    promoStartsAt: group.promoStartsAt,
+    promoEndsAt: group.promoEndsAt,
+  };
+}
+
+function priceListRows(groups = [], options = {}) {
+  const includeSkus = options.includeSkus !== false;
   return groups.flatMap((group) => {
     const base = {
       type: "base",
@@ -210,7 +225,7 @@ function priceListRows(groups = []) {
       price: group.price,
       skuCount: group.skuCount,
       productCount: group.productCount,
-      skus: group.skus.join(", "),
+      skus: includeSkus ? group.skus.join(", ") : "",
       promoStartsAt: "",
       promoEndsAt: "",
     };
@@ -223,7 +238,7 @@ function priceListRows(groups = []) {
         price: group.promoPrice,
         skuCount: group.skuCount,
         productCount: group.productCount,
-        skus: group.skus.join(", "),
+        skus: includeSkus ? group.skus.join(", ") : "",
         promoStartsAt: group.promoStartsAt,
         promoEndsAt: group.promoEndsAt,
       });
@@ -238,10 +253,19 @@ function csvCell(value) {
   return `"${safe.replaceAll('"', '""')}"`;
 }
 
-function priceListCsv(rows = priceListRows([])) {
+function priceListCsv(rows = priceListRows([]), options = {}) {
+  const includeSkus = options.includeSkus !== false;
+  const header = ["Категория/группа", "Цена", "Тип строки", "Артикулов", "Товаров"];
+  if (includeSkus) header.push("SKU");
+  header.push("Акция с", "Акция до");
   const output = [
-    ["Категория/группа", "Цена", "Тип строки", "Артикулов", "Товаров", "SKU", "Акция с", "Акция до"],
-    ...rows.map((row) => [row.label, row.price, row.type === "promo" ? "Акция" : "База", row.skuCount, row.productCount, row.skus, row.promoStartsAt, row.promoEndsAt]),
+    header,
+    ...rows.map((row) => {
+      const line = [row.label, row.price, row.type === "promo" ? "Акция" : "База", row.skuCount, row.productCount];
+      if (includeSkus) line.push(row.skus);
+      line.push(row.promoStartsAt, row.promoEndsAt);
+      return line;
+    }),
   ];
   return `\uFEFF${output.map((row) => row.map(csvCell).join(";")).join("\n")}\n`;
 }
@@ -459,6 +483,7 @@ module.exports = {
   groupKey,
   parsePriceImportRows,
   priceGroupName,
+  publicPriceGroup,
   priceListCsv,
   priceListRows,
   productVariantRecords,

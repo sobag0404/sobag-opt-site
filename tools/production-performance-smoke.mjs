@@ -7,6 +7,7 @@ const DEFAULT_BASE_URL = "https://sobag-shop.online";
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_QUERY_MAX_BYTES = 220 * 1024;
 const DEFAULT_DETAIL_MAX_BYTES = 700 * 1024;
+const DEFAULT_PRICE_LIST_MAX_BYTES = 160 * 1024;
 const DEFAULT_STATIC_MAX_BYTES = 520 * 1024;
 const DEFAULT_MAX_MS = 5000;
 const DEFAULT_CATALOG_API_MAX_MS = 3000;
@@ -18,6 +19,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     timeoutMs: DEFAULT_TIMEOUT_MS,
     queryMaxBytes: DEFAULT_QUERY_MAX_BYTES,
     detailMaxBytes: DEFAULT_DETAIL_MAX_BYTES,
+    priceListMaxBytes: DEFAULT_PRICE_LIST_MAX_BYTES,
     staticMaxBytes: DEFAULT_STATIC_MAX_BYTES,
     maxMs: DEFAULT_MAX_MS,
     catalogApiMaxMs: DEFAULT_CATALOG_API_MAX_MS,
@@ -32,6 +34,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (token === "--timeout") args.timeoutMs = Number(argv[++index] || args.timeoutMs);
     else if (token === "--query-max-bytes") args.queryMaxBytes = Number(argv[++index] || args.queryMaxBytes);
     else if (token === "--detail-max-bytes") args.detailMaxBytes = Number(argv[++index] || args.detailMaxBytes);
+    else if (token === "--price-list-max-bytes") args.priceListMaxBytes = Number(argv[++index] || args.priceListMaxBytes);
     else if (token === "--static-max-bytes") args.staticMaxBytes = Number(argv[++index] || args.staticMaxBytes);
     else if (token === "--max-ms") args.maxMs = Number(argv[++index] || args.maxMs);
     else if (token === "--catalog-api-max-ms") args.catalogApiMaxMs = Number(argv[++index] || args.catalogApiMaxMs);
@@ -204,8 +207,10 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
   const priceListPayload = parseJson(priceList);
   assertFast(priceList, args.catalogApiMaxMs);
   assertPublicCache(priceList);
+  assert(priceList.bytes <= args.priceListMaxBytes, `${priceList.path}: ${priceList.bytes} bytes exceeds ${args.priceListMaxBytes}`);
   assert(Array.isArray(priceListPayload.rows), "price-list should include rows[]");
   assert(priceListPayload.rows.length > 0, "price-list should expose public price rows");
+  assert(priceListPayload.rows.every((row) => !row.skus), "price-list JSON should not include full SKU lists by default");
   checks.push({ name: "price-list", path: priceList.path, bytes: priceList.bytes, elapsedMs: priceList.elapsedMs });
 
   const firstSku = queryPayload.items[0]?.baseSku;

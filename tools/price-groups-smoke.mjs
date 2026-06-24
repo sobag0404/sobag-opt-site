@@ -151,7 +151,10 @@ async function main() {
   process.env.SOBAG_ADMIN_NAME = "Price Admin";
   const { server, baseUrl } = await listen(createSobagServer());
   try {
-    const publicList = await request(baseUrl, "/api/price-list?format=json");
+    const publicPreview = await request(baseUrl, "/api/price-list?format=json");
+    assert.equal(publicPreview.response.status, 200);
+    assert.ok(publicPreview.payload.rows.every((row) => !row.skus), "public price-list JSON should not ship full SKU lists by default");
+    const publicList = await request(baseUrl, "/api/price-list?format=json&includeSkus=1");
     assert.equal(publicList.response.status, 200);
     assert.ok(publicList.payload.groups.length > 0);
     assert.ok(publicList.payload.groups.every((group) => Number(group.price) > 0));

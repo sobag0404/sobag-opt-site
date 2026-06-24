@@ -11,7 +11,7 @@ This document records the post-Rust-cutover backend contract for price-list, pri
 
 ## Public Price List
 
-`GET /api/price-list` returns CSV by default and JSON with `?format=json`.
+`GET /api/price-list` returns compact grouped CSV by default and compact grouped JSON with `?format=json`. Full SKU lists are not included in the public default payload to keep catalog and price preview loads fast; use `?includeSkus=1` only for explicit diagnostics or admin-style verification.
 
 Rows are grouped by price category/group, not by every SKU. A group is resolved from explicit `priceGroup`/`priceGroupName` first, then from variant type/material/size, then product name fallback. Each base row contains the group label and current positive price. If an active promo exists for the group and the current date is inside its optional ISO date window, the export includes a second row with an `Акция ` prefix and the promo price.
 
