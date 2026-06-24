@@ -253,7 +253,7 @@ impl IntoResponse for AppError {
                 }
             }
         }
-        (self.status, Json(payload)).into_response()
+        (self.status, no_store_headers(), Json(payload)).into_response()
     }
 }
 
