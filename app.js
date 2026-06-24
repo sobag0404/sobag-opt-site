@@ -163,6 +163,7 @@ const state = {
     source: "",
   },
   catalogHomeProductCountsTrusted: products.length > CATALOG_PAGE_SIZE,
+  publishedProductsLoadStarted: false,
   cart: new Map(),
   cartUpdatedAt: "",
   favorites: new Set(cleanFavoriteIds(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"))),
@@ -426,6 +427,18 @@ function hasActiveCatalogState() {
       state.forceCatalogListing ||
       state.search.trim() ||
       Object.values(state.filters).some((bucket) => bucket.size)
+  );
+}
+function isCatalogHomeState() {
+  return Boolean(
+    catalogListing &&
+      !isSearchPage &&
+      !isFavoritesPage &&
+      !state.forceCatalogListing &&
+      !state.selectedCategory &&
+      !state.selectedCollection &&
+      !state.selectedHoliday &&
+      !state.search.trim()
   );
 }
 function resetVisibleProducts() {
@@ -1232,6 +1245,13 @@ function applyLoadedProducts(incomingProducts, options = {}) {
     state.catalogHomeProductCountsTrusted = incomingProducts.length > CATALOG_PAGE_SIZE;
   }
   addMissingCatalogCategories(products);
+  if (state.catalogHomeProductCountsTrusted) {
+    const counts = catalogCategoryCountsFromProducts(products);
+    if (catalogHomeSummaryCountsLookFull(counts)) {
+      state.catalogHomeSummary = { status: "ready", counts, source: "full-product-cache" };
+      writeCatalogHomeSummaryCache(counts);
+    }
+  }
   renderSiteContent();
   renderCatalogHome();
   renderCatalogShell();
@@ -1267,6 +1287,14 @@ function catalogCategoryCountsFromRows(rows = []) {
     const name = String(row?.value || "").trim();
     const count = Number(row?.count || 0) || 0;
     if (name && count > 0) counts[name] = count;
+    return counts;
+  }, {});
+}
+function catalogCategoryCountsFromProducts(sourceProducts = products) {
+  return sourceProducts.reduce((counts, product) => {
+    (product.categories || [product.category]).forEach((category) => {
+      if (category) counts[category] = (counts[category] || 0) + 1;
+    });
     return counts;
   }, {});
 }
@@ -1417,6 +1445,7 @@ async function loadAdminCatalogProducts() {
   }
 }
 async function loadPublishedProducts() {
+  state.publishedProductsLoadStarted = true;
   if (await loadAdminCatalogProducts()) return;
   if (shouldUseServerCatalogList()) {
     const loadedQuery = await refreshServerCatalogList();
@@ -1440,6 +1469,17 @@ async function loadPublishedProducts() {
   } catch {
     // The static catalog file is optional in local prototype mode.
   }
+}
+function schedulePublishedProductsLoad(options = {}) {
+  if (state.publishedProductsLoadStarted) return;
+  const start = () => {
+    if (!state.publishedProductsLoadStarted) loadPublishedProducts();
+  };
+  if (options.idle && "requestIdleCallback" in window) {
+    window.requestIdleCallback(start, { timeout: 1600 });
+    return;
+  }
+  window.setTimeout(start, options.idle ? 800 : 0);
 }
 function cleanProductsForStorage() {
   return products.map(({ variants, minPrice, maxPrice, ...product }) => product);
@@ -2631,7 +2671,7 @@ async function loadPriceListPreview() {
 }
 function renderCatalogShell() {
   if (!catalogHome || !catalogListing || !catalogTools || !catalogTitle) return;
-  const isHome = !isSearchPage && !isFavoritesPage && !state.forceCatalogListing && !state.selectedCategory && !state.selectedCollection && !state.selectedHoliday && !state.search.trim();
+  const isHome = isCatalogHomeState();
   document.body.classList.toggle("catalog-listing-active", document.body.classList.contains("catalog-page") && !isHome);
   catalogHome.classList.toggle("is-hidden", !isHome);
   catalogListing.classList.toggle("is-hidden", isHome);
@@ -3094,6 +3134,19 @@ function renderProductGridCards(visibleList, renderKey = "") {
 }
 function renderProducts() {
   if (!productGrid || !productCount) return;
+  if (isCatalogHomeState()) {
+    productGrid.removeAttribute("aria-busy");
+    productGrid.innerHTML = "";
+    productCount.textContent = "";
+    if (catalogLoadMore) catalogLoadMore.innerHTML = "";
+    resetProductGridRenderState();
+    renderSearchSuggestions();
+    renderSearchResultsPanel([], 0);
+    renderActiveFilterChips();
+    renderCatalogSeoCopy(0);
+    renderRecentProducts();
+    return;
+  }
   queueServerCatalogRefresh();
   if (isServerCatalogInitialLoading()) {
     renderSearchSuggestions();
@@ -4214,7 +4267,11 @@ function boot() {
   loadServerSiteContent();
   refreshCatalogHomeSummary();
   loadPriceListPreview();
-  loadPublishedProducts();
+  if (shouldUseServerCatalogList() || isFavoritesPage || shouldLoadAdminCatalog()) {
+    schedulePublishedProductsLoad();
+  } else if (catalogListing) {
+    schedulePublishedProductsLoad({ idle: true });
+  }
   loadImportBatches();
   initFormEnhancements();
   loadBackendAccountData().then(async (changed) => {
@@ -4706,6 +4763,7 @@ function boot() {
   document.addEventListener("input", (event) => {
     if (event.target.id === "searchInput") {
       state.search = event.target.value;
+      if (state.search.trim().length >= 2) schedulePublishedProductsLoad();
       resetVisibleProducts();
       renderSearchSuggestions();
       if (!catalogListing && state.search.trim().length >= 2) return;

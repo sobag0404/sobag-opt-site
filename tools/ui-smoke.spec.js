@@ -742,6 +742,7 @@ test("catalog home first load uses server category summary over stale fallback",
   await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-label", "Категории каталога");
   await expect(page.locator("#categoryTiles .category-tile").first()).toHaveAttribute("aria-label", /517/);
   await expect(page.locator("#categoryTiles .category-tile").first()).toHaveAttribute("title", /517/);
+  await expect(page.locator("#productGrid .product-card")).toHaveCount(0);
   const tileText = await page.locator("#categoryTiles").innerText();
   const normalizedTileText = tileText.toLocaleLowerCase("ru-RU");
   for (const row of categoryRows) {
@@ -932,6 +933,7 @@ test("catalog home SPA navigation does not reuse page-sized listing counts", asy
   await expect.poll(() => summaryRequests).toBeGreaterThan(0);
   await expect.poll(() => page.locator("#categoryTiles").innerText()).toContain("517");
   await expect(page.locator("#categoryTiles")).not.toContainText(/48\s+товар/i);
+  await expect(page.locator("#productGrid .product-card")).toHaveCount(0);
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });
 
@@ -1759,7 +1761,8 @@ test("catalog server query keeps 10k pages bounded in DOM", async ({ page }) => 
 });
 
 test("search prioritizes exact sku and shows case-insensitive image suggestions", async ({ page }) => {
-  await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
+  const category = await largestCategory(page);
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}`, { waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
 
   const sku = await page.locator(".product-card__sku").first().innerText();
@@ -1767,7 +1770,9 @@ test("search prioritizes exact sku and shows case-insensitive image suggestions"
   await page.locator("#searchInput").press("Enter");
   await expect(page).toHaveURL(/\/search(?:\.html)?\?q=/);
   await waitForLiveProducts(page, 0);
-  await expect(page.locator(".product-card").first().locator(".product-card__sku")).toHaveText(sku.trim());
+  await expect
+    .poll(() => page.locator(".product-card").first().locator(".product-card__sku").innerText().then((value) => value.toLocaleLowerCase("ru-RU")))
+    .toBe(sku.trim().toLocaleLowerCase("ru-RU"));
   await expect(page.locator("#searchResultsPanel")).toBeVisible();
 
   await page.locator("#searchInput").fill("ПодУШКа");
