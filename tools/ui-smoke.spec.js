@@ -1426,6 +1426,18 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator("#downloadCartQuoteButton")).toBeVisible();
   await expect(page.locator("#printCartQuoteButton")).toBeVisible();
   await expect(page.locator(".cart-scale-step")).toHaveCount(4);
+  await expect(page.locator(".cart-page-line__remove").first()).toHaveAttribute("title", /.+/);
+  await expect
+    .poll(() =>
+      page.locator(".cart-page-line__remove").first().evaluate((button) => {
+        const fallback = button.querySelector(".cart-page-line__remove-fallback");
+        const fallbackVisible = fallback && getComputedStyle(fallback).display !== "none";
+        const svg = button.querySelector("svg");
+        const svgRect = svg?.getBoundingClientRect();
+        return fallbackVisible || Boolean(svgRect?.width && svgRect.height);
+      })
+    )
+    .toBe(true);
   await expect(page.locator("[data-qty-input]").first()).toHaveValue("1");
   await page.locator("[data-qty-plus]").first().click();
   await expect(page.locator("[data-qty-input]").first()).toHaveValue("2");
@@ -1437,6 +1449,8 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await page.locator("#checkoutButton").click();
   await expect(page.locator("#checkoutModal")).toBeVisible();
   await expect(page.locator("#checkoutModal .modal__close")).toHaveAttribute("aria-label", "Закрыть оформление заказа");
+  const checkoutPanelWidth = await page.locator("#checkoutModal .checkout-panel").evaluate((panel) => panel.getBoundingClientRect().width);
+  expect(checkoutPanelWidth, "checkout panel width").toBeLessThanOrEqual(560);
   await expect(page.locator('#checkoutForm input[name="name"]')).toBeVisible();
   await expect(page.locator('#checkoutForm input[name="email"]')).toBeVisible();
   await expect(page.locator('#checkoutForm input[name="phone"]')).toBeVisible();

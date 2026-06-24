@@ -721,8 +721,9 @@ function renderCart() {
             <strong>${formatMoney(discountedUnitPrice(line.variant.price, totals.qtyDiscount) * line.qty)}</strong>
             <span>${formatMoney(discountedUnitPrice(line.variant.price, totals.qtyDiscount))} / шт.</span>
           </div>
-          <button class="cart-page-line__remove" type="button" data-remove-line="${line.key}" aria-label="Удалить">
+          <button class="cart-page-line__remove" type="button" data-remove-line="${line.key}" aria-label="Удалить" title="Удалить">
             <i data-lucide="trash-2"></i>
+            <span class="cart-page-line__remove-fallback" aria-hidden="true">&times;</span>
           </button>
         </article>
       `
