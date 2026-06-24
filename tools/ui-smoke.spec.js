@@ -548,6 +548,10 @@ test("mobile pages do not create horizontal overflow", async ({ page }) => {
     await page.goto(`${BASE_URL}${route}`, { waitUntil: "commit" });
     await page.locator("body").waitFor();
     await page.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => {});
+    if (!route.includes("/admin-")) {
+      const canonicalHref = await page.locator('link[rel="canonical"]').getAttribute("href");
+      expect(canonicalHref, `canonical for ${route}`).toMatch(/^(https:\/\/sobag-shop\.online|http:\/\/127\.0\.0\.1:4173)\//);
+    }
     if (route.includes("catalog")) await waitForLiveProducts(page);
     if (route.includes("search")) await waitForLiveProducts(page, 0);
     if (["/", "/favorites.html", "/marketplaces.html", "/contacts.html"].includes(route) || route.includes("catalog")) {
@@ -1451,6 +1455,13 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator("#checkoutModal .modal__close")).toHaveAttribute("aria-label", "Закрыть оформление заказа");
   const checkoutPanelWidth = await page.locator("#checkoutModal .checkout-panel").evaluate((panel) => panel.getBoundingClientRect().width);
   expect(checkoutPanelWidth, "checkout panel width").toBeLessThanOrEqual(560);
+  const unnamedCartFields = await page.evaluate(() =>
+    [...document.querySelectorAll('#promoForm input, #checkoutForm input:not([type="hidden"]), #checkoutForm textarea, #checkoutForm select')]
+      .filter((field) => !field.closest("label"))
+      .filter((field) => !field.getAttribute("aria-label") && !field.getAttribute("aria-labelledby") && !field.getAttribute("title"))
+      .map((field) => field.getAttribute("name") || field.id || field.tagName)
+  );
+  expect(unnamedCartFields).toEqual([]);
   await expect(page.locator('#checkoutForm input[name="name"]')).toBeVisible();
   await expect(page.locator('#checkoutForm input[name="email"]')).toBeVisible();
   await expect(page.locator('#checkoutForm input[name="phone"]')).toBeVisible();

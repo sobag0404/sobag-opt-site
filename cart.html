@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sobag Opt | Корзина</title>
     <meta name="description" content="Корзина оптового заказа Sobag Opt." />
+    <link rel="canonical" href="https://sobag-shop.online/cart.html" />
     <link rel="stylesheet" href="styles.css?v=20260624-customer-flow" />
   </head>
   <body class="cart-page">
@@ -46,7 +47,7 @@
           <div class="cart-summary__block">
             <h2>Промокод</h2>
             <form class="promo-form" id="promoForm">
-              <input id="promoInput" type="text" placeholder="Промокод согласует менеджер" autocomplete="off" disabled />
+              <input id="promoInput" type="text" placeholder="Промокод согласует менеджер" autocomplete="off" disabled aria-label="Промокод" />
               <button type="submit" disabled>Применить</button>
             </form>
             <p id="promoHint">Промокод согласует менеджер при подтверждении заказа.</p>
@@ -98,29 +99,29 @@
             <i data-lucide="user-check"></i>
             Использовать информацию из профиля
           </button>
-          <input name="name" type="text" placeholder="Имя" autocomplete="name" required />
-          <input name="email" type="email" placeholder="Почта" autocomplete="email" required />
-          <input name="company" type="text" placeholder="Компания или ИП" autocomplete="organization" />
-          <input name="inn" type="text" inputmode="numeric" placeholder="ИНН" />
-          <input name="kpp" type="text" inputmode="numeric" placeholder="КПП" />
-          <input name="phone" type="tel" placeholder="Номер телефона" autocomplete="tel" required />
-          <input name="city" type="text" placeholder="Город" autocomplete="address-level2" />
-          <input name="address" type="text" placeholder="Адрес доставки или город" autocomplete="street-address" />
-          <input name="legalAddress" type="text" placeholder="Юридический адрес" />
-          <select name="delivery">
+          <input name="name" type="text" placeholder="Имя" autocomplete="name" required aria-label="Имя покупателя" />
+          <input name="email" type="email" placeholder="Почта" autocomplete="email" required aria-label="Электронная почта" />
+          <input name="company" type="text" placeholder="Компания или ИП" autocomplete="organization" aria-label="Компания или ИП" />
+          <input name="inn" type="text" inputmode="numeric" placeholder="ИНН" aria-label="ИНН" />
+          <input name="kpp" type="text" inputmode="numeric" placeholder="КПП" aria-label="КПП" />
+          <input name="phone" type="tel" placeholder="Номер телефона" autocomplete="tel" required aria-label="Номер телефона" />
+          <input name="city" type="text" placeholder="Город" autocomplete="address-level2" aria-label="Город доставки" />
+          <input name="address" type="text" placeholder="Адрес доставки или город" autocomplete="street-address" aria-label="Адрес доставки или город" />
+          <input name="legalAddress" type="text" placeholder="Юридический адрес" aria-label="Юридический адрес" />
+          <select name="delivery" aria-label="Способ доставки">
             <option value="">Доставка: согласовать</option>
             <option value="Самовывоз">Самовывоз</option>
             <option value="Транспортная компания">Транспортная компания</option>
             <option value="До маркетплейса">До маркетплейса</option>
           </select>
-          <select name="packaging">
+          <select name="packaging" aria-label="Упаковка">
             <option value="">Упаковка: стандартная</option>
             <option value="Под маркетплейс">Под маркетплейс</option>
             <option value="Индивидуальная">Индивидуальная</option>
           </select>
-          <input name="layoutReference" type="text" placeholder="Макет из профиля или ссылка" />
-          <input name="layoutFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.zip,.rar" />
-          <textarea name="comment" placeholder="Комментарий: сроки, город, упаковка"></textarea>
+          <input name="layoutReference" type="text" placeholder="Макет из профиля или ссылка" aria-label="Макет из профиля или ссылка" />
+          <input name="layoutFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.zip,.rar" aria-label="Файл макета" />
+          <textarea name="comment" placeholder="Комментарий: сроки, город, упаковка" aria-label="Комментарий к заказу"></textarea>
           <label class="consent-check">
             <input name="consent" type="checkbox" required />
             <span>
