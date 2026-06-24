@@ -104,6 +104,58 @@ function discoverCatalogDetailPaths(result) {
   }
 }
 
+function discoverProductPagePaths(result) {
+  if (!result.path.startsWith("/api/catalog-query")) return [];
+  try {
+    const payload = JSON.parse(result.body);
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const pages = [];
+    for (const item of items) {
+      const baseSku = item?.baseSku || item?.base_sku || item?.sku || item?.id;
+      if (!baseSku) continue;
+      pages.push(`/product?baseSku=${encodeURIComponent(baseSku)}`);
+      if (pages.length >= CACHE_WARMUP_LIMITS.maxDiscoveredProductPages) break;
+    }
+    return pages;
+  } catch {
+    return [];
+  }
+}
+
+function discoverImagePaths(result, base) {
+  const candidates = [];
+  function add(raw) {
+    if (!raw) return;
+    const normalized = normalizeSameOriginPath(raw, base);
+    if (normalized && /\.(?:avif|gif|jpe?g|png|webp|svg)(?:\?|$)/i.test(normalized)) candidates.push(normalized);
+  }
+  if (result.contentType.includes("text/html")) {
+    const pattern = /\b(?:src|href)=["']([^"']+\.(?:avif|gif|jpe?g|png|webp|svg)(?:\?[^"']*)?)["']/giu;
+    let match;
+    while ((match = pattern.exec(result.body))) add(match[1]);
+    return candidates;
+  }
+  if (!result.path.startsWith("/api/catalog-query") && !result.path.startsWith("/api/catalog-detail")) return [];
+  try {
+    const payload = JSON.parse(result.body);
+    const products = [
+      ...(Array.isArray(payload.items) ? payload.items : []),
+      ...(payload.product ? [payload.product] : []),
+    ];
+    products.forEach((product) => {
+      add(product?.image);
+      (product?.gallery || []).forEach(add);
+      (product?.images || []).forEach((image) => {
+        add(image?.url || image?.publicUrl || image?.downloadUrl);
+        (image?.variants || []).forEach((variant) => add(variant?.url || variant?.publicUrl || variant?.downloadUrl));
+      });
+    });
+  } catch {
+    return [];
+  }
+  return candidates;
+}
+
 async function fetchWarm(base, path, args, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(new Error(`Timed out after ${args.timeoutMs}ms`)), args.timeoutMs);
@@ -156,6 +208,11 @@ function assertPublicPath(result) {
       assert(/immutable/i.test(cache) && maxAgeSeconds(cache) >= 31536000, `${result.path}: versioned static asset must be immutable long-cache`);
     }
   }
+  if (result.contentType.startsWith("image/")) {
+    assert(/public/i.test(cache), `${result.path}: image asset should use public cache`);
+    assert(!/no-store/i.test(cache), `${result.path}: image asset must not be no-store`);
+    assert(!result.contentType.includes("text/html"), `${result.path}: image URL must not fall back to HTML`);
+  }
 }
 
 function assertPrivatePath(result) {
@@ -169,16 +226,17 @@ async function runWarmup(rawBaseUrl, args) {
   const queue = [...args.paths];
   const seen = new Set(queue.map((entry) => entry.path));
   let discoveredVersionedAssets = 0;
+  let discoveredImages = 0;
 
-  function enqueue(path, kind, label) {
+  function enqueue(path, kind, label, extra = {}) {
     if (seen.has(path)) return;
     seen.add(path);
-    queue.push({ path, kind, label });
+    queue.push({ path, kind, label, ...extra });
   }
 
   for (let index = 0; index < queue.length; index += 1) {
     const entry = queue[index];
-    const result = await fetchWarm(base, entry.path, args);
+    const result = await fetchWarm(base, entry.path, args, { method: entry.method || "GET" });
     result.kind = entry.kind;
     result.label = entry.label;
     result.maxMs = args.maxMs;
@@ -195,6 +253,16 @@ async function runWarmup(rawBaseUrl, args) {
 
     for (const detailPath of discoverCatalogDetailPaths(result)) {
       enqueue(detailPath, "public-api", "discovered-catalog-detail");
+    }
+
+    for (const productPath of discoverProductPagePaths(result)) {
+      enqueue(productPath, "html", "discovered-product-page");
+    }
+
+    for (const imagePath of discoverImagePaths(result, base)) {
+      if (discoveredImages >= CACHE_WARMUP_LIMITS.maxDiscoveredImages) break;
+      if (!seen.has(imagePath)) discoveredImages += 1;
+      enqueue(imagePath, "image", "discovered-image", { method: "HEAD" });
     }
   }
 
@@ -226,14 +294,14 @@ async function closeServer(server) {
 async function createSelfTestServer() {
   const server = createServer((req, res) => {
     const url = new URL(req.url || "/", "http://127.0.0.1");
-    if (url.pathname === "/" || url.pathname === "/catalog.html" || url.pathname === "/catalog" || /\.(?:html)$/i.test(url.pathname)) {
+    if (url.pathname === "/" || url.pathname === "/catalog.html" || url.pathname === "/catalog" || url.pathname === "/search" || url.pathname === "/product" || /\.(?:html)$/i.test(url.pathname)) {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
-      res.end('<!doctype html><title>Sobag</title><script src="/app.js?v=self-test"></script><link rel="stylesheet" href="/styles.css?v=self-test">');
+      res.end('<!doctype html><title>Sobag</title><img src="/x.webp"><script src="/app.js?v=self-test"></script><link rel="stylesheet" href="/styles.css?v=self-test">');
       return;
     }
     if (url.pathname === "/api/catalog-query") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
-      res.end(JSON.stringify({ items: [{ baseSku: "OPT-1", minPrice: 100 }], total: 1, facets: { categories: [{ value: "Test", count: 1 }] } }));
+      res.end(JSON.stringify({ items: [{ baseSku: "OPT-1", minPrice: 100, image: "/x.webp" }], total: 1, facets: { categories: [{ value: "Test", count: 1 }] } }));
       return;
     }
     if (url.pathname === "/api/price-list") {
@@ -243,7 +311,12 @@ async function createSelfTestServer() {
     }
     if (url.pathname === "/api/catalog-detail") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
-      res.end(JSON.stringify({ product: { baseSku: url.searchParams.get("baseSku") || "OPT-1", minPrice: 100 } }));
+      res.end(JSON.stringify({ product: { baseSku: url.searchParams.get("baseSku") || "OPT-1", minPrice: 100, images: [{ url: "/x.webp", variants: [{ url: "/x-320.webp" }] }] } }));
+      return;
+    }
+    if (url.pathname === "/x.webp" || url.pathname === "/x-320.webp") {
+      res.writeHead(200, { "content-type": "image/webp", "cache-control": "public, max-age=86400, stale-while-revalidate=604800" });
+      res.end();
       return;
     }
     if (url.pathname === "/app.js" || url.pathname === "/styles.css") {
