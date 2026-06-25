@@ -12,6 +12,7 @@ const DEFAULT_STATIC_MAX_BYTES = 520 * 1024;
 const DEFAULT_MAX_MS = 5000;
 const DEFAULT_CATALOG_API_MAX_MS = 3000;
 const DEFAULT_CATALOG_FIRST_LOAD_MAX_MS = 4500;
+const DEFAULT_IMAGE_MAX_MS = 2000;
 
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
@@ -24,6 +25,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     maxMs: DEFAULT_MAX_MS,
     catalogApiMaxMs: DEFAULT_CATALOG_API_MAX_MS,
     catalogFirstLoadMaxMs: DEFAULT_CATALOG_FIRST_LOAD_MAX_MS,
+    imageMaxMs: DEFAULT_IMAGE_MAX_MS,
     json: false,
     selfTest: false,
   };
@@ -39,6 +41,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (token === "--max-ms") args.maxMs = Number(argv[++index] || args.maxMs);
     else if (token === "--catalog-api-max-ms") args.catalogApiMaxMs = Number(argv[++index] || args.catalogApiMaxMs);
     else if (token === "--catalog-first-load-max-ms") args.catalogFirstLoadMaxMs = Number(argv[++index] || args.catalogFirstLoadMaxMs);
+    else if (token === "--image-max-ms") args.imageMaxMs = Number(argv[++index] || args.imageMaxMs);
     else if (token === "--json") args.json = true;
     else if (token === "--self-test") args.selfTest = true;
     else if (token === "--help") {
@@ -150,6 +153,21 @@ function facetCounts(bucket) {
   return [];
 }
 
+function firstCardImagePaths(items, limit = 6) {
+  const paths = [];
+  function add(raw) {
+    if (!raw || paths.includes(raw)) return;
+    paths.push(raw);
+  }
+  for (const item of items || []) {
+    add(item?.image);
+    add(item?.imageMeta?.url || item?.imageMeta?.publicUrl || item?.imageMeta?.downloadUrl);
+    for (const variant of item?.imageMeta?.variants || []) add(variant?.url || variant?.publicUrl || variant?.downloadUrl);
+    if (paths.length >= limit) break;
+  }
+  return paths.slice(0, limit);
+}
+
 async function runPerformanceSmoke(rawBaseUrl, args) {
   const base = normalizeBaseUrl(rawBaseUrl);
   const checks = [];
@@ -248,14 +266,17 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
   assert(data.cacheControl.includes("max-age=300"), `${data.path}: product data should use short cache`);
   checks.push({ name: "products-json", path: data.path, bytes: data.bytes, elapsedMs: data.elapsedMs });
 
-  const imagePath = detailPayload.product?.images?.find((item) => item?.url)?.url || queryPayload.items[0]?.image || "/assets/production-hero-1.png";
-  const image = await fetchText(base, imagePath, args);
-  assert(image.ok, `${image.path}: expected image GET 2xx, got ${image.status}`);
-  assertFast(image, args.maxMs);
-  assert(image.contentType.startsWith("image/"), `${image.path}: expected image MIME, got ${image.contentType}`);
-  assert(image.cacheControl.includes("max-age=86400") || image.cacheControl.includes("max-age=31536000"), `${image.path}: image cache header missing`);
-  assert(!image.contentType.includes("text/html"), `${image.path}: image URL must not fall back to HTML`);
-  checks.push({ name: "image-get", path: image.path, bytes: image.bytes, elapsedMs: image.elapsedMs });
+  const imagePaths = firstCardImagePaths(queryPayload.items);
+  if (!imagePaths.length) imagePaths.push(detailPayload.product?.images?.find((item) => item?.url)?.url || "/assets/production-hero-1.png");
+  for (const imagePath of imagePaths) {
+    const image = await fetchText(base, imagePath, args);
+    assert(image.ok, `${image.path}: expected image GET 2xx, got ${image.status}`);
+    assertFast(image, args.imageMaxMs);
+    assert(image.contentType.startsWith("image/"), `${image.path}: expected image MIME, got ${image.contentType}`);
+    assert(image.cacheControl.includes("max-age=86400") || image.cacheControl.includes("max-age=31536000"), `${image.path}: image cache header missing`);
+    assert(!image.contentType.includes("text/html"), `${image.path}: image URL must not fall back to HTML`);
+    checks.push({ name: "first-card-image-get", path: image.path, bytes: image.bytes, elapsedMs: image.elapsedMs });
+  }
 
   const missingAsset = await fetchText(base, "/assets/missing-cache-smoke.webp", args, { redirect: "manual" });
   assert(missingAsset.status === 404, `${missingAsset.path}: missing asset should return 404, got ${missingAsset.status}`);

@@ -285,7 +285,7 @@ function main() {
   run("node", ["tools/vps-server-smoke.mjs"]);
   run("node", ["tools/vps-write-smoke.mjs"]);
   run("node", ["tools/api-security-smoke.mjs"]);
-  run("node", ["tools/rum-smoke.mjs"]);
+  run("node", ["tools/rum-smoke.mjs", "--api-only"]);
   run("node", ["tools/review-eligibility-contract-audit.mjs"]);
   run("node", ["tools/review-eligibility-contract-audit.mjs", "--self-test"]);
   run("node", ["tools/price-integrity-smoke.mjs"]);

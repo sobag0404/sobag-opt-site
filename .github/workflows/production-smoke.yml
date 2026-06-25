@@ -66,7 +66,7 @@ jobs:
           SOBAG_PRODUCTION_BASE_URL: ${{ github.event.inputs.base_url || vars.PRODUCTION_BASE_URL || 'https://sobag-shop.online' }}
         run: |
           set +e
-          output="$(node tools/production-performance-smoke.mjs --timeout 15000 --max-ms 5000 --catalog-api-max-ms 3000 --catalog-first-load-max-ms 4500 2>&1)"
+          output="$(node tools/production-performance-smoke.mjs --timeout 15000 --max-ms 5000 --catalog-api-max-ms 2000 --catalog-first-load-max-ms 2500 --image-max-ms 2000 2>&1)"
           status="$?"
           printf '%s\n' "$output"
           if [ "$status" -ne 0 ]; then

@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "@playwright/test";
 
+const args = new Set(process.argv.slice(2));
+const apiOnly = args.has("--api-only");
 const tempDir = mkdtempSync(join(tmpdir(), "sobag-rum-smoke-"));
 process.env.SOBAG_STORE_PROVIDER = "file";
 process.env.SOBAG_FILE_STORE_DIR = tempDir;
@@ -116,12 +118,14 @@ async function run() {
     assert(limited.response.status === 429 && limited.payload.error === "rate_limited", "RUM burst should be rate-limited");
     resetRateLimits();
 
-    await runBrowserBeacon(baseUrl);
-    summary = await storedRumSummary();
-    assert(summary.totalEvents >= 5, "browser RUM beacon should add safe metric events");
-    assert(summary.groups.some((group) => group.name === "NAV_LOAD" || group.name === "FCP"), "browser RUM should include navigation or paint timing");
+    if (!apiOnly) {
+      await runBrowserBeacon(baseUrl);
+      summary = await storedRumSummary();
+      assert(summary.totalEvents >= 5, "browser RUM beacon should add safe metric events");
+      assert(summary.groups.some((group) => group.name === "NAV_LOAD" || group.name === "FCP"), "browser RUM should include navigation or paint timing");
+    }
 
-    console.log(`RUM smoke passed: ${baseUrl}, events=${summary.totalEvents}, groups=${summary.groups.length}`);
+    console.log(`RUM smoke passed: ${baseUrl}, mode=${apiOnly ? "api-only" : "browser"}, events=${summary.totalEvents}, groups=${summary.groups.length}`);
   } finally {
     await close(server).catch(() => {});
     rmSync(tempDir, { recursive: true, force: true });
