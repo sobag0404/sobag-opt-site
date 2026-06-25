@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 const require = createRequire(import.meta.url);
 const root = resolve(process.cwd());
 const { handleApiRequest } = require("./api-router");
-const publicRootFiles = new Set(["index.html", "app.js", "cart.js", "styles.css", "favicon.ico"]);
+const publicRootFiles = new Set(["index.html", "app.js", "cart.js", "styles.css", "sw.js", "favicon.ico"]);
 const publicRootExtensions = new Set([".html", ".ico", ".png", ".svg", ".webp", ".jpg", ".jpeg"]);
 const publicDirectories = new Set(["assets", "components", "templates"]);
 
@@ -45,6 +45,7 @@ function isFingerprintedAsset(pathname) {
 
 function cacheControlFor(pathname, searchParams = new URLSearchParams()) {
   const hasVersionToken = ["v", "ver", "version", "hash", "rev"].some((key) => searchParams.has(key));
+  if (pathname === "/sw.js") return "no-cache";
   if (isFingerprintedAsset(pathname)) return "public, max-age=31536000, immutable";
   if (hasVersionToken && [".css", ".js"].includes(extname(pathname).toLowerCase())) return "public, max-age=31536000, immutable";
   if (pathname.startsWith("/assets/")) return "public, max-age=86400, stale-while-revalidate=604800";

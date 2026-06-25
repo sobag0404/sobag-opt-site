@@ -15,6 +15,7 @@ const DEFAULT_PATHS = [
   "/api/catalog-query?pageSize=1",
   "/api/price-list?format=json",
   "/api/price-list",
+  "/sw.js",
   "/api/admin/catalog",
   "/api/admin/content",
   "/api/admin/import-batches",
@@ -136,6 +137,7 @@ function expectedKind(path) {
   if (path === "/api/health") return "health";
   if (path === "/index.html") return "canonical-redirect";
   if (path === "/api/auth/me") return "auth-me";
+  if (path === "/sw.js") return "service-worker";
   if (path.startsWith("/api/catalog-query")) return "catalog-query";
   if (path.startsWith("/api/price-list")) return "price-list";
   if (ANONYMOUS_DENIED_PATHS.has(path)) return "anonymous-denied";
@@ -279,6 +281,11 @@ function assertCachePolicy(path, kind, response) {
   if (kind === "price-list" && !/public/i.test(cacheControl)) {
     throw new Error(`${path}: public price-list should use public cache-control`);
   }
+  if (kind === "service-worker") {
+    if (/immutable/i.test(cacheControl) || maxAgeSeconds(cacheControl) > 300) {
+      throw new Error(`${path}: service worker must revalidate instead of long-cache`);
+    }
+  }
 }
 
 async function fetchWithTimeout(url, timeoutMs) {
@@ -346,6 +353,10 @@ async function checkPath(baseUrl, path, timeoutMs) {
     payload = assertCatalogQuery(path, contentType, body);
   } else if (kind === "price-list") {
     payload = assertPriceList(path, contentType, body, response.headers.get("content-disposition") || "");
+  } else if (kind === "service-worker") {
+    if (!contentType.toLowerCase().includes("javascript")) {
+      throw new Error(`${path}: expected JavaScript service worker, got ${contentType || "empty content-type"}`);
+    }
   } else {
     payload = assertJson(path, contentType, body);
   }
@@ -493,6 +504,11 @@ async function createSelfTestServer() {
     if (ANONYMOUS_DENIED_PATHS.has(req.url || "")) {
       res.writeHead(401, { "content-type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ error: "unauthorized" }));
+      return;
+    }
+    if (req.url === "/sw.js") {
+      res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
+      res.end("self.addEventListener('install', () => self.skipWaiting());");
       return;
     }
     if (req.url === "/index.html") {

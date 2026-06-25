@@ -72,6 +72,10 @@ try {
   const versionedCache = versionedAppJs.response.headers.get("cache-control") || "";
   assert(versionedCache.includes("max-age=31536000") && versionedCache.includes("immutable"), "versioned JS should use immutable long cache");
 
+  const serviceWorker = await readText(baseUrl, "/sw.js");
+  assert((serviceWorker.response.headers.get("content-type") || "").includes("text/javascript"), "service worker should use JavaScript MIME");
+  assert((serviceWorker.response.headers.get("cache-control") || "").includes("no-cache"), "service worker should revalidate instead of long-cache");
+
   const styles = await readText(baseUrl, "/styles.css");
   assert((styles.response.headers.get("content-type") || "").includes("text/css"), "CSS should use text/css MIME");
   assert((styles.response.headers.get("cache-control") || "").includes("max-age=3600"), "non-fingerprinted CSS should use short static cache");
