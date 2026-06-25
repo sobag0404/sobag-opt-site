@@ -1566,9 +1566,9 @@ function productRatingButtonHtml(product) {
   const stats = reviewStats(product);
   const label = `${ratingSummaryLabel(stats)}. Открыть отзывы`;
   return `
-    <button class="sku-rating-button" type="button" data-toggle-product-reviews aria-controls="productReviewsPanel" aria-expanded="false" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
+    <button class="product-rating-button" type="button" data-toggle-product-reviews aria-controls="productReviewsPanel" aria-expanded="false" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
       ${starsHtml(stats.average, ratingSummaryLabel(stats))}
-      <span class="sku-rating-button__count">${stats.count}</span>
+      <span class="product-rating-button__count">${stats.count ? `${stats.count} ${reviewWord(stats.count)}` : "0 отзывов"}</span>
     </button>
   `;
 }
@@ -3382,6 +3382,7 @@ function productReviewsHtml(product) {
         </div>
         ${stats.count ? starsHtml(stats.average, `Средняя оценка ${stats.average.toFixed(1)} из 5`) : ""}
       </div>
+      <p class="review-scope-note">Рейтинг относится к базовому артикулу; в тексте отзыва покупатели могут уточнять размер, материал или вариант.</p>
       ${
         reviews.length
           ? `<div class="review-list">${reviews
@@ -3435,8 +3436,12 @@ function productModalHtml(product) {
               </div>
             </div>
             <div class="product-detail__copy">
-              <p class="eyebrow">${product.baseSku}</p>
+              <div class="product-detail__identity">
+                <p class="eyebrow">${product.baseSku}</p>
+                ${productRatingButtonHtml(product)}
+              </div>
               <h2 id="detailProductName">${variant.name}</h2>
+              ${productReviewsHtml(product)}
               <p>${product.description}</p>
               <p class="product-detail__note">${product.detailDescription}</p>
               <div class="detail-tags" aria-label="Быстрые фильтры">
@@ -3461,10 +3466,8 @@ function productModalHtml(product) {
                 <button class="copy-sku-button copy-sku-button--detail" type="button" data-copy-sku="${variant.sku}" data-tooltip="Скопировать артикул" title="Скопировать артикул" aria-label="Скопировать выбранный артикул ${variant.sku}">
                   <i data-lucide="copy"></i>
                 </button>
-                ${productRatingButtonHtml(product)}
               </div>
             </div>
-            ${productReviewsHtml(product)}
             ${variantControls("type", "Тип товара", product.types)}
             ${variantControls("size", "Размер", product.sizes)}
             ${variantControls("material", "Материал", product.materials)}
