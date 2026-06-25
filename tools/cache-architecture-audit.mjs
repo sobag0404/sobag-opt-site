@@ -16,6 +16,7 @@ function auditCacheArchitecture(files = {}) {
   const performanceSmoke = files.performanceSmoke ?? read("tools/production-performance-smoke.mjs");
   const warmupManifest = files.warmupManifest ?? read("tools/cache-warmup-manifest.mjs");
   const warmupSmoke = files.warmupSmoke ?? read("tools/cache-warmup-smoke.mjs");
+  const swSource = files.swSource ?? read("sw.js");
   const vpsDeploy = files.vpsDeploy ?? read(".github/workflows/vps-deploy.yml");
   const productionWorkflow = files.productionWorkflow ?? read(".github/workflows/production-smoke.yml");
   const packageJson = files.packageJson ?? read("package.json");
@@ -38,6 +39,7 @@ function auditCacheArchitecture(files = {}) {
 
   assert(productionSmoke.includes("category counts look page-limited"), "production smoke must catch page-limited catalog counts");
   assert(productionSmoke.includes("expected current app.js cache-bust version"), "production smoke must catch stale app.js references");
+  assert(productionSmoke.includes("expected current site-shell.js cache-bust version"), "production smoke must catch stale service-worker registration shell references");
   assert(productionSmoke.includes("HTML must not use aggressive cache-control"), "production smoke must reject aggressive HTML cache");
   assert(performanceSmoke.includes("catalog first-load categories look page-limited"), "performance smoke must catch first-load partial category counts");
   assert(performanceSmoke.includes("catalog-first-load"), "performance smoke must report first-load budget");
@@ -48,6 +50,8 @@ function auditCacheArchitecture(files = {}) {
   assert(warmupSmoke.includes("/api/catalog-detail?baseSku="), "cache warmup must discover a representative catalog detail API");
   assert(warmupSmoke.includes("discoverVersionedAssetPaths") && warmupSmoke.includes("versioned static asset must be immutable"), "cache warmup must discover and verify versioned JS/CSS assets");
   assert(warmupSmoke.includes("PRIVATE_CACHE_PROBE_PATHS") && warmupSmoke.includes("no-store"), "cache warmup must verify private no-store paths");
+  assert(swSource.includes("freshPublicApiFirst") && swSource.includes("isFreshApiResponse(cached)"), "service worker should serve fresh public API cache without repeat network fetches");
+  assert(swSource.includes("SKIP_WAITING"), "service worker should handle explicit skip-waiting upgrades");
   assert(vpsDeploy.includes("node tools/cache-warmup-smoke.mjs --base-url https://sobag-shop.online"), "VPS deploy must run cache warmup after release activation");
   assert(productionWorkflow.includes("node tools/cache-warmup-smoke.mjs"), "production workflow must run cache warmup verification");
   assert(packageJson.includes("\"smoke:cache-warmup\""), "package scripts must expose cache warmup smoke");
@@ -62,10 +66,11 @@ function runSelfTest() {
     auditCacheArchitecture({
       docs: "Public HTML shells no-cache\nVersioned JS/CSS immutable\nPrivate or user-specific APIs no-store\nSafe migration plan\n",
       server: "return \"no-cache\"; max-age=31536000, immutable",
-      productionSmoke: "expected current app.js cache-bust version",
+      productionSmoke: "expected current app.js cache-bust version\nexpected current site-shell.js cache-bust version",
       performanceSmoke: "catalog-first-load",
       warmupManifest: "/business.html\n/contacts.html\nPRIVATE_CACHE_PROBE_PATHS\n/api/admin/prices\n/api/catalog-query?pageSize=1&sort=popular\n/api/catalog-query?pageSize=48&sort=popular&category=",
       warmupSmoke: "/api/catalog-detail?baseSku=\ndiscoverVersionedAssetPaths\nversioned static asset must be immutable\nPRIVATE_CACHE_PROBE_PATHS\nno-store",
+      swSource: "freshPublicApiFirst\nisFreshApiResponse(cached)\nSKIP_WAITING",
       vpsDeploy: "node tools/cache-warmup-smoke.mjs --base-url https://sobag-shop.online",
       productionWorkflow: "node tools/cache-warmup-smoke.mjs",
       packageJson: "\"smoke:cache-warmup\"",

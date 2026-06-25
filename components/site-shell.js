@@ -101,7 +101,7 @@
 
   renderSiteShell();
 
-  const SW_VERSION = "20260624-browser-cache";
+  const SW_VERSION = "20260625-sw-cache-v2";
   const PREFETCH_PAGES = [
     "/",
     "/catalog.html",
@@ -119,7 +119,7 @@
     "/styles.css?v=20260624-customer-flow",
     "/app.js?v=20260624-product-image-sizes",
     "/cart.js?v=20260624-customer-flow",
-    "/components/site-shell.js?v=20260625-rum-v1",
+    "/components/site-shell.js?v=20260625-sw-cache-v2",
     "/components/app-utils.js?v=20260615-modular-utils",
     "/components/app-data.js?v=20260624-public-cache-v3",
     "/components/app-content-utils.js?v=20260624-public-cache-v3",

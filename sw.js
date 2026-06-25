@@ -1,4 +1,4 @@
-const SOBAG_SW_VERSION = "20260624-browser-cache";
+const SOBAG_SW_VERSION = "20260625-sw-cache-v2";
 const SOBAG_PUBLIC_CACHE = `sobag-public-${SOBAG_SW_VERSION}`;
 const SOBAG_API_MAX_AGE_MS = 10 * 60 * 1000;
 const SOBAG_HTML_TIMEOUT_MS = 1200;
@@ -152,6 +152,13 @@ async function networkFirst(request, timeoutMs, options = {}) {
   return fetch(request);
 }
 
+async function freshPublicApiFirst(request) {
+  const cache = await caches.open(SOBAG_PUBLIC_CACHE);
+  const cached = await cache.match(request);
+  if (cached && isFreshApiResponse(cached)) return cached;
+  return networkFirst(request, SOBAG_API_TIMEOUT_MS);
+}
+
 async function cacheFirst(request) {
   const cache = await caches.open(SOBAG_PUBLIC_CACHE);
   const cached = await cache.match(request);
@@ -191,6 +198,10 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    event.waitUntil(self.skipWaiting());
+    return;
+  }
   if (event.data?.type === "SOBAG_PREFETCH_PUBLIC") {
     event.waitUntil(prefetchPublic(event.data.urls || []));
   }
@@ -202,7 +213,7 @@ self.addEventListener("fetch", (event) => {
   if (!shouldHandle(request)) return;
 
   if (isApiRequest(url)) {
-    event.respondWith(networkFirst(request, SOBAG_API_TIMEOUT_MS, { requireFreshCached: true }));
+    event.respondWith(freshPublicApiFirst(request));
     return;
   }
 

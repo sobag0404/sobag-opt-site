@@ -83,6 +83,11 @@ async function measureCatalogHome(browser, viewport) {
 
 async function measureCategoryListing(browser, viewport) {
   const page = await browser.newPage({ viewport });
+  const apiRequests = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith("/api/")) apiRequests.push(url);
+  });
   const startedAt = Date.now();
   const path = `/catalog?category=${encodeURIComponent(CATEGORY)}`;
   await page.goto(`${BASE_URL}${withQa(path, `speed-list-${viewport.name}`)}`, { waitUntil: "domcontentloaded" });
@@ -98,8 +103,10 @@ async function measureCategoryListing(browser, viewport) {
   assert(!metrics.hasStale48, `${viewport.name} category listing shows stale 48 товаров text`);
   assert(metrics.overflow <= 1, `${viewport.name} category listing has horizontal overflow ${metrics.overflow}`);
   assert(firstCardMs <= 2500, `${viewport.name} first category card ${firstCardMs}ms is too slow`);
+  const firstPageRequests = apiRequests.filter((url) => url.pathname === "/api/catalog-query" && url.searchParams.get("category") === CATEGORY && !url.searchParams.get("cursor"));
+  assert(firstPageRequests.length <= 1, `${viewport.name} category listing made duplicate first-page catalog-query requests`);
   await page.close();
-  return { route: "category-listing", viewport: viewport.name, firstCardMs, ...metrics };
+  return { route: "category-listing", viewport: viewport.name, firstCardMs, apiRequests: apiRequests.length, ...metrics };
 }
 
 async function measureRepeatAndSpa(browser) {

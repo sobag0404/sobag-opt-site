@@ -20,13 +20,18 @@ Status: target model and migration notes for the VPS/Rust production runtime.
   - public API cache keys use an explicit `sobag.publicApiCache.vN.*` prefix with a request-shape scope before the normalized endpoint/query;
   - catalog-home summary cache uses the `sobag.catalogHomeSummary.*` family;
   - private cart/favorites/profile/order prototype keys are per browser/user and must not be treated as shared cache.
+- Service worker public cache:
+  - `sw.js` owns only same-origin public HTML/static/image assets plus `/api/catalog-query`, `/api/catalog-detail`, and `/api/price-list`;
+  - fresh public API responses are served from the service-worker cache without a repeat network fetch during the 10-minute browser-cache TTL, preventing back-to-catalog navigation from re-running the same cold API chain;
+  - stale public API entries revalidate through the network with a short timeout and may fall back to cached public data during transient network slowness;
+  - private/auth/admin/order/account routes are bypassed and never enter the public service-worker cache.
 - Deploy workflow: release activation updates static files and versioned asset URLs, then `tools/cache-warmup-smoke.mjs` warms public paths from `tools/cache-warmup-manifest.mjs` and verifies cache headers before old-release cleanup. Production smoke reruns the same read-only warmup verification after canonical/performance/storage checks.
-- No service worker cache is part of the current production model.
 
 ## Conflict risks
 
 - A partial `/api/catalog-query?pageSize=48&category=...` listing response must never seed catalog-home category counts. Catalog-home counts must come from full summary facets (`/api/catalog-query?pageSize=1&sort=popular`) or a cache entry that has been validated as full-count data.
 - Stale HTML can pin old asset versions, so HTML must stay revalidated and production smoke must check the current `app.js` / `components/app-data.js` cache-bust values.
+- Stale service-worker registration shell can pin an old SW cache strategy, so HTML pages must bump `components/site-shell.js?v=...` when the worker registration/cache version changes and production smoke must check that cache-bust.
 - Public API cache keys must include the full path/query and request-shape scope (`catalog-home-summary`, `catalog-listing-initial`, `catalog-listing-page`, `catalog-detail`). Reusing a listing cache key for catalog-home summary is invalid.
 - Private browser state (`cart`, `favorites`, auth/profile/order history, admin previews) must stay local/per-user and must not be exposed via public cache headers.
 
@@ -49,6 +54,7 @@ Status: target model and migration notes for the VPS/Rust production runtime.
 - `.github/workflows/production-smoke.yml` runs `tools/cache-warmup-smoke.mjs` after storage readiness, so a deploy must prove public cache warmup and private no-store behavior after the live release is active.
 - `tools/cache-warmup-manifest.mjs` keeps the public warmup list bounded and reviewable: HTML/content pages, catalog/search/product public surfaces, representative catalog listing/category/search APIs, price-list JSON, fallback static assets, discovered versioned assets, mandatory first-view/discovered product-image `GET` requests, background catalog product-image `GET` batches, and private no-store probes.
 - `npm run smoke:cache-warmup` exposes the read-only warmup locally; `npm run check` runs its self-test and the architecture/workflow audits.
+- `npm run smoke:sw-cache` runs a local browser fixture proving fresh public API/detail/image requests are served from the service-worker cache on repeat navigation while `/api/auth/me` remains uncached.
 
 ## Image warmup tiers
 

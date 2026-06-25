@@ -158,6 +158,7 @@ const state = {
     hasMore: false,
     source: "",
     loadingMore: false,
+    promise: null,
   },
   catalogHomeSummary: {
     status: "idle",
@@ -508,6 +509,7 @@ function resetServerCatalogList() {
   state.serverCatalog.hasMore = false;
   state.serverCatalog.source = "";
   state.serverCatalog.loadingMore = false;
+  state.serverCatalog.promise = null;
 }
 function serverCatalogImageMeta(card) {
   const meta = normalizeProductImageMetadata(card?.imageMeta);
@@ -638,7 +640,11 @@ async function refreshServerCatalogList(options = {}) {
       return true;
     }
   }
-  return fetchAndApplyServerCatalog(path, { append, key, requestId });
+  const promise = fetchAndApplyServerCatalog(path, { append, key, requestId });
+  state.serverCatalog.promise = promise;
+  const loaded = await promise;
+  if (state.serverCatalog.promise === promise) state.serverCatalog.promise = null;
+  return loaded;
 }
 function queueServerCatalogRefresh() {
   if (!shouldUseServerCatalogList()) {
@@ -1450,7 +1456,14 @@ async function loadPublishedProducts() {
   state.publishedProductsLoadStarted = true;
   if (await loadAdminCatalogProducts()) return;
   if (shouldUseServerCatalogList()) {
-    const loadedQuery = await refreshServerCatalogList();
+    const currentKey = serverCatalogKey();
+    let loadedQuery = false;
+    if (state.serverCatalog.key === currentKey && state.serverCatalog.status === "ready") return;
+    if (state.serverCatalog.key === currentKey && state.serverCatalog.status === "loading" && state.serverCatalog.promise) {
+      loadedQuery = await state.serverCatalog.promise;
+    } else {
+      loadedQuery = await refreshServerCatalogList();
+    }
     if (loadedQuery) {
       renderFilters();
       renderProducts();

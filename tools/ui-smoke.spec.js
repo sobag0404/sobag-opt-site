@@ -112,7 +112,7 @@ test("browser public cache worker warms only public resources", async ({ page })
             entries.push(`${url.pathname}${url.search}`);
           }
         }
-        return entries.includes("/catalog.html") && entries.some((entry) => /^\/styles\.css\?/.test(entry)) && entries.some((entry) => /^\/components\/site-shell\.js\?v=20260625-rum-v1/.test(entry));
+        return entries.includes("/catalog.html") && entries.some((entry) => /^\/styles\.css\?/.test(entry)) && entries.some((entry) => /^\/components\/site-shell\.js\?v=20260625-sw-cache-v2/.test(entry));
       })
     )
     .toBe(true);
@@ -130,7 +130,7 @@ test("browser public cache worker warms only public resources", async ({ page })
     return entries;
   });
   expect(publicEntries).toContainEqual(expect.stringMatching(/^\/styles\.css\?/));
-  expect(publicEntries).toContainEqual(expect.stringMatching(/^\/components\/site-shell\.js\?v=20260625-rum-v1/));
+  expect(publicEntries).toContainEqual(expect.stringMatching(/^\/components\/site-shell\.js\?v=20260625-sw-cache-v2/));
 
   await page.evaluate(async () => {
     await fetch("/api/auth/me").catch(() => null);
@@ -1817,6 +1817,8 @@ test("catalog list renders server query cards and cursor pages", async ({ page }
   expect(requestedUrls[0].searchParams.get("category")).toBe("QA Server");
   expect(requestedUrls[0].searchParams.get("pageSize")).toBe("48");
   expect(requestedUrls.every((url) => url.searchParams.get("pageSize") === "48")).toBe(true);
+  const initialPageRequests = requestedUrls.filter((url) => url.searchParams.get("category") === "QA Server" && !url.searchParams.get("cursor") && !url.searchParams.get("size"));
+  expect(initialPageRequests).toHaveLength(1);
   expect(requestedUrls.some((url) => url.searchParams.get("cursor") === "MQ")).toBe(true);
   expect(fullCatalogRequested).toBe(false);
 });

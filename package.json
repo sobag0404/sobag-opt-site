@@ -35,6 +35,7 @@
     "smoke:frontend-speed": "node tools/frontend-perceived-speed-smoke.mjs",
     "smoke:cache-headers": "node tools/production-performance-smoke.mjs",
     "smoke:cache-warmup": "node tools/cache-warmup-smoke.mjs",
+    "smoke:sw-cache": "node tools/sw-cache-behavior-smoke.mjs",
     "audit:cache-architecture": "node tools/cache-architecture-audit.mjs",
     "smoke:prod:storage": "node tools/production-storage-readiness.mjs",
     "smoke:rust:shadow": "node tools/rust-catalog-shadow-smoke.mjs",
