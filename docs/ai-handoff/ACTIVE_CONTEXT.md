@@ -339,3 +339,4 @@ Last updated: 2026-06-20
 4. Не читать весь старый чат без причины.
 5. Не менять архитектуру проекта на основании сжатого контекста.
 6. Если информации не хватает, сначала искать в handoff/docs, а не выдумывать.
+7. Worker chats may use subagents when it materially speeds up work: split independent exploration, verification, or non-overlapping implementation slices; keep file ownership explicit and integrate/check results before final.
