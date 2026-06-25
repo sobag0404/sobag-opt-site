@@ -1,0 +1,78 @@
+name: live-ui-smoke
+
+on:
+  workflow_run:
+    workflows: ["production-smoke"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Production live UI base URL"
+        required: false
+        default: "https://sobag-shop.online"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-ui-smoke-${{ github.event.workflow_run.head_branch || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  live-ui:
+    if: >-
+      ${{
+        (
+          github.event_name == 'workflow_dispatch' &&
+          github.ref_name == 'main'
+        ) ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'main'
+        )
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      # GitHub-owned actions are pinned to full commit SHAs; refresh intentionally during CI maintenance.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate live UI smoke target
+        env:
+          LIVE_BASE_URL: ${{ github.event.inputs.base_url || vars.LIVE_BASE_URL || 'https://sobag-shop.online' }}
+        run: |
+          case "$LIVE_BASE_URL" in
+            https://sobag-shop.online|https://sobag-shop.online/*)
+              ;;
+            *)
+              echo "Live UI smoke base URL must stay on sobag-shop.online"
+              exit 1
+              ;;
+          esac
+
+      - name: Run live UI smoke
+        env:
+          LIVE_BASE_URL: ${{ github.event.inputs.base_url || vars.LIVE_BASE_URL || 'https://sobag-shop.online' }}
+        run: |
+          set +e
+          output="$(node tools/live-ui-smoke.mjs --timeout 20000 2>&1)"
+          status="$?"
+          printf '%s\n' "$output"
+          if [ "$status" -ne 0 ]; then
+            reason="$(printf '%s\n' "$output" | tail -n 10 | tr '\n' ' ' | sed 's/[^[:print:]]//g' | cut -c1-900)"
+            echo "::error title=live-ui-smoke failed::$reason"
+            exit "$status"
+          fi
