@@ -2,6 +2,14 @@
 
 Last updated: 2026-06-20
 
+## Coordinator Reasoning Budget Rule
+- Default worker-thread reasoning: `medium`.
+- Use `high` for backend/API/auth/security/cache/deploy/VPS work, production blockers, or bugs that affect several subsystems.
+- Use `low` only for simple status checks, thread reads, GitHub Actions checks, or short follow-up prompts.
+- Use `xhigh` only when `high` is clearly insufficient: architectural deadlock, repeated failed attempts, subtle security/cache/race issue.
+- Do not use `max` unless the user explicitly asks for it.
+- Keep prompts complete, but avoid overlong status polling. A worker should finish the whole assigned prompt before finalizing, unless blocked by external access/user decision or dirty-file conflict.
+
 ## Token-Saving Rule
 - Читать этот файл первым.
 - Старый чат, большие handoff-файлы и длинные логи открывать только если не хватает конкретной детали.
