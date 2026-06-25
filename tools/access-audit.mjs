@@ -11,6 +11,7 @@ const routeMatrix = [
   { file: "server-routes/price-list.js", route: "/api/price-list", methods: ["GET"], access: "public" },
   { file: "server-routes/content.js", route: "/api/content", methods: ["GET"], access: "public" },
   { file: "server-routes/health.js", route: "/api/health", methods: ["GET"], access: "public" },
+  { file: "server-routes/rum.js", route: "/api/rum", methods: ["POST"], access: "public" },
   { file: "server-routes/auth/login.js", route: "/api/auth/login", methods: ["POST"], access: "public" },
   { file: "server-routes/auth/register.js", route: "/api/auth/register", methods: ["POST"], access: "public" },
   { file: "server-routes/auth/logout.js", route: "/api/auth/logout", methods: ["POST"], access: "optional-session" },

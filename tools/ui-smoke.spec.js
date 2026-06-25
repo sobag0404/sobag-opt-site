@@ -112,7 +112,7 @@ test("browser public cache worker warms only public resources", async ({ page })
             entries.push(`${url.pathname}${url.search}`);
           }
         }
-        return entries.includes("/catalog.html") && entries.some((entry) => /^\/styles\.css\?/.test(entry)) && entries.some((entry) => /^\/components\/site-shell\.js\?v=20260624-browser-cache/.test(entry));
+        return entries.includes("/catalog.html") && entries.some((entry) => /^\/styles\.css\?/.test(entry)) && entries.some((entry) => /^\/components\/site-shell\.js\?v=20260625-rum-v1/.test(entry));
       })
     )
     .toBe(true);
@@ -130,7 +130,7 @@ test("browser public cache worker warms only public resources", async ({ page })
     return entries;
   });
   expect(publicEntries).toContainEqual(expect.stringMatching(/^\/styles\.css\?/));
-  expect(publicEntries).toContainEqual(expect.stringMatching(/^\/components\/site-shell\.js\?v=20260624-browser-cache/));
+  expect(publicEntries).toContainEqual(expect.stringMatching(/^\/components\/site-shell\.js\?v=20260625-rum-v1/));
 
   await page.evaluate(async () => {
     await fetch("/api/auth/me").catch(() => null);

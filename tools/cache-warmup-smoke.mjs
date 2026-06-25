@@ -20,6 +20,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     paths: [],
     selfTest: false,
     json: false,
+    warmBackgroundImages: true,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -31,6 +32,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (token.startsWith("--path=")) args.paths.push(token.slice("--path=".length));
     else if (token === "--self-test") args.selfTest = true;
     else if (token === "--json") args.json = true;
+    else if (token === "--skip-background-images") args.warmBackgroundImages = false;
     else if (token === "--help") {
       console.log(`Usage:
   node tools/cache-warmup-smoke.mjs --base-url https://sobag-shop.online
@@ -104,7 +106,7 @@ function discoverCatalogDetailPaths(result) {
   }
 }
 
-function discoverProductPagePaths(result) {
+function discoverProductPagePaths(result, limit = CACHE_WARMUP_LIMITS.maxDiscoveredProductPages) {
   if (!result.path.startsWith("/api/catalog-query")) return [];
   try {
     const payload = JSON.parse(result.body);
@@ -114,7 +116,7 @@ function discoverProductPagePaths(result) {
       const baseSku = item?.baseSku || item?.base_sku || item?.sku || item?.id;
       if (!baseSku) continue;
       pages.push(`/product?baseSku=${encodeURIComponent(baseSku)}`);
-      if (pages.length >= CACHE_WARMUP_LIMITS.maxDiscoveredProductPages) break;
+      if (pages.length >= limit) break;
     }
     return pages;
   } catch {
@@ -144,6 +146,8 @@ function discoverImagePaths(result, base) {
     ];
     products.forEach((product) => {
       add(product?.image);
+      add(product?.imageMeta?.url || product?.imageMeta?.publicUrl || product?.imageMeta?.downloadUrl);
+      (product?.imageMeta?.variants || []).forEach((variant) => add(variant?.url || variant?.publicUrl || variant?.downloadUrl));
       (product?.gallery || []).forEach(add);
       (product?.images || []).forEach((image) => {
         add(image?.url || image?.publicUrl || image?.downloadUrl);
@@ -171,15 +175,25 @@ async function fetchWarm(base, path, args, options = {}) {
       },
       signal: controller.signal,
     });
-    const body = options.method === "HEAD" ? "" : await response.text();
+    let body = "";
+    let bytes = 0;
+    if (options.method !== "HEAD") {
+      if (options.discardBody) {
+        bytes = (await response.arrayBuffer()).byteLength;
+      } else {
+        body = await response.text();
+        bytes = Buffer.byteLength(body, "utf8");
+      }
+    }
     return {
       path,
+      method: options.method || "GET",
       status: response.status,
       ok: response.ok,
       elapsedMs: Math.round(performance.now() - startedAt),
       contentType: response.headers.get("content-type") || "",
       cacheControl: response.headers.get("cache-control") || "",
-      bytes: Buffer.byteLength(body, "utf8"),
+      bytes,
       body,
     };
   } finally {
@@ -209,6 +223,7 @@ function assertPublicPath(result) {
     }
   }
   if (result.contentType.startsWith("image/")) {
+    assert(result.method === "GET", `${result.path}: public image warmup must use GET, not ${result.method || "unknown"}`);
     assert(/public/i.test(cache), `${result.path}: image asset should use public cache`);
     assert(!/no-store/i.test(cache), `${result.path}: image asset must not be no-store`);
     assert(!result.contentType.includes("text/html"), `${result.path}: image URL must not fall back to HTML`);
@@ -220,6 +235,103 @@ function assertPrivatePath(result) {
   assert(/no-store/i.test(result.cacheControl || ""), `${result.path}: private route must use no-store`);
 }
 
+function nextCatalogPagePath(path, payload) {
+  const nextCursor = payload?.pageInfo?.nextCursor || payload?.nextCursor || "";
+  if (!nextCursor) return "";
+  const url = new URL(path, "https://sobag-shop.online");
+  url.searchParams.set("cursor", nextCursor);
+  return `${url.pathname}${url.search}`;
+}
+
+async function warmImageBatch(base, paths, args, label) {
+  const concurrency = Math.max(1, CACHE_WARMUP_LIMITS.backgroundImageConcurrency || 4);
+  const results = [];
+  let index = 0;
+  async function worker() {
+    while (index < paths.length) {
+      const path = paths[index];
+      index += 1;
+      const result = await fetchWarm(base, path, args, { method: "GET", discardBody: true });
+      result.kind = "image";
+      result.label = label;
+      result.maxMs = args.maxMs;
+      assertPublicPath(result);
+      results.push(result);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, paths.length) }, worker));
+  return results;
+}
+
+async function warmPublicPathBatch(base, paths, args, label, kind, concurrencyLimit) {
+  const concurrency = Math.max(1, concurrencyLimit || 3);
+  const results = [];
+  let index = 0;
+  async function worker() {
+    while (index < paths.length) {
+      const path = paths[index];
+      index += 1;
+      const result = await fetchWarm(base, path, args);
+      result.kind = kind;
+      result.label = label;
+      result.maxMs = args.maxMs;
+      assertPublicPath(result);
+      results.push(result);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, paths.length) }, worker));
+  return results;
+}
+
+async function warmBackgroundCatalogImages(base, args, seen) {
+  if (!args.warmBackgroundImages) return { catalogPages: 0, discoveredProductPages: 0, warmedProductPages: 0, discoveredImages: 0, warmedImages: 0, productResults: [], results: [] };
+  const discovered = new Set();
+  const discoveredProductPages = new Set();
+  let path = "/api/catalog-query?pageSize=48&sort=popular";
+  let catalogPages = 0;
+  while (path && catalogPages < CACHE_WARMUP_LIMITS.maxBackgroundCatalogPages && discovered.size < CACHE_WARMUP_LIMITS.maxBackgroundImages) {
+    const result = await fetchWarm(base, path, args);
+    result.maxMs = args.maxMs;
+    assertPublicPath(result);
+    catalogPages += 1;
+    for (const imagePath of discoverImagePaths(result, base)) {
+      if (discovered.size >= CACHE_WARMUP_LIMITS.maxBackgroundImages) break;
+      discovered.add(imagePath);
+    }
+    for (const productPath of discoverProductPagePaths(result, CACHE_WARMUP_LIMITS.maxBackgroundProductPages)) {
+      if (discoveredProductPages.size >= CACHE_WARMUP_LIMITS.maxBackgroundProductPages) break;
+      discoveredProductPages.add(productPath);
+    }
+    try {
+      path = nextCatalogPagePath(path, JSON.parse(result.body));
+    } catch {
+      path = "";
+    }
+  }
+  const productCandidates = [...discoveredProductPages].filter((productPath) => !seen.has(productPath));
+  const productResults = await warmPublicPathBatch(
+    base,
+    productCandidates,
+    args,
+    "background-product-page",
+    "html",
+    CACHE_WARMUP_LIMITS.backgroundProductConcurrency,
+  );
+  productResults.forEach((result) => seen.add(result.path));
+  const candidates = [...discovered].filter((imagePath) => !seen.has(imagePath));
+  const results = await warmImageBatch(base, candidates, args, "background-catalog-image");
+  results.forEach((result) => seen.add(result.path));
+  return {
+    catalogPages,
+    discoveredProductPages: discoveredProductPages.size,
+    warmedProductPages: productResults.length,
+    discoveredImages: discovered.size,
+    warmedImages: results.length,
+    productResults,
+    results,
+  };
+}
+
 async function runWarmup(rawBaseUrl, args) {
   const base = normalizeBaseUrl(rawBaseUrl);
   const publicResults = [];
@@ -227,6 +339,7 @@ async function runWarmup(rawBaseUrl, args) {
   const seen = new Set(queue.map((entry) => entry.path));
   let discoveredVersionedAssets = 0;
   let discoveredImages = 0;
+  let mandatoryImageGets = 0;
 
   function enqueue(path, kind, label, extra = {}) {
     if (seen.has(path)) return;
@@ -236,7 +349,7 @@ async function runWarmup(rawBaseUrl, args) {
 
   for (let index = 0; index < queue.length; index += 1) {
     const entry = queue[index];
-    const result = await fetchWarm(base, entry.path, args, { method: entry.method || "GET" });
+    const result = await fetchWarm(base, entry.path, args, { method: entry.method || "GET", discardBody: entry.kind === "image" });
     result.kind = entry.kind;
     result.label = entry.label;
     result.maxMs = args.maxMs;
@@ -261,10 +374,15 @@ async function runWarmup(rawBaseUrl, args) {
 
     for (const imagePath of discoverImagePaths(result, base)) {
       if (discoveredImages >= CACHE_WARMUP_LIMITS.maxDiscoveredImages) break;
-      if (!seen.has(imagePath)) discoveredImages += 1;
-      enqueue(imagePath, "image", "discovered-image", { method: "HEAD" });
+      if (!seen.has(imagePath)) {
+        discoveredImages += 1;
+        mandatoryImageGets += 1;
+      }
+      enqueue(imagePath, "image", "mandatory-first-view-image", { method: "GET" });
     }
   }
+
+  const background = await warmBackgroundCatalogImages(base, args, seen);
 
   const privateResults = [];
   for (const entry of PRIVATE_CACHE_PROBE_PATHS) {
@@ -273,14 +391,38 @@ async function runWarmup(rawBaseUrl, args) {
     assertPrivatePath(result);
     privateResults.push(result);
   }
-  return { ok: true, baseUrl: base, publicResults, privateResults };
+  return {
+    ok: true,
+    baseUrl: base,
+    publicResults,
+    privateResults,
+    backgroundProductResults: background.productResults,
+    backgroundResults: background.results,
+    summary: {
+      mandatoryImageGets,
+      backgroundCatalogPages: background.catalogPages,
+      backgroundProductPagesDiscovered: background.discoveredProductPages,
+      backgroundProductPagesWarmed: background.warmedProductPages,
+      backgroundImagesDiscovered: background.discoveredImages,
+      backgroundImagesWarmed: background.warmedImages,
+    },
+  };
 }
 
 function printReport(report) {
   console.log(`Cache warmup passed: ${report.baseUrl}`);
   report.publicResults.forEach((result) => {
-    console.log(`WARM ${String(result.elapsedMs).padStart(4, " ")}ms ${String(result.status).padStart(3, " ")} ${result.path}`);
+    console.log(`WARM ${String(result.elapsedMs).padStart(4, " ")}ms ${String(result.status).padStart(3, " ")} ${result.method || "GET"} ${result.path}`);
   });
+  report.backgroundProductResults.forEach((result) => {
+    console.log(`BG-PAGE ${String(result.elapsedMs).padStart(4, " ")}ms ${String(result.status).padStart(3, " ")} ${result.method || "GET"} ${result.path}`);
+  });
+  report.backgroundResults.forEach((result) => {
+    console.log(`BG-IMAGE ${String(result.elapsedMs).padStart(4, " ")}ms ${String(result.status).padStart(3, " ")} ${result.method || "GET"} ${result.path}`);
+  });
+  console.log(
+    `SUMMARY mandatoryImageGets=${report.summary.mandatoryImageGets} backgroundCatalogPages=${report.summary.backgroundCatalogPages} backgroundProductPagesDiscovered=${report.summary.backgroundProductPagesDiscovered} backgroundProductPagesWarmed=${report.summary.backgroundProductPagesWarmed} backgroundImagesDiscovered=${report.summary.backgroundImagesDiscovered} backgroundImagesWarmed=${report.summary.backgroundImagesWarmed}`,
+  );
   report.privateResults.forEach((result) => {
     console.log(`PRIVATE ${String(result.status).padStart(3, " ")} ${result.path}`);
   });
@@ -301,7 +443,15 @@ async function createSelfTestServer() {
     }
     if (url.pathname === "/api/catalog-query") {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300, stale-while-revalidate=3600" });
-      res.end(JSON.stringify({ items: [{ baseSku: "OPT-1", minPrice: 100, image: "/x.webp" }], total: 1, facets: { categories: [{ value: "Test", count: 1 }] } }));
+      const secondPage = url.searchParams.has("cursor");
+      res.end(JSON.stringify({
+        items: secondPage
+          ? [{ baseSku: "OPT-2", minPrice: 200, image: "/y.webp", imageMeta: { url: "/y.webp", variants: [{ url: "/y-320.webp" }] } }]
+          : [{ baseSku: "OPT-1", minPrice: 100, image: "/x.webp", imageMeta: { url: "/x.webp", variants: [{ url: "/x-320.webp" }] } }],
+        total: 2,
+        pageInfo: { hasMore: !secondPage, nextCursor: secondPage ? "" : "MQ" },
+        facets: { categories: [{ value: "Test", count: 2 }] },
+      }));
       return;
     }
     if (url.pathname === "/api/price-list") {
@@ -314,7 +464,7 @@ async function createSelfTestServer() {
       res.end(JSON.stringify({ product: { baseSku: url.searchParams.get("baseSku") || "OPT-1", minPrice: 100, images: [{ url: "/x.webp", variants: [{ url: "/x-320.webp" }] }] } }));
       return;
     }
-    if (url.pathname === "/x.webp" || url.pathname === "/x-320.webp") {
+    if (url.pathname === "/x.webp" || url.pathname === "/x-320.webp" || url.pathname === "/y.webp" || url.pathname === "/y-320.webp") {
       res.writeHead(200, { "content-type": "image/webp", "cache-control": "public, max-age=86400, stale-while-revalidate=604800" });
       res.end();
       return;
@@ -346,6 +496,10 @@ async function main() {
     const fixture = await createSelfTestServer();
     try {
       const report = await runWarmup(fixture.baseUrl, args);
+      assert(report.summary.mandatoryImageGets >= 1, "self-test should GET-warm mandatory first-view images");
+      assert(report.summary.backgroundProductPagesDiscovered >= 2, "self-test should discover background product pages from catalog pages");
+      assert(report.summary.backgroundProductPagesWarmed >= 1, "self-test should warm background product pages not already in the mandatory set");
+      assert(report.summary.backgroundImagesDiscovered >= 4, "self-test should discover background catalog images");
       if (args.json) console.log(JSON.stringify(report, null, 2));
       else {
         printReport(report);

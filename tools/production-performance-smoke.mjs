@@ -249,12 +249,13 @@ async function runPerformanceSmoke(rawBaseUrl, args) {
   checks.push({ name: "products-json", path: data.path, bytes: data.bytes, elapsedMs: data.elapsedMs });
 
   const imagePath = detailPayload.product?.images?.find((item) => item?.url)?.url || queryPayload.items[0]?.image || "/assets/production-hero-1.png";
-  const image = await fetchText(base, imagePath, args, { method: "HEAD" });
-  assert(image.ok, `${image.path}: expected image HEAD 2xx, got ${image.status}`);
+  const image = await fetchText(base, imagePath, args);
+  assert(image.ok, `${image.path}: expected image GET 2xx, got ${image.status}`);
+  assertFast(image, args.maxMs);
   assert(image.contentType.startsWith("image/"), `${image.path}: expected image MIME, got ${image.contentType}`);
   assert(image.cacheControl.includes("max-age=86400") || image.cacheControl.includes("max-age=31536000"), `${image.path}: image cache header missing`);
   assert(!image.contentType.includes("text/html"), `${image.path}: image URL must not fall back to HTML`);
-  checks.push({ name: "image-head", path: image.path, bytes: image.bytes, elapsedMs: image.elapsedMs });
+  checks.push({ name: "image-get", path: image.path, bytes: image.bytes, elapsedMs: image.elapsedMs });
 
   const missingAsset = await fetchText(base, "/assets/missing-cache-smoke.webp", args, { redirect: "manual" });
   assert(missingAsset.status === 404, `${missingAsset.path}: missing asset should return 404, got ${missingAsset.status}`);

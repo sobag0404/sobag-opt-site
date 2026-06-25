@@ -119,7 +119,7 @@
     "/styles.css?v=20260624-customer-flow",
     "/app.js?v=20260624-product-image-sizes",
     "/cart.js?v=20260624-customer-flow",
-    "/components/site-shell.js?v=20260624-browser-cache",
+    "/components/site-shell.js?v=20260625-rum-v1",
     "/components/app-utils.js?v=20260615-modular-utils",
     "/components/app-data.js?v=20260624-public-cache-v3",
     "/components/app-content-utils.js?v=20260624-public-cache-v3",
@@ -182,6 +182,123 @@
     });
   }
 
+  function registerRumMonitoring() {
+    const RUM_VERSION = "20260625-rum-v1";
+    const RUM_SAMPLE_RATE = 0.25;
+    const METRIC_RATINGS = {
+      LCP: [2500, 4000],
+      CLS: [0.1, 0.25],
+      INP: [200, 500],
+      FCP: [1800, 3000],
+      TTFB: [800, 1800],
+      NAV_LOAD: [2500, 6000],
+    };
+
+    if (location.protocol === "file:" || location.pathname.startsWith("/admin-")) return;
+    if (navigator.doNotTrack === "1" || window.doNotTrack === "1") return;
+    const force = /(?:^|[?&])rum-smoke=1(?:&|$)/.test(location.search) || window.__sobagRumForce === true;
+    if (!force && Math.random() > RUM_SAMPLE_RATE) return;
+    if (/^\/(?:cart|favorites|account|admin)(?:\.html)?(?:\/|$)/i.test(location.pathname)) return;
+
+    const events = [];
+    let sent = false;
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+
+    function routeClass() {
+      const path = location.pathname || "/";
+      if (path === "/" || path === "/index.html") return "/";
+      if (path === "/catalog.html") return "/catalog";
+      if (path === "/search.html") return "/search";
+      if (path === "/product.html" || path.startsWith("/product")) return "/product";
+      const publicPage = path.match(/^\/([a-z0-9-]+)\.html$/i);
+      return publicPage ? `/${publicPage[1]}` : "/other";
+    }
+
+    function ratingFor(name, value) {
+      const thresholds = METRIC_RATINGS[name];
+      if (!thresholds) return "unknown";
+      if (value <= thresholds[0]) return "good";
+      if (value <= thresholds[1]) return "needs-improvement";
+      return "poor";
+    }
+
+    function addMetric(name, value) {
+      if (!Number.isFinite(value) || value < 0) return;
+      events.push({
+        name,
+        value: Math.round(value * 100) / 100,
+        rating: ratingFor(name, value),
+        route: routeClass(),
+        device: window.innerWidth < 760 ? "mobile" : window.innerWidth < 1100 ? "tablet" : "desktop",
+        connection: connection?.saveData ? "save-data" : String(connection?.effectiveType || "unknown").slice(0, 20),
+        appVersion: RUM_VERSION,
+      });
+      if (events.length >= 8) flush();
+    }
+
+    function flush() {
+      if (sent || !events.length) return;
+      sent = true;
+      const payload = JSON.stringify({ events: events.splice(0, 12) });
+      try {
+        fetch("/api/rum", {
+          method: "POST",
+          credentials: "omit",
+          keepalive: true,
+          headers: { "content-type": "application/json" },
+          body: payload,
+        }).catch(() => {});
+      } catch {
+        // RUM is best-effort and must not affect user flow.
+      }
+    }
+
+    try {
+      let clsValue = 0;
+      new PerformanceObserver((list) => {
+        const entries = list.getEntries();
+        const last = entries[entries.length - 1];
+        if (last) addMetric("LCP", last.renderTime || last.loadTime || last.startTime || 0);
+      }).observe({ type: "largest-contentful-paint", buffered: true });
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (!entry.hadRecentInput) clsValue += entry.value || 0;
+        }
+        addMetric("CLS", clsValue);
+      }).observe({ type: "layout-shift", buffered: true });
+      if (PerformanceObserver.supportedEntryTypes?.includes("event")) {
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.name === "click" || entry.name === "keydown" || entry.name === "pointerdown") {
+              addMetric("INP", entry.duration || 0);
+            }
+          }
+        }).observe({ type: "event", buffered: true, durationThreshold: 40 });
+      }
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (entry.name === "first-contentful-paint") addMetric("FCP", entry.startTime || 0);
+        }
+      }).observe({ type: "paint", buffered: true });
+    } catch {
+      // Unsupported browser timing APIs should not disable the site.
+    }
+
+    window.addEventListener("load", () => {
+      const nav = performance.getEntriesByType?.("navigation")?.[0];
+      if (nav) {
+        addMetric("TTFB", Math.max(0, nav.responseStart || 0));
+        addMetric("NAV_LOAD", Math.max(0, nav.loadEventEnd || nav.domComplete || 0));
+      }
+      idle(() => window.setTimeout(flush, force ? 400 : 2500));
+    }, { once: true });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flush();
+    });
+    window.addEventListener("pagehide", flush);
+  }
+
   registerPublicCacheWorker();
+  registerRumMonitoring();
   window.SobagSiteShell = { render: renderSiteShell };
 })();

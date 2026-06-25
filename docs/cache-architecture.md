@@ -41,14 +41,20 @@ Status: target model and migration notes for the VPS/Rust production runtime.
    - public price-list cache;
    - private/admin/auth routes denied or `no-store`.
 4. If client cache schema changes, migrate by version prefix (`sobag.publicApiCache.v3.*` or newer, or a new summary key) rather than global deletion.
-5. Warm only safe public paths after deploy with `tools/cache-warmup-smoke.mjs`: `/`, `/catalog.html`, public catalog/search SSR pages, representative static content pages, representative category/search API queries, `/api/catalog-query?pageSize=1&sort=popular`, `/api/catalog-query?pageSize=48&sort=popular`, discovered `/api/catalog-detail?baseSku=...`, discovered `/product?baseSku=...` SSR pages, first-screen/discovered product images by `HEAD`, `/api/price-list?format=json`, and discovered versioned JS/CSS assets from HTML. The same tool probes private/auth/admin/order paths only to assert `no-store` and never sends credentials or writes.
+5. Warm only safe public paths after deploy with `tools/cache-warmup-smoke.mjs`: `/`, `/catalog.html`, public catalog/search SSR pages, all static public content pages listed in the warmup manifest, representative category/search API queries, `/api/catalog-query?pageSize=1&sort=popular`, `/api/catalog-query?pageSize=48&sort=popular`, discovered `/api/catalog-detail?baseSku=...`, discovered `/product?baseSku=...` SSR pages, `/api/price-list?format=json`, and discovered versioned JS/CSS assets from HTML. First-view/discovered product images are warmed with bounded `GET` requests, because `HEAD` does not reliably populate the same cache path used by browser `<img>` loads. The same tool probes private/auth/admin/order paths only to assert `no-store` and never sends credentials or writes.
 
 ## Implemented VPS gates
 
 - `.github/workflows/vps-deploy.yml` runs `node tools/cache-warmup-smoke.mjs --base-url https://sobag-shop.online --timeout 15000 --max-ms 5000` after the Rust/media route gates and before release housekeeping.
 - `.github/workflows/production-smoke.yml` runs `tools/cache-warmup-smoke.mjs` after storage readiness, so a deploy must prove public cache warmup and private no-store behavior after the live release is active.
-- `tools/cache-warmup-manifest.mjs` keeps the public warmup list bounded and reviewable: HTML/content pages, catalog/search/product public surfaces, representative catalog listing/category/search APIs, price-list JSON, fallback static assets, discovered versioned assets, first-screen/discovered product images, and private no-store probes.
+- `tools/cache-warmup-manifest.mjs` keeps the public warmup list bounded and reviewable: HTML/content pages, catalog/search/product public surfaces, representative catalog listing/category/search APIs, price-list JSON, fallback static assets, discovered versioned assets, mandatory first-view/discovered product-image `GET` requests, background catalog product-image `GET` batches, and private no-store probes.
 - `npm run smoke:cache-warmup` exposes the read-only warmup locally; `npm run check` runs its self-test and the architecture/workflow audits.
+
+## Image warmup tiers
+
+- Synchronous deploy gate: `tools/cache-warmup-smoke.mjs` warms mandatory first-view/discovered product images with `GET` and discards the body after reading it. This covers root/catalog/product surfaces that a first human visitor would otherwise warm.
+- Background bounded batch in the same deploy smoke: the warmer pages through representative public catalog results and GET-warms remaining discovered catalog card/image variant URLs with concurrency and count limits (`maxBackgroundCatalogPages`, `maxBackgroundImages`, `backgroundImageConcurrency`). It reports counts instead of logging full catalogs.
+- Intentionally not warmed: private/admin/account/cart/order/user-specific URLs and any unbounded full SKU/gallery universe beyond the safe public catalog batch limits. If the product image set grows beyond the configured cap, the smoke reports the discovered/warmed counts so the cap can be reviewed without overloading VPS or object storage.
 
 ## Remaining risks
 

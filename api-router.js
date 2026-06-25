@@ -6,6 +6,7 @@ const catalogDetail = require("./server-routes/catalog-detail.js");
 const priceList = require("./server-routes/price-list.js");
 const content = require("./server-routes/content.js");
 const health = require("./server-routes/health.js");
+const rum = require("./server-routes/rum.js");
 const orders = require("./server-routes/orders.js");
 const briefs = require("./server-routes/briefs.js");
 const authLogin = require("./server-routes/auth/login.js");
@@ -29,6 +30,7 @@ const apiRoutes = new Map(
     ["/api/price-list", priceList],
     ["/api/content", content],
     ["/api/health", health],
+    ["/api/rum", rum],
     ["/api/orders", orders],
     ["/api/briefs", briefs],
     ["/api/auth/login", authLogin],
