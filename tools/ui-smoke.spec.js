@@ -1452,6 +1452,14 @@ test("catalog filters, product modal, variants, and cart stay coherent", async (
   await expect(page.locator("#productModal .modal__close")).toHaveAttribute("aria-label", "Закрыть карточку товара");
   await expect(page.locator("#productModal .modal__close")).toHaveAttribute("title", "Закрыть карточку товара");
   await expect(page.locator(".product-gallery__thumb").first()).toHaveAttribute("title", "Фото 1");
+  await expect(page.locator(".sku-rating-button")).toBeVisible();
+  await expect(page.locator(".sku-rating-button")).toHaveAttribute("aria-label", /Рейтинг:/);
+  await expect(page.locator(".sku-rating-button")).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("#productReviewsPanel")).toBeHidden();
+  await page.locator(".sku-rating-button").click();
+  await expect(page.locator(".sku-rating-button")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#productReviewsPanel")).toBeVisible();
+  await expect(page.locator("#productReviewsPanel .review-empty, #productReviewsPanel .review-card").first()).toBeVisible();
   await expect(page.locator("#detailQty")).toHaveValue("1");
   await page.locator("#detailQty").fill("100");
   await expect(page.locator("#detailQty")).toHaveValue("100");
@@ -1925,6 +1933,12 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   const reviewedProductId = (await page.locator("[data-open-product]").first().getAttribute("data-open-product")) || "";
   const reviewedBaseSku = await page.locator(".product-card__sku").first().innerText();
   await page.locator("[data-open-product]").first().click();
+  await expect(page.locator(".sku-rating-button")).toBeVisible();
+  await expect(page.locator(".sku-rating-button")).toHaveAttribute("aria-label", /Рейтинг:/);
+  await expect(page.locator(".sku-rating-button")).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("#productReviewsPanel")).toBeHidden();
+  await page.locator(".sku-rating-button").click();
+  await expect(page.locator(".sku-rating-button")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator(".product-reviews")).toBeVisible();
   await expect(page.locator(".review-login-note")).toContainText("зарегистрированные покупатели");
   await expect(page.locator(".review-login-note")).toHaveAttribute("role", "status");
@@ -2017,6 +2031,7 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
   await page.locator("[data-open-product]").first().click();
+  await page.locator(".sku-rating-button").click();
   await expect(page.locator(".review-login-note")).toContainText("после заказа");
   await expect(page.locator(".review-login-note")).toHaveAttribute("role", "status");
   await expect(page.locator(".review-form")).toHaveCount(0);
@@ -2040,6 +2055,7 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
   await page.locator("[data-open-product]").first().click();
+  await page.locator(".sku-rating-button").click();
   await expect(page.locator(".review-form")).toBeVisible();
   await expect(page.locator(".review-form")).toHaveAttribute("aria-describedby", /^reviewHelp-/);
   await expect(page.locator('.review-form textarea[name="text"]')).toHaveAttribute("aria-describedby", /^reviewHelp-/);
@@ -2054,6 +2070,7 @@ test("product reviews require login and can be moderated by admin", async ({ pag
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForLiveProducts(page);
   await page.locator("[data-open-product]").first().click();
+  await page.locator(".sku-rating-button").click();
   await expect(page.locator(".review-login-note")).toContainText("уже отправили отзыв");
   await expect(page.locator(".review-login-note")).toHaveAttribute("aria-live", "polite");
   await expect(page.locator(".review-form")).toHaveCount(0);

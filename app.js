@@ -1548,10 +1548,29 @@ function reviewStats(product) {
   return { count: reviews.length, average };
 }
 function starsHtml(value, label = "") {
-  const rounded = Math.round(Number(value || 0));
-  return `<span class="review-stars" aria-label="${escapeHtml(label || `${rounded} из 5`)}">${[1, 2, 3, 4, 5]
-    .map((star) => `<span class="${star <= rounded ? "is-filled" : ""}">★</span>`)
+  const rating = Math.max(0, Math.min(5, Number(value || 0)));
+  const roundedHalf = Math.round(rating * 2) / 2;
+  const labelText = label || `Рейтинг ${rating.toFixed(1)} из 5`;
+  return `<span class="review-stars" aria-label="${escapeHtml(labelText)}" title="${escapeHtml(labelText)}">${[1, 2, 3, 4, 5]
+    .map((star) => {
+      const state = roundedHalf >= star ? "is-filled" : roundedHalf >= star - 0.5 ? "is-half" : "";
+      return `<span class="${state}" aria-hidden="true">★</span>`;
+    })
     .join("")}</span>`;
+}
+function ratingSummaryLabel(stats) {
+  if (!stats.count) return "Рейтинг: 0 из 5, отзывов нет";
+  return `Рейтинг: ${stats.average.toFixed(1)} из 5 на основе ${stats.count} ${reviewWord(stats.count)}`;
+}
+function productRatingButtonHtml(product) {
+  const stats = reviewStats(product);
+  const label = `${ratingSummaryLabel(stats)}. Открыть отзывы`;
+  return `
+    <button class="sku-rating-button" type="button" data-toggle-product-reviews aria-controls="productReviewsPanel" aria-expanded="false" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
+      ${starsHtml(stats.average, ratingSummaryLabel(stats))}
+      <span class="sku-rating-button__count">${stats.count}</span>
+    </button>
+  `;
 }
 let productServerSaveTimer = null;
 let productServerSavePromise = Promise.resolve(false);
@@ -3308,12 +3327,13 @@ function relatedProductsHtml(product) {
     </section>
   `;
 }
-function reviewFormHtml(product) {
+function reviewFormHtml(product, compact = false) {
   const user = getUsers()[state.currentUser];
   const reviewHelpId = `reviewHelp-${String(product?.id || "product").replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+  const noteClass = compact ? "review-login-note review-login-note--compact" : "review-login-note";
   if (!user) {
     return `
-      <div class="review-login-note" role="status" aria-live="polite">
+      <div class="${noteClass}" role="status" aria-live="polite">
         <span>Отзывы могут оставлять только зарегистрированные покупатели после заказа.</span>
         <button class="ghost-button" type="button" data-open-account aria-label="Войти, чтобы оставить отзыв" title="Войти, чтобы оставить отзыв">Войти</button>
       </div>
@@ -3321,14 +3341,14 @@ function reviewFormHtml(product) {
   }
   if (userHasSubmittedReview(user, product)) {
     return `
-      <div class="review-login-note" role="status" aria-live="polite">
+      <div class="${noteClass}" role="status" aria-live="polite">
         <span>Вы уже отправили отзыв на этот товар.</span>
       </div>
     `;
   }
   if (!userHasEligibleReviewOrder(user, product)) {
     return `
-      <div class="review-login-note" role="status" aria-live="polite">
+      <div class="${noteClass}" role="status" aria-live="polite">
         <span>Оставить отзыв можно после заказа этого товара.</span>
       </div>
     `;
@@ -3354,10 +3374,10 @@ function productReviewsHtml(product) {
   const reviews = reviewsForProduct(product);
   const stats = reviewStats(product);
   return `
-    <section class="product-reviews" aria-label="Отзывы о товаре">
+    <section class="product-reviews product-reviews--compact is-hidden" id="productReviewsPanel" aria-label="Отзывы о товаре" tabindex="-1" hidden>
       <div class="product-reviews__head">
         <div>
-          <h3>Отзывы</h3>
+          <strong>Отзывы</strong>
           <span>${stats.count ? `${stats.average.toFixed(1)} из 5 · ${stats.count} ${reviewWord(stats.count)}` : "Пока нет одобренных отзывов"}</span>
         </div>
         ${stats.count ? starsHtml(stats.average, `Средняя оценка ${stats.average.toFixed(1)} из 5`) : ""}
@@ -3379,9 +3399,9 @@ function productReviewsHtml(product) {
                 `
               )
               .join("")}</div>`
-          : '<p class="review-empty">Отзывы смогут оставить покупатели после заказа товара.</p>'
+          : '<p class="review-empty">Одобренных отзывов пока нет. Отзывы доступны после покупки товара.</p>'
       }
-      ${reviewFormHtml(product)}
+      ${reviewFormHtml(product, true)}
     </section>
   `;
 }
@@ -3431,7 +3451,6 @@ function productModalHtml(product) {
                   .join("")}
               </div>
               ${relatedProductsHtml(product)}
-              ${productReviewsHtml(product)}
             </div>
           </div>
           <aside class="product-detail__options">
@@ -3442,8 +3461,10 @@ function productModalHtml(product) {
                 <button class="copy-sku-button copy-sku-button--detail" type="button" data-copy-sku="${variant.sku}" data-tooltip="Скопировать артикул" title="Скопировать артикул" aria-label="Скопировать выбранный артикул ${variant.sku}">
                   <i data-lucide="copy"></i>
                 </button>
+                ${productRatingButtonHtml(product)}
               </div>
             </div>
+            ${productReviewsHtml(product)}
             ${variantControls("type", "Тип товара", product.types)}
             ${variantControls("size", "Размер", product.sizes)}
             ${variantControls("material", "Материал", product.materials)}
@@ -3624,6 +3645,18 @@ function startActualSlider() {
 function initActualSlider() {
   setActualSlide(0);
   startActualSlider();
+}
+function toggleProductReviews(button) {
+  const panel = document.querySelector("#productReviewsPanel");
+  if (!panel) return;
+  const isOpen = !panel.hidden;
+  panel.hidden = isOpen;
+  panel.classList.toggle("is-hidden", isOpen);
+  button?.setAttribute("aria-expanded", String(!isOpen));
+  if (!isOpen) {
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    panel.focus({ preventScroll: true });
+  }
 }
 function downloadTemplate() {
   downloadCsv("sobag-products-template.csv", [
@@ -4309,6 +4342,10 @@ function boot() {
     }
     const button = event.target.closest("button");
     if (!button) return;
+    if (button.dataset.toggleProductReviews !== undefined) {
+      toggleProductReviews(button);
+      return;
+    }
     if (button.dataset.reviewStar) {
       setReviewFormRating(button.closest("[data-review-form]"), button.dataset.reviewStar);
       return;
