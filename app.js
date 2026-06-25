@@ -2545,7 +2545,7 @@ function renderCatalogHome() {
             </span>
             <strong>${escapeHtml(category.name)}</strong>
             <small>${escapeHtml(category.description)}</small>
-            <b>Считаем товары</b>
+            <b>Загружаем каталог</b>
           </button>
         `;
       })
@@ -3159,6 +3159,7 @@ function renderProducts() {
     productGrid.removeAttribute("aria-busy");
     productGrid.innerHTML = "";
     productCount.textContent = "";
+    productCount.removeAttribute("aria-busy");
     if (catalogLoadMore) catalogLoadMore.innerHTML = "";
     resetProductGridRenderState();
     renderSearchSuggestions();
@@ -3173,7 +3174,8 @@ function renderProducts() {
     renderSearchSuggestions();
     renderSearchResultsPanel([], 0);
     renderActiveFilterChips();
-    productCount.textContent = "загрузка";
+    productCount.textContent = "Загружаем товары";
+    productCount.setAttribute("aria-busy", "true");
     renderCatalogSeoCopy(0);
     renderProductsLoading();
     return;
@@ -3187,6 +3189,21 @@ function renderProducts() {
   renderSearchSuggestions();
   renderSearchResultsPanel(list, total);
   renderActiveFilterChips();
+  productCount.removeAttribute("aria-busy");
+  if (shouldUseServerCatalogList() && state.serverCatalog.status === "fallback" && !list.length && !products.length) {
+    productCount.textContent = "Каталог не загрузился";
+    productGrid.innerHTML = `
+      <div class="empty-products empty-products--error" role="status" aria-live="polite">
+        <i data-lucide="wifi-off"></i>
+        <strong>Каталог временно недоступен</strong>
+        <span>Обновите страницу или попробуйте изменить фильтры через несколько секунд.</span>
+      </div>
+    `;
+    if (catalogLoadMore) catalogLoadMore.innerHTML = "";
+    resetProductGridRenderState();
+    refreshLucideIcons();
+    return;
+  }
   productCount.textContent = `${total} ${productWord(total)}`;
   renderCatalogSeoCopy(total);
   if (!list.length) {

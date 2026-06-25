@@ -78,7 +78,7 @@
           </section>
         </div>
 
-        <div class="container catalog-layout" id="catalogListing">
+        <div class="container catalog-layout is-hidden" id="catalogListing">
           <div class="catalog-listing-head">
             <button class="ghost-button catalog-listing-back" id="catalogListingBack" type="button" data-back-catalog>
               <i data-lucide="arrow-left"></i>
@@ -86,7 +86,7 @@
             </button>
             <div class="catalog-listing-title">
               <h2 id="catalogCompactTitle">Каталог</h2>
-              <span id="productCount">0 товаров</span>
+              <span id="productCount" aria-live="polite"></span>
             </div>
             <select id="sortSelect" aria-label="Сортировка">
               <option value="popular">Сначала популярные</option>

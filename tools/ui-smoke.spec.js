@@ -827,6 +827,8 @@ test("catalog home first load uses server category summary over stale fallback",
 
   await page.goto(`${BASE_URL}/catalog.html?qa=category-summary`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(100);
+  await expect(page.locator("#catalogListing")).toBeHidden();
+  await expect(page.locator("#productCount")).toHaveText("");
   await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-busy", "true");
   expect(await page.locator("#categoryTiles .category-tile--loading").count()).toBeGreaterThanOrEqual(6);
   await expect(page.locator("#categoryTiles")).not.toContainText("48");
@@ -913,6 +915,53 @@ test("catalog home first load uses server category summary over stale fallback",
   await page.goto(`${BASE_URL}/catalog.html?qa=price-error`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".price-list-preview__state")).toHaveAttribute("aria-live", "polite");
   await expect(page.locator(".price-list-preview__state")).toContainText("не загрузился");
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
+test("catalog listing loading state avoids false zero count", async ({ page }) => {
+  const category = "Подушки";
+  const items = Array.from({ length: 2 }, (_, index) => ({
+    id: `qa-loading-${index}`,
+    baseSku: `QA-LOADING-${index}`,
+    name: `QA loading ${index}`,
+    category,
+    categories: [category],
+    image: "assets/production-workshop-1.png",
+    minPrice: 1000,
+    variants: [{ sku: `QA-LOADING-${index}-V`, name: `QA loading ${index}`, type: "QA", size: "QA", material: "QA", price: 1000 }],
+  }));
+  await page.route("**/api/catalog", async (route) => {
+    await route.fulfill({ status: 503, contentType: "application/json; charset=utf-8", body: JSON.stringify({ error: "qa_catalog_unavailable" }) });
+  });
+  await page.route("**/data/products-live.json", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify([]) });
+  });
+  await page.route("**/api/catalog-query?**", async (route) => {
+    await page.waitForTimeout(450);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        items,
+        total: 517,
+        facets: { categories: [{ value: category, count: 517 }], collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        facetOptions: { categories: [{ value: category, count: 517 }], collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        pageInfo: { page: 1, pageSize: 48, offset: 0, total: 517, totalPages: 11, hasMore: true, nextCursor: "48" },
+        source: "qa-loading-listing",
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/catalog?category=${encodeURIComponent(category)}&qa=false-zero`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(120);
+  await expect(page.locator("#catalogListing")).toBeVisible();
+  await expect(page.locator("#productCount")).toHaveAttribute("aria-busy", "true");
+  await expect(page.locator("#productCount")).toContainText("Загружаем товары");
+  await expect(page.locator("#productCount")).not.toContainText(/0\s+товар/i);
+  expect(await page.locator("#productGrid .product-card--skeleton").count()).toBeGreaterThanOrEqual(6);
+  await expect(page.locator("#productCount")).toContainText("517");
+  await expect(page.locator("#productCount")).not.toContainText(/0\s+товар/i);
+  await expect(page.locator("#productGrid .product-card:not(.product-card--skeleton)")).toHaveCount(2);
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });
 
