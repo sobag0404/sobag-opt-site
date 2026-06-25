@@ -3772,10 +3772,6 @@ function downloadAdminPriceRowsCsv(rows, fileName = "sobag-admin-prices.csv") {
   showToast(`Скачано строк цен: ${preparedRows.length}.`);
 }
 async function downloadAdminPriceRowsXlsx(rows, fileName = "sobag-admin-prices.xlsx") {
-  if (!(await ensureXlsxLibrary())) {
-    downloadAdminPriceRowsCsv(rows, fileName.replace(/\.xlsx$/i, ".csv"));
-    return;
-  }
   const preparedRows = rows.map(({ product, variant }) => [
     product.baseSku,
     variant.sku,
@@ -3789,11 +3785,15 @@ async function downloadAdminPriceRowsXlsx(rows, fileName = "sobag-admin-prices.x
     (product.holidays || []).join("; "),
     (product.tags || []).join("; "),
   ]);
-  const workbook = XLSX.utils.book_new();
-  const sheet = XLSX.utils.aoa_to_sheet([variantPriceExportColumns.slice(0, 11), ...preparedRows]);
-  sheet["!cols"] = [{ wch: 18 }, { wch: 30 }, { wch: 34 }, { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 34 }];
-  XLSX.utils.book_append_sheet(workbook, sheet, "Цены вариантов");
-  XLSX.writeFile(workbook, fileName);
+  const downloaded = await downloadRowsXlsx([variantPriceExportColumns.slice(0, 11), ...preparedRows], fileName, "Цены вариантов", {
+    columns: [18, 30, 34, 16, 12, 16, 12, 28, 28, 28, 34],
+    title: "Экспорт цен Sobag Opt",
+    subject: "Цены вариантов для проверки в Excel",
+  });
+  if (!downloaded) {
+    downloadAdminPriceRowsCsv(rows, fileName.replace(/\.xlsx$/i, ".csv"));
+    return;
+  }
   showToast(`Скачано строк цен в XLSX: ${preparedRows.length}.`);
 }
 function downloadOrdersCsv() {

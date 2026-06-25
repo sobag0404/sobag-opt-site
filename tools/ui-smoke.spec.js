@@ -297,6 +297,10 @@ test("manager order pages can open guest customer history", async ({ page }) => 
   await page.waitForFunction(() => document.querySelectorAll(".admin-price-row").length > 0);
   await expect(page.locator(".admin-price-preview h3")).toContainText("Предпросмотр изменений");
   await expect(page.locator('.admin-product-export a[href="/api/admin/prices?template=1"]')).toContainText("Шаблон импорта");
+  await expect(page.locator("[data-admin-export-price-rows]")).toContainText("CSV");
+  await expect(page.locator("[data-admin-export-price-rows]")).toHaveAttribute("title", "Скачать CSV для Excel");
+  await expect(page.locator("[data-admin-export-price-xlsx]")).toHaveAttribute("title", /автофильтром/);
+  await expect(page.locator(".admin-export-note")).toContainText("SheetJS OSS");
   await expect(page.locator(".admin-price-import-guide")).toContainText("promo_price");
   await expect(page.locator(".admin-price-import-guide")).toContainText("starts_at");
   await expect(page.locator(".admin-price-preview__empty")).toHaveAttribute("role", "status");

@@ -2933,6 +2933,11 @@ select[aria-invalid="true"] {
   font-size: 12px;
 }
 
+.admin-product-export .admin-export-note {
+  flex-basis: 100%;
+  line-height: 1.45;
+}
+
 .admin-products-list {
   display: grid;
   gap: 12px;

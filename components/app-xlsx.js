@@ -16,11 +16,44 @@ function ensureXlsxLibrary() {
   return xlsxLoadPromise;
 }
 
-async function downloadRowsXlsx(rows, fileName, sheetName = "КП") {
+function worksheetRange(rows) {
+  const rowCount = Math.max(1, rows.length);
+  const colCount = Math.max(1, ...rows.map((row) => row.length || 0));
+  return XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rowCount - 1, c: colCount - 1 } });
+}
+
+function columnWidths(rows, preferred = []) {
+  const colCount = Math.max(1, ...rows.map((row) => row.length || 0), preferred.length);
+  return Array.from({ length: colCount }, (_, index) => {
+    if (preferred[index]) return { wch: preferred[index] };
+    const maxLength = rows.reduce((max, row) => Math.max(max, String(row[index] ?? "").length), 0);
+    return { wch: Math.min(42, Math.max(12, maxLength + 2)) };
+  });
+}
+
+function polishWorkbook(workbook, sheet, rows, options = {}) {
+  const ref = worksheetRange(rows);
+  sheet["!ref"] = sheet["!ref"] || ref;
+  sheet["!cols"] = columnWidths(rows, options.columns || []);
+  if (rows.length > 1) sheet["!autofilter"] = { ref };
+  workbook.Props = {
+    ...(workbook.Props || {}),
+    Title: options.title || fileNameTitle(options.fileName || ""),
+    Subject: options.subject || "Экспорт Sobag Opt",
+    Author: "Sobag Opt",
+    CreatedDate: new Date(),
+  };
+}
+
+function fileNameTitle(fileName) {
+  return String(fileName || "Sobag export").replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+}
+
+async function downloadRowsXlsx(rows, fileName, sheetName = "КП", options = {}) {
   if (!(await ensureXlsxLibrary())) return false;
   const workbook = XLSX.utils.book_new();
   const sheet = XLSX.utils.aoa_to_sheet(rows);
-  sheet["!cols"] = [{ wch: 28 }, { wch: 34 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+  polishWorkbook(workbook, sheet, rows, { ...options, fileName });
   XLSX.utils.book_append_sheet(workbook, sheet, sheetName.slice(0, 31));
   XLSX.writeFile(workbook, fileName);
   return true;

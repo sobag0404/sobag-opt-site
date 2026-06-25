@@ -1167,9 +1167,9 @@ function adminPricesPageHtml() {
       </form>
       <div class="admin-product-export">
         <button class="ghost-button" type="button" data-admin-sync-catalog>Сохранить каталог на сервере</button>
-        <button class="ghost-button" type="button" data-admin-export-price-rows>Экспорт цен</button>
-        <button class="ghost-button" type="button" data-admin-export-price-xlsx>Экспорт цен XLSX</button>
-        <button class="ghost-button" type="button" data-admin-export-price-products>Экспорт товаров с ценами</button>
+        <button class="ghost-button" type="button" data-admin-export-price-rows title="Скачать CSV для Excel">Экспорт цен CSV</button>
+        <button class="ghost-button" type="button" data-admin-export-price-xlsx title="Скачать XLSX с ширинами колонок и автофильтром">Экспорт цен XLSX</button>
+        <button class="ghost-button" type="button" data-admin-export-price-products title="Скачать CSV товаров и цен для Excel">Экспорт товаров с ценами CSV</button>
         <a class="ghost-button" href="/api/admin/prices?template=1" target="_blank" rel="noopener" aria-label="Скачать шаблон импорта цен" title="Скачать шаблон импорта цен">
           <i data-lucide="download"></i>
           Шаблон импорта
@@ -1179,6 +1179,7 @@ function adminPricesPageHtml() {
           Импорт цен CSV/XLSX
           <input type="file" accept=".csv,.xlsx,.xls" data-admin-price-import aria-label="Импортировать цены из CSV или XLSX" />
         </label>
+        <span class="admin-export-note">CSV открывается в Excel без оформления. XLSX экспорт добавляет ширины колонок, метаданные и автофильтр; цветовое оформление строк не заявляем, потому что текущая SheetJS OSS-сборка не гарантирует стили.</span>
         <span>Импорт принимает строки по категории/группе или артикулу, включая колонки «Акция цена», «Акция с», «Акция до». Если строки не выбраны, массовое действие применяется к текущему фильтру.</span>
       </div>
       <section class="admin-price-preview" aria-live="polite">
