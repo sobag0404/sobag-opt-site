@@ -37,7 +37,7 @@
             <i data-lucide="heart"></i>
             <span id="favoriteCount">0</span>
           </button>
-          <button class="cart-button is-empty" type="button" data-open-cart>
+          <button class="cart-button is-empty" type="button" data-open-cart title="Корзина" aria-label="Открыть корзину">
             <i data-lucide="shopping-cart"></i>
             <span>Корзина</span>
             <strong id="cartCount">0</strong>

@@ -7046,6 +7046,12 @@ body.theme-night .modal__close {
   margin-bottom: 24px;
 }
 
+@media (max-width: 900px) {
+  .business-conditions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .info-page__panel {
   padding: 28px;
   background: var(--surface-soft);
