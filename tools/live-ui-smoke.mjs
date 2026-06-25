@@ -148,8 +148,11 @@ async function verifyCatalogHome(page, baseUrl, timeoutMs) {
 }
 
 async function verifyListingToCatalog(page, baseUrl, timeoutMs) {
-  const listingUrl = `${baseUrl}/catalog?category=${encodeURIComponent(CATEGORY)}&live-ui-smoke=listing`;
-  await gotoChecked(page, listingUrl, "category listing", timeoutMs);
+  await gotoChecked(page, `${baseUrl}/catalog.html?live-ui-smoke=listing-source`, "catalog home before listing", timeoutMs);
+  await page.locator("#categoryTiles .category-tile:not(.category-tile--loading)").first().waitFor({ state: "visible", timeout: 12000 });
+  const categoryTile = page.locator("#categoryTiles .category-tile", { hasText: CATEGORY }).first();
+  if ((await categoryTile.count()) > 0) await categoryTile.click({ timeout: 5000 });
+  else await page.locator("#categoryTiles .category-tile").first().click({ timeout: 5000 });
   await page.locator("#productGrid .product-card:not(.product-card--skeleton), .product-card:not(.product-card--skeleton)").first().waitFor({
     state: "visible",
     timeout: 12000,
@@ -212,7 +215,7 @@ function createSelfTestServer() {
     }
     if (url.pathname === "/catalog.html") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      res.end(html('<section id="catalogHome"><div id="categoryTiles"><a class="category-tile">Подушки 517 товаров</a><a class="category-tile">Наволочки 517 товаров</a><a class="category-tile">Флаги 65 товаров</a><a class="category-tile">Ремувки 19 товаров</a></div></section>'));
+      res.end(html('<section id="catalogHome"><div id="categoryTiles"><a class="category-tile" href="/catalog?category=%D0%9F%D0%BE%D0%B4%D1%83%D1%88%D0%BA%D0%B8">Подушки 517 товаров</a><a class="category-tile">Наволочки 517 товаров</a><a class="category-tile">Флаги 65 товаров</a><a class="category-tile">Ремувки 19 товаров</a></div></section>'));
       return;
     }
     if (url.pathname === "/catalog") {
