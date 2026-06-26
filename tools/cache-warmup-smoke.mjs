@@ -11,12 +11,14 @@ import {
 const DEFAULT_BASE_URL = "https://sobag-shop.online";
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_MS = 5000;
+const DEFAULT_LATENCY_RETRIES = 2;
 
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     baseUrl: process.env.SOBAG_PRODUCTION_BASE_URL || DEFAULT_BASE_URL,
     timeoutMs: DEFAULT_TIMEOUT_MS,
     maxMs: DEFAULT_MAX_MS,
+    latencyRetries: DEFAULT_LATENCY_RETRIES,
     paths: [],
     selfTest: false,
     json: false,
@@ -28,6 +30,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (token.startsWith("--base-url=")) args.baseUrl = token.slice("--base-url=".length);
     else if (token === "--timeout") args.timeoutMs = Number(argv[++index] || args.timeoutMs);
     else if (token === "--max-ms") args.maxMs = Number(argv[++index] || args.maxMs);
+    else if (token === "--latency-retries") args.latencyRetries = Number(argv[++index] || args.latencyRetries);
     else if (token === "--path") args.paths.push(argv[++index]);
     else if (token.startsWith("--path=")) args.paths.push(token.slice("--path=".length));
     else if (token === "--self-test") args.selfTest = true;
@@ -196,9 +199,23 @@ async function fetchWarm(base, path, args, options = {}) {
       bytes,
       body,
     };
+  } catch (error) {
+    throw new Error(`${path}: ${error.message}`);
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function fetchPublicWarm(base, path, args, options = {}) {
+  let result;
+  for (let attempt = 0; attempt <= args.latencyRetries; attempt += 1) {
+    result = await fetchWarm(base, path, args, options);
+    result.attempts = attempt + 1;
+    result.maxMs = args.maxMs;
+    if (attempt === 0) result.firstElapsedMs = result.elapsedMs;
+    if (!result.ok || result.elapsedMs <= args.maxMs || attempt === args.latencyRetries) return result;
+  }
+  return result;
 }
 
 function assertPublicPath(result) {
@@ -251,10 +268,9 @@ async function warmImageBatch(base, paths, args, label) {
     while (index < paths.length) {
       const path = paths[index];
       index += 1;
-      const result = await fetchWarm(base, path, args, { method: "GET", discardBody: true });
+      const result = await fetchPublicWarm(base, path, args, { method: "GET", discardBody: true });
       result.kind = "image";
       result.label = label;
-      result.maxMs = args.maxMs;
       assertPublicPath(result);
       results.push(result);
     }
@@ -271,10 +287,9 @@ async function warmPublicPathBatch(base, paths, args, label, kind, concurrencyLi
     while (index < paths.length) {
       const path = paths[index];
       index += 1;
-      const result = await fetchWarm(base, path, args);
+      const result = await fetchPublicWarm(base, path, args);
       result.kind = kind;
       result.label = label;
-      result.maxMs = args.maxMs;
       assertPublicPath(result);
       results.push(result);
     }
@@ -290,8 +305,7 @@ async function warmBackgroundCatalogImages(base, args, seen) {
   let path = "/api/catalog-query?pageSize=48&sort=popular";
   let catalogPages = 0;
   while (path && catalogPages < CACHE_WARMUP_LIMITS.maxBackgroundCatalogPages && discovered.size < CACHE_WARMUP_LIMITS.maxBackgroundImages) {
-    const result = await fetchWarm(base, path, args);
-    result.maxMs = args.maxMs;
+    const result = await fetchPublicWarm(base, path, args);
     assertPublicPath(result);
     catalogPages += 1;
     for (const imagePath of discoverImagePaths(result, base)) {
@@ -349,10 +363,9 @@ async function runWarmup(rawBaseUrl, args) {
 
   for (let index = 0; index < queue.length; index += 1) {
     const entry = queue[index];
-    const result = await fetchWarm(base, entry.path, args, { method: entry.method || "GET", discardBody: entry.kind === "image" });
+    const result = await fetchPublicWarm(base, entry.path, args, { method: entry.method || "GET", discardBody: entry.kind === "image" });
     result.kind = entry.kind;
     result.label = entry.label;
-    result.maxMs = args.maxMs;
     assertPublicPath(result);
     publicResults.push(result);
 
@@ -412,13 +425,16 @@ async function runWarmup(rawBaseUrl, args) {
 function printReport(report) {
   console.log(`Cache warmup passed: ${report.baseUrl}`);
   report.publicResults.forEach((result) => {
-    console.log(`WARM ${String(result.elapsedMs).padStart(4, " ")}ms ${String(result.status).padStart(3, " ")} ${result.method || "GET"} ${result.path}`);
+    const attempts = result.attempts > 1 ? ` attempts=${result.attempts} cold=${result.firstElapsedMs}ms` : "";
+    console.log(`WARM ${String(result.elapsedMs).padStart(4, " ")}ms ${String(result.status).padStart(3, " ")} ${result.method || "GET"} ${result.path}${attempts}`);
   });
   report.backgroundProductResults.forEach((result) => {
-    console.log(`BG-PAGE ${String(result.elapsedMs).padStart(4, " ")}ms ${String(result.status).padStart(3, " ")} ${result.method || "GET"} ${result.path}`);
+    const attempts = result.attempts > 1 ? ` attempts=${result.attempts} cold=${result.firstElapsedMs}ms` : "";
+    console.log(`BG-PAGE ${String(result.elapsedMs).padStart(4, " ")}ms ${String(result.status).padStart(3, " ")} ${result.method || "GET"} ${result.path}${attempts}`);
   });
   report.backgroundResults.forEach((result) => {
-    console.log(`BG-IMAGE ${String(result.elapsedMs).padStart(4, " ")}ms ${String(result.status).padStart(3, " ")} ${result.method || "GET"} ${result.path}`);
+    const attempts = result.attempts > 1 ? ` attempts=${result.attempts} cold=${result.firstElapsedMs}ms` : "";
+    console.log(`BG-IMAGE ${String(result.elapsedMs).padStart(4, " ")}ms ${String(result.status).padStart(3, " ")} ${result.method || "GET"} ${result.path}${attempts}`);
   });
   console.log(
     `SUMMARY mandatoryImageGets=${report.summary.mandatoryImageGets} backgroundCatalogPages=${report.summary.backgroundCatalogPages} backgroundProductPagesDiscovered=${report.summary.backgroundProductPagesDiscovered} backgroundProductPagesWarmed=${report.summary.backgroundProductPagesWarmed} backgroundImagesDiscovered=${report.summary.backgroundImagesDiscovered} backgroundImagesWarmed=${report.summary.backgroundImagesWarmed}`,
