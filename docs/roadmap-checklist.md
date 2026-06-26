@@ -17,6 +17,7 @@ Last updated: 2026-06-12
 - [x] Admin/manager order pages with statuses, manager notes, customer profile links, and status history.
 - [x] Server-backed auth/orders/catalog/content through the shared API handlers; active production target is VPS only.
 - [x] Admin catalog tools: products, prices, import, content, users/roles, employees/manager access by email.
+- [ ] Granular manager permissions: split employee access into order processing, catalog/prices, content/site editing, media/import, and owner/admin rights so staff do not need the owner's login.
 - [x] Product import workflow and local importer.
 - [x] Basic SEO pages, sitemap, robots, Organization/CollectionPage/BreadcrumbList JSON-LD.
 - [x] Footer informational pages exist for order flow, delivery, payment, returns, seller support, and wholesale lots, with editable admin content fields.

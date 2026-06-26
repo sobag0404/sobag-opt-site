@@ -3891,7 +3891,13 @@ async function downloadOrderXlsx(orderId) {
     return;
   }
   const rows = orderCsvRows(order);
-  if (await downloadRowsXlsx(rows, `sobag-order-${order.id || "order"}.xlsx`, "Заказ")) {
+  if (
+    await downloadRowsXlsx(rows, `sobag-order-${order.id || "order"}.xlsx`, "Заказ", {
+      columns: [24, 38, 16, 14, 18, 12, 14],
+      title: `Sobag Opt order ${order.id || ""}`.trim(),
+      subject: "Order export",
+    })
+  ) {
     showToast("Заказ скачан в XLSX.");
     return;
   }

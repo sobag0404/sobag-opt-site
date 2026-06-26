@@ -245,7 +245,13 @@ async function downloadSavedCartQuote(cartId) {
     return;
   }
   const rows = savedCartQuoteRows(draft, { includeInternal: canViewSavedCartInternal() });
-  if (await downloadRowsXlsx(rows, savedCartFileName(draft, "xlsx"), "КП")) {
+  if (
+    await downloadRowsXlsx(rows, savedCartFileName(draft, "xlsx"), "КП", {
+      columns: [24, 34, 16, 14, 18, 12, 18, 18, 18],
+      title: "Sobag Opt quote",
+      subject: "Saved cart commercial quote",
+    })
+  ) {
     showToast("КП скачано в XLSX.");
     return;
   }

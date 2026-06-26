@@ -13,6 +13,7 @@ const BUDGETS = {
   "components/site-shell.js": { rawKb: 20, gzipKb: 8 },
   "components/app-account.js": { rawKb: 80, gzipKb: 24 },
   "components/app-admin.js": { rawKb: 180, gzipKb: 44 },
+  "components/app-admin-loader.js": { rawKb: 12, gzipKb: 4 },
   "components/app-content-utils.js": { rawKb: 80, gzipKb: 22 },
   "components/app-data.js": { rawKb: 220, gzipKb: 44 },
   "components/app-product-utils.js": { rawKb: 60, gzipKb: 18 },
@@ -78,6 +79,8 @@ function auditCoreWebVitalsReadiness() {
   REQUIRED_PAGES.forEach((pageFile) => {
     const html = read(pageFile);
     assert(!html.includes("xlsx.full.min.js"), `${pageFile} should not load XLSX CDN during initial page render`, errors);
+    assert(!html.includes("components/app-admin.js"), `${pageFile} should lazy-load admin module instead of loading full admin bundle`, errors);
+    assert(html.includes("components/app-admin-loader.js") || pageFile === "cart.html", `${pageFile} should keep lightweight admin storage/loader before app.js`, errors);
     scriptTags(html).forEach((tag) => {
       assert(/\bdefer\b/i.test(tag) || /\btype=["']module["']/i.test(tag), `${pageFile} has render-blocking script tag: ${tag}`, errors);
     });
@@ -90,9 +93,12 @@ function auditCoreWebVitalsReadiness() {
 
   assert(!/Date\.now\(\)/.test(app.match(/fetchCatalogData[\s\S]{0,1200}/)?.[0] || ""), "catalog fetch path must not disable browser cache with Date.now()", errors);
   const appXlsx = read("components/app-xlsx.js");
+  const appAdminLoader = read("components/app-admin-loader.js");
   const xlsxLazySource = `${app}\n${appAccount}\n${appAdmin}\n${appXlsx}`;
+  const adminLazySource = `${app}\n${appAdmin}\n${appAdminLoader}`;
   const publicCacheSource = `${app}\n${appContentUtils}`;
   assert(xlsxLazySource.includes("ensureXlsxLibrary") && xlsxLazySource.includes("XLSX_CDN_URL"), "app XLSX support should lazy-load only on demand", errors);
+  assert(adminLazySource.includes("ensureAdminModule") && adminLazySource.includes("ADMIN_MODULE_SRC"), "public app pages should lazy-load full admin module only on demand", errors);
   assert(publicCacheSource.includes("PUBLIC_API_CACHE_PREFIX") && publicCacheSource.includes("PUBLIC_API_CACHE_MAX_ENTRIES"), "public catalog API responses should keep a bounded browser cache", errors);
   assert(app.includes("const CATALOG_PAGE_SIZE = 48;"), "frontend public catalog page size must stay 48", errors);
   assert(app.includes("const SERVER_CATALOG_PAGE_SIZE = CATALOG_PAGE_SIZE;"), "server query page size must follow shared page size", errors);

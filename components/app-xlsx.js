@@ -22,6 +22,13 @@ function worksheetRange(rows) {
   return XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rowCount - 1, c: colCount - 1 } });
 }
 
+function worksheetRangeFrom(rows, startRow = 0) {
+  const rowCount = Math.max(1, rows.length);
+  const colCount = Math.max(1, ...rows.map((row) => row.length || 0));
+  const safeStartRow = Math.min(Math.max(0, startRow), rowCount - 1);
+  return XLSX.utils.encode_range({ s: { r: safeStartRow, c: 0 }, e: { r: rowCount - 1, c: colCount - 1 } });
+}
+
 function columnWidths(rows, preferred = []) {
   const colCount = Math.max(1, ...rows.map((row) => row.length || 0), preferred.length);
   return Array.from({ length: colCount }, (_, index) => {
@@ -31,11 +38,25 @@ function columnWidths(rows, preferred = []) {
   });
 }
 
+function firstTableHeaderRow(rows) {
+  const index = rows.findIndex((row) => Array.isArray(row) && row.length > 2);
+  return index >= 0 ? index : 0;
+}
+
 function polishWorkbook(workbook, sheet, rows, options = {}) {
   const ref = worksheetRange(rows);
+  const headerRow = Number.isInteger(options.headerRow) ? options.headerRow : firstTableHeaderRow(rows);
+  const tableRef = worksheetRangeFrom(rows, headerRow);
   sheet["!ref"] = sheet["!ref"] || ref;
   sheet["!cols"] = columnWidths(rows, options.columns || []);
-  if (rows.length > 1) sheet["!autofilter"] = { ref };
+  if (rows.length > 1) sheet["!autofilter"] = { ref: tableRef };
+  sheet["!freeze"] = {
+    xSplit: 0,
+    ySplit: Math.min(headerRow + 1, rows.length),
+    topLeftCell: `A${Math.min(headerRow + 2, rows.length + 1)}`,
+    activePane: "bottomLeft",
+    state: "frozen",
+  };
   workbook.Props = {
     ...(workbook.Props || {}),
     Title: options.title || fileNameTitle(options.fileName || ""),
