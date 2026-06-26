@@ -100,13 +100,11 @@ jobs:
             fi
           }
           cleanup_cargo_build_artifacts() {
-            for target in \
-              "$rust_target_dir/debug" \
-              "$rust_target_dir/release/build" \
-              "$rust_target_dir/release/deps" \
-              "$rust_target_dir/release/examples" \
-              "$rust_target_dir/release/incremental"
-            do
+            targets=("$rust_target_dir/debug" "$rust_target_dir/release/examples")
+            if [ "${SOBAG_DEPLOY_DEEP_CARGO_CLEAN:-0}" = "1" ]; then
+              targets+=("$rust_target_dir/release/build" "$rust_target_dir/release/deps" "$rust_target_dir/release/incremental")
+            fi
+            for target in "${targets[@]}"; do
               [ -e "$target" ] || continue
               resolved="$(readlink -f "$target")"
               case "$resolved" in
