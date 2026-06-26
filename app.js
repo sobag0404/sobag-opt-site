@@ -1383,6 +1383,7 @@ async function refreshCatalogHomeSummary() {
   } catch (error) {
     if (!hadValidatedCounts) state.catalogHomeSummary.status = "fallback";
     renderCatalogHome();
+    if (!products.length) schedulePublishedProductsLoad();
     if (!isBackendUnavailable(error) && error.status !== 404) console.warn(error);
     return false;
   }
@@ -4337,8 +4338,6 @@ function boot() {
   loadPriceListPreview();
   if (shouldUseServerCatalogList() || isFavoritesPage || shouldLoadAdminCatalog()) {
     schedulePublishedProductsLoad();
-  } else if (catalogListing) {
-    schedulePublishedProductsLoad({ idle: true });
   }
   loadImportBatches();
   initFormEnhancements();

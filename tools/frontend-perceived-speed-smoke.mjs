@@ -63,17 +63,32 @@ async function pageMetrics(page) {
 
 async function measureCatalogHome(browser, viewport) {
   const page = await browser.newPage({ viewport });
+  const apiRequests = [];
+  const apiResponses = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith("/api/")) apiRequests.push(url);
+  });
+  page.on("response", (response) => {
+    const url = new URL(response.url());
+    if (url.pathname.startsWith("/api/")) apiResponses.push({ url, status: response.status() });
+  });
   const startedAt = Date.now();
   await page.goto(`${BASE_URL}${withQa("/catalog.html", `speed-home-${viewport.name}`)}`, { waitUntil: "domcontentloaded" });
   await page.locator("#categoryTiles .category-tile, #categoryTiles .category-tile--loading").first().waitFor({ state: "visible", timeout: 1600 });
   const firstVisibleMs = Date.now() - startedAt;
   await page.locator("#categoryTiles .category-tile").first().waitFor({ state: "visible", timeout: 2500 });
   const readyMs = Date.now() - startedAt;
-  await wait(120);
+  await wait(1200);
   const metrics = await pageMetrics(page);
+  const fullCatalogRequests = apiRequests.filter((url) => url.pathname === "/api/catalog");
+  const compactCatalogSucceeded = apiResponses.some((item) => item.url.pathname === "/api/catalog-query" && item.status < 400);
   assert(metrics.categoryTiles >= 6, `${viewport.name} catalog home should show real category tiles`);
   assert(metrics.productCards === 0, `${viewport.name} catalog home should not render hidden product cards`);
   assert(metrics.skeletonCards === 0, `${viewport.name} catalog home should not keep product skeletons`);
+  if (compactCatalogSucceeded) {
+    assert(fullCatalogRequests.length === 0, `${viewport.name} catalog home should not fetch full /api/catalog`);
+  }
   assert(!metrics.hasStale48, `${viewport.name} catalog home shows stale 48 товаров`);
   assert(metrics.overflow <= 1, `${viewport.name} catalog home has horizontal overflow ${metrics.overflow}`);
   assert(firstVisibleMs <= 1800, `${viewport.name} category first visible ${firstVisibleMs}ms is too slow`);
