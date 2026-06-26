@@ -300,7 +300,7 @@ function renderFooterMarketplaceLinks() {
 
 function setButtonText(selector, value) {
   document.querySelectorAll(selector).forEach((button) => {
-    const icon = button.querySelector("i")?.outerHTML || "";
+    const icon = button.querySelector("svg[data-lucide], i[data-lucide]")?.outerHTML || "";
     button.innerHTML = `${icon}${buttonLabel(value)}`;
   });
 }

@@ -49,24 +49,24 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("header icon buttons keep visible fallbacks when external icons are unavailable", async ({ page }) => {
+test("critical header icons render from local bundle without CDN delay", async ({ page }) => {
   await page.goto(`${BASE_URL}/catalog.html`, { waitUntil: "domcontentloaded" });
-  const fallbacks = await page.evaluate(() =>
+  const icons = await page.evaluate(() =>
     [
-      "#accountButton i[data-lucide='user']",
-      "[data-nav='favorites.html'] i[data-lucide='heart']",
-      "[data-open-cart] i[data-lucide='shopping-cart']",
-      ".catalog-button i[data-lucide='layout-grid']",
+      "#accountButton svg[data-lucide='user']",
+      "[data-nav='favorites.html'] svg[data-lucide='heart']",
+      "[data-open-cart] svg[data-lucide='shopping-cart']",
+      ".catalog-button svg[data-lucide='layout-grid']",
     ].map((selector) => ({
       selector,
-      content: getComputedStyle(document.querySelector(selector), "::before").content,
-      box: document.querySelector(selector).getBoundingClientRect().toJSON(),
+      exists: Boolean(document.querySelector(selector)),
+      box: document.querySelector(selector)?.getBoundingClientRect().toJSON(),
     }))
   );
-  for (const fallback of fallbacks) {
-    expect(fallback.content, `${fallback.selector} fallback content`).not.toBe('""');
-    expect(fallback.box.width, `${fallback.selector} fallback width`).toBeGreaterThan(8);
-    expect(fallback.box.height, `${fallback.selector} fallback height`).toBeGreaterThan(8);
+  for (const icon of icons) {
+    expect(icon.exists, `${icon.selector} exists`).toBe(true);
+    expect(icon.box.width, `${icon.selector} width`).toBeGreaterThan(8);
+    expect(icon.box.height, `${icon.selector} height`).toBeGreaterThan(8);
   }
 });
 
@@ -112,7 +112,12 @@ test("browser public cache worker warms only public resources", async ({ page })
             entries.push(`${url.pathname}${url.search}`);
           }
         }
-        return entries.includes("/catalog.html") && entries.some((entry) => /^\/styles\.css\?/.test(entry)) && entries.some((entry) => /^\/components\/site-shell\.js\?v=20260625-sw-cache-v2/.test(entry));
+        return (
+          entries.includes("/catalog.html") &&
+          entries.some((entry) => /^\/styles\.css\?v=20260626-local-icons/.test(entry)) &&
+          entries.some((entry) => /^\/components\/site-shell\.js\?v=20260626-local-icons/.test(entry)) &&
+          entries.some((entry) => /^\/components\/app-icons\.js\?v=20260626-local-icons/.test(entry))
+        );
       })
     )
     .toBe(true);
@@ -130,7 +135,8 @@ test("browser public cache worker warms only public resources", async ({ page })
     return entries;
   });
   expect(publicEntries).toContainEqual(expect.stringMatching(/^\/styles\.css\?/));
-  expect(publicEntries).toContainEqual(expect.stringMatching(/^\/components\/site-shell\.js\?v=20260625-sw-cache-v2/));
+  expect(publicEntries).toContainEqual(expect.stringMatching(/^\/components\/site-shell\.js\?v=20260626-local-icons/));
+  expect(publicEntries).toContainEqual(expect.stringMatching(/^\/components\/app-icons\.js\?v=20260626-local-icons/));
 
   await page.evaluate(async () => {
     await fetch("/api/auth/me").catch(() => null);
@@ -679,10 +685,18 @@ test("empty cart and anonymous account states stay safe", async ({ page }) => {
   await expect(page.locator('.marketplace-links--footer a[href="https://www.wildberries.ru/seller/167187"]')).toBeVisible();
   await expect(page.locator('.marketplace-links--footer a[href="https://ozon.ru/s/sobag"]')).toBeVisible();
   await expect(page.locator('.marketplace-links--footer a[href="https://market.yandex.ru/cc/84GXiW"]')).toBeVisible();
-  const cartIconFallbacks = await page.evaluate(() =>
-    ["save", "download", "printer", "file-text", "send"].map((name) => getComputedStyle(document.querySelector(`i[data-lucide='${name}']`), "::before").content)
+  const cartIcons = await page.evaluate(() =>
+    ["save", "download", "printer", "file-text", "send"].map((name) => ({
+      name,
+      exists: Boolean(document.querySelector(`svg[data-lucide='${name}']`)),
+      box: document.querySelector(`svg[data-lucide='${name}']`)?.getBoundingClientRect().toJSON(),
+    }))
   );
-  expect(cartIconFallbacks).not.toContain('"•"');
+  for (const icon of cartIcons) {
+    expect(icon.exists, `${icon.name} icon exists`).toBe(true);
+    expect(icon.box.width, `${icon.name} icon width`).toBeGreaterThan(8);
+    expect(icon.box.height, `${icon.name} icon height`).toBeGreaterThan(8);
+  }
   await expect(page.locator("#cartPageEmpty")).toBeVisible();
   await expect(page.locator("#checkoutButton")).toBeDisabled();
   await expect(page.locator("#checkoutButton")).toHaveAttribute("aria-disabled", "true");
@@ -835,9 +849,11 @@ test("catalog home first load uses server category summary over stale fallback",
   await expect(page.locator("#productCount")).toHaveText("");
   await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-busy", "true");
   expect(await page.locator("#categoryTiles .category-tile--loading").count()).toBeGreaterThanOrEqual(6);
+  await expect(page.locator("#categoryTiles .catalog-category-card").first()).toBeVisible();
   await expect(page.locator("#categoryTiles")).not.toContainText("48");
   await expect(page.locator("#categoryTiles .category-tile--loading").first()).toHaveAttribute("aria-label", /загружаем/);
   await expect.poll(() => page.locator("#categoryTiles .category-tile").count()).toBe(6);
+  await expect(page.locator("#categoryTiles .catalog-category-card")).toHaveCount(6);
   await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-busy", "false");
   await expect(page.locator("#categoryTiles")).toHaveAttribute("aria-label", "Категории каталога");
   await expect(page.locator("#categoryTiles .category-tile").first()).toHaveAttribute("aria-label", /517/);
@@ -1011,6 +1027,53 @@ test("catalog home never renders page-sized category counts as final totals", as
   await expect(page.locator("#categoryTiles")).not.toContainText(/48\s+товар/);
   expect(await page.locator("#categoryTiles .category-tile--loading").count()).toBeGreaterThanOrEqual(6);
   await expect(page.locator("#categoryTiles .category-tile-skeleton")).toHaveCount(0);
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
+test("catalog home keeps visible skeleton sections while public APIs are slow", async ({ page }) => {
+  const categories = [
+    { value: "\u041f\u043e\u0434\u0443\u0448\u043a\u0438", count: 517 },
+    { value: "\u041d\u0430\u0432\u043e\u043b\u043e\u0447\u043a\u0438", count: 517 },
+    { value: "\u041c\u0435\u0448\u043a\u0438 \u0434\u043b\u044f \u043e\u0431\u0443\u0432\u0438", count: 170 },
+    { value: "\u0427\u0435\u0445\u043b\u044b \u043d\u0430 \u0447\u0435\u043c\u043e\u0434\u0430\u043d", count: 37 },
+    { value: "\u0420\u0435\u043c\u0443\u0432\u043a\u0438", count: 19 },
+    { value: "\u0424\u043b\u0430\u0433\u0438", count: 65 },
+  ];
+  await page.route("**/api/content", async (route) => {
+    await page.waitForTimeout(900);
+    await route.fulfill({ status: 503, contentType: "application/json; charset=utf-8", body: JSON.stringify({ error: "qa_content_slow" }) });
+  });
+  await page.route("**/api/price-list?format=json", async (route) => {
+    await page.waitForTimeout(900);
+    await route.fulfill({ status: 503, contentType: "application/json; charset=utf-8", body: JSON.stringify({ error: "qa_price_slow" }) });
+  });
+  await page.route("**/api/catalog-query?**", async (route) => {
+    await page.waitForTimeout(900);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        items: [],
+        total: 808,
+        facets: { categories, collections: [], holidays: [], tags: [], types: [], sizes: [], materials: [], stock: [] },
+        facetOptions: {},
+        pageInfo: { page: 1, pageSize: 1, offset: 0, total: 808, totalPages: 808, hasMore: true, nextCursor: "1" },
+        source: "qa-slow-home-summary",
+      }),
+    });
+  });
+  await page.goto(`${BASE_URL}/catalog.html?qa=slow-public-shell`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(120);
+  await expect(page.locator("#catalogHome")).toBeVisible();
+  await expect(page.locator("#categoryTiles .catalog-category-card").first()).toBeVisible();
+  expect(await page.locator("#actualTiles .actual-tile").count()).toBeGreaterThanOrEqual(3);
+  expect(await page.locator("#collectionTiles .theme-tile").count()).toBeGreaterThanOrEqual(3);
+  expect(await page.locator("#holidayTiles .theme-tile").count()).toBeGreaterThanOrEqual(3);
+  await expect(page.locator("#priceListPreview .price-list-preview__state--loading")).toBeVisible();
+  await expect(page.locator("#categoryTiles")).not.toContainText(/48\s+\u0442\u043e\u0432\u0430\u0440/i);
+  await expect(page.locator("#productCount")).toHaveText("");
+  await expect.poll(() => page.locator("#categoryTiles").innerText()).toContain("517");
+  await expect(page.locator("#categoryTiles")).not.toContainText(/48\s+\u0442\u043e\u0432\u0430\u0440/i);
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });
 

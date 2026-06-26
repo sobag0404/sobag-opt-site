@@ -1,4 +1,4 @@
-const SOBAG_SW_VERSION = "20260625-sw-cache-v2";
+const SOBAG_SW_VERSION = "20260626-local-icons";
 const SOBAG_PUBLIC_CACHE = `sobag-public-${SOBAG_SW_VERSION}`;
 const SOBAG_API_MAX_AGE_MS = 10 * 60 * 1000;
 const SOBAG_HTML_TIMEOUT_MS = 1200;

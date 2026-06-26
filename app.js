@@ -326,7 +326,7 @@ function toggleTheme() {
 }
 function updateButtonText(button, text, options = {}) {
   if (!button) return;
-  const icon = button.querySelector("i")?.outerHTML || "";
+  const icon = button.querySelector("svg[data-lucide], i[data-lucide]")?.outerHTML || "";
   const label = options.preserveCase ? String(text || "").trim() : buttonLabel(text);
   button.innerHTML = `${icon}${label}`;
 }
@@ -2548,7 +2548,7 @@ function renderCatalogHome() {
       .map((category) => {
         const label = `${category.name}: загружаем количество`;
         return `
-          <button class="category-tile category-tile--loading" type="button" data-open-category="${escapeHtml(category.name)}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
+          <button class="category-tile catalog-category-card category-tile--loading" type="button" data-open-category="${escapeHtml(category.name)}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
             <span class="category-tile__top">
               <span class="category-tile__icon"><i data-lucide="${escapeHtml(category.icon)}"></i></span>
               <span class="category-tile__schema" aria-hidden="true">
@@ -2583,7 +2583,7 @@ function renderCatalogHome() {
       const count = countByCategory[category.name] || 0;
       const label = `${category.name}: ${count} ${productWord(count)}`;
       return `
-        <button class="category-tile" type="button" data-open-category="${escapeHtml(category.name)}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
+        <button class="category-tile catalog-category-card" type="button" data-open-category="${escapeHtml(category.name)}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
           <span class="category-tile__top">
             <span class="category-tile__icon"><i data-lucide="${escapeHtml(category.icon)}"></i></span>
             <span class="category-tile__schema" aria-hidden="true">
@@ -2603,6 +2603,9 @@ function renderCatalogHome() {
   refreshLucideIcons();
 }
 function renderCatalogHomeSecondarySections(content) {
+  actualTiles.setAttribute("aria-busy", "false");
+  collectionTiles.setAttribute("aria-busy", "false");
+  holidayTiles.setAttribute("aria-busy", "false");
   actualTiles.innerHTML = content.actualSlides
     .map(
       (item, index) => `
@@ -2665,8 +2668,15 @@ function priceListPreviewRowHtml(row) {
 }
 function renderPriceListPreview(status = "loading", rows = [], message = "") {
   if (!priceListPreview) return;
+  priceListPreview.setAttribute("aria-busy", status === "loading" ? "true" : "false");
   if (status === "loading") {
-    priceListPreview.innerHTML = `<div class="price-list-preview__skeleton" aria-hidden="true"><span></span><span></span><span></span></div>`;
+    priceListPreview.innerHTML = `
+      <div class="price-list-preview__skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="price-list-preview__state price-list-preview__state--loading" role="status" aria-live="polite">
+        <strong>Загружаем строки прайса.</strong>
+        <span>Скачать CSV для Excel можно сразу по кнопке выше.</span>
+      </div>
+    `;
     return;
   }
   if (status === "error") {
